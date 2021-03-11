@@ -4,6 +4,8 @@
 #include "platform/wrapmalloc.h"
 
 
+unsigned int sky_diag_mask = SKY_DIAG_LINK_STATE | SKY_DIAG_BUG;
+
 /* Initialization */
 
 struct ap_all* sky_init(struct ap_all *ap, struct ap_conf *conf)
