@@ -142,25 +142,25 @@ int ap_fec_decode(struct radioframe *frame, struct ap_diag *diag);
 /*
  * Allocate and initialize data structures to store protocol state
  */
-struct ap_all * ap_init(struct ap_all *ap, struct ap_conf *conf);
+struct ap_all * sky_init(struct ap_all *ap, struct ap_conf *conf);
 
 /*
  * Process a received frame
  */
-int ap_rx(struct ap_all *ap, struct radioframe *frame);
+int sky_rx(struct ap_all *ap, struct radioframe *frame);
 
 /*
  * Request a frame to be transmitted
  */
-int ap_tx(struct ap_all *ap, struct radioframe *frame, timestamp_t current_time);
+int sky_tx(struct ap_all *ap, struct radioframe *frame, timestamp_t current_time);
 
 /*
  * Print diagnostics of the protocol
  */
-int ap_print_diag(struct ap_all *ap);
+int sky_print_diag(struct ap_all *ap);
 
 // TODO: Return some kind of a status for housekeeping and OBC interfacing
-int ap_status(struct ap_all *ap, struct ap_status *s);
+int sky_status(struct ap_all *ap, struct ap_status *s);
 
 
 #endif /* __SKYLINK_H__ */

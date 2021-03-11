@@ -140,7 +140,7 @@ int ap_buf_read(struct ap_buf *self, uint8_t *data, unsigned maxlen, unsigned *f
 
 unsigned ap_buf_space(struct ap_buf *self)
 {
-	assert(self);
+	SKY_ASSERT(self);
 	unsigned size = self->size;
 	unsigned p_read = self->p_read, p_write = self->p_write;
 	return (size * 2 + p_read - p_write - 1) % size;
@@ -149,7 +149,7 @@ unsigned ap_buf_space(struct ap_buf *self)
 
 unsigned ap_buf_fullness(struct ap_buf *self)
 {
-	assert(self);
+	SKY_ASSERT(self);
 	unsigned size = self->size;
 	unsigned p_read = self->p_read, p_write2 = self->p_write2;
 	return (size + p_write2 - p_read) % size;
@@ -160,7 +160,7 @@ struct ap_buf *ap_buf_init(unsigned size)
 {
 	struct ap_buf *self;
 	self = malloc(sizeof(struct ap_buf) + size);
-	assert(self);
+	SKY_ASSERT(self);
 	if (self == NULL)
 		return NULL;
 	self->size = size;

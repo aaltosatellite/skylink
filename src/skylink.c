@@ -29,7 +29,7 @@ int sky_rx(struct ap_all *ap, struct radioframe *frame)
 {
 	SKY_ASSERT(ap && frame);
 
-	int ret = ap_fec_decode(frame, ap->diag);
+	int ret = sky_fec_decode(frame, ap->diag);
 	if (ret >= 0)
 		return ap_mac_rx(ap, frame);
 	else
@@ -44,7 +44,7 @@ int sky_tx(struct ap_all *ap, struct radioframe *frame, timestamp_t current_time
 	frame->length = 223; // TODO: check if this is used anywhere and place the constant somewhere
 	if (ap_mac_tx(ap, frame, current_time) >= 0) {
 		++ap->diag->tx_frames;
-		ap_fec_encode(frame);
+		sky_fec_encode(frame);
 		return 0;
 	} else {
 		return -1;

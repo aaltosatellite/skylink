@@ -52,7 +52,7 @@ int sky_fec_decode(struct radioframe *frame, struct ap_diag *diag)
 /* Encode a frame to transmit */
 int sky_fec_encode(struct radioframe *frame)
 {
-	SKY_ASSERT(frame && frame->length < RS_MSGLEN)
+	SKY_ASSERT(frame && frame->length < RS_MSGLEN);
 
 	if (frame->length < RS_MSGLEN) {
 		/* Zero pad the rest to achieve a constant frame size.

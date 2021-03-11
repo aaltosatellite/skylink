@@ -5,7 +5,7 @@
  */
 
 #include "skylink/skylink.h"
-#include "skylink/"
+#include "skylink/diag.h"
 #include <assert.h>
 
 #define N_VC 15

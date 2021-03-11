@@ -122,7 +122,7 @@ int ap_arqtx_reset(struct ap_arqtx *self, const struct ap_arqtx_conf *conf)
 	for (i=0; i<WINDOW_SIZE; i++)
 		self->buf[i].state = SDU_FREE;
 
-	sky_printf(SKY_DIAG_DEBUG, "ARQ: reset transmitter\n");
+	SKY_PRINTF(SKY_DIAG_DEBUG, "ARQ: reset transmitter\n");
 	return 0;
 }
 
@@ -155,7 +155,7 @@ int ap_arqtx_tx(struct ap_arqtx *state, const struct ap_arqtx_conf *conf, uint8_
 		struct tx_sdu *sdu = &state->buf[seq & WINDOW_MASK];
 		if(sdu->seq != seq) {
 			++state->wtf;
-			sky_printf(SKY_DIAG_DEBUG, "ARQ: WTF: Wrong sequence number in transmit buffer (%d != %d)\n", sdu->seq, seq);
+			SKY_PRINTF(SKY_DIAG_DEBUG, "ARQ: WTF: Wrong sequence number in transmit buffer (%d != %d)\n", sdu->seq, seq);
 		}
 
 		data[0] = 0x40 | (sdu->seq & SEQ_MASK);
