@@ -1,0 +1,8 @@
+Only the files required for the fixed Reed-Solomon codec, i.e.
+encode_rs_8 and decode_rs_8, have been copied here from libfec.
+
+ccsds_tab.c is precalculated and the library does not need any initialization
+when using the fixed codec.
+
+Precalculated tables have been changed to const to keep them in program
+memory ("text"), so they don't waste the RAM used for "data" section.
