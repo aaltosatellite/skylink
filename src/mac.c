@@ -13,7 +13,7 @@
 
 #include "skylink/skylink.h"
 #include "skylink/diag.h"
-#include "platform/wrapmalloc.h"
+//#include "platform/wrapmalloc.h"
 #include <string.h>
 
 #define TDD_PERIOD (TIMESTAMP_MS*1000)
@@ -30,17 +30,74 @@
 #define MAC_HEADER_M2S_FIRST 0x69
 #define MAC_HEADER_M2S_OTHER 0x7F
 
+
+struct all* ap = NULL;
+
+
 // State of the MAC/TDD sublayer
 struct ap_mac {
 	/* TDD */
-	timestamp_t tdd_cycle_start, tdd_next_frame;
+
+	unsigned int mac_mode; /* 0 = no-TDD, 1 = TDD*/
+
+	/* Time when the TDD cycle/window started */
+	timestamp_t tdd_cycle_start;
+
+	/* */
+	timestamp_t tdd_next_frame;
+
 	unsigned tdd_cycles_since_sync, tdd_frame_number;
+
+	/* Time when the TDD windows size was adjusted last time. */
+	timestamp_t last_window_adjust;
 };
 
 
-int ap_mac_rx(struct ap_all *ap, struct radioframe *frame)
+struct sky_mac_conf {
+
+	/* Minimum number of slots inside a window */
+	uint32_t min_slots;
+
+	/* Maximum number of slots inside a window */
+	uint32_t max_slots;
+
+	/* Minimum time between windows size adjustmends. */
+	uint32_t windows_adjust_interval;
+
+	/* Delay between communication direction (uplink/downlink) changes. */
+	uint32_t switching_delay;
+};
+
+
+int eval_window_adjustment_logic(int self, timestamp_t now) {
+
+	//if (all->mac->last_window_adjust > )
+
+}
+
+/*
+
+static int sky_mac_postpone_tx(timestamp_t now, unsigned int duration) {
+	timestamp new_cycle_start = now + tdd_cycle_start;
+	if (new_cycle_start > tdd_cycle_start)
+		ap->mac->tdd_cycle_start = new_cycle_start;
+}
+
+void sky_carrier_sensed(timestamp_t now) {
+	sky_mac_postpone_tx(now, ap)
+}
+*/
+
+
+
+int ap_mac_rx(struct ap_all *ap, SkyRadioFrame_t *frame)
 {
 	SKY_ASSERT(ap && frame);
+
+	ap_mux_rx(ap, &ap->conf->lmux_conf, frame->raw+1, frame->length-1);
+
+#if 0
+	//getTDDHeader();
 
 	struct ap_mac *self = ap->mac;
 	char is_tdd_slave = ap->conf->tdd_slave;
@@ -73,15 +130,14 @@ int ap_mac_rx(struct ap_all *ap, struct radioframe *frame)
 		break;
 	};
 
-	if (valid) {
-		// BLAH this &ap->conf->lmux_conf thing is ugly too
-		ap_mux_rx(ap, &ap->conf->lmux_conf, frame->data+1, frame->length-1);
-	}
+#endif
+
+
 	return 0;
 }
 
 
-int ap_mac_tx(struct ap_all *ap, struct radioframe *frame, timestamp_t current_time)
+int ap_mac_tx(struct ap_all *ap, SkyRadioFrame_t *frame, timestamp_t current_time)
 {
 	SKY_ASSERT(ap && frame);
 
@@ -119,13 +175,17 @@ int ap_mac_tx(struct ap_all *ap, struct radioframe *frame, timestamp_t current_t
 	td = current_time - self->tdd_next_frame;
 	if (transmit_ok && td >= 0) {
 		//SKY_PRINTF(SKY_DIAG_DEBUG, "TDD: %10u: Frame transmit time (td=%d)\n", current_time, td);
+
 		/* Time to transmit a frame. Slave doesn't transmit anything
 		 * if it hasn't been synchronized recently enough. */
 		if (!is_tdd_slave ||
-		    self->tdd_cycles_since_sync < TDD_SYNC_TIMEOUT_CYCLES) {
+		    self->tdd_cycles_since_sync < TDD_SYNC_TIMEOUT_CYCLES)
+		{
+
 			int ret;
+
 			// BLAH ugly call again
-			ret = ap_mux_tx(ap, &ap->conf->lmux_conf, frame->data+1, frame->length-1);
+			ret = ap_mux_tx(ap, &ap->conf->lmux_conf, frame->raw+1, frame->length-1);
 			if (ret >= 0) {
 				/* Yes, there is a frame to transmit.
 				 * Add header octet. */
@@ -136,7 +196,7 @@ int ap_mac_tx(struct ap_all *ap, struct radioframe *frame, timestamp_t current_t
 					header = MAC_HEADER_M2S_FIRST;
 				else
 					header = MAC_HEADER_M2S_OTHER;
-				frame->data[0] = header;
+				frame->raw[0] = header;
 				frame->length = ret+1;
 				retval = 1;
 			}

@@ -10,13 +10,63 @@
 #define RS_MSGLEN 223
 #define RS_PARITYS 32
 
+
+#define SKY_HMAC_LENGTH 8
+
+
+/**
+ *
+ * This follows the Mode-5 definitions.
+ */
+#define SKY_GOLAY_PAYLOAD_LENGTH_MASK  0x0FF
+#define SKY_GOLAY_VITERBI_ENABLED      0x800
+#define SKY_GOLAY_RANDOMIZER_ENABLED   0x400
+#define SKY_GOLAY_RS_ENABLED           0x200
+
+
+int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics_t *diag);
+
+int sky_fec_encode(SkyRadioFrame_t *frame);
+
+
+/*
+ * Decode Forward error correcting code on the received frame.
+ * Randomizer + Reed-solomon.
+ *
+ * params:
+ *   frame: Frame received over the physical radio link.
+ *   diag: Diagnostics telemetry struct.
+ *
+ * returns:
+ *   Returns the number of errors corrected.
+ *   On error returns a negative return code.
+ */
+//int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics_t *diag);
+
+
+/*
+ * Encode Forward error correction code on the frame to be transmit.
+ *
+ * params:
+ *   frame: Frame to be encoded.
+ *
+ * returns:
+ *   O on success. Negative return code on error.
+ */
+//int sky_fec_encode(SkyRadioFrame_t *frame)
+
+
+
 #define SKY_INCLUDE_DEPENDENCIES
+
 #ifdef SKY_INCLUDE_DEPENDENCIES
 
 #include "ext/libfec/fec.h"
+#include "ext/cifra/sha2.h"
 #include "ext/cifra/hmac.h"
 #include "ext/gr-satellites/golay24.h"
 
+#define SKY_HMAC_CTX_SIZE  (sizeof(cf_hmac_ctx))
 
 #else
 
@@ -24,7 +74,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-
+typedef uint8_t data_t;
+//typedef struct  cf_hmac_ctx;
+//typedef int cf_chash;
 
 /*
  */
@@ -36,8 +88,14 @@ int encode_golay24(uint32_t* data);
 int decode_rs_8(data_t *data, int *eras_pos, int no_eras, int pad);
 void encode_rs_8(data_t *data, data_t *parity, int pad);
 
-//typedef cf_hmac_ctx;
-//typedef cf_chash;
+
+#define SKY_HMAC_CTX_SIZE  (768)
+
+
+typedef void cf_hmac_ctx;
+typedef void cf_chash;
+
+extern cf_chash cf_sha256;
 
 /* Set up ctx for computing a HMAC using the given hash and key. */
 void cf_hmac_init(cf_hmac_ctx *ctx,
@@ -51,16 +109,6 @@ void cf_hmac_update(cf_hmac_ctx *ctx,
 /* Finish and compute HMAC.
  * `ctx->hash->hashsz` bytes are written to `out`. */
 void cf_hmac_finish(cf_hmac_ctx *ctx, uint8_t *out);
-
-/*
- * One shot interface: compute `HMAC_hash(key, msg)`, writing the
- * answer (which is `hash->hashsz` long) to `out`.
- *
- * This function does not fail. */
-void cf_hmac(const uint8_t *key, size_t nkey,
-            const uint8_t *msg, size_t nmsg,
-            uint8_t *out,
-            const cf_chash *hash);
 
 
 #endif

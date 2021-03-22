@@ -13,6 +13,7 @@
 #define SKY_DIAG_DEBUG      0x0002
 #define SKY_DIAG_BUG        0x0004
 #define SKY_DIAG_LINK_STATE 0x0008
+#define SKY_DIAG_FRAMES     0x0100
 
 #ifdef DEBUG
 #define SKY_ASSERT(x)    if (x) while(1);
@@ -22,8 +23,12 @@
 
 extern unsigned int sky_diag_mask;
 
-#if 1
+// TODO: Better defines
+#ifndef STM32F446xx
 #define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) != 0) { fprintf(stderr, __VA_ARGS__); }
+#elif 1
+#include "SEGGER_RTT.h"
+#define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) != 0) { SEGGER_RTT_printf(0, __VA_ARGS__); }
 #else
 #define SKY_PRINTF(...) do { } while(0)
 #endif

@@ -103,6 +103,7 @@ int main(int argc, char *argv[])
 	snprintf(name, NAMELEN, "tcp://localhost:%d", modem_base + 1);
 	zmq_connect(z_tx, name);
 
+
 	int ps;
 	for (ps = 0; ps < PS_RX_N; ps++) {
 		void *sock;
@@ -130,11 +131,11 @@ int main(int argc, char *argv[])
 	 * Initialize protocol stack
 	 * ------------------------- */
 	for (ps=0; ps<PS_RX_N; ps++) {
-		ap1->rxbuf[ps] = ap_buf_init(0x4000);
+		ap1->rxbuf[ps] = sky_buf_init(0x4000);
 	}
 
 	for (ps=0; ps<PS_TX_N; ps++) {
-		ap1->txbuf[ps] = ap_buf_init(0x4000);
+		ap1->txbuf[ps] = sky_buf_init(0x4000);
 	}
 
 	/* Read the first timing message */
@@ -162,10 +163,11 @@ int main(int argc, char *argv[])
 			/* RX frame */
 			SKY_PRINTF(SKY_DIAG_DEBUG, "%20lu: Receive\n", fr.time);
 			frame.length = ret - 64;
-			frame.timestamp = fr.time / 1000;
+			frame.metadata.timestamp = fr.time / 1000;
 			memcpy(frame.data, fr.data, frame.length);
-			sky_rx(ap1, &frame);
+			sky_rx_raw(ap1, &frame);
 			sky_print_diag(ap1);
+
 		} else if (ret == sizeof(struct suotiming)) {
 			/* Tick message */
 			uint64_t t = fr.time + tx_ahead_time;
@@ -175,7 +177,7 @@ int main(int argc, char *argv[])
 				fr.id = 1;
 				fr.flags |= 2 | 4;
 				fr.time = t;
-				memcpy(fr.data, frame.data, frame.length);
+				memcpy(fr.raw, frame.raw, frame.length);
 				fr.len = frame.length;
 				zmq_send(z_tx, &fr, 64+frame.length, 0);
 			}

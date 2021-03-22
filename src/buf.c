@@ -8,7 +8,7 @@
 
 #include "skylink/buf.h"
 #include "skylink/diag.h"
-#include "platform/wrapmalloc.h"
+//#include "platform/wrapmalloc.h"
 
 struct ap_buf {
 	unsigned size;
@@ -104,14 +104,17 @@ int ap_buf_write(struct ap_buf *self, const uint8_t *data, unsigned datalen, uns
 int ap_buf_read(struct ap_buf *self, uint8_t *data, unsigned maxlen, unsigned *flags)
 {
 	SKY_ASSERT(self && data && flags);
+
 	unsigned p_read = self->p_read, size = self->size;
 	unsigned p_write2 = self->p_write2;
 	unsigned remaining = self->remaining;
 	unsigned ret_flags = 0;
+
 	if (p_read == p_write2) {
 		/* Buffer is empty, return no data */
 		return -1;
 	}
+
 	if (remaining == 0) {
 		/* Start of new packet, read length */
 		remaining = self->data[p_read] << 8;
@@ -120,6 +123,7 @@ int ap_buf_read(struct ap_buf *self, uint8_t *data, unsigned maxlen, unsigned *f
 		p_read = next_wrap(p_read, size);
 		ret_flags |= BUF_FIRST_SEG;
 	}
+
 	unsigned i;
 	for (i=0; i < maxlen && i < remaining; ++i) {
 		data[i] = self->data[p_read];
@@ -155,6 +159,7 @@ unsigned ap_buf_fullness(struct ap_buf *self)
 	return (size + p_write2 - p_read) % size;
 }
 
+int sky_buf_flush(SkyBuffer_t *self);
 
 struct ap_buf *ap_buf_init(unsigned size)
 {

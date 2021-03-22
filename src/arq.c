@@ -32,7 +32,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "platform/wrapmalloc.h"
+//#include "platform/wrapmalloc.h"
 
 
 
@@ -109,6 +109,7 @@ struct ap_arqtx {
 };
 
 
+
 int ap_arqtx_reset(struct ap_arqtx *self, const struct ap_arqtx_conf *conf)
 {
 	(void)conf; // not used now
@@ -137,10 +138,10 @@ int ap_arqtx_tx(struct ap_arqtx *state, const struct ap_arqtx_conf *conf, uint8_
 
 	state->time_now++;
 
-	if (
-			state->rx_status == RX_STATUS_UNKNOWN ||
-			state->rx_status == RX_STATUS_WTF ||
-			state->wtf > 0) {
+	if (state->rx_status == RX_STATUS_UNKNOWN ||
+	    state->rx_status == RX_STATUS_WTF ||
+	    state->wtf > 0)
+	{
 		/* Receiver state unknown. Request protocol reset. */
 		ap_arqtx_reset(state, conf);
 		data[0] = 0x80;
@@ -262,7 +263,7 @@ static int find_next_sdu_to_transmit(struct ap_arqtx *self, const ap_arq_sdu_tx_
 		seq_t seq = (rx_acked + i) & SEQ_MASK;
 		struct tx_sdu *sdu = &self->buf[seq & WINDOW_MASK];
 
-		if(!getbit(rx_bitmap, i)) {
+		if (getbit(rx_bitmap, i) == 0) {
 			/* If the SDU has been transmitted only once, retransmit immediately.
 			 * Otherwise retransmit if its timer has expired. */
 			switch(sdu->state) {
@@ -395,12 +396,6 @@ done:
 	self->tx_window_last  = tx_window_last;
 	return retval;
 }
-
-
-
-
-
-
 
 
 
