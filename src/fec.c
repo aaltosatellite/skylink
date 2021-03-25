@@ -101,44 +101,61 @@ static const uint8_t whitening[WHITENING_LEN] = {
 #endif
 
 
+/*
+ * Default configuration for the PHY layer
+ */
+SkyPHYConfig_t phy_defaults = {
+	.enable_scrambler = 1,
+	.enable_rs = 1,
+};
+
+SkyPHYConfig_t* conf = &phy_defaults;
+
 
 /** Decode a received frame */
 int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics_t *diag)
 {
 	SKY_ASSERT(frame && diag);
+	int ret = 0;
 
-	if (frame->length < RS_PARITYS)
-		return SKY_RET_RS_INVALID_LENGTH;
-
-	/*
-	 * Remove scrambler/whitening
-	 */
-	for (unsigned i = 0; i < frame->length; i++)
-		frame->raw[i] ^= whitening[i % WHITENING_LEN];
-
-	/*
-	 * Decode Reed-Solomon FEC
-	 *
-	 * Simply decode in place in the original buffer
- 	 * and pass it to the next layer together with
- 	 * the original metadata. */
-	int ret = decode_rs_8(frame->raw, NULL, 0, 255 - frame->length);
-	if (ret < 0) {
-		++diag->rx_fec_fail;
-		return SKY_RET_RS_FAILED; /* Reed-Solomon decode failed */
+	if (conf->enable_scrambler) {
+		/*
+		 * Remove scrambler/whitening
+		 */
+		for (unsigned i = 0; i < frame->length; i++)
+			frame->raw[i] ^= whitening[i % WHITENING_LEN];
 	}
 
-	// Frame is now "shorter"
-	frame->length -= RS_PARITYS;
+	if (conf->enable_rs) {
 
-	//SKY_PRINTF(SKY_DIAG_FRAMES, "FEC: %10u: Frame ready to transmit\n", get_timestamp());
+		if (frame->length < RS_PARITYS)
+			return SKY_RET_RS_INVALID_LENGTH;
 
-	// Telemetry
-	diag->rx_fec_ok++;
-	diag->rx_fec_errs += ret;
-	diag->rx_fec_octs += frame->length + RS_PARITYS;
+		/*
+		 * Decode Reed-Solomon FEC
+		 *
+		 * Simply decode in place in the original buffer
+	 	 * and pass it to the next layer together with
+	 	 * the original metadata. */
+		if ((ret = decode_rs_8(frame->raw, NULL, 0, 255 - frame->length)) < 0) {
+			++diag->rx_fec_fail;
+			return SKY_RET_RS_FAILED; /* Reed-Solomon decode failed */
+		}
 
-	return ret; /* Decoding success */
+		// Frame is now "shorter"
+		frame->length -= RS_PARITYS;
+
+		//SKY_PRINTF(SKY_DIAG_FRAMES, "FEC: %10u: Frame ready to transmit\n", get_timestamp());
+
+		// Update FEC Telemetry
+		diag->rx_fec_ok++;
+		diag->rx_fec_errs += ret;
+		diag->rx_fec_octs += frame->length + RS_PARITYS;
+
+		ret = SKY_RET_OK;
+	}
+
+	return ret;
 }
 
 
@@ -147,19 +164,23 @@ int sky_fec_encode(SkyRadioFrame_t *frame)
 {
 	SKY_ASSERT(frame);
 
-	/*
-	 * Calculate Reed-Solomon parity bytes
-	 */
-	encode_rs_8(frame->raw, &frame->raw[frame->length], frame->length - RS_MSGLEN);
-	frame->length += RS_PARITYS;
+	if (conf->enable_rs) {
+		/*
+		 * Calculate Reed-Solomon parity bytes
+		 */
+		encode_rs_8(frame->raw, &frame->raw[frame->length], frame->length - RS_MSGLEN);
+		frame->length += RS_PARITYS;
 
-	/*
-	 * Apply data whitening
-	 */
-	for (unsigned i = 0; i < frame->length; i++)
-		frame->raw[i] ^= whitening[i % WHITENING_LEN];
+		//SKY_PRINTF(SKY_DIAG_FRAMES, "FEC: %10u: Frame ready to transmit\n", get_timestamp());
+	}
 
-	//SKY_PRINTF(SKY_DIAG_FRAMES, "FEC: %10u: Frame ready to transmit\n", get_timestamp());
+	if (conf->enable_scrambler) {
+		/*
+		 * Apply data whitening
+		 */
+		for (unsigned i = 0; i < frame->length; i++)
+			frame->raw[i] ^= whitening[i % WHITENING_LEN];
+	}
 
 	return SKY_RET_OK;
 }

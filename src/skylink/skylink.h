@@ -102,10 +102,10 @@ struct ap_mux;
 // State of the MAC/TDD sublayer (forward declaration)
 struct ap_mac;
 
-// Configuration for a particular MUX instance
-struct ap_mux_conf {
-	uint32_t enabled_channels; // Bitmap of virtual channels enabled
-};
+
+#include "skylink/conf.h"
+
+
 
 /* Protocol configuration struct.
  *
@@ -115,15 +115,20 @@ struct ap_mux_conf {
  */
 struct ap_conf {
 
-	//SkyMACConfig_t mac;
+	SkyMACConfig_t mac;
+	SkyPHYConfig_t phy;
 
 	char tdd_slave; // 1 if operating as a TDD slave, 0 if master
 	timestamp_t initial_time; // TODO: move to init function parameter or something
+
+/*
 	struct ap_mux_conf lmux_conf;
 	struct ap_mux_conf umux_conf[AP_N_ARQS];
 	struct ap_arqtx_conf arqtx_conf;
 	struct ap_arqrx_conf arqrx_conf;
+*/
 };
+
 typedef struct ap_conf SkyConfig_t;
 
 
@@ -145,21 +150,21 @@ typedef struct ap_diag {
 /*
  * Struct to store pointers to all the data structures related to a
  * protocol instance.
- *
+ *	SkyPhyConfig_t phy_conf;
  * Having these in one place makes it easier to use them from
  * different places, which is particularly useful for MUX,
  * since it ties several different blocks togehter.
  */
 struct ap_all {
-	struct ap_conf *conf;                 // Configuration
-	struct ap_diag *diag;                 // Diagnostics
-	struct ap_buf *rxbuf[AP_RX_BUFS];     // Receive buffers
-	struct ap_buf *txbuf[AP_TX_BUFS];     // Transmit buffers
+	SkyConfig_t    *conf;                 // Configuration
+	SkyDiagnostics_t *diag;                 // Diagnostics
+	struct ap_buf *rxbuf[SKY_NUM_VIRTUAL_CHANNELS]; // Receive buffers
+	struct ap_buf *txbuf[SKY_NUM_VIRTUAL_CHANNELS]; // Transmit buffers
 	struct ap_mac *mac;                   // MAC state
-	struct ap_mux *lmux;                  // Lower MUX state
-	struct ap_mux *umux[AP_N_ARQS];       // Upper MUX state for each ARQ process
-	struct ap_arqrx *arqrx[AP_N_ARQS];    // Receiving ARQ process states
-	struct ap_arqtx *arqtx[AP_N_ARQS];    // Sending ARQ process states
+	//struct ap_mux *lmux;                  // Lower MUX state
+	//struct ap_mux *umux[AP_N_ARQS];       // Upper MUX state for each ARQ process
+	//struct ap_arqrx *arqrx[AP_N_ARQS];    // Receiving ARQ process states
+	//struct ap_arqtx *arqtx[AP_N_ARQS];    // Sending ARQ process states
 
 	void* hmac_ctx;
 };
@@ -171,8 +176,8 @@ typedef struct ap_all* SkyHandle_t;
  * Interfaces between protocol sublayers
  * ------------------------------------- */
 
-int ap_mux_rx(struct ap_all *ap, const struct ap_mux_conf *conf, const uint8_t *data, int datalen);
-int ap_mux_tx(struct ap_all *ap, const struct ap_mux_conf *conf, uint8_t *data, int maxlen);
+//int ap_mux_rx(struct ap_all *ap, const struct ap_mux_conf *conf, const uint8_t *data, int datalen);
+//int ap_mux_tx(struct ap_all *ap, const struct ap_mux_conf *conf, uint8_t *data, int maxlen);
 
 struct ap_arq *ap_arq_init(const struct ap_conf *conf);
 int ap_arq_rx(struct ap_arq *self, const uint8_t *data, int length, const ap_arq_sdu_rx_cb cb, void *const cb_arg);

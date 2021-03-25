@@ -53,20 +53,6 @@ struct ap_mac {
 };
 
 
-struct sky_mac_conf {
-
-	/* Minimum number of slots inside a window */
-	uint32_t min_slots;
-
-	/* Maximum number of slots inside a window */
-	uint32_t max_slots;
-
-	/* Minimum time between windows size adjustmends. */
-	uint32_t windows_adjust_interval;
-
-	/* Delay between communication direction (uplink/downlink) changes. */
-	uint32_t switching_delay;
-};
 
 
 int eval_window_adjustment_logic(int self, timestamp_t now) {
@@ -94,10 +80,9 @@ int ap_mac_rx(struct ap_all *ap, SkyRadioFrame_t *frame)
 {
 	SKY_ASSERT(ap && frame);
 
+#if 0
 	ap_mux_rx(ap, &ap->conf->lmux_conf, frame->raw+1, frame->length-1);
 
-#if 0
-	//getTDDHeader();
 
 	struct ap_mac *self = ap->mac;
 	char is_tdd_slave = ap->conf->tdd_slave;
@@ -147,6 +132,7 @@ int ap_mac_tx(struct ap_all *ap, SkyRadioFrame_t *frame, timestamp_t current_tim
 	int retval = -1;
 	timediff_t td;
 
+#if 0
 	td = current_time - self->tdd_cycle_start;
 	if (td >= TDD_PERIOD) {
 		//SKY_PRINTF(SKY_DIAG_DEBUG, "TDD: %10u: Wrapped TDD timer\n", (unsigned)current_time);
@@ -171,6 +157,8 @@ int ap_mac_tx(struct ap_all *ap, SkyRadioFrame_t *frame, timestamp_t current_tim
 		if (td >= TDD_PERIOD - TDD_FRAME - TDD_FRAME_PREPARATION_TIME)
 			transmit_ok = 0;
 	}
+#endif
+
 
 	td = current_time - self->tdd_next_frame;
 	if (transmit_ok && td >= 0) {
@@ -185,7 +173,7 @@ int ap_mac_tx(struct ap_all *ap, SkyRadioFrame_t *frame, timestamp_t current_tim
 			int ret;
 
 			// BLAH ugly call again
-			ret = ap_mux_tx(ap, &ap->conf->lmux_conf, frame->raw+1, frame->length-1);
+			ret = -1;// ap_mux_tx(ap, &ap->conf->lmux_conf, frame->raw+1, frame->length-1);
 			if (ret >= 0) {
 				/* Yes, there is a frame to transmit.
 				 * Add header octet. */

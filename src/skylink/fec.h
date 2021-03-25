@@ -24,6 +24,7 @@
 #define SKY_GOLAY_RS_ENABLED           0x200
 
 
+
 int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics_t *diag);
 
 int sky_fec_encode(SkyRadioFrame_t *frame);
