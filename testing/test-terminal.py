@@ -7,31 +7,36 @@ import sys
 import asyncio
 import argparse
 
-import zmq
-import zmq.asyncio
+from vc_connector import RTTChannel, ZMQChannel
+
 
 parser = argparse.ArgumentParser(description='Skylink test terminal')
+parser.add_argument('--host', '-H', type=str, default="127.0.0.1")
 parser.add_argument('--port', '-p', type=int, default=5200)
 parser.add_argument('--vc', '-V', type=int, default=0)
 parser.add_argument('--binary', '-B', action='store_true')
 parser.add_argument('--pp', action='store_false')
+parser.add_argument('--rtt', action='store_true')
 args = parser.parse_args()
 
 
 
-print(f"Test terminal: RX {args.port+args.vc}, TX {args.port+args.vc+100}")
-ctx = zmq.asyncio.Context()
+if not args.rtt:
+    """
+    Connecting directly to skylink ZMQ sockets
+    """
 
-# Open downlink socket
-dl = ctx.socket(zmq.PULL if args.pp else zmq.SUB)
-dl.connect("tcp://localhost:%d" % (args.port + args.vc))
-if not args.pp:
-    dl.setsockopt(zmq.SUBSCRIBE, b"")
+    connector = ZMQChannel(args.host, args.port, args.vc, pp=args.pp)
 
-# Open uplink socket
-ul = ctx.socket(zmq.PUSH if args.pp else zmq.PUB)
-ul.connect("tcp://localhost:%d" % (args.port + args.vc + 100))
-ul.setsockopt(zmq.SNDHWM, 10) # Set high water mark for outbound messages
+else:
+    """
+    Connect embedded Skylink implementation over Segger RTT
+    """
+
+    if args.port == 5200: # Different default port!
+        args.port = 19201
+
+    connector = RTTChannel(args.host, args.port, args.vc)
 
 
 input_line = ""
@@ -62,7 +67,10 @@ async def dl_loop():
     Coroutine to wait and print incoming frames
     """
     while True:
-        msg = await dl.recv()
+        msg = await connector.receive()
+        if msg is None:
+            return
+
         if args.binary:
             sys.stdout.buffer.write(msg)
             sys.stdout.buffer.flush()
@@ -99,8 +107,8 @@ async def up_loop():
         while True:
 
             if args.binary:
-                msg = await sys.stdin.buffer.read()
-                await ul.send(msg)
+                msg = await loop.run_in_executor(None, sys.stdin.read)
+
             else:
 
                 # Wait for line
@@ -119,15 +127,18 @@ async def up_loop():
                     sys.stdout.write(c)
                     sys.stdout.flush()
 
-            msg, input_line = input_line, ""
+                msg, input_line = input_line, ""
 
             if len(msg) > 0:
                 print(f"TX: {msg}")
-                await ul.send(msg.encode('utf-8', 'ignore'))
+                await connector.transmit(msg)
 
     except KeyboardInterrupt:
         loop.stop()
-    #finally:
+
+    finally:
+        #termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, oldattr)
+        pass
 
 
 if __name__ == "__main__":
