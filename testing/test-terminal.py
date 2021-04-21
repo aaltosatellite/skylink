@@ -32,11 +32,7 @@ else:
     """
     Connect embedded Skylink implementation over Segger RTT
     """
-
-    if args.port == 5200: # Different default port!
-        args.port = 19021
-
-    connector = RTTChannel(args.host, args.port, args.vc)
+    connector = RTTChannel(args.vc)
 
 
 input_line = ""

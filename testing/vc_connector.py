@@ -18,7 +18,7 @@ class RTTChannel:
         Connect to embedded Skylink implementation via RTT and Telnet
     """
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 19021, vc: int = 0):
+    def __init__(self, vc: int = 0):
         """ Initialize J-Link RTT server's Telnet connection. """
         self.vc = vc
         self.frames = asyncio.Queue()
@@ -69,9 +69,9 @@ class RTTChannel:
 
                     cmd, data_len = await self._read_exactly(2)
                     data = await self._read_exactly(data_len)
-                    if cmd == 0x00:
+                    if cmd == 0x01:
                         await self.frames.put(data)
-                    elif cmd == 0x01:
+                    elif cmd == 0x02:
                         await self.statuses.put(data)
                 sync = False
 
@@ -160,7 +160,7 @@ class ZMQChannel:
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
-    rtt = RTTChannel("127.0.0.1", 19021, 0)
+    rtt = RTTChannel(vc=0)
 
     async def hello():
         await rtt.transmit(b"Hello world")
