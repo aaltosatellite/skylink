@@ -34,7 +34,7 @@ else:
     """
 
     if args.port == 5200: # Different default port!
-        args.port = 19201
+        args.port = 19021
 
     connector = RTTChannel(args.host, args.port, args.vc)
 

@@ -11,7 +11,7 @@ from vc_connector import RTTChannel, ZMQChannel
 parser = argparse.ArgumentParser(description='Skylink test terminal')
 parser.add_argument('role', type=str)
 parser.add_argument('--host', '-H', type=str, default="127.0.0.1")
-parser.add_argument('--port', '-p', type=int, default=5200)
+parser.add_argument('--port', '-p', type=int, default=None)
 parser.add_argument('--vc', '-V', type=int, default=0)
 parser.add_argument('--pp', action='store_false')
 parser.add_argument('--rtt', action='store_true')
@@ -22,11 +22,9 @@ args = parser.parse_args()
 # Connect to protocol virtual channel
 #
 if args.rtt:
-    if args.port == 5200:
-        args.port = 19021
-    conn = RTTChannel(args.host, args.port, vc=args.vc)
+    conn = RTTChannel(args.host, args.port or 19021, vc=args.vc)
 else:
-    conn = ZMQChannel(args.host, args.port, vc=args.vc, pp=args.pp)
+    conn = ZMQChannel(args.host, args.port or 5200, vc=args.vc, pp=args.pp)
 
 
 async def pinger():
