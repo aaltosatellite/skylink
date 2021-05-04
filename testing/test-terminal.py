@@ -7,7 +7,7 @@ import sys
 import asyncio
 import argparse
 
-from vc_connector import RTTChannel, ZMQChannel
+from vc_connector import connect_to_vc
 
 
 parser = argparse.ArgumentParser(description='Skylink test terminal')
@@ -19,20 +19,10 @@ parser.add_argument('--pp', action='store_false')
 parser.add_argument('--rtt', action='store_true')
 args = parser.parse_args()
 
-
-
-if not args.rtt:
-    """
-    Connecting directly to skylink ZMQ sockets
-    """
-
-    connector = ZMQChannel(args.host, args.port, args.vc, pp=args.pp)
-
-else:
-    """
-    Connect embedded Skylink implementation over Segger RTT
-    """
-    connector = RTTChannel(args.vc)
+"""
+Connect to Skylink
+"""
+connector = connect_to_vc(**vars(args))
 
 
 input_line = ""
