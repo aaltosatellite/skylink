@@ -14,6 +14,7 @@
 #define SKY_DIAG_BUG        0x0004
 #define SKY_DIAG_LINK_STATE 0x0008
 #define SKY_DIAG_FRAMES     0x0100
+#define SKY_DIAG_BUFFER     0x0200
 
 #ifdef DEBUG
 #define SKY_ASSERT(x)    if (x) while(1);
@@ -33,6 +34,6 @@ extern unsigned int sky_diag_mask;
 #define SKY_PRINTF(...) do { } while(0)
 #endif
 
-
+void sky_diag_dump_hex(uint8_t* data, unsigned int len);
 
 #endif /* __SKYLINK_DIAG_H__ */
