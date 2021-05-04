@@ -8,7 +8,7 @@
 #include <string.h>
 
 
-#if RADIOFRAME_MAXLEN < RS_MSGLEN + RS_PARITYS
+#if SKY_FRAME_MAX_LEN < RS_MSGLEN + RS_PARITYS
 #error "Too small buffer for radio frames"
 #endif
 
@@ -128,7 +128,7 @@ int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics_t *diag)
 
 	if (conf->enable_rs) {
 
-		if (frame->length < RS_PARITYS)
+		if (frame->length < RS_PARITYS || frame->length > (RS_MSGLEN + RS_PARITYS))
 			return SKY_RET_RS_INVALID_LENGTH;
 
 		/*
@@ -137,15 +137,16 @@ int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics_t *diag)
 		 * Simply decode in place in the original buffer
 	 	 * and pass it to the next layer together with
 	 	 * the original metadata. */
-		if ((ret = decode_rs_8(frame->raw, NULL, 0, 255 - frame->length)) < 0) {
+		if ((ret = decode_rs_8(frame->raw, NULL, 0, RS_MSGLEN + RS_PARITYS - frame->length)) < 0) {
 			++diag->rx_fec_fail;
+			SKY_PRINTF(SKY_DIAG_FRAMES, "%10u: FEC uncorrectable\n", get_timestamp());
 			return SKY_RET_RS_FAILED; /* Reed-Solomon decode failed */
 		}
 
 		// Frame is now "shorter"
 		frame->length -= RS_PARITYS;
 
-		//SKY_PRINTF(SKY_DIAG_FRAMES, "FEC: %10u: Frame ready to transmit\n", get_timestamp());
+		SKY_PRINTF(SKY_DIAG_FRAMES, "%10u: FEC corrected %d\n", get_timestamp(), ret);
 
 		// Update FEC Telemetry
 		diag->rx_fec_ok++;
@@ -168,10 +169,12 @@ int sky_fec_encode(SkyRadioFrame_t *frame)
 		/*
 		 * Calculate Reed-Solomon parity bytes
 		 */
-		encode_rs_8(frame->raw, &frame->raw[frame->length], frame->length - RS_MSGLEN);
+		SKY_ASSERT(frame->lenght + RS_PARITYS < SKY_FRAME_MAX_LEN);
+
+		encode_rs_8(frame->raw, &frame->raw[frame->length], RS_MSGLEN - frame->length);
 		frame->length += RS_PARITYS;
 
-		//SKY_PRINTF(SKY_DIAG_FRAMES, "FEC: %10u: Frame ready to transmit\n", get_timestamp());
+		SKY_PRINTF(SKY_DIAG_FRAMES, "FEC: %10u: Frame ready to transmit\n", get_timestamp());
 	}
 
 	if (conf->enable_scrambler) {

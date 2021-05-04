@@ -6,17 +6,17 @@
  */
 
 
-
-#define RS_MSGLEN 223
-#define RS_PARITYS 32
-
-
-#define SKY_HMAC_LENGTH 8
+/*
+ */
+#define RS_MSGLEN       223
+#define RS_PARITYS      32
 
 
 /**
+ * PHY header high bit definitions
  *
- * This follows the Mode-5 definitions.
+ * Remarks:
+ *   These follow the Mode-5 definitions.
  */
 #define SKY_GOLAY_PAYLOAD_LENGTH_MASK  0x0FF
 #define SKY_GOLAY_VITERBI_ENABLED      0x800
