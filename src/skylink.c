@@ -1,17 +1,19 @@
 #include "skylink/skylink.h"
 #include "skylink/diag.h"
 #include "skylink/fec.h"
+#include "skylink/hmac.h"
 
 #include "skylink_platform.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 
 
-unsigned int sky_diag_mask = SKY_DIAG_LINK_STATE | SKY_DIAG_BUG;
+unsigned int sky_diag_mask = SKY_DIAG_LINK_STATE | SKY_DIAG_BUG | SKY_DIAG_FRAMES | SKY_DIAG_DEBUG | SKY_DIAG_INFO;
 
 /** Initialization */
-SkyHandle_t sky_init(SkyHandle_t self, struct ap_conf *conf)
+SkyHandle_t sky_init(SkyHandle_t self, SkyConfig_t *conf)
 {
 	SKY_ASSERT(conf);
 
@@ -21,42 +23,55 @@ SkyHandle_t sky_init(SkyHandle_t self, struct ap_conf *conf)
 	self->conf = conf;
 	self->diag = SKY_CALLOC(1, sizeof(*self->diag));
 
-	self->mac = ap_mac_init(self);
+	//self->mac = sky_mac_init(self);
 
 	// ARQs
 	//self->arqtx[0] = ap_arqtx_init(&conf->arqtx_conf);
 	//self->arqrx[0] = ap_arqrx_init(&conf->arqrx_conf);
 
-
 	return self;
 }
 
 
-int sky_rx(SkyHandle_t ap, struct radioframe *frame)
+int sky_rx(SkyHandle_t self, SkyRadioFrame_t *frame)
 {
 	SKY_ASSERT(ap && frame);
+	int ret;
 
-	int ret = sky_fec_decode(frame, ap->diag);
-	if (ret >= 0)
-		return ap_mac_rx(ap, frame);
-	else
-		return -1;
+	// Decode FEC
+	if ((ret = sky_fec_decode(frame, self->diag)) < 0)
+		return ret;
+
+	// Check authentication code if the frame claims it is authenticated.
+	if (frame->hdr.flags & SKY_FRAME_AUTHENTICATED) {
+		if ((ret = sky_hmac_check_authentication(self, frame)) < 0)
+			return ret;
+	}
+
+	//ap_mac_rx(self, frame);
+	sky_buf_write(self->rxbuf[0], frame->raw, frame->length, BUF_FIRST_SEG | BUF_LAST_SEG);
+
+	return 0;
 }
 
 
-int sky_rx_raw(SkyHandle_t ap, SkyRadioFrame_t *frame)
+int sky_rx_raw(SkyHandle_t self, SkyRadioFrame_t *frame)
 {
-	SKY_ASSERT(ap && frame);
+	SKY_ASSERT(self && frame);
 
-	// Read golay decoded len
-	uint32_t coded_len = (frame->raw[0] << 16) | (frame->raw[1] << 16) | frame->raw[2];
+	// Read Golay decoded len
+	uint32_t coded_len = (frame->raw[0] << 16) | (frame->raw[1] << 8) | frame->raw[2];
 
 	int ret = decode_golay24(&coded_len);
 	if (ret < 0) {
 		// TODO: log the number of corrected bits?
-		ap->diag->rx_fec_fail++;
+		self->diag->rx_fec_fail++;
+		SKY_PRINTF(SKY_DIAG_FRAMES, "%10u: Golay failed %d\n", get_timestamp(), ret);
 		return SKY_RET_GOLAY_FAILED;
 	}
+
+	if ((coded_len & 0xF00) != (SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED))
+		return -1;
 
 	frame->length = coded_len & SKY_GOLAY_PAYLOAD_LENGTH_MASK;
 
@@ -64,25 +79,64 @@ int sky_rx_raw(SkyHandle_t ap, SkyRadioFrame_t *frame)
 	for (unsigned int i = 0; i < frame->length; i++)
 		frame->raw[i] = frame->raw[i + 3];
 
-	return sky_rx(ap, frame);
+	return sky_rx(self, frame);
 }
 
 
 int sky_tx(SkyHandle_t self, SkyRadioFrame_t *frame, timestamp_t current_time)
 {
-	SKY_ASSERT(ap && frame);
+	SKY_ASSERT(self && frame);
 
-	frame->length = 223; // TODO: check if this is used anywhere and place the constant somewhere
-	if (ap_mac_tx(self, frame, current_time) < 0)
+	int loc = 0;
+
+	// Reserve space for the MAC header
+	if (0)
+		loc += 2;
+
+	if (0 && ap_mac_tx(self, frame, current_time) < 0)
 		return -1;
 
-	if (1 /*ap->conf->authenticate_tx*/) {
-		sky_authenticate(self, frame);
-	}
 
+	int flags;
+
+	int ret = sky_buf_read(self->txbuf[0], &frame->payload[loc], 200, &flags);
+	if (ret < 0)
+		return -1;
+
+
+	frame->length = ret;
+
+	frame->hdr.flags = 0;
+	frame->hdr.apid = 0;
+
+	frame->phy.length = 0;
+
+	/*
+	 * Authenticate the frame
+	 */
+	sky_hmac_authenticate(self, frame);
+
+	/*
+	 * Apply Forward Error Correction (FEC) coding
+	 */
+	sky_fec_encode(frame);
 
 	++self->diag->tx_frames;
-	sky_fec_encode(frame);
+
+	return 0;
+}
+
+
+
+int sky_tx_raw(SkyHandle_t ap, SkyRadioFrame_t *frame, timestamp_t current_time) {
+
+	int ret = sky_tx(ap, frame, current_time);
+	if (ret != 0)
+		return ret;
+
+	/* Move the data by 3 bytes to make room for the PHY header */
+	for (unsigned int i = frame->length; i != 0; i--)
+		frame->raw[i + 3] = frame->raw[i];
 
 	/*
 	 * Decode length field.
@@ -91,60 +145,11 @@ int sky_tx(SkyHandle_t self, SkyRadioFrame_t *frame, timestamp_t current_time)
 	uint32_t phy_header = frame->length | SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED;
 	encode_golay24(&phy_header);
 
-	//frame->
+	frame->raw[0] = 0xff & (phy_header >> 16);
+	frame->raw[1] = 0xff & (phy_header >> 8);
+	frame->raw[2] = 0xff & (phy_header >> 0);
 
-	return 0;
-}
-
-
-
-int sky_init_hmac(SkyHandle_t self, const char* key, unsigned int key_len) {
-
-	if (self->hmac_ctx == NULL)
-		self->hmac_ctx = SKY_MALLOC(SKY_HMAC_CTX_SIZE);
-
-	cf_hmac_init(self->hmac_ctx, &cf_sha256, key, key_len);
-}
-
-
-int sky_authenticate(SkyHandle_t self, SkyRadioFrame_t* frame) {
-
-	uint8_t full_hash[32];
-	cf_hmac_update(self->hmac_ctx, frame->raw, frame->length);
-	cf_hmac_finish(self->hmac_ctx, full_hash);
-
-	// Copy truncated hash to the end of the frame
-	memcpy(&frame->raw[frame->length], full_hash, SKY_HMAC_LENGTH);
 	return SKY_RET_OK;
-}
-
-
-
-
-int sky_check_authentication(SkyHandle_t self, SkyRadioFrame_t* frame) {
-
-	if (frame->length < SKY_HMAC_LENGTH)
-		return -1; // SKY_RET_INVALID_FRAME_LENGTH
-
-
-	// Check if the sequence number is something we are expecting
-	if (0) {
-		// TODO:
-	}
-
-	uint8_t calculated_hash[32];
-	cf_hmac_update(self->hmac_ctx, frame->raw, frame->length - SKY_HMAC_LENGTH);
-	cf_hmac_finish(self->hmac_ctx, calculated_hash);
-
-	uint8_t *frame_hash = &frame->raw[frame->length - SKY_HMAC_LENGTH];
-
-	if (memcmp(frame_hash, calculated_hash, SKY_HMAC_LENGTH) != 0) {
-		/*
-
-		 */
-		return -1;
-		// FAIL
-	}
 }
 
 
@@ -152,6 +157,20 @@ int sky_check_authentication(SkyHandle_t self, SkyRadioFrame_t* frame) {
 int sky_vc_write(SkyHandle_t self, SkyVirtualChannel_t vc, const uint8_t *data, unsigned datalen, unsigned flags) {
 	//return sky_buf_write(ap1->txbuf[(cmd - CMD_WRITE_VC0)/2], data+1, len-1, BUF_FIRST_SEG|BUF_LAST_SEG);
 	return 0;
+}
+
+
+int sky_set_config(SkyHandle_t self, int cfg, unsigned int val) {
+	SKY_ASSERT(self);
+	(void)self; (void)cfg; (void)val;
+	return -1;
+}
+
+
+int sky_get_config(SkyHandle_t self, int cfg, unsigned int* val) {
+	SKY_ASSERT(self);
+	(void)self; (void)cfg; (void)val;
+	return -1;
 }
 
 
@@ -169,13 +188,14 @@ int sky_print_diag(SkyHandle_t self)
 		diag->tx_frames);
 
 	SKY_PRINTF(SKY_DIAG_LINK_STATE, "Buffer fullness RX: ");
-	for (i = 0; i < AP_RX_BUFS; i++)
+	for (i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++)
 		SKY_PRINTF(SKY_DIAG_LINK_STATE, "%4u ", ap_buf_fullness(self->rxbuf[i]));
 	SKY_PRINTF(SKY_DIAG_LINK_STATE, "TX: ");
-	for (i = 0; i < AP_TX_BUFS; i++)
+	for (i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++)
 		SKY_PRINTF(SKY_DIAG_LINK_STATE, "%4u ", ap_buf_fullness(self->txbuf[i]));
 	SKY_PRINTF(SKY_DIAG_LINK_STATE, "\n");
-	for (i = 0; i < AP_N_ARQS; i++) {
+
+	/*for (i = 0; i < AP_N_ARQS; i++) {
 		SKY_PRINTF(SKY_DIAG_LINK_STATE, "ARQ %u RX:\n", i);
 		ap_arqrx_print(self->arqrx[i]);
 		SKY_PRINTF(SKY_DIAG_LINK_STATE, "\n");
@@ -184,6 +204,32 @@ int sky_print_diag(SkyHandle_t self)
 		SKY_PRINTF(SKY_DIAG_LINK_STATE, "ARQ %u TX:\n", i);
 		ap_arqtx_print(self->arqtx[i]);
 		SKY_PRINTF(SKY_DIAG_LINK_STATE, "\n");
+	}*/
+
+	return 0;
+}
+
+void sky_diag_dump_hex(uint8_t* data, unsigned int data_len) {
+
+	char str[3];
+	const char hex[17] = "0123456789ABCDEF";
+
+	while (data_len) {
+
+		str[0] = hex[0xF & (*data >> 4)];
+		str[1] = hex[0xF & (*data >> 0)];
+		str[2] = '\0';
+
+		printf("%s ", str);
+
+		data++;
+		data_len--;
 	}
+	printf("\n");
+	return 0;
+}
+
+int sky_clear_stats(SkyHandle_t self) {
+	memset(self->diag, 0, sizeof(struct ap_diag));
 	return 0;
 }

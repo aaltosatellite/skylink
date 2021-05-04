@@ -6,13 +6,13 @@
 #include "skylink/arq.h"
 #include "platform/timestamp.h"
 
-/* --------------------------
- * Compile-time configuration
- * -------------------------- */
+#include "skylink/platform.h"
 
-#define SKY_NUM_VIRTUAL_CHANNELS  4
 
-/**/
+
+/*
+ * Virtual channel type define..
+ */
 typedef enum {
 	VC0 = 0,
 	VC1,
@@ -20,11 +20,10 @@ typedef enum {
 	VC3
 } SkyVirtualChannel_t;
 
+#define SKY_NUM_VIRTUAL_CHANNELS  4
 
-// Number of receive packet buffers
-#define AP_RX_BUFS 4
-// Number of transmit packet buffers
-#define AP_TX_BUFS 4
+
+
 // Number of ARQ processes
 #define AP_N_ARQS 1
 
@@ -45,31 +44,45 @@ struct link_message {
  * Return codes
  */
 #define SKY_RET_OK                  0
+#define SKY_RET_INVALID_LENGTH     -1
+#define SKY_RET_MALLOC_FAILED      -2
+
 // FEC
-#define SKY_RET_GOLAY_FAILED       -1
-#define SKY_RET_RS_FAILED          -2
-#define SKY_RET_RS_INVALID_LENGTH  -3
+#define SKY_RET_GOLAY_FAILED       -10
+#define SKY_RET_RS_FAILED          -11
+#define SKY_RET_RS_INVALID_LENGTH  -12
+
+// MAC
+#define SKY_RET_MAC                -20
+
+// AUTH
+#define SKY_RET_AUTH_UNINITIALIZED -30
+#define SKY_RET_AUTH_FAILED        -31
+//
 
 
 
 /*
  * Physical layer radio frame structure.
  */
-#define RADIOFRAME_MAXLEN 0x100
+//#define RADIOFRAME_MAXLEN 0x100
 #define RADIOFRAME_RX 0
 #define RADIOFRAME_TX 1
 
+#define SKY_FRAME_MAX_LEN       0x100
 
 typedef struct {
 
 	/* Frame metadata */
 	int16_t rssi;            //
-	int32_t freq;            // Frequency estimate (applicable only for the received frames)
+	int16_t freq;            // Frequency estimate (applicable only for the received frames)
 
 } SkyRadioFrameMetadata_t;
 
 
+
 #define SKY_FRAME_AUTHENTICATED 0x0001
+
 
 /*
  * Struct to store raw radio frame to be transmitted over the radio or frame which was received
@@ -80,28 +93,52 @@ typedef struct radioframe {
 	timestamp_t timestamp;   //
 	SkyRadioFrameMetadata_t meta;
 
-	/* Data */
-	uint16_t length;  // Decoded length
-	uint16_t flags;
+	uint16_t length;
+	uint16_t raw_length;
 
 	union {
-		struct {
-			uint8_t phy_header[3];
-			uint8_t phy_flags[3];
+	struct {
 
-		};
+	/**
+	 * PHY header  (3 bytes)
+	 *
+	 * Remarks: For alignment reason there's a single reserved by in the
+	 */
+	struct __attribute__((packed)) {
+		uint8_t _res;
+		uint8_t flags;
+		uint16_t length;
+	} phy;
 
-		uint8_t raw[RADIOFRAME_MAXLEN];
+	//uint32_t phy_header;
+
+	/**
+	 *  Data link layer header
+	 */
+	struct __attribute__((packed)) {
+		uint8_t version;
+		uint8_t flags;
+		uint32_t apid;
+	} hdr;
+
+	uint8_t payload[0];
+
+	};
+	uint8_t raw[SKY_FRAME_MAX_LEN];
 	};
 
 } SkyRadioFrame_t;
 
 
-// MUX stores no state, so TODO remove this?
-struct ap_mux;
+
+
+
+
 // State of the MAC/TDD sublayer (forward declaration)
 struct ap_mac;
+struct sky_hmac;
 
+typedef struct sky_hmac SkyHMAC_t;
 
 #include "skylink/conf.h"
 
@@ -113,23 +150,14 @@ struct ap_mac;
  * Where feasible, sublayer implementations should read their parameters
  * directly from here, allowing configuration changes.
  */
-struct ap_conf {
+typedef struct sky_conf {
 
 	SkyMACConfig_t mac;
 	SkyPHYConfig_t phy;
+	SkyVCConfig_t vc[SKY_NUM_VIRTUAL_CHANNELS];
+	SkyARQConfig_t arq;
 
-	char tdd_slave; // 1 if operating as a TDD slave, 0 if master
-	timestamp_t initial_time; // TODO: move to init function parameter or something
-
-/*
-	struct ap_mux_conf lmux_conf;
-	struct ap_mux_conf umux_conf[AP_N_ARQS];
-	struct ap_arqtx_conf arqtx_conf;
-	struct ap_arqrx_conf arqrx_conf;
-*/
-};
-
-typedef struct ap_conf SkyConfig_t;
+} SkyConfig_t;
 
 
 /* Protocol diagnostic information.
@@ -147,6 +175,7 @@ typedef struct ap_diag {
 } SkyDiagnostics_t;
 
 
+
 /*
  * Struct to store pointers to all the data structures related to a
  * protocol instance.
@@ -155,42 +184,17 @@ typedef struct ap_diag {
  * different places, which is particularly useful for MUX,
  * since it ties several different blocks togehter.
  */
-struct ap_all {
-	SkyConfig_t    *conf;                 // Configuration
+struct sky_all {
+	SkyConfig_t      *conf;                 // Configuration
 	SkyDiagnostics_t *diag;                 // Diagnostics
-	struct ap_buf *rxbuf[SKY_NUM_VIRTUAL_CHANNELS]; // Receive buffers
-	struct ap_buf *txbuf[SKY_NUM_VIRTUAL_CHANNELS]; // Transmit buffers
-	struct ap_mac *mac;                   // MAC state
-	//struct ap_mux *lmux;                  // Lower MUX state
-	//struct ap_mux *umux[AP_N_ARQS];       // Upper MUX state for each ARQ process
-	//struct ap_arqrx *arqrx[AP_N_ARQS];    // Receiving ARQ process states
-	//struct ap_arqtx *arqtx[AP_N_ARQS];    // Sending ARQ process states
+	SkyBuffer_t *rxbuf[SKY_NUM_VIRTUAL_CHANNELS]; // Receive buffers
+	SkyBuffer_t *txbuf[SKY_NUM_VIRTUAL_CHANNELS]; // Transmit buffers
+	struct ap_mac *mac;                    // MAC state
 
-	void* hmac_ctx;
+	SkyHMAC_t* hmac;
 };
 
-typedef struct ap_all* SkyHandle_t;
-
-
-/* -------------------------------------
- * Interfaces between protocol sublayers
- * ------------------------------------- */
-
-//int ap_mux_rx(struct ap_all *ap, const struct ap_mux_conf *conf, const uint8_t *data, int datalen);
-//int ap_mux_tx(struct ap_all *ap, const struct ap_mux_conf *conf, uint8_t *data, int maxlen);
-
-struct ap_arq *ap_arq_init(const struct ap_conf *conf);
-int ap_arq_rx(struct ap_arq *self, const uint8_t *data, int length, const ap_arq_sdu_rx_cb cb, void *const cb_arg);
-int ap_arq_tx(struct ap_arq *self, uint8_t *data, int maxlength, const ap_arq_sdu_tx_cb cb, void *const cb_arg);
-int ap_arq_reset(struct ap_arq *self);
-
-struct ap_mac *ap_mac_init(struct ap_all *ap/*, const struct ap_conf *conf*/);
-int ap_mac_rx(struct ap_all *ap, SkyRadioFrame_t *frame);
-int ap_mac_tx(struct ap_all *ap, SkyRadioFrame_t *frame, timestamp_t current_time);
-
-int ap_fec_encode(SkyRadioFrame_t *frame);
-int ap_fec_decode(SkyRadioFrame_t *frame, struct ap_diag *diag);
-
+typedef struct sky_all* SkyHandle_t;
 
 
 /* -------------------------
@@ -200,23 +204,24 @@ int ap_fec_decode(SkyRadioFrame_t *frame, struct ap_diag *diag);
 /*
  * Allocate and initialize data structures to store protocol state
  */
-SkyHandle_t sky_init(struct ap_all *ap, struct ap_conf *conf);
+SkyHandle_t sky_init(SkyHandle_t self, SkyConfig_t *conf);
 
 /*
  * Process a received frame
  */
-int sky_rx(struct ap_all *ap,  SkyRadioFrame_t *frame);
-int sky_rx_raw(struct ap_all *ap, struct radioframe *frame);
+int sky_rx(SkyHandle_t self,  SkyRadioFrame_t *frame);
+int sky_rx_raw(SkyHandle_t self, SkyRadioFrame_t *frame);
 
 /*
  * Request a frame to be transmitted
  */
-int sky_tx(struct ap_all *ap, SkyRadioFrame_t *frame, timestamp_t current_time);
+int sky_tx(SkyHandle_t self, SkyRadioFrame_t *frame, timestamp_t current_time);
+int sky_tx_raw(SkyHandle_t self, SkyRadioFrame_t *frame, timestamp_t current_time);
 
 /*
  * Write to Virtual Channel transmit buffer.
  */
-int sky_vc_write(struct ap_all *ap, SkyVirtualChannel_t vc, const uint8_t *data, unsigned datalen, unsigned flags);
+int sky_vc_write(SkyHandle_t self, SkyVirtualChannel_t vc, const uint8_t *data, unsigned datalen, unsigned flags);
 
 /*
  * Indicate the protocol logic that a carrier has been sensed.
@@ -226,15 +231,16 @@ int sky_mac_carrier_sensed(timestamp_t t);
 /*
  * Print diagnostics of the protocol
  */
-int sky_print_diag(struct ap_all *ap);
+int sky_print_diag(SkyHandle_t self);
+int sky_clear_stats(SkyHandle_t self);
+
 
 // TODO: Return some kind of a status for housekeeping and OBC interfacing
 //int sky_status(struct ap_all *ap, struct ap_status *s);
 
 
-int sky_init_hmac(SkyHandle_t self, const char* key, unsigned int key_len);
-int sky_authenticate(SkyHandle_t self, SkyRadioFrame_t* frame);
-int sky_check_authentication(SkyHandle_t self, SkyRadioFrame_t* frame);
 
+int sky_set_config(SkyHandle_t self, int cfg, unsigned int val);
+int sky_get_config(SkyHandle_t self, int cfg, unsigned int* val);
 
 #endif /* __SKYLINK_H__ */
