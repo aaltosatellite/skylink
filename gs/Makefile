@@ -7,13 +7,17 @@ LIBS = -lzmq
 
 CFLAGS =  -Wall -Wextra -g $(INCS)
 
+#	../src/arq.c
+#	../src/mac.c
+#	../src/mux.c
+#       control.c \
 SRCS= \
-	fs_ll.c \
-	../src/arq.c \
+	main.c \
+	vc_interface.c \
+	modem_suo.c \
 	../src/buf.c \
 	../src/fec.c \
-	../src/mac.c \
-	../src/mux.c \
+	../src/hmac.c \
 	../src/skylink.c \
 	../ext/cifra/blockwise.c \
 	../ext/cifra/hmac.c \
