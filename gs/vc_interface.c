@@ -7,6 +7,30 @@
 
 #include "skylink/skylink.h"
 
+
+/*
+ * List of control message command/response types
+ */
+#define VC_CTRL_PUSH                0
+#define VC_CTRL_PULL                1
+
+#define VC_CTRL_GET_BUFFER          5
+#define VC_CTRL_BUFFER_RSP          6
+#define VC_CTRL_FLUSH_BUFFERS       7
+
+#define VC_CTRL_GET_STATS           10
+#define VC_CTRL_STATS_RSP           11
+#define VC_CTRL_CLEAR_STATS         12
+
+#define VC_CTRL_SET_CONFIG          13
+#define VC_CTRL_GET_CONFIG          14
+#define VC_CTRL_CONFIG_RSP          15
+
+#define VC_CTRL_ARQ_CONNECT         20
+#define VC_CTRL_ARQ_RESET           21
+
+
+
 const int PP = 1; // use push/pull instead of pub/sub for VC interfaces?
 
 
@@ -33,7 +57,7 @@ int vc_init(int vc_base) {
 
 	int vc;
 
-#define ZMQ_URI_LEN 64
+	#define ZMQ_URI_LEN 64
 	char uri[ZMQ_URI_LEN];
 
 	/*
@@ -57,6 +81,7 @@ int vc_init(int vc_base) {
 		z_ps_tx[vc] = sock;
 	}
 
+	return 0;
 }
 
 int vc_tx(void *arg, uint8_t *data, int maxlen)
@@ -88,8 +113,6 @@ int vc_rx(void *arg, const uint8_t *data, int len)
 
 
 
-
-
 void vc_check() {
 
 	int vc;
@@ -97,16 +120,25 @@ void vc_check() {
 
 	/* If packets appeared to some RX buffer, send them to ZMQ */
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
+
 		uint8_t data[PACKET_RX_MAXLEN];
 		unsigned flags = 0;
 		ret = sky_buf_read(sky->rxbuf[vc], data, PACKET_RX_MAXLEN, &flags);
 		if (ret >= 0) {
-			zmq_send(z_ps_rx[vc], data, ret, ZMQ_DONTWAIT);
+			fprintf(stderr, " %d bytes to  VC%d", ret, vc);
+			int rettt = zmq_send(z_ps_rx[vc], data, ret, 0);
+			fprintf(stderr, "   ret %d\n", rettt);
+
+			if (rettt < 0)
+				fprintf(stderr, "zmq_send() ret %d\n", rettt);
+
 			if ((flags & (BUF_FIRST_SEG|BUF_LAST_SEG)) != (BUF_FIRST_SEG|BUF_LAST_SEG)) {
 				SKY_PRINTF(SKY_DIAG_DEBUG, "RX %d len %5d flags %u: Buffer read fragmented a packet. This shouldn't really happen here.\n",
 					vc, ret, flags);
 			}
 		}
+
+
 	}
 
 	/* If some TX packets were received from ZMQ,
@@ -118,6 +150,16 @@ void vc_check() {
 		uint8_t data[PACKET_TX_MAXLEN];
 		ret = zmq_recv(z_ps_tx[vc], data, PACKET_TX_MAXLEN, ZMQ_DONTWAIT);
 		if (ret >= 0) {
+
+
+			/* Handle control messages */
+			int ret = handle_control_message(vc, data[0], data[1]);
+
+			// Send response
+			if (ret > 0)
+				ret = zmq_send(z_ps_tx[vc], data, ret, 0);
+
+#if 0
 			int ret2;
 			ret2 = sky_buf_write(sky->txbuf[vc], data, ret, BUF_FIRST_SEG|BUF_LAST_SEG);
 			if (ret2 < 0) {
@@ -125,6 +167,107 @@ void vc_check() {
 				SKY_PRINTF(SKY_DIAG_DEBUG, "TX %d len %5d: error %5d\n",
 					vc, ret, ret2);
 			}
+#endif
 		}
+
 	}
 }
+
+
+
+int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) {
+
+	int rsp_len = 0;
+	int rsp_code = 0;
+	uint8_t* rsp = msg;
+
+	SKY_PRINTF(SKY_DIAG_DEBUG, "CTRL MSG vc: %d  cmd: %d len: msg_len %d\n", vc, cmd, msg_len);
+
+	switch (cmd) {
+	case VC_CTRL_PUSH: {
+		/*
+		 * Write data to buffer
+		 */
+		sky_buf_write(sky->txbuf[vc], msg, msg_len, BUF_FIRST_SEG | BUF_LAST_SEG);
+		break; // No response
+	}
+	case VC_CTRL_GET_BUFFER: {
+		/*
+		 * Get virtual channel buffer status
+		 */
+		sky_get_buffer_status(sky, (SkyBufferState_t*)rsp);
+ 		rsp_len = sizeof(SkyBufferState_t);
+		rsp_code = VC_CTRL_BUFFER_RSP;
+		break;
+	}
+ 	case VC_CTRL_FLUSH_BUFFERS: {
+		/*
+		 * Flush virtual channel buffers
+		 */
+ 		sky_flush_buffers(sky);
+		break; // No response
+	}
+	case VC_CTRL_GET_STATS: {
+		/*
+		 * Get statistics
+		 */
+		memcpy(rsp, sky->diag, sizeof(SkyDiagnostics_t));
+		rsp_len = sizeof(SkyDiagnostics_t);
+		rsp_code = VC_CTRL_STATS_RSP;
+		break;
+	}
+	case VC_CTRL_CLEAR_STATS: {
+		/*
+		 * Reset statistics
+		 */
+		sky_clear_stats(sky);
+		break; // No response
+	}
+	case VC_CTRL_SET_CONFIG: {
+		/*
+		 * Set Skylink Configuration
+		 */
+		unsigned int cfg = msg[0]; // TODO: Correct byte-lengths
+		unsigned int val = msg[1];
+		sky_set_config(sky, cfg, val);
+		break; // No response
+	}
+	case VC_CTRL_GET_CONFIG: {
+		/*
+		 * Get Skylink Configuration
+		 */
+		unsigned int cfg = msg[0]; // TODO: Correct byte-lengths
+		unsigned int val;
+
+		if (sky_get_config(sky, cfg, &val) < 0) {
+			break; // TODO
+		}
+
+		rsp[0] = val;
+		rsp_len = 1;
+		rsp_code = VC_CTRL_CONFIG_RSP;
+		break;
+	}
+	case VC_CTRL_ARQ_CONNECT: {
+		/*
+		 * ARQ
+		 */
+		//sky_arq_connect(sky, vc);
+		break; // No response
+	}
+	case VC_CTRL_ARQ_RESET: {
+		/*
+		 * ARQ
+		 */
+		//sky_arq_reset(sky, vc);
+		break; // No response
+	}
+	default:
+		return -1;
+	}
+
+	cmd = rsp_code;
+
+	return rsp_len;
+}
+

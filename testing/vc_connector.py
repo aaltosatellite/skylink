@@ -16,7 +16,76 @@ except:
     pass
 
 
-class RTTChannel:
+__all__ = [
+    "RTTChannel",
+    "ZMQChannel",
+    "connect_to_vc"
+]
+
+
+#
+# Virtual Channel Control message codes
+#
+VC_CTRL_PUSH              =  0
+VC_CTRL_PULL              =  1
+
+VC_CTRL_GET_BUFFER        =  5
+VC_CTRL_BUFFER_RSP        =  6
+VC_CTRL_FLUSH_BUFFERS     =  7
+
+VC_CTRL_GET_STATS         =  10
+VC_CTRL_STATS_RSP         =  11
+VC_CTRL_CLEAR_STATS       =  12
+
+VC_CTRL_SET_CONFIG        =  13
+VC_CTRL_GET_CONFIG        =  14
+VC_CTRL_CONFIG_RSP        =  15
+
+VC_CTRL_ARQ_CONNECT       =  20
+VC_CTRL_ARQ_RESET         =  21
+
+
+
+class VCCommands:
+
+    # def __init__(self)
+
+    async def get_status(self) -> SkyStatus:
+        """
+        Request virtual buffer status.
+        Returns:
+            SkyStatus object containting the buffer statuses
+        """
+        if self.control_queue is None:
+            raise RuntimeError("Channel closed")
+
+        await self._send_command(VC_CTRL_GET_BUFFER)
+        return parse_status(await self._wait_control_response(VC_CTRL_BUFFER_RSP))
+
+
+    async def get_free(self) -> int:
+        """
+        Get number of free bytes in the virtual channel buffer.
+        """
+        status = self.get_status()
+        return status.vc[self.vc] # TODO: real definition
+
+
+    async def get_stats(self) -> SkyStatistics:
+        """
+        Request protocol statistics.
+
+        Returns:
+            SkyStatistics object containing the statistics.
+        """
+        if self.control_queue is None:
+            raise RuntimeError("Channel closed")
+
+        await self._send_command(VC_CTRL_GET_STATS)
+        return parse_stats(await self._wait_control_response(VC_CTRL_STATS_RSP))
+
+
+class RTTChannel(VCCommands):
     """
     Connect to embedded Skylink implementation via Segger RTT.
     """
@@ -82,14 +151,15 @@ class RTTChannel:
             if not sync:
                 if b == b"\xAB":
                     sync = True
+
             else:
                 if b == b"\xBA":
 
                     # Sync received, receive rest of the frame
-                    cmd, data_len = await self._read_exactly(2)
+                    data_len, cmd = await self._read_exactly(2)
                     data = await self._read_exactly(data_len)
 
-                    if cmd == 0x01:
+                    if cmd == VC_CTRL_PULL:
                         await self.frame_queue.put(data)
                     else:
                         await self.control_queue.put((cmd, data))
@@ -112,14 +182,20 @@ class RTTChannel:
             cmd: Command code
             data:
         """
+        if self.control_queue is None or not self.jlink.connected():
+            raise RuntimeError("Channel closed")
+
         hdr = struct.pack("BBBB", 0xAB, 0xBA, len(data), cmd)
         self.jlink.rtt_write(self.vc + 1, hdr + data)
         await asyncio.sleep(0) # For the function to behave as a couroutine
+
 
     async def _wait_control_response(self, cmd: int) -> bytes:
         """
         Wait for specific control message.
         """
+        if self.control_queue is None or not self.jlink.connected():
+            raise RuntimeError("Channel closed")
         while True:
             ctrl = await asyncio.wait_for(self.control_queue.get(), timeout=0.5)
             if ctrl[0] == cmd:
@@ -127,12 +203,17 @@ class RTTChannel:
 
 
     async def transmit(self, frame: Union[SkyFrame, bytes, str]) -> None:
-        """ Send a frame to Virtual Channel buffer. """
+        """
+        Send a frame to Virtual Channel buffer.
+
+        Args:
+            frame: Frame to be send. `str`, `bytes` or `SkyFrame`
+        """
         if isinstance(frame, SkyFrame):
             frame = frame.data
         if isinstance(frame, str):
             frame = frame.encode('utf-8', 'ignore')
-        await self._send_command(0x02, frame)
+        await self._send_command(VC_CTRL_PUSH, frame)
 
 
     async def receive(self, timeout: Optional[float]=None) -> SkyFrame:
@@ -143,7 +224,7 @@ class RTTChannel:
             timeout: Optional timeout time in seconds.
                 If None, receive will block.
 
-        raises:
+        Raises:
             asyncio.TimeoutError in case of timeout.
         """
         if self.frame_queue is None:
@@ -152,43 +233,8 @@ class RTTChannel:
         return await asyncio.wait_for(self.frame_queue.get(), timeout)
 
 
-    async def get_status(self) -> SkyStatus:
-        """
-        Request virtual buffer status.
-        Returns:
-            SkyStatus object containting the buffer statuses
-        """
-        if self.control_queue is None:
-            raise RuntimeError("Channel closed")
 
-        await self._send_command(0x00)
-        return parse_status(await self._wait_control_response(0x00))
-
-
-    async def get_free(self) -> int:
-        """
-        Get number of free bytes in the virtual channel buffer.
-        """
-        status = self.get_status()
-        return status.vc[self.vc] # TODO: real definition
-
-
-    async def get_stats(self) -> SkyStatistics:
-        """
-        Request protocol statistics.
-
-        Returns:
-            SkyStatistics object containing the statistics.
-        """
-        if self.control_queue is None:
-            raise RuntimeError("Channel closed")
-
-        await self._send_command(0x00)
-        return parse_stats(await self._wait_control_response(0x00))
-
-
-
-class ZMQChannel:
+class ZMQChannel(VCCommands):
     """
     Connect to Skylink implementation over ZeroMQ
     """
@@ -211,7 +257,35 @@ class ZMQChannel:
         self.ul.connect("tcp://%s:%d" % (host, port + vc + 100))
         self.ul.setsockopt(zmq.SNDHWM, 10) # Set high water mark for outbound messages
 
-        print(f"Connected to VC {vc} via ZMQ {host}:{port}")
+        print(f"Connected to VC {vc} via ZMQ {host}:{port+vc}")
+
+
+    async def _send_command(self, cmd: int, data: bytes = b""):
+        """
+        Send general command to RTT VC buffer.
+
+        Args:
+            cmd: Command code
+            data:
+        """
+        if self.control_queue is None:
+            raise RuntimeError("Channel closed")
+
+        hdr = struct.pack("BBBB", 0xAB, 0xBA, len(data), cmd)
+        self.ul.send(hdr + data)
+        await asyncio.sleep(0) # For the function to behave as a couroutine
+
+
+    async def _wait_control_response(self, cmd: int) -> bytes:
+        """
+        Wait for specific control message.
+        """
+        if self.control_queue is None:
+            raise RuntimeError("Channel closed")
+        while True:
+            ctrl = await asyncio.wait_for(self.control_queue.get(), timeout=0.5)
+            if ctrl[0] == cmd:
+                return ctrl[1]
 
 
     async def transmit(self, frame: Union[SkyFrame, bytes, str]) -> None:
@@ -228,18 +302,8 @@ class ZMQChannel:
         return await self.dl.recv()
 
 
-    async def get_status(self) -> SkyStatus:
-        """ Request virtual buffer status. """
-        self.ul.send
-        pass # TODO
-        return (0, 0, 0, 0)
 
-    async def get_stats(self) -> SkyStatistics:
-        """ Request statistics """
-        return # parse_stats()
-
-
-def connect_to_vc(host: str = "127.0.0.1", port: int = 5200, rtt: bool=False, vc: int = 0, **kwargs):
+def connect_to_vc(host: str = "127.0.0.1", port: int = 52000, rtt: bool=False, vc: int = 0, **kwargs):
     """
     Connect to Skylink implementation over ZMQ or RTT
     """
@@ -256,7 +320,7 @@ if __name__ == "__main__":
     #vc = ZMQChannel(vc=0)
 
     async def testing():
-        await vc.transmit(b"Hello world")
+        #await vc.transmit(b"Hello world")
         print(await vc.get_status())
         print(await vc.get_stats())
         await asyncio.sleep(0.1)

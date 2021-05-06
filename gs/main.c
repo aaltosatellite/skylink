@@ -15,8 +15,8 @@
 
 void *zmq = NULL;
 
-struct ap_all ap_;
-SkyHandle_t sky = &ap_;
+struct sky_all sky_;
+SkyHandle_t sky = &sky_;
 SkyConfig_t sky_config;
 
 
@@ -96,12 +96,6 @@ int main(int argc, char *argv[])
 		 */
 		if (modem_rx(&fr, 0) > 0) {
 
-			// Copy data from Suo frame to Skylink frame
-			frame.length = fr.len;
-			frame.timestamp = fr.time / 1000;
-			//frame.meta.rssi = fr.metadata[0];
-			memcpy(frame.raw, fr.data, frame.length);
-
 			//sky_mac_carrier_sensed(frame.timestamp);
 			sky_rx_raw(sky, &frame);
 
@@ -119,7 +113,10 @@ int main(int argc, char *argv[])
 
 			uint64_t t = get_timestamp() + tx_ahead_time;
 			if (sky_tx(sky, &frame, t) >= 0) {
-				modem_tx(frame, t);
+				modem_tx(&frame, t);
+
+				// Clear the frame and re-use the memory
+				memset(&frame, 0, sizeof(frame));
 			}
 
 			//sky_print_diag(sky);

@@ -71,7 +71,7 @@ timestamp_t get_timestamp() {
 
 
 int modem_tx(SkyRadioFrame_t* frame, timestamp_t t) {
-	//assert();
+	//assert(frame);
 
 	struct suoframe fr;
 	memset(&fr, 0, sizeof(struct suoframe));
@@ -92,28 +92,34 @@ int modem_tx(SkyRadioFrame_t* frame, timestamp_t t) {
 }
 
 
-int modem_rx(struct suoframe* fr, int flags) {
+int modem_rx(SkyRadioFrame_t* frame, int flags) {
 
-
-	int ret = zmq_recv(suo_rx, fr, 64+RADIOFRAME_MAXLEN, 0);
+	struct suoframe suo_frame;
+	int ret = zmq_recv(suo_rx, &suo_frame, 64+RADIOFRAME_MAXLEN, 0);
 
 	if (ret < 0)
 		printf("zmq_recv() error %d\n", ret);
 
 
-	if (fr->id == SUO_FRAME_TIMING && ret == sizeof(struct suotiming)) {
+	if (suo_frame.id == SUO_FRAME_TIMING && ret == sizeof(struct suotiming)) {
 
-		last_received_time = fr->time;
+		last_received_time = suo_frame.time;
 		tick_received = 1;
 
 		return 0;
 	}
-	else if (fr->id == SUO_FRAME_RECEIVE && ret >= 64 /* sizeof(suoframe)*/) {
+	else if (suo_frame.id == SUO_FRAME_RECEIVE && ret >= 64 /* sizeof(suoframe)*/) {
 
 		/* RX frame */
-		SKY_PRINTF(SKY_DIAG_FRAMES, "%20lu: Suo receive %d bytes\n", fr->time, fr->len);
+		SKY_PRINTF(SKY_DIAG_FRAMES, "%20lu: Suo receive %d bytes\n", suo_frame.time, suo_frame.len);
 
-		return ret;
+		// Copy data from Suo frame to Skylink frame
+		frame->length = suo_frame.len;
+		frame->timestamp = suo_frame.time / 1000;
+		//frame->meta.rssi = fr.metadata[0];
+		memcpy(frame->raw, suo_frame.data, suo_frame.len);
+
+		return 1;
 	}
 
 	return 0;
