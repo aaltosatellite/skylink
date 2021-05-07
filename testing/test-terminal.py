@@ -69,12 +69,18 @@ async def execute_command(cmd: str):
     Execute control command from the command line.
     All the commands must start with `!`.
     """
-    if cmd == "!B":
-        print(await connector.get_status())
-    elif cmd == "!S":
-        print(await connector.get_stats())
-    else:
-        print("Unknown command")
+    try:
+        if cmd == "!B":
+            print(await connector.get_status())
+        elif cmd == "!f":
+            print("Free in TX buffer:", await connector.get_free())
+        elif cmd == "!S":
+            print(await connector.get_stats())
+        else:
+            print("Unknown command")
+
+    except asyncio.exceptions.TimeoutError:
+        print("! Timeout")
 
 
 async def up_loop():
@@ -126,7 +132,7 @@ async def up_loop():
                     sys.stdout.write(c)
                     sys.stdout.flush()
 
-                msg, input_line = input_line, ""
+                msg, input_line = input_line.strip(), ""
 
             if len(msg) > 0:
                 if msg.startswith("!"):
@@ -147,5 +153,4 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.create_task(dl_loop())
     #loop.create_task(test_counter())
-    loop.create_task(up_loop())
-    loop.run_forever()
+    loop.run_until_complete(up_loop())
