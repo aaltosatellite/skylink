@@ -46,7 +46,7 @@ static inline unsigned next_wrap(unsigned p, unsigned size)
 }
 
 
-int ap_buf_write(struct ap_buf *self, const uint8_t *data, unsigned datalen, unsigned flags)
+int sky_buf_write(struct ap_buf *self, const uint8_t *data, unsigned datalen, unsigned flags)
 {
 	SKY_ASSERT(self);
 	/* TODO: check if there is space in buffer.
@@ -101,7 +101,7 @@ int ap_buf_write(struct ap_buf *self, const uint8_t *data, unsigned datalen, uns
 }
 
 
-int ap_buf_read(struct ap_buf *self, uint8_t *data, unsigned maxlen, unsigned *flags)
+int sky_buf_read(struct ap_buf *self, uint8_t *data, unsigned maxlen, unsigned *flags)
 {
 	SKY_ASSERT(self && data && flags);
 
@@ -141,8 +141,11 @@ int ap_buf_read(struct ap_buf *self, uint8_t *data, unsigned maxlen, unsigned *f
 	return i;
 }
 
+int sky_buf_peek(struct ap_buf *self) {
+	return 0;
+}
 
-unsigned ap_buf_space(struct ap_buf *self)
+unsigned sky_buf_space(struct ap_buf *self)
 {
 	SKY_ASSERT(self);
 	unsigned size = self->size;
@@ -151,7 +154,7 @@ unsigned ap_buf_space(struct ap_buf *self)
 }
 
 
-unsigned ap_buf_fullness(struct ap_buf *self)
+unsigned sky_buf_fullness(struct ap_buf *self)
 {
 	SKY_ASSERT(self);
 	unsigned size = self->size;
@@ -159,9 +162,12 @@ unsigned ap_buf_fullness(struct ap_buf *self)
 	return (size + p_write2 - p_read) % size;
 }
 
-int sky_buf_flush(SkyBuffer_t *self);
+int sky_buf_flush(SkyBuffer_t *self) {
+	// TODO
+	return 0;
+}
 
-struct ap_buf *ap_buf_init(unsigned size)
+struct ap_buf *sky_buf_init(unsigned size)
 {
 	struct ap_buf *self;
 	self = malloc(sizeof(struct ap_buf) + size);
