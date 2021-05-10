@@ -160,14 +160,14 @@ int sky_vc_write(SkyHandle_t self, SkyVirtualChannel_t vc, const uint8_t *data, 
 }
 
 
-int sky_set_config(SkyHandle_t self, int cfg, unsigned int val) {
+int sky_set_config(SkyHandle_t self, unsigned int cfg, unsigned int val) {
 	SKY_ASSERT(self);
 	(void)self; (void)cfg; (void)val;
 	return -1;
 }
 
 
-int sky_get_config(SkyHandle_t self, int cfg, unsigned int* val) {
+int sky_get_config(SkyHandle_t self, unsigned int cfg, unsigned int* val) {
 	SKY_ASSERT(self);
 	(void)self; (void)cfg; (void)val;
 	return -1;
@@ -180,7 +180,7 @@ int sky_print_diag(SkyHandle_t self)
 	SKY_ASSERT(self);
 
 	unsigned i;
-	const struct ap_diag *diag = self->diag;
+	const SkyDiagnostics_t *diag = self->diag;
 	SKY_PRINTF(SKY_DIAG_LINK_STATE, "\033[H\033[2J");
 	SKY_PRINTF(SKY_DIAG_LINK_STATE, "Received frames: %5u total, %5u OK, %5u failed. FEC corrected octets %5u/%u\n",
 		diag->rx_frames, diag->rx_fec_ok, diag->rx_fec_fail, diag->rx_fec_errs, diag->rx_fec_octs);
@@ -226,10 +226,32 @@ void sky_diag_dump_hex(uint8_t* data, unsigned int data_len) {
 		data_len--;
 	}
 	printf("\n");
+}
+
+
+int sky_clear_stats(SkyHandle_t self) {
+	memset(self->diag, 0, sizeof(SkyDiagnostics_t));
 	return 0;
 }
 
-int sky_clear_stats(SkyHandle_t self) {
-	memset(self->diag, 0, sizeof(struct ap_diag));
+
+int sky_get_buffer_status(SkyHandle_t self, SkyBufferState_t* state) {
+	SKY_ASSERT(self && state);
+
+	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
+		state->state[vc] = 0;
+		state->rx_free[vc] = sky_buf_fullness(self->rxbuf[vc]);
+		state->tx_avail[vc] = sky_buf_space(self->rxbuf[vc]);
+	}
+
 	return 0;
+}
+
+
+int sky_flush_buffers(SkyHandle_t self) {
+	SKY_ASSERT(self);
+	for (int vc = 0; vc < 4; vc++) {
+		sky_buf_flush(self->rxbuf[vc]);
+		sky_buf_flush(self->txbuf[vc]);
+	}
 }

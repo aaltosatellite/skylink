@@ -10,7 +10,7 @@ CFLAGS =  -Wall -Wextra -g $(INCS)
 #	../src/arq.c
 #	../src/mac.c
 #	../src/mux.c
-#       control.c \
+
 SRCS= \
 	main.c \
 	vc_interface.c \

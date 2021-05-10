@@ -28,7 +28,7 @@
 
 #define VC_CTRL_ARQ_CONNECT         20
 #define VC_CTRL_ARQ_RESET           21
-
+#define VC_CTRL_ARQ_TIMEOUT         22
 
 
 const int PP = 1; // use push/pull instead of pub/sub for VC interfaces?
@@ -55,6 +55,7 @@ void* z_ps_tx[4];
 
 int vc_init(int vc_base) {
 
+	int ret;
 	int vc;
 
 	#define ZMQ_URI_LEN 64
@@ -65,17 +66,29 @@ int vc_init(int vc_base) {
 	 */
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		void *sock = zmq_socket(zmq, PP ? ZMQ_PUSH : ZMQ_PUB);
+		if (sock == NULL)
+				SKY_PRINTF(SKY_DIAG_BUG, "zmq_socket() failed: %s", zmq_strerror(errno));
+
 		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%d", vc_base + vc);
 		SKY_PRINTF(SKY_DIAG_INFO, "VC %d RX binding %s\n", vc, uri);
-		zmq_bind(sock, uri);
+
+		if ((ret = zmq_bind(sock, uri)) < 0)
+			fprintf(stderr, "zmq_bind() failed: %s", zmq_strerror(ret));
+
 		z_ps_rx[vc] = sock;
 	}
 
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		void *sock = zmq_socket(zmq, PP ? ZMQ_PULL : ZMQ_SUB);
+		if (sock == NULL)
+			SKY_PRINTF(SKY_DIAG_BUG, "zmq_socket() failed: %s", zmq_strerror(errno));
+
 		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%d", vc_base + 100 + vc);
 		SKY_PRINTF(SKY_DIAG_INFO, "VC %d TX binding %s\n", vc, uri);
-		zmq_bind(sock, uri);
+
+		if ((ret = zmq_bind(sock, uri)) < 0)
+			SKY_PRINTF(SKY_DIAG_BUG, "zmq_bind() failed: %s", zmq_strerror(errno));
+
 		if (!PP)
 			zmq_setsockopt(sock, ZMQ_SUBSCRIBE, "", 0);
 		z_ps_tx[vc] = sock;
@@ -126,11 +139,10 @@ void vc_check() {
 		ret = sky_buf_read(sky->rxbuf[vc], data, PACKET_RX_MAXLEN, &flags);
 		if (ret >= 0) {
 			fprintf(stderr, " %d bytes to  VC%d", ret, vc);
-			int rettt = zmq_send(z_ps_rx[vc], data, ret, 0);
-			fprintf(stderr, "   ret %d\n", rettt);
 
-			if (rettt < 0)
-				fprintf(stderr, "zmq_send() ret %d\n", rettt);
+			if (zmq_send(z_ps_rx[vc], data, ret, 0) < 0)
+				SKY_PRINTF(SKY_DIAG_BUG, "zmq_send() failed: %s", zmq_strerror(errno));
+
 
 			if ((flags & (BUF_FIRST_SEG|BUF_LAST_SEG)) != (BUF_FIRST_SEG|BUF_LAST_SEG)) {
 				SKY_PRINTF(SKY_DIAG_DEBUG, "RX %d len %5d flags %u: Buffer read fragmented a packet. This shouldn't really happen here.\n",
@@ -149,15 +161,20 @@ void vc_check() {
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		uint8_t data[PACKET_TX_MAXLEN];
 		ret = zmq_recv(z_ps_tx[vc], data, PACKET_TX_MAXLEN, ZMQ_DONTWAIT);
+		if (ret < 0)
+			fprintf(stderr, "VC: zmq_recv() error %s\n", zmq_strerror(errno));
+
 		if (ret >= 0) {
 
-
+			fprintf(stderr, "handle %d  %d\n", ret, data[0]);
 			/* Handle control messages */
 			int ret = handle_control_message(vc, data[0], data[1]);
 
 			// Send response
 			if (ret > 0)
 				ret = zmq_send(z_ps_tx[vc], data, ret, 0);
+				if (ret < 0)
+					fprintf(stderr, "VC: zmq_send() error %s\n", zmq_strerror(errno));
 
 #if 0
 			int ret2;
@@ -270,4 +287,3 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 
 	return rsp_len;
 }
-

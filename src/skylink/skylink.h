@@ -160,9 +160,10 @@ typedef struct sky_conf {
 } SkyConfig_t;
 
 
-/* Protocol diagnostic information.
+/*
+ * Protocol diagnostic information.
  */
-typedef struct ap_diag {
+typedef struct sky_diag {
 
 	uint16_t rx_frames;      // Total number of received frames
 	uint16_t rx_fec_ok;      // Number of successfully decoded codewords
@@ -175,6 +176,14 @@ typedef struct ap_diag {
 } SkyDiagnostics_t;
 
 
+/*
+ * Buffer state response struct
+ */
+typedef struct {
+	uint8_t state[SKY_NUM_VIRTUAL_CHANNELS];
+	uint16_t rx_free[SKY_NUM_VIRTUAL_CHANNELS];
+	uint16_t tx_avail[SKY_NUM_VIRTUAL_CHANNELS];
+} SkyBufferState_t;
 
 /*
  * Struct to store pointers to all the data structures related to a
@@ -234,13 +243,15 @@ int sky_mac_carrier_sensed(timestamp_t t);
 int sky_print_diag(SkyHandle_t self);
 int sky_clear_stats(SkyHandle_t self);
 
+int sky_get_buffer_status(SkyHandle_t self, SkyBufferState_t* state);
+int sky_flush_buffers(SkyHandle_t self);
 
 // TODO: Return some kind of a status for housekeeping and OBC interfacing
 //int sky_status(struct ap_all *ap, struct ap_status *s);
 
 
 
-int sky_set_config(SkyHandle_t self, int cfg, unsigned int val);
-int sky_get_config(SkyHandle_t self, int cfg, unsigned int* val);
+int sky_set_config(SkyHandle_t self, unsigned int cfg, unsigned int val);
+int sky_get_config(SkyHandle_t self, unsigned int cfg, unsigned int* val);
 
 #endif /* __SKYLINK_H__ */
