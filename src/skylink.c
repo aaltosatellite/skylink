@@ -255,3 +255,31 @@ int sky_flush_buffers(SkyHandle_t self) {
 		sky_buf_flush(self->txbuf[vc]);
 	}
 }
+
+
+
+inline uint16_t __attribute__ ((__const__)) sky_hton16(uint16_t vh) {
+#ifndef __LITTLE_ENDIAN__
+	return vh;
+#else
+	return (((vh & 0xff00) >> 8) | ((vh & 0x00ff) << 8));
+#endif
+}
+
+inline uint16_t __attribute__ ((__const__)) sky_ntoh16(uint16_t vn) {
+	return sky_hton16(vn);
+}
+
+
+inline uint32_t __attribute__ ((__const__)) sky_hton32(uint32_t vh) {
+#ifndef __LITTLE_ENDIAN__
+	return vh;
+#else
+	return (((vh & 0xff000000) >> 24) | ((vh & 0x000000ff) << 24) |
+			((vh & 0x0000ff00) <<  8) | ((vh & 0x00ff0000) >>  8));
+#endif
+}
+
+inline uint32_t __attribute__ ((__const__)) sky_ntoh32(uint32_t vn) {
+	return sky_hton32(vn);
+}

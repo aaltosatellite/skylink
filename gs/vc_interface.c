@@ -6,6 +6,7 @@
 
 
 #include "skylink/skylink.h"
+#include "skylink/endian.h"
 
 
 /*
@@ -213,6 +214,9 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		 * Get virtual channel buffer status
 		 */
 		sky_get_buffer_status(sky, (SkyBufferState_t*)rsp);
+		uint16_t* vals = (uint16_t*)rsp;
+		for (int i = 2; i < sizeof(SkyBufferState_t)/2; i++)
+			vals[i] = sky_hton16(vals[i]);
  		rsp_len = sizeof(SkyBufferState_t);
 		rsp_code = VC_CTRL_BUFFER_RSP;
 		break;
@@ -229,6 +233,9 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		 * Get statistics
 		 */
 		memcpy(rsp, sky->diag, sizeof(SkyDiagnostics_t));
+		uint16_t* vals = (uint16_t*)rsp;
+		for (int i = 0; i < sizeof(SkyDiagnostics_t)/2; i++)
+			vals[i] = sky_hton16(vals[i]);
 		rsp_len = sizeof(SkyDiagnostics_t);
 		rsp_code = VC_CTRL_STATS_RSP;
 		break;
