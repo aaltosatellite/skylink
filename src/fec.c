@@ -169,7 +169,7 @@ int sky_fec_encode(SkyRadioFrame_t *frame)
 		/*
 		 * Calculate Reed-Solomon parity bytes
 		 */
-		SKY_ASSERT(frame->lenght + RS_PARITYS < SKY_FRAME_MAX_LEN);
+		SKY_ASSERT(frame->length + RS_PARITYS < SKY_FRAME_MAX_LEN);
 
 		encode_rs_8(frame->raw, &frame->raw[frame->length], RS_MSGLEN - frame->length);
 		frame->length += RS_PARITYS;

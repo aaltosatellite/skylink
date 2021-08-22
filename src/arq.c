@@ -131,7 +131,7 @@ int ap_arqtx_reset(struct ap_arqtx *self, const struct ap_arqtx_conf *conf)
 static int find_next_sdu_to_transmit(struct ap_arqtx *, const ap_arq_sdu_tx_cb cb, void *const cb_arg);
 
 
-int ap_arqtx_tx(struct ap_arqtx *state, const struct ap_arqtx_conf *conf, uint8_t *data, int maxlength, const ap_arq_sdu_tx_cb cb, void *const cb_arg)
+int ap_arqtx_tx(struct ap_arqtx *state, const SkyARQConfig_t *conf, uint8_t *data, int maxlength, const ap_arq_sdu_tx_cb cb, void *const cb_arg)
 {
 	if(maxlength < 1 + AP_ARQ_SDU_LEN)
 		return -1;

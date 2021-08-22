@@ -31,14 +31,8 @@
 #define MAC_HEADER_M2S_OTHER 0x7F
 
 
-struct all* ap = NULL;
-
-
 // State of the MAC/TDD sublayer
-struct ap_mac {
-	/* TDD */
-
-	unsigned int mac_mode; /* 0 = no-TDD, 1 = TDD*/
+typedef struct ap_mac {
 
 	/* Time when the TDD cycle/window started */
 	timestamp_t tdd_cycle_start;
@@ -50,7 +44,7 @@ struct ap_mac {
 
 	/* Time when the TDD windows size was adjusted last time. */
 	timestamp_t last_window_adjust;
-};
+} SkyMAC_t;
 
 
 
@@ -122,9 +116,11 @@ int ap_mac_rx(struct ap_all *ap, SkyRadioFrame_t *frame)
 }
 
 
-int ap_mac_tx(struct ap_all *ap, SkyRadioFrame_t *frame, timestamp_t current_time)
+int ap_mac_tx(SkyHandle_t *self, SkyRadioFrame_t *frame, timestamp_t current_time)
 {
 	SKY_ASSERT(ap && frame);
+
+	SkyMAC_t* mac = self->mac;
 
 	struct ap_mac *self = ap->mac;
 	char is_tdd_slave = ap->conf->tdd_slave;
@@ -133,15 +129,15 @@ int ap_mac_tx(struct ap_all *ap, SkyRadioFrame_t *frame, timestamp_t current_tim
 	timediff_t td;
 
 #if 0
-	td = current_time - self->tdd_cycle_start;
+	td = current_time - mac->tdd_cycle_start;
 	if (td >= TDD_PERIOD) {
 		//SKY_PRINTF(SKY_DIAG_DEBUG, "TDD: %10u: Wrapped TDD timer\n", (unsigned)current_time);
 		self->tdd_cycle_start += TDD_PERIOD;
 
 		if (is_tdd_slave)
-			self->tdd_next_frame = self->tdd_cycle_start + TDD_M2S - TDD_FRAME_PREPARATION_TIME;
+			self->tdd_next_frame = mac->tdd_cycle_start + TDD_M2S - TDD_FRAME_PREPARATION_TIME;
 		else
-			self->tdd_next_frame = self->tdd_cycle_start;
+			self->tdd_next_frame = mac->tdd_cycle_start;
 
 		self->tdd_frame_number = 0;
 		++self->tdd_cycles_since_sync;
@@ -160,7 +156,7 @@ int ap_mac_tx(struct ap_all *ap, SkyRadioFrame_t *frame, timestamp_t current_tim
 #endif
 
 
-	td = current_time - self->tdd_next_frame;
+	td = current_time - mac->tdd_next_frame;
 	if (transmit_ok && td >= 0) {
 		//SKY_PRINTF(SKY_DIAG_DEBUG, "TDD: %10u: Frame transmit time (td=%d)\n", current_time, td);
 
@@ -193,7 +189,7 @@ int ap_mac_tx(struct ap_all *ap, SkyRadioFrame_t *frame, timestamp_t current_tim
 		/* Transmit timestamp is not currently supported.
 		 * When used, it should be set a bit in future
 		 * since generating the frame takes some time. */
-		frame->timestamp = self->tdd_next_frame + TDD_FRAME_PREPARATION_TIME;
+		frame->timestamp = mac->tdd_next_frame + TDD_FRAME_PREPARATION_TIME;
 
 		self->tdd_next_frame += TDD_FRAME;
 		++self->tdd_frame_number;
@@ -202,17 +198,16 @@ int ap_mac_tx(struct ap_all *ap, SkyRadioFrame_t *frame, timestamp_t current_tim
 }
 
 
-struct ap_mac *ap_mac_init(struct ap_all *ap/*, const struct ap_conf *conf*/)
+SkyMAC_t* sky_mac_init(SkyHandle_t *self/*, const struct ap_conf *conf*/)
 {
-	SKY_ASSERT(ap);
+	SKY_ASSERT(self);
 
-	struct ap_conf *conf = ap->conf;
-	struct ap_mac *self;
-	self = calloc(1, sizeof(*self));
+	SkyMACConfig_t *conf = self->conf;
+	SkyMAC_t* mac = calloc(1, sizeof(SkyMAC_t));
 
 	/* Trick the timer to wrap once on next call to l1_tx */
-	self->tdd_cycle_start = conf->initial_time - TDD_PERIOD;
-	self->tdd_cycles_since_sync = 1000;
+	mac->tdd_cycle_start = conf->initial_time - TDD_PERIOD;
+	mac->tdd_cycles_since_sync = 1000;
 
-	return self;
+	return mac;
 }

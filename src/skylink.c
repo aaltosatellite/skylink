@@ -2,7 +2,7 @@
 #include "skylink/diag.h"
 #include "skylink/fec.h"
 #include "skylink/hmac.h"
-
+#include "skylink/endian.h"
 #include "skylink_platform.h"
 
 #include <stdlib.h>
@@ -35,7 +35,7 @@ SkyHandle_t sky_init(SkyHandle_t self, SkyConfig_t *conf)
 
 int sky_rx(SkyHandle_t self, SkyRadioFrame_t *frame)
 {
-	SKY_ASSERT(ap && frame);
+	SKY_ASSERT(self && frame);
 	int ret;
 
 	// Decode FEC
@@ -209,6 +209,7 @@ int sky_print_diag(SkyHandle_t self)
 	return 0;
 }
 
+
 void sky_diag_dump_hex(uint8_t* data, unsigned int data_len) {
 
 	char str[3];
@@ -220,12 +221,12 @@ void sky_diag_dump_hex(uint8_t* data, unsigned int data_len) {
 		str[1] = hex[0xF & (*data >> 0)];
 		str[2] = '\0';
 
-		printf("%s ", str);
+		SKY_PRINTF(SKY_DIAG_DEBUG, "%s ", str);
 
 		data++;
 		data_len--;
 	}
-	printf("\n");
+	SKY_PRINTF(SKY_DIAG_DEBUG, "\n");
 }
 
 

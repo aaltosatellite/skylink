@@ -41,7 +41,7 @@ int sky_hmac_authenticate(SkyHandle_t self, SkyRadioFrame_t* frame) {
 	if (hmac == NULL)
 		return SKY_RET_AUTH_UNINITIALIZED;
 
-	SKY_ASSERT(frame->length + SKY_HMAC_LENGTH <= RADIOFRAME_MAXLEN);
+	SKY_ASSERT(frame->length + SKY_HMAC_LENGTH <= SKY_FRAME_MAX_LEN);
 
 	// Indicate in the phy header that the frame is authenticated
 	frame->hdr.flags |= SKY_FRAME_AUTHENTICATED;

@@ -24,7 +24,7 @@
 #define SKY_ASSERT(...)   assert(__VA_ARGS__);
 #else
 /* Assert for embedded platforms */
-#define SKY_ASSERT(x)    if (x) while(1);
+#define SKY_ASSERT(...)    if ((__VA_ARGS__) != 0) while(1);
 #endif
 
 #else

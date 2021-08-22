@@ -9,6 +9,7 @@
 #include "skylink/buf.h"
 #include "skylink/diag.h"
 //#include "platform/wrapmalloc.h"
+#include <stdlib.h>
 
 struct ap_buf {
 	unsigned size;
