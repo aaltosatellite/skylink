@@ -22,6 +22,8 @@
 
 #include <stdint.h>
 
+#include "skylink/conf.h"
+
 /* -------------------------------------
  * Compile-time configuration parameters
  * ------------------------------------- */
@@ -78,19 +80,19 @@ typedef int (*ap_arq_sdu_tx_cb) (void *arg, uint8_t *data, int maxlen);
  * Return value is length of the data if there is a PDU
  * to transmit, -1 if not.
  */
-int ap_arqtx_tx(struct ap_arqtx *state, const struct ap_arqtx_conf *conf, uint8_t *data, int maxlen, const ap_arq_sdu_tx_cb cb, void *const cb_arg);
+int ap_arqtx_tx(struct ap_arqtx *state, const SkyARQConfig_t *conf, uint8_t *data, int maxlen, const ap_arq_sdu_tx_cb cb, void *const cb_arg);
 
 /* Process a received acknowledgement PDU.
  */
-int ap_arqtx_rx_ack(struct ap_arqtx *state, const struct ap_arqtx_conf *conf, const uint8_t *data, int length);
+int ap_arqtx_rx_ack(struct ap_arqtx *state, const SkyARQConfig_t *conf, const uint8_t *data, int length);
 
 /* Reset a transmitter state.
  */
-int ap_arqtx_reset(struct ap_arqtx *self, const struct ap_arqtx_conf *conf);
+int ap_arqtx_reset(struct ap_arqtx *self, const SkyARQConfig_t *conf);
 
 /* Allocate and initialize a transmitter state struct.
  */
-struct ap_arqtx *ap_arqtx_init(const struct ap_arqtx_conf *conf);
+struct ap_arqtx *ap_arqtx_init(const SkyARQConfig_t *conf);
 
 /* Print the state for diagnostics */
 int ap_arqtx_print(struct ap_arqtx *state);
@@ -112,22 +114,22 @@ typedef int (*ap_arq_sdu_rx_cb) (void *arg, const uint8_t *data, int datalen);
  * Whenever a new SDU has been successfully received (in order),
  * the function calls the given callback.
  */
-int ap_arqrx_rx(struct ap_arqrx *state, const struct ap_arqrx_conf *conf, const uint8_t *data, int length, const ap_arq_sdu_rx_cb cb, void *const cb_arg);
+int ap_arqrx_rx(struct ap_arqrx *state, const SkyARQConfig_t *conf, const uint8_t *data, int length, const ap_arq_sdu_rx_cb cb, void *const cb_arg);
 
 /* Request an acknowledgment PDU to be transmitted.
  *
  * Return value is length of the data (always 3) if there is an ACK
  * to transmit, -1 if not.
  */
-int ap_arqrx_tx_ack(struct ap_arqrx *state, const struct ap_arqrx_conf *conf, uint8_t *data, int maxlen);
+int ap_arqrx_tx_ack(struct ap_arqrx *state, const SkyARQConfig_t *conf, uint8_t *data, int maxlen);
 
 /* Reset a receiver state.
  */
-int ap_arqrx_reset(struct ap_arqrx *self, const struct ap_arqrx_conf *conf);
+int ap_arqrx_reset(struct ap_arqrx *self, const SkyARQConfig_t *conf);
 
 /* Allocate and initialize a receiver state struct.
  */
-struct ap_arqrx *ap_arqrx_init(const struct ap_arqrx_conf *conf);
+struct ap_arqrx *ap_arqrx_init(const SkyARQConfig_t *conf);
 
 /* Print the state for diagnostics */
 int ap_arqrx_print(struct ap_arqrx *state);

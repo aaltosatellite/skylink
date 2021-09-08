@@ -8,9 +8,14 @@
 
 #include "suo.h"
 #include "skylink/skylink.h"
+#include "skylink/platform.h"
 #include "vcs.h"
 #include "modem.h"
-#include "platform/debug.h"
+
+
+#define debugprintf(...) do { } while(0)
+#define diagprintf(...) printf(__VA_ARGS__)
+
 
 
 void *zmq = NULL;
@@ -47,6 +52,14 @@ int main(int argc, char *argv[])
 	/* -------------------------
 	 * Initialize protocol
 	 * ------------------------- */
+
+	sky_diag_mask = 0xFFFF;
+	/*SKY_DIAG_INFO  |
+	SKY_DIAG_DEBUG |
+	SKY_DIAG_BUG | \
+	SKY_DIAG_LINK_STATE | \
+	SKY_DIAG_FRAMES |
+	SKY_DIAG_BUFFER*/
 
 	/*
 	* PHY configurations

@@ -19,13 +19,13 @@ SRCS= \
 	../src/fec.c \
 	../src/hmac.c \
 	../src/skylink.c \
-	../ext/cifra/blockwise.c \
-	../ext/cifra/hmac.c \
-	../ext/cifra/sha256.c \
-	../ext/gr-satellites/golay24.c \
-	../ext/libfec/decode_rs_8.c \
-	../ext/libfec/encode_rs_8.c \
-	../ext/libfec/ccsds_tab.c
+	../src/ext/cifra/blockwise.c \
+	../src/ext/cifra/hmac.c \
+	../src/ext/cifra/sha256.c \
+	../src/ext/gr-satellites/golay24.c \
+	../src/ext/libfec/decode_rs_8.c \
+	../src/ext/libfec/encode_rs_8.c \
+	../src/ext/libfec/ccsds_tab.c
 
 OBJS = $(addprefix $(BUILD)/,$(SRCS:.c=.o))
 

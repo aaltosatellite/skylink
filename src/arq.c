@@ -26,6 +26,7 @@
 #include "skylink/arq.h"
 #include "skylink/diag.h"
 
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -110,7 +111,7 @@ struct ap_arqtx {
 
 
 
-int ap_arqtx_reset(struct ap_arqtx *self, const struct ap_arqtx_conf *conf)
+int ap_arqtx_reset(struct ap_arqtx *self, const SkyARQConfig_t *conf)
 {
 	(void)conf; // not used now
 	int i;
@@ -168,7 +169,7 @@ int ap_arqtx_tx(struct ap_arqtx *state, const SkyARQConfig_t *conf, uint8_t *dat
 }
 
 
-int ap_arqtx_rx_ack(struct ap_arqtx *state, const struct ap_arqtx_conf *conf, const uint8_t *data, int length)
+int ap_arqtx_rx_ack(struct ap_arqtx *state, const SkyARQConfig_t *conf, const uint8_t *data, int length)
 {
 	if (length != 3)
 		return -1;
@@ -181,7 +182,7 @@ int ap_arqtx_rx_ack(struct ap_arqtx *state, const struct ap_arqtx_conf *conf, co
 }
 
 
-struct ap_arqtx *ap_arqtx_init(const struct ap_arqtx_conf *conf)
+struct ap_arqtx *ap_arqtx_init(const SkyARQConfig_t *conf)
 {
 	struct ap_arqtx *self;
 	self = calloc(1, sizeof(*self));
@@ -455,7 +456,7 @@ struct ap_arqrx {
 };
 
 
-int ap_arqrx_reset(struct ap_arqrx *self, const struct ap_arqrx_conf *conf)
+int ap_arqrx_reset(struct ap_arqrx *self, const SkyARQConfig_t *conf)
 {
 	int i;
 	self->status = RX_STATUS_RESET;
@@ -472,7 +473,7 @@ int ap_arqrx_reset(struct ap_arqrx *self, const struct ap_arqrx_conf *conf)
 
 static int sr_rx(struct ap_arqrx *self, const uint8_t *data, size_t length, seq_t rxseq, const ap_arq_sdu_rx_cb cb, void *const cb_arg);
 
-int ap_arqrx_rx(struct ap_arqrx *state, const struct ap_arqrx_conf *conf, const uint8_t *data, int length, const ap_arq_sdu_rx_cb cb, void *const cb_arg)
+int ap_arqrx_rx(struct ap_arqrx *state, const SkyARQConfig_t *conf, const uint8_t *data, int length, const ap_arq_sdu_rx_cb cb, void *const cb_arg)
 {
 	if(length != 1 + AP_ARQ_SDU_LEN)
 		return 0;
@@ -567,7 +568,7 @@ done:
 }
 
 
-int ap_arqrx_tx_ack(struct ap_arqrx *state, const struct ap_arqrx_conf *conf, uint8_t *data, int maxlen)
+int ap_arqrx_tx_ack(struct ap_arqrx *state, const SkyARQConfig_t *conf, uint8_t *data, int maxlen)
 {
 	data[0] = state->acked;
 	data[1] = state->bitmap >> 8;
@@ -576,7 +577,7 @@ int ap_arqrx_tx_ack(struct ap_arqrx *state, const struct ap_arqrx_conf *conf, ui
 }
 
 
-struct ap_arqrx *ap_arqrx_init(const struct ap_arqrx_conf *conf)
+struct ap_arqrx *ap_arqrx_init(const SkyARQConfig_t *conf)
 {
 	struct ap_arqrx *self;
 	self = calloc(1, sizeof(*self));

@@ -4,8 +4,6 @@
 #include "skylink/buf.h"
 #include "skylink/diag.h"
 #include "skylink/arq.h"
-#include "platform/timestamp.h"
-
 #include "skylink/platform.h"
 
 

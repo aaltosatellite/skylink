@@ -118,12 +118,12 @@ int ap_mac_rx(struct ap_all *ap, SkyRadioFrame_t *frame)
 
 int ap_mac_tx(SkyHandle_t *self, SkyRadioFrame_t *frame, timestamp_t current_time)
 {
-	SKY_ASSERT(ap && frame);
+	SKY_ASSERT(self && frame);
 
 	SkyMAC_t* mac = self->mac;
 
-	struct ap_mac *self = ap->mac;
-	char is_tdd_slave = ap->conf->tdd_slave;
+	struct ap_mac *self = self->mac;
+	char is_tdd_slave = self->conf->tdd_slave;
 	char transmit_ok = 1;
 	int retval = -1;
 	timediff_t td;
