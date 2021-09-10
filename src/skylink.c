@@ -3,7 +3,7 @@
 #include "skylink/fec.h"
 #include "skylink/hmac.h"
 #include "skylink/endian.h"
-#include "skylink_platform.h"
+#include "skylink/platform.h"
 
 #include <stdlib.h>
 #include <string.h>

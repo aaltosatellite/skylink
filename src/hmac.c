@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "skylink_platform.h"
+#include "skylink/platform.h"
 
 int sky_hmac_init(SkyHandle_t self, const uint8_t* key, unsigned int key_len) {
 
