@@ -125,17 +125,15 @@ void wipe_skylink_array(SkylinkArray* array);
 
 //=== SEND =============================================================================================================
 //======================================================================================================================
-uint16_t skyArray_get_horizon_bitmap(SkylinkArray* array);
+int skyArray_push_packet_to_send(SkylinkArray* array, void* payload, int length); //push packet to buffer. Return the save address index, or -1.
 
-int skyArray_push_packet_to_send(SkylinkArray* array, void* payload, int length);
+int skyArray_packets_to_tx(SkylinkArray* array); //returns the number of messages in buffer.
 
-int skyArray_packets_to_tx(SkylinkArray* array);
+int skyArray_read_packet_for_tx(SkylinkArray* array, void* tgt); //reads next message to be sent.
 
-int skyArray_read_packet_for_tx(SkylinkArray* array, void* tgt);
+int skyArray_can_recall(SkylinkArray* array, int sequence); //return boolean wether a message of particular sequence is still recallable.
 
-int skyArray_can_recall(SkylinkArray* array, int sequence);
-
-int skyArray_recall(SkylinkArray* array, int sequence, void* tgt);
+int skyArray_recall(SkylinkArray* array, int sequence, void* tgt); //reads a message that has laready been sent recently, if it is at most n<n_recall behind current sequence to be sent.
 //======================================================================================================================
 //======================================================================================================================
 
@@ -144,13 +142,15 @@ int skyArray_recall(SkylinkArray* array, int sequence, void* tgt);
 
 //=== RECEIVE ==========================================================================================================
 //======================================================================================================================
-int skyArray_get_readable_rcv_packet_count(SkylinkArray* array);
+int skyArray_get_readable_rcv_packet_count(SkylinkArray* array); //how many messages there are in buffer as a continuous sequence, an thus readable by skyArray_read_next_received()
 
-int skyArray_read_next_received(SkylinkArray* array, void* tgt, int* sequence);
+int skyArray_read_next_received(SkylinkArray* array, void* tgt, int* sequence); //read next message to tgt buffer. Return number of bytes written on success, -1 on fail.
 
-int skyArray_rx_sequence_fits(SkylinkArray* array, int sequence);
+int skyArray_rx_sequence_fits(SkylinkArray* array, int sequence); //returns a boolean as to a particular sequence is in the receive-horizon. ie. if it is at most horrizon-width from head
 
-int skyArray_push_rx_packet(SkylinkArray* array, void* src, int length, int sequence);
+int skyArray_push_rx_packet(SkylinkArray* array, void* src, int length, int sequence); //pushes a recently radio received message of particular sequence to buffer.
+
+uint16_t skyArray_get_horizon_bitmap(SkylinkArray* array); 		//bitmap of which messages we have received after the last continuous sequence.
 //======================================================================================================================
 //======================================================================================================================
 

@@ -200,9 +200,6 @@ void destroy_element_buffer(ElementBuffer* buffer){
 
 
 
-
-
-
 int element_buffer_element_requirement_for(ElementBuffer* buffer, int32_t length){
 	int32_t n = (length + EB_LEN_BYTES + buffer->element_usable_space - 1) / buffer->element_usable_space;
 	return n;

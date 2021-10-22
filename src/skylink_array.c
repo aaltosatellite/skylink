@@ -175,20 +175,6 @@ int sendRingFull(SkySendRing* sendRing){
 
 //=== SEND =============================================================================================================
 //======================================================================================================================
-uint16_t skyArray_get_horizon_bitmap(SkylinkArray* array){
-	int n = array->rcvRing->horizon_width;
-	uint16_t map = 0;
-	for (int i = 0; i < n; ++i) {
-		int ring_idx = ring_wrap(array->rcvRing->head + i + 1, array->rcvRing->length);
-		RingItem* item = &array->rcvRing->buff[ring_idx];
-		if(item->idx != EB_NULL_IDX){
-			map |= (1<<i);
-		}
-	}
-	return map;
-}
-
-
 int skyArray_push_packet_to_send(SkylinkArray* array, void* payload, int length){
 	if(sendRingFull(array->sendRing)){
 		return -1;
@@ -333,6 +319,20 @@ int skyArray_push_rx_packet(SkylinkArray* array, void* src, int length, int sequ
 	item->sequence = sequence;
 	skyArray_advance_rcv_head(array);
 	return 0;
+}
+
+
+uint16_t skyArray_get_horizon_bitmap(SkylinkArray* array){
+	int n = array->rcvRing->horizon_width;
+	uint16_t map = 0;
+	for (int i = 0; i < n; ++i) {
+		int ring_idx = ring_wrap(array->rcvRing->head + i + 1, array->rcvRing->length);
+		RingItem* item = &array->rcvRing->buff[ring_idx];
+		if(item->idx != EB_NULL_IDX){
+			map |= (1<<i);
+		}
+	}
+	return map;
 }
 //======================================================================================================================
 //======================================================================================================================

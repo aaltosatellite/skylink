@@ -176,6 +176,7 @@ int encode_skylink_packet(SkyHandle_t self, SkyRadioFrame* frame){
 			return SKY_RET_PACKET_TOO_LONG;
 		}
 	}
+
 	//Observe: the payload is initially placed to the end of the packet.
 	//If the total packet length is not beyond length limit, the payload will not be corrupted
 	//during prior packet construction.
