@@ -5,19 +5,6 @@
 #include "skylink/skylink.h"
 
 
-#define MAC_MS_OVERFLOW_PERIOD			3600000
-#define MAXIMUM_WINDOW_LENGTH			3000
-#define MINIMUM_WINDOW_LENGTH			300
-
-struct sky_mac_s {
-	int32_t T0_ms;
-	int32_t my_window_length;
-	int32_t peer_window_length;
-	int32_t gap_constant;
-	int32_t cycle_time;
-};
-typedef struct sky_mac_s MACSystem;
-
 
 static int32_t wrap_ms(int32_t time_ms, int32_t mod){ //This mess is a conversion from C-modulo, to always-positive-modulo.
 	return ((time_ms % mod) + mod) % mod;

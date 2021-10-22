@@ -12,7 +12,7 @@
 #include "skylink/platform.h"
 #include "skylink/elementbuffer.h"
 #include "skylink/skylink_array.h"
-
+#include "skylink/conf.h"
 
 
 
@@ -43,26 +43,28 @@
 #define SKY_RET_PACKET_TOO_LONG		(-41)
 #define SKY_RET_INVALID_EXTENSION   (-42)
 
+
+
+//HMAC
+#define SKY_HMAC_LENGTH 8
 #define SKY_FRAME_AUTHENTICATED 	0x0001
 
-
-
-
-/*
- * HMAC
- */
-#define SKY_HMAC_LENGTH 8
-
-/*
- * Physical layer radio frame structure.
- */
+//Physical layer radio frame structure.
 #define SKY_NUM_VIRTUAL_CHANNELS  	4
 #define SKY_FRAME_MAX_LEN       	0x100
 #define SKY_MAX_EXTENSION_COUNT		8
 #define SKY_IDENTITY_LEN			5
 
+//MAC-system definitions
+#define MAXIMUM_WINDOW_LENGTH			3000	//todo: probably should be in config.
+#define MINIMUM_WINDOW_LENGTH			300		//todo: probably should be in config.
 
 
+
+
+//================================================================================================================================
+//============ STRUCTS ===========================================================================================================
+//================================================================================================================================
 typedef struct {
 	/* Frame metadata */
 	int16_t rssi;            //
@@ -114,6 +116,16 @@ struct skylink_packet_extension_s {
 typedef struct skylink_packet_extension_s SkyPacketExtension;
 
 
+//MAC-system
+struct sky_mac_s {
+	int32_t T0_ms;
+	int32_t my_window_length;
+	int32_t peer_window_length;
+	int32_t gap_constant;
+	int32_t cycle_time;
+};
+typedef struct sky_mac_s MACSystem;
+
 
 
 /*
@@ -143,9 +155,6 @@ struct radioframe {
 typedef struct radioframe SkyRadioFrame;
 
 
-
-
-
 /*
  * HMAC runtime state
  */
@@ -157,13 +166,7 @@ struct sky_hmac {
 };
 typedef struct sky_hmac SkyHMAC_t;
 
-// State of the MAC/TDD sublayer (forward declaration)
-struct ap_mac;
 
-
-
-
-#include "skylink/conf.h"
 
 
 
@@ -218,19 +221,25 @@ typedef struct {
  * since it ties several different blocks togehter.
  */
 struct sky_all {
-	SkyConfig_t      *conf;                 // Configuration
-	SkyDiagnostics_t *diag;                 // Diagnostics
-	SkylinkArray* arayBuffers[SKY_NUM_VIRTUAL_CHANNELS]; //ARQ capable buffers.
-	struct ap_mac *mac;                    // MAC state
-
-	SkyHMAC_t* hmac;
+	SkyConfig_t*		conf;                 // Configuration
+	SkyDiagnostics_t*	diag;                 // Diagnostics
+	SkylinkArray* 		arayBuffers[SKY_NUM_VIRTUAL_CHANNELS]; //ARQ capable buffers.
+	MACSystem* 			mac;                    // MAC state
+	SkyHMAC_t* 			hmac;
 };
 typedef struct sky_all* SkyHandle_t;
+
 
 struct sky_instance {
 	SkyConfig_t			conf;
 	SkyDiagnostics_t*	diag;
 };
+//================================================================================================================================
+//============ STRUCTS ===========================================================================================================
+//================================================================================================================================
+
+
+
 
 
 
