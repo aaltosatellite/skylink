@@ -6,11 +6,12 @@
 #define SKYLINK_SKYLINK_NEW_H
 
 
-#include "skylink/buf.h"
+//#include "skylink/buf.h"
 #include "skylink/diag.h"
-#include "skylink/arq.h"
+//#include "skylink/arq.h"
 #include "skylink/platform.h"
-
+#include "skylink/elementbuffer.h"
+#include "skylink/skylink_array.h"
 
 
 
@@ -219,8 +220,7 @@ typedef struct {
 struct sky_all {
 	SkyConfig_t      *conf;                 // Configuration
 	SkyDiagnostics_t *diag;                 // Diagnostics
-	SkyBuffer_t *rxbuf[SKY_NUM_VIRTUAL_CHANNELS]; // Receive buffers
-	SkyBuffer_t *txbuf[SKY_NUM_VIRTUAL_CHANNELS]; // Transmit buffers
+	SkylinkArray* arayBuffers[SKY_NUM_VIRTUAL_CHANNELS]; //ARQ capable buffers.
 	struct ap_mac *mac;                    // MAC state
 
 	SkyHMAC_t* hmac;
@@ -230,8 +230,6 @@ typedef struct sky_all* SkyHandle_t;
 struct sky_instance {
 	SkyConfig_t			conf;
 	SkyDiagnostics_t*	diag;
-
-
 };
 
 
@@ -242,25 +240,21 @@ struct sky_instance {
 
 
 
-
-
-
-
-
-/* -------------------------
- * Interface to the protocol
- * ------------------------- */
-
+//================================================================================================================================
+//============ FUNCTIONS =========================================================================================================
+//================================================================================================================================
 /*
  * Allocate and initialize data structures to store protocol state
  */
 SkyHandle_t sky_init(SkyHandle_t self, SkyConfig_t *conf);
+
 
 /*
  * Process a received frame
  */
 int sky_rx(SkyHandle_t self,  SkyRadioFrame *frame);
 int sky_rx_raw(SkyHandle_t self, SkyRadioFrame *frame);
+
 
 /*
  * Request a frame to be transmitted
@@ -274,20 +268,31 @@ int sky_tx_raw(SkyHandle_t self, SkyRadioFrame *frame, timestamp_t current_time)
  */
 int sky_mac_carrier_sensed(timestamp_t t);
 
+
 /*
  * Print diagnostics of the protocol
  */
 int sky_print_diag(SkyHandle_t self);
 int sky_clear_stats(SkyHandle_t self);
 
+
 int sky_get_buffer_status(SkyHandle_t self, SkyBufferState_t* state);
 int sky_flush_buffers(SkyHandle_t self);
+
 
 // TODO: Return some kind of a status for housekeeping and OBC interfacing
 //int sky_status(struct ap_all *ap, struct ap_status *s);
 
-int decode_skylink_packet(SkyRadioFrame* frame);
 
+/*
+ * Packet decode and encode from bytearray to individual fields. Does NOT contian Golay24 or FEC
+ */
+int decode_skylink_packet(SkyRadioFrame* frame);
+int encode_skylink_packet(SkyHandle_t self, SkyRadioFrame* frame);
+
+/*
+ * Configuartions.
+ */
 int sky_set_config(SkyHandle_t self, unsigned int cfg, unsigned int val);
 int sky_get_config(SkyHandle_t self, unsigned int cfg, unsigned int* val);
 

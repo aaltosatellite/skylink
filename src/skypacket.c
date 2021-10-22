@@ -28,7 +28,7 @@
 
 
 static int decode_skylink_extension(SkyRadioFrame* frame, int cursor);
-static int encode_skylink_extension(SkyHandle_t self, SkyRadioFrame* frame, int i_extension, int cursor);
+static int encode_skylink_extension(SkyRadioFrame* frame, int i_extension, int cursor);
 
 int decode_skylink_packet(SkyRadioFrame* frame){
 	if(frame->length < SKY_PLAIN_FRAME_MIN_LENGTH){
@@ -167,7 +167,7 @@ int encode_skylink_packet(SkyHandle_t self, SkyRadioFrame* frame){
 	frame->raw[I_PK_EXTENSION_COUNT] = frame->n_extensions;
 	int cursor = I_PK_EXTENSIONS;
 	for (int i = 0; i < frame->n_extensions; ++i) {
-		int r = encode_skylink_extension(self, frame, i, cursor);
+		int r = encode_skylink_extension(frame, i, cursor);
 		if(r < 0){
 			return SKY_RET_INVALID_EXTENSION;
 		}
@@ -186,29 +186,51 @@ int encode_skylink_packet(SkyHandle_t self, SkyRadioFrame* frame){
 	frame->length = cursor + frame->payload_length;
 
 	if(frame->hmac_sequence != 0){
-		sky_hmac_authenticate(self, frame);
+		sky_hmac_authenticate(self, frame); //todo: hmac_sequence of the skylink state needs to get incremented.
 	}
 	return 0;
 }
 
 
-static int encode_skylink_extension(SkyHandle_t self, SkyRadioFrame* frame, int i_extension, int cursor){
+static int encode_skylink_extension(SkyRadioFrame* frame, int i_extension, int cursor){
 	SkyPacketExtension* extension = &frame->extensions[i_extension];
 
 	if(extension->type == EXTENSION_ARQ_SEQ){
-
+		ExtArqNum arqNum = extension->extension.ArqNum;
+		frame->raw[cursor]  = (extension->type << 4) & 0xf0;
+		frame->raw[cursor] |= 1 & 0x0f;
+		frame->raw[cursor+1] = arqNum.sequence;
+		return 1+1;
 	}
 
 	if(extension->type == EXTENSION_ARQ_SETUP){
-
+		ExtArqSetup arqSetup = extension->extension.ArqSetup;
+		frame->raw[cursor]  = (extension->type << 4) & 0xf0;
+		frame->raw[cursor] |= 2 & 0x0f;
+		frame->raw[cursor+1] = arqSetup.toggle;
+		frame->raw[cursor+2] = arqSetup.enforced_sequence;
+		return 1+2;
 	}
 
 	if(extension->type == EXTENSION_ARQ_RESEND_REQ){
-
+		ExtArqReq arqReq = extension->extension.ArqReq;
+		frame->raw[cursor]  = (extension->type << 4) & 0xf0;
+		frame->raw[cursor] |= 3 & 0x0f;
+		frame->raw[cursor+1] = arqReq.sequence;
+		frame->raw[cursor+2] = arqReq.mask1;
+		frame->raw[cursor+3] = arqReq.mask2;
+		return 1+3;
 	}
 
 	if(extension->type == EXTENSION_MAC_PARAMETERS){
-
+		ExtMACSpec macSpec = extension->extension.MACSpec;
+		frame->raw[cursor]  = (extension->type << 4) & 0xf0;
+		frame->raw[cursor] |= 4 & 0x0f;
+		uint16_t window_size_tx = sky_hton16(macSpec.default_window_size);
+		uint16_t gap_size_tx = sky_hton16(macSpec.gap_size);
+		memcpy(frame->raw + cursor + 1, &window_size_tx, 2);
+		memcpy(frame->raw + cursor + 3, &gap_size_tx, 2);
+		return 1+4;
 	}
 
 	return -1;
