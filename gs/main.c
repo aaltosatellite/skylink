@@ -9,6 +9,7 @@
 #include "suo.h"
 #include "skylink/skylink.h"
 #include "skylink/platform.h"
+#include "skylink/hmac.h"
 #include "vcs.h"
 #include "modem.h"
 
@@ -24,6 +25,7 @@ struct sky_all sky_;
 SkyHandle_t sky = &sky_;
 SkyConfig_t sky_config;
 
+int main(int argc, char* argv[]) __attribute__((noreturn));
 
 int main(int argc, char *argv[])
 {
@@ -93,7 +95,6 @@ int main(int argc, char *argv[])
 	// modem_wait_for_sync();
 
 	int ret;
-	struct suoframe fr;
 	SkyRadioFrame_t frame;
 
 
@@ -102,12 +103,18 @@ int main(int argc, char *argv[])
 	/* ----------------
 	 * Run the protocol
 	 * ---------------- */
-	for (;;) {
+	int loopcount = 0;
 
+	for (;;) {
+		loopcount++;
+		if((loopcount % 256) == 0){
+			printf("[loop: %d]\n", loopcount);
+			fflush(stdout);
+		}
 		/*
 		 * Receive frames from the modem interface
 		 */
-		if (modem_rx(&fr, 0) > 0) {
+		if (modem_rx(&frame, 0) > 0) {
 
 			//sky_mac_carrier_sensed(frame.timestamp);
 			sky_rx_raw(sky, &frame);
@@ -136,7 +143,4 @@ int main(int argc, char *argv[])
 		}
 
 	}
-
-	// Should never exit
-	return 0;
 }

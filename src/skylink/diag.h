@@ -15,12 +15,17 @@
 #define SKY_DIAG_FRAMES     0x0100
 #define SKY_DIAG_BUFFER     0x0200
 
+void asrt(int x);
 
+#define DEBUG
 #ifdef DEBUG
 
 #ifdef __unix__
 #include <assert.h>
 /* Assert for POSIX platforms */
+void asrt(int x){
+	assert(x);
+}
 #define SKY_ASSERT(...)   assert(__VA_ARGS__);
 #else
 /* Assert for embedded platforms */
@@ -30,19 +35,20 @@
 #else
 /* No asserts  in release build */
 #define SKY_ASSERT(...)   do { } while(0)
+void asrt(int x){}
 #endif
 
 
 /* Global define for debug print flags */
 extern unsigned int sky_diag_mask;
 
-
+#define DEBUG
 #ifdef DEBUG
 
 #ifdef __unix__
 #include <stdio.h>
 /* printf for POSIX platforms */
-#define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) != 0) { fprintf(stderr, __VA_ARGS__); }
+#define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) != 0) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
 #else
 /* printf for embedded platforms */
 #include "SEGGER_RTT.h"
@@ -51,7 +57,7 @@ extern unsigned int sky_diag_mask;
 
 #else
 /* No debug prints in release build */
-#define SKY_PRINTF(...) do { } while(0)
+#define SKY_PRINTF(...)  //do { } while(0)
 #endif
 
 

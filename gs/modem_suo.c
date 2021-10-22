@@ -93,15 +93,39 @@ int modem_tx(SkyRadioFrame_t* frame, timestamp_t t) {
 
 
 int modem_rx(SkyRadioFrame_t* frame, int flags) {
-
-	int len;
 	struct suoframe suo_frame;
-	if ((len = zmq_recv(suo_rx, &suo_frame, 64+RADIOFRAME_MAXLEN, 0)) < 0) {
+	int len = zmq_recv(suo_rx, &suo_frame, 64+RADIOFRAME_MAXLEN, 0);
+
+	int rcv_returns[3] = {0,0,0};
+	struct zmq_msg_t rcv_msgs[3];
+	int n_rcv = 0;
+	while (1){
+		zmq_msg_init(&rcv_msgs[n_rcv]);
+		int r = zmq_msg_recv(&rcv_msgs[n_rcv], suo_rx, ZMQ_DONTWAIT);
+		if(r < 0){
+			break;
+		}
+		rcv_returns[n_rcv] = r;
+		n_rcv++;
+
+		int more = 0;
+		size_t optlen = 0;
+		zmq_getsockopt(suo_rx, ZMQ_RCVMORE, &more, &optlen);
+		if(!more){
+			break;
+		}
+	}
+
+
+	if (len < 0) {
 		SKY_PRINTF(SKY_DIAG_BUG, "Modem zmq_recv() error %d\n", zmq_strerror(errno));
 		return -1;
 	}
-	if (len == 0)
+	if (len == 0){
+		SKY_PRINTF(SKY_DIAG_BUG, "Modem zmq_recv()=0 error (-2)\n");
 		return -2;
+	}
+
 
 	if (suo_frame.id == SUO_FRAME_TIMING) {
 		/*
@@ -113,7 +137,7 @@ int modem_rx(SkyRadioFrame_t* frame, int flags) {
 		last_received_time = suo_frame.time;
 		tick_received = 1;
 
-		//SKY_PRINTF(SKY_DIAG_FRAMES, "%20lu: Tick\n", suo_frame.time);
+		SKY_PRINTF(SKY_DIAG_FRAMES, "%20lu: Tick\n", suo_frame.time);
 
 		return 0;
 	}
@@ -139,6 +163,7 @@ int modem_rx(SkyRadioFrame_t* frame, int flags) {
 		/*
 		 * Unknown frame type
 		 */
+		SKY_PRINTF(SKY_DIAG_FRAMES, "modem_rx: unknown frame %d\n", suo_frame.id);
 		return -999;
 	}
 	return 0;

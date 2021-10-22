@@ -15,7 +15,7 @@ unsigned int sky_diag_mask = SKY_DIAG_LINK_STATE | SKY_DIAG_BUG | SKY_DIAG_FRAME
 /** Initialization */
 SkyHandle_t sky_init(SkyHandle_t self, SkyConfig_t *conf)
 {
-	SKY_ASSERT(conf);
+	SKY_ASSERT(conf)
 
 	if (self == NULL)
 		self = SKY_MALLOC(sizeof(*self));
@@ -33,31 +33,39 @@ SkyHandle_t sky_init(SkyHandle_t self, SkyConfig_t *conf)
 }
 
 
-int sky_rx(SkyHandle_t self, SkyRadioFrame_t *frame)
+int sky_rx(SkyHandle_t self, SkyRadioFrame *frame)
 {
-	SKY_ASSERT(self && frame);
+	SKY_ASSERT(self && frame)
 	int ret;
 
 	// Decode FEC
 	if ((ret = sky_fec_decode(frame, self->diag)) < 0)
 		return ret;
 
+	// Decode packet
+	if((ret = decode_skylink_packet(frame)) < 0){
+		return ret;
+	}
+
 	// Check authentication code if the frame claims it is authenticated.
-	if (frame->hdr.flags & SKY_FRAME_AUTHENTICATED) {
+	if (sky_hmac_frame_claims_authenticated(frame)) {
 		if ((ret = sky_hmac_check_authentication(self, frame)) < 0)
 			return ret;
 	}
 
+	if(sky_hmac_vc_demands_auth(self, frame->vc) && (!(frame->flags & SKY_FRAME_AUTHENTICATED))){
+		return SKY_RET_AUTH_MISSING;
+	}
+
 	//ap_mac_rx(self, frame);
 	sky_buf_write(self->rxbuf[0], frame->raw, frame->length, BUF_FIRST_SEG | BUF_LAST_SEG);
-
 	return 0;
 }
 
 
-int sky_rx_raw(SkyHandle_t self, SkyRadioFrame_t *frame)
+int sky_rx_raw(SkyHandle_t self, SkyRadioFrame *frame)
 {
-	SKY_ASSERT(self && frame);
+	SKY_ASSERT(self && frame)
 
 	// Read Golay decoded len
 	uint32_t coded_len = (frame->raw[0] << 16) | (frame->raw[1] << 8) | frame->raw[2];
@@ -83,9 +91,9 @@ int sky_rx_raw(SkyHandle_t self, SkyRadioFrame_t *frame)
 }
 
 
-int sky_tx(SkyHandle_t self, SkyRadioFrame_t *frame, timestamp_t current_time)
+int sky_tx(SkyHandle_t self, SkyRadioFrame *frame, timestamp_t current_time)
 {
-	SKY_ASSERT(self && frame);
+	SKY_ASSERT(self && frame)
 
 	int loc = 0;
 
@@ -128,7 +136,7 @@ int sky_tx(SkyHandle_t self, SkyRadioFrame_t *frame, timestamp_t current_time)
 
 
 
-int sky_tx_raw(SkyHandle_t ap, SkyRadioFrame_t *frame, timestamp_t current_time) {
+int sky_tx_raw(SkyHandle_t ap, SkyRadioFrame *frame, timestamp_t current_time) {
 
 	int ret = sky_tx(ap, frame, current_time);
 	if (ret != 0)
@@ -154,21 +162,16 @@ int sky_tx_raw(SkyHandle_t ap, SkyRadioFrame_t *frame, timestamp_t current_time)
 
 
 
-int sky_vc_write(SkyHandle_t self, SkyVirtualChannel_t vc, const uint8_t *data, unsigned datalen, unsigned flags) {
-	//return sky_buf_write(ap1->txbuf[(cmd - CMD_WRITE_VC0)/2], data+1, len-1, BUF_FIRST_SEG|BUF_LAST_SEG);
-	return 0;
-}
-
 
 int sky_set_config(SkyHandle_t self, unsigned int cfg, unsigned int val) {
-	SKY_ASSERT(self);
+	SKY_ASSERT(self)
 	(void)self; (void)cfg; (void)val;
 	return -1;
 }
 
 
 int sky_get_config(SkyHandle_t self, unsigned int cfg, unsigned int* val) {
-	SKY_ASSERT(self);
+	SKY_ASSERT(self)
 	(void)self; (void)cfg; (void)val;
 	return -1;
 }
@@ -177,23 +180,23 @@ int sky_get_config(SkyHandle_t self, unsigned int cfg, unsigned int* val) {
 
 int sky_print_diag(SkyHandle_t self)
 {
-	SKY_ASSERT(self);
+	SKY_ASSERT(self)
 
 	unsigned i;
 	const SkyDiagnostics_t *diag = self->diag;
-	SKY_PRINTF(SKY_DIAG_LINK_STATE, "\033[H\033[2J");
+	SKY_PRINTF(SKY_DIAG_LINK_STATE, "\033[H\033[2J")
 	SKY_PRINTF(SKY_DIAG_LINK_STATE, "Received frames: %5u total, %5u OK, %5u failed. FEC corrected octets %5u/%u\n",
-		diag->rx_frames, diag->rx_fec_ok, diag->rx_fec_fail, diag->rx_fec_errs, diag->rx_fec_octs);
+		diag->rx_frames, diag->rx_fec_ok, diag->rx_fec_fail, diag->rx_fec_errs, diag->rx_fec_octs)
 	SKY_PRINTF(SKY_DIAG_LINK_STATE, "Transmit frames: %5u\n",
-		diag->tx_frames);
+		diag->tx_frames)
 
-	SKY_PRINTF(SKY_DIAG_LINK_STATE, "Buffer fullness RX: ");
+	SKY_PRINTF(SKY_DIAG_LINK_STATE, "Buffer fullness RX: ")
 	for (i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++)
-		SKY_PRINTF(SKY_DIAG_LINK_STATE, "%4u ", ap_buf_fullness(self->rxbuf[i]));
-	SKY_PRINTF(SKY_DIAG_LINK_STATE, "TX: ");
+		SKY_PRINTF(SKY_DIAG_LINK_STATE, "%4u ", ap_buf_fullness(self->rxbuf[i]))
+	SKY_PRINTF(SKY_DIAG_LINK_STATE, "TX: ")
 	for (i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++)
-		SKY_PRINTF(SKY_DIAG_LINK_STATE, "%4u ", ap_buf_fullness(self->txbuf[i]));
-	SKY_PRINTF(SKY_DIAG_LINK_STATE, "\n");
+		SKY_PRINTF(SKY_DIAG_LINK_STATE, "%4u ", ap_buf_fullness(self->txbuf[i]))
+	SKY_PRINTF(SKY_DIAG_LINK_STATE, "\n")
 
 	/*for (i = 0; i < AP_N_ARQS; i++) {
 		SKY_PRINTF(SKY_DIAG_LINK_STATE, "ARQ %u RX:\n", i);
@@ -221,12 +224,12 @@ void sky_diag_dump_hex(uint8_t* data, unsigned int data_len) {
 		str[1] = hex[0xF & (*data >> 0)];
 		str[2] = '\0';
 
-		SKY_PRINTF(SKY_DIAG_DEBUG, "%s ", str);
+		SKY_PRINTF(SKY_DIAG_DEBUG, "%s ", str)
 
 		data++;
 		data_len--;
 	}
-	SKY_PRINTF(SKY_DIAG_DEBUG, "\n");
+	SKY_PRINTF(SKY_DIAG_DEBUG, "\n")
 }
 
 
@@ -237,7 +240,7 @@ int sky_clear_stats(SkyHandle_t self) {
 
 
 int sky_get_buffer_status(SkyHandle_t self, SkyBufferState_t* state) {
-	SKY_ASSERT(self && state);
+	SKY_ASSERT(self && state)
 
 	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		state->state[vc] = 0;
@@ -250,7 +253,7 @@ int sky_get_buffer_status(SkyHandle_t self, SkyBufferState_t* state) {
 
 
 int sky_flush_buffers(SkyHandle_t self) {
-	SKY_ASSERT(self);
+	SKY_ASSERT(self)
 	for (int vc = 0; vc < 4; vc++) {
 		sky_buf_flush(self->rxbuf[vc]);
 		sky_buf_flush(self->txbuf[vc]);

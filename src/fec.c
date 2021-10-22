@@ -113,9 +113,8 @@ SkyPHYConfig_t* conf = &phy_defaults;
 
 
 /** Decode a received frame */
-int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics_t *diag)
+int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics_t *diag)
 {
-	SKY_ASSERT(frame && diag);
 	int ret = 0;
 
 	if (conf->enable_scrambler) {
@@ -138,7 +137,7 @@ int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics_t *diag)
 	 	 * and pass it to the next layer together with
 	 	 * the original metadata. */
 		if ((ret = decode_rs_8(frame->raw, NULL, 0, RS_MSGLEN + RS_PARITYS - frame->length)) < 0) {
-			++diag->rx_fec_fail;
+			diag->rx_fec_fail++;
 			SKY_PRINTF(SKY_DIAG_FRAMES, "%10u: FEC uncorrectable\n", get_timestamp());
 			return SKY_RET_RS_FAILED; /* Reed-Solomon decode failed */
 		}
@@ -161,7 +160,7 @@ int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics_t *diag)
 
 
 /** Encode a frame to transmit */
-int sky_fec_encode(SkyRadioFrame_t *frame)
+int sky_fec_encode(SkyRadioFrame *frame)
 {
 	SKY_ASSERT(frame);
 

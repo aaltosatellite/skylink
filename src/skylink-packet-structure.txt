@@ -1,0 +1,56 @@
+
+RX prcess order:
+
+-decode_golay24
+-fec_decode
+    (-insert packet unzip here?)
+-check_hmac_auth
+    (-or MAC state update here?)
+-sky_buf_write
+    here:
+        if arq:
+            check arq_seq.
+            acceptance.
+            update the list of arq-requests needed.
+        MAC (medium access control):
+            read mac number (n of ticks remaining in senders window)
+            update own belief of next own turn
+
+
+
+
+
+
+----------------------------------- 0
+SKYLINK             1 Bytes  '\n'        'S'        this is a skylink frame
+VERSION             1 Bytes  's'         '1'        version number
+----------------------------------- 2
+IDENTITY            N_i Bytes                       identity of sender (5 bytes thought enough to contain OH-callsign)
+----------------------------------- 2+N_i
+VC                  2 bits                          virtual channel 0-3
+HMAC_SEQ            14 bits                         sequence number for hmac. Not used for ARQ (IF ZERO, NO HMAC
+----------------------------------- 2+N_i+2
+MAC                 4 Bytes                         MAC count
+----------------------------------- 2+N_i+2+2
+N_EXTENSIONS        1 Byte
+----------------------------------- 2+N_i+2+2
+
+----------------------------------- 2+N_i+2+2+1
+x N_EXTENSIONS:
+    EXTENSION_TYPE      4 bits
+    EXTENSION_LEN       4 bits
+    EXTENSION           EXTENSION_LEN bytes
+
+        ARQ_SEQ ----------- 1 Bytes
+        SEQ                 1 Bytes
+        ---------------------------
+
+        ARQ_RESEND_REQ ---- 3 Bytes
+        SEQ                 1 Bytes
+        MASK                2 Bytes
+        ---------------------------
+-----------------------------------
+
+
+----------------------------------- ??
+PAYLOAD

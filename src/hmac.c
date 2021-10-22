@@ -32,7 +32,12 @@ int sky_hmac_init(SkyHandle_t self, const uint8_t* key, unsigned int key_len) {
 }
 
 
-int sky_hmac_authenticate(SkyHandle_t self, SkyRadioFrame_t* frame) {
+int sky_hmac_frame_claims_authenticated(SkyRadioFrame* frame){
+	return frame->hmac_sequence != 0;
+}
+
+
+int sky_hmac_authenticate(SkyHandle_t self, SkyRadioFrame* frame) {
 
 	if (self->conf->phy.authenticate_tx == 0)
 		return SKY_RET_OK;
@@ -44,7 +49,7 @@ int sky_hmac_authenticate(SkyHandle_t self, SkyRadioFrame_t* frame) {
 	SKY_ASSERT(frame->length + SKY_HMAC_LENGTH <= SKY_FRAME_MAX_LEN);
 
 	// Indicate in the phy header that the frame is authenticated
-	frame->hdr.flags |= SKY_FRAME_AUTHENTICATED;
+	//frame->hdr.flags |= SKY_FRAME_AUTHENTICATED;
 
 	/*
 	 * Calculate SHA256 hash
@@ -65,11 +70,7 @@ int sky_hmac_authenticate(SkyHandle_t self, SkyRadioFrame_t* frame) {
 
 
 
-int sky_hmac_check_authentication(SkyHandle_t self, SkyRadioFrame_t* frame) {
-
-	if ((frame->hdr.flags & SKY_FRAME_AUTHENTICATED) == 0)
-		return SKY_RET_OK;
-
+int sky_hmac_check_authentication(SkyHandle_t self, SkyRadioFrame* frame) {
 	/*
 	 * If the frame is too short don't even try to calculate anything
 	 */
@@ -109,5 +110,13 @@ int sky_hmac_check_authentication(SkyHandle_t self, SkyRadioFrame_t* frame) {
 		return SKY_RET_AUTH_FAILED;
 	}
 
+	frame->flags |= SKY_FRAME_AUTHENTICATED;
 	return SKY_RET_OK;
 }
+
+
+int sky_hmac_vc_demands_auth(SkyHandle_t self, uint8_t vc){
+	return self->conf->vc[vc].require_authentication;
+}
+
+

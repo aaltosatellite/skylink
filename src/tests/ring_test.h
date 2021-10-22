@@ -1,0 +1,17 @@
+//
+// Created by elmore on 16.10.2021.
+//
+
+#ifndef SKYLINK_RING_TEST_H
+#define SKYLINK_RING_TEST_H
+
+#include "../skylink/elementbuffer.h"
+#include "../skylink/skylink_array.h"
+#include "tools/tools.h"
+#include "crc/crc_algos.h"
+
+
+void ring_tests();
+
+
+#endif //SKYLINK_RING_TEST_H

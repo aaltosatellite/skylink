@@ -31,6 +31,7 @@
 #define VC_CTRL_ARQ_RESET           21
 #define VC_CTRL_ARQ_TIMEOUT         22
 
+int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len);
 
 const int PP = 1; // use push/pull instead of pub/sub for VC interfaces?
 
@@ -49,8 +50,8 @@ extern void *zmq;
 #define PACKET_TX_MAXLEN  0x200
 
 
-void* z_ps_rx[4];
-void* z_ps_tx[4];
+void* z_ps_rx[SKY_NUM_VIRTUAL_CHANNELS];
+void* z_ps_tx[SKY_NUM_VIRTUAL_CHANNELS];
 
 
 
@@ -73,8 +74,8 @@ int vc_init(int vc_base) {
 		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%d", vc_base + vc);
 		SKY_PRINTF(SKY_DIAG_INFO, "VC %d RX binding %s\n", vc, uri);
 
-		if ((ret = zmq_bind(sock, uri)) < 0)
-			fprintf(stderr, "zmq_bind() failed: %s", zmq_strerror(ret));
+		if (zmq_bind(sock, uri) < 0)
+			fprintf(stderr, "zmq_bind() failed: %s", zmq_strerror(errno));
 
 		z_ps_rx[vc] = sock;
 	}
@@ -87,7 +88,7 @@ int vc_init(int vc_base) {
 		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%d", vc_base + 100 + vc);
 		SKY_PRINTF(SKY_DIAG_INFO, "VC %d TX binding %s\n", vc, uri);
 
-		if ((ret = zmq_bind(sock, uri)) < 0)
+		if (zmq_bind(sock, uri) < 0)
 			SKY_PRINTF(SKY_DIAG_BUG, "zmq_bind() failed: %s", zmq_strerror(errno));
 
 		if (!PP)
@@ -162,20 +163,24 @@ void vc_check() {
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		uint8_t data[PACKET_TX_MAXLEN];
 		ret = zmq_recv(z_ps_tx[vc], data, PACKET_TX_MAXLEN, ZMQ_DONTWAIT);
-		if (ret < 0)
-			fprintf(stderr, "VC: zmq_recv() error %s\n", zmq_strerror(errno));
+		if (ret < 0){
+            if(errno == EAGAIN){
+                continue;
+            }
+            fprintf(stderr, "VC: zmq_recv() error %d %s\n", errno, zmq_strerror(errno));
+        }
 
 		if (ret >= 0) {
 
 			fprintf(stderr, "handle %d  %d\n", ret, data[0]);
 			/* Handle control messages */
-			int ret = handle_control_message(vc, data[0], data[1]);
+			int ret2 = handle_control_message(vc, data[0], &data[1], ret-1);
 
 			// Send response
-			if (ret > 0)
-				ret = zmq_send(z_ps_tx[vc], data, ret, 0);
-				if (ret < 0)
-					fprintf(stderr, "VC: zmq_send() error %s\n", zmq_strerror(errno));
+			if (ret2 > 0)
+				ret2 = zmq_send(z_ps_tx[vc], data, ret2, 0);
+            if (ret2 < 0)
+                fprintf(stderr, "VC: zmq_send() error %s\n", zmq_strerror(errno));
 
 #if 0
 			int ret2;
@@ -217,7 +222,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		uint16_t* vals = (uint16_t*)rsp;
 		for (int i = 2; i < sizeof(SkyBufferState_t)/2; i++)
 			vals[i] = sky_hton16(vals[i]);
- 		rsp_len = sizeof(SkyBufferState_t);
+		rsp_len = sizeof(SkyBufferState_t);
 		rsp_code = VC_CTRL_BUFFER_RSP;
 		break;
 	}
