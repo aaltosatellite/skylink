@@ -13,6 +13,7 @@
 
 
 #define ARQ_SEQUENCE_MODULO 			250
+#define ARQ_SEQUENCE_NAN 				(ARQ_SEQUENCE_MODULO+1)
 #define SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE	260
 
 
@@ -136,6 +137,9 @@ int skyArray_schedule_resend(SkyArqRing* arqRing, int sequence);
 
 //pops a sequence number from resend list. (FiFo) returns sequence number or -1 if list is empty.
 int skyArray_pop_resend_sequence(SkyArqRing* arqRing);
+
+//returns the length of the next payload that would be read from transmit ring. -1 if there is nothing to read.
+int skyArray_peek_next_tx_size(SkyArqRing* arqRing);
 //======================================================================================================================
 //======================================================================================================================
 

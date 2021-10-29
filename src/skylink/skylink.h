@@ -52,6 +52,7 @@
 #define SKY_HMAC_LENGTH 				8
 #define SKY_FLAG_FRAME_AUTHENTICATED 	0b00000001
 #define SKY_FLAG_ARQ_ON 				0b00000010
+#define SKY_FLAG_HAS_PAYLOAD 			0b00000100
 
 //Physical layer radio frame structure.
 #define SKY_NUM_VIRTUAL_CHANNELS  		4

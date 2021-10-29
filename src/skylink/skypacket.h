@@ -52,6 +52,8 @@ int encode_skylink_packet(SkyRadioFrame* frame);
 int sky_packet_available_payload_space(SkyRadioFrame* frame);
 
 int sky_packet_extend_with_payload(SkyRadioFrame* frame, void* payload, int length);
+
+int sky_packet_stamp_arq(SkyRadioFrame* frame, uint8_t arq_sequence);
 // =====================================================================================================================
 
 

@@ -131,6 +131,14 @@ int sky_packet_extend_with_payload(SkyRadioFrame* frame, void* payload, int leng
 }
 
 
+int sky_packet_stamp_arq(SkyRadioFrame* frame, uint8_t arq_sequence){
+	frame->raw[I_PK_FLAG] |= SKY_FLAG_HAS_PAYLOAD;
+	frame->raw[I_PK_FLAG] |= SKY_FLAG_ARQ_ON;
+	frame->raw[I_PK_ARQ_SEQUENCE] = arq_sequence;
+	return 0;
+}
+
+
 static int encode_skylink_extension(SkyRadioFrame* frame, int i_extension, int cursor){
 	SkyPacketExtension* extension = &frame->extensions[i_extension];
 

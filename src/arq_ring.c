@@ -287,6 +287,15 @@ static int sendRing_pop_resend_sequence(SkySendRing* sendRing){
 	memmove(sendRing->resend_list, sendRing->resend_list+1, sendRing->resend_count);
 	return r;
 }
+
+static int sendRing_peek_next_tx_size(SkySendRing* sendRing, ElementBuffer* elementBuffer){
+	if(sendRing_count_packets_to_send(sendRing) == 0){
+		return -1;
+	}
+	RingItem* item = &sendRing->buff[sendRing->tx_head];
+	int length = element_buffer_get_data_length(elementBuffer, item->idx);
+	return length;
+}
 //===== SEND RING ======================================================================================================
 
 
@@ -427,6 +436,10 @@ int skyArray_schedule_resend(SkyArqRing* arqRing, int sequence){
 
 int skyArray_pop_resend_sequence(SkyArqRing* arqRing){
 	return sendRing_pop_resend_sequence(arqRing->primarySendRing);
+}
+
+int skyArray_peek_next_tx_size(SkyArqRing* arqRing){
+	return sendRing_peek_next_tx_size(arqRing->primarySendRing, arqRing->elementBuffer);
 }
 //======================================================================================================================
 //======================================================================================================================

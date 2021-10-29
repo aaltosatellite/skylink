@@ -151,4 +151,4 @@ add_executable(elementbuffer_test
         src/tests/tst_utilities.c
         src/tests/tst_utilities.h
         src/diag.c
-        src/tests/fec_test.c src/tests/fec_test.h src/skylink2.c src/skylink2.h)
+        src/tests/fec_test.c src/tests/fec_test.h src/skylink_rx.c src/skylink_rx.h src/skylink_tx.c src/skylink_tx.h)
