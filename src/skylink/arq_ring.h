@@ -11,6 +11,15 @@
 #include "conf.h"
 
 
+#define RING_RET_EMPTY					(-1)
+#define RING_RET_INVALID_SEQUENCE		(-10)
+#define RING_RET_ELEMENTBUFFER_FAULT	(-11)
+#define RING_RET_BUFFER_FULL			(-12)
+#define RING_RET_RING_FULL				(-13)
+#define RING_RET_PACKET_ALREADY_IN		(-14)
+#define RING_RET_CANNOT_RECALL			(-15)
+#define RING_RET_RESEND_FULL			(-16)
+
 
 #define ARQ_SEQUENCE_MODULO 			250
 #define ARQ_SEQUENCE_NAN 				(ARQ_SEQUENCE_MODULO+1)

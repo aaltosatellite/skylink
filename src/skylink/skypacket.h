@@ -15,8 +15,9 @@
 #define SKYLINK_START_BYTE				'S' 	//all packets start with this
 #define SKYLINK_VERSION_BYTE			'1'		//the version id of the protocol.
 #define EXTENSION_ARQ_RESEND_REQ		1
-#define EXTENSION_ARQ_SETUP				2
+#define EXTENSION_ARQ_SEQ_RESET			2
 #define EXTENSION_MAC_PARAMETERS		3
+#define EXTENSION_HMAC_INVALID_SEQ		4
 
 
 //bytearray indexes of specific segments of a packed message.

@@ -109,8 +109,7 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 	//Check if the hmac sequence number is something we are expecting
 	int32_t jump = wrap_hmac_sequence( (int32_t)(frame->hmac_sequence - self->hmac->sequence_rx[frame->vc]), self->conf->hmac.cycle_length);
 	if (jump > self->conf->hmac.maximum_jump) {
-		//todo: set state varible to indicate need for extension to recalibrate appropriate hmac sequence.
-		return SKY_RET_AUTH_FAILED;
+		return SKY_RET_EXCESSIVE_HMAC_JUMP;
 	}
 
 

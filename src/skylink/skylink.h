@@ -33,10 +33,10 @@
 #define SKY_RET_MAC                	(-20)
 
 // AUTH
-#define SKY_RET_AUTH_UNINITIALIZED 	(-30)
-#define SKY_RET_AUTH_FAILED        	(-31)
-#define SKY_RET_AUTH_MISSING       	(-32)
-#define SKY_RET_NO_MAC_SEQUENCE     (-33)
+#define SKY_RET_AUTH_FAILED        	(-30)
+#define SKY_RET_AUTH_MISSING       	(-31)
+#define SKY_RET_NO_MAC_SEQUENCE     (-32)
+#define SKY_RET_EXCESSIVE_HMAC_JUMP (-33)
 
 // PACKET
 #define SKY_RET_INVALID_PACKET		(-40)
@@ -67,6 +67,7 @@
 //================================================================================================================================
 //============ STRUCTS ===========================================================================================================
 //================================================================================================================================
+/* extensions ====================================================================================== */
 struct extension_arq_req {
 	uint8_t sequence;
 	uint8_t mask1;
@@ -79,20 +80,26 @@ struct extension_arq_setup {
 	uint8_t toggle;
 	uint8_t enforced_sequence;
 };
-typedef struct extension_arq_setup ExtArqSetup;
+typedef struct extension_arq_setup ExtArqSeqReset;
 
 
 struct extension_mac_spec {
-	uint16_t default_window_size;
+	uint16_t window_size;
 	uint16_t gap_size;
 };
 typedef struct extension_mac_spec ExtMACSpec;
 
+struct extension_hmac_tx_reset {
+	uint16_t correct_tx_sequence;
+};
+typedef struct extension_hmac_tx_reset ExtHMACTxReset;
+
 
 union extension_union {
 	ExtArqReq  ArqReq;
-	ExtArqSetup  ArqSetup;
+	ExtArqSeqReset  ArqSeqReset;
 	ExtMACSpec MACSpec;
+	ExtHMACTxReset HMACTxReset;
 };
 typedef union extension_union unifExt;
 
@@ -102,13 +109,13 @@ struct skylink_packet_extension_s {
 	unifExt ext_union;
 };
 typedef struct skylink_packet_extension_s SkyPacketExtension;
+/* extensions ====================================================================================== */
 
 
 
 
-/*
- * Struct to store raw radio frame to be transmitted over the radio or frame which was received
- */
+
+/* Struct to store raw radio frame to be transmitted over the radio or frame which was received */
 struct radioframe {
 	uint8_t raw[SKY_FRAME_MAX_LEN + 3 + 1];
 	uint16_t length;
@@ -124,7 +131,6 @@ struct radioframe {
 	uint16_t mac_length;
 	uint16_t mac_remaining;
 	uint8_t arq_sequence;
-	//uint8_t flags;
 	SkyPacketExtension extensions[SKY_MAX_EXTENSION_COUNT];
 
 	int payload_read_length;
@@ -135,7 +141,8 @@ typedef struct radioframe SkyRadioFrame;
 
 
 
-//MAC-system
+
+/* MAC-system */
 struct sky_mac_s {
 	int32_t T0_ms;
 	int32_t my_window_length;
@@ -147,18 +154,17 @@ typedef struct sky_mac_s MACSystem;
 
 
 
-/*
- * HMAC runtime state
- */
+
+/* HMAC runtime state */
 struct sky_hmac {
 	uint8_t* key;
 	int32_t key_len;
 	int32_t sequence_tx[SKY_NUM_VIRTUAL_CHANNELS];
 	int32_t sequence_rx[SKY_NUM_VIRTUAL_CHANNELS];
+	uint8_t vc_enfocement_need[SKY_NUM_VIRTUAL_CHANNELS];
 	void* ctx;
 };
 typedef struct sky_hmac SkyHMAC;
-
 
 
 
@@ -178,8 +184,6 @@ typedef struct sky_conf {
 	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t identity[SKY_IDENTITY_LEN];
 } SkyConfig;
-
-
 
 
 

@@ -33,7 +33,7 @@ typedef struct {
 
 
 typedef struct {
-	/* Default send window size. */
+	/* Default send window size for both me and peer */
 	int32_t default_window_length;
 
 	/* Default gap size between windows. */
@@ -47,6 +47,8 @@ typedef struct {
 
 	int32_t minimum_gap_size;
 
+	/* Boolean toggle for wether an unauthenticated frame can update MAC state belief.
+	 * Enabling this will allow a continuous stream of unauthenticated frames to essentially block transmission. */
 	uint8_t unauthenticated_mac_updates;
 
 } SkyMACConfig;

@@ -8,13 +8,16 @@
 #include "skylink.h"
 
 
-//int valid_window_length(int32_t length);
+int mac_valid_window_length(SkyMACConfig* config, int32_t length);
 
-//int32_t set_my_window_length(MACSystem* macSystem, int32_t new_length);
+int mac_valid_gap_length(SkyMACConfig* config, int32_t length);
 
-//int32_t set_peer_window_length(MACSystem* macSystem, int32_t new_length);
+int32_t mac_set_my_window_length(MACSystem* macSystem, int32_t new_length);
 
-//int32_t set_gap_constant(MACSystem* macSystem, int32_t new_gap_constant);
+int32_t mac_set_peer_window_length(MACSystem* macSystem, int32_t new_length);
+
+int32_t mac_set_gap_constant(MACSystem* macSystem, int32_t new_gap_constant);
+
 
 
 

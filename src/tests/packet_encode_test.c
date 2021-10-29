@@ -116,12 +116,12 @@ void test1_round(){
 		if(ext.type == EXTENSION_MAC_PARAMETERS){
 			assert(extension_mac_params == 1);
 			assert(ext.ext_union.MACSpec.gap_size == new_gap);
-			assert(ext.ext_union.MACSpec.default_window_size == new_window);
+			assert(ext.ext_union.MACSpec.window_size == new_window);
 		}
-		if(ext.type == EXTENSION_ARQ_SETUP){
+		if(ext.type == EXTENSION_ARQ_SEQ_RESET){
 			assert(extension_arq_settings == 1);
-			assert(ext.ext_union.ArqSetup.toggle == toggle);
-			assert(ext.ext_union.ArqSetup.enforced_sequence == new_sequence0);
+			assert(ext.ext_union.ArqSeqReset.toggle == toggle);
+			assert(ext.ext_union.ArqSeqReset.enforced_sequence == new_sequence0);
 		}
 
 		if(ext.type == EXTENSION_ARQ_RESEND_REQ){

@@ -333,7 +333,17 @@ static void test2_round(){
 				assert(memcmp(tgt, messages[last_received_idx+1]->data, r) == 0);
 				last_received_idx += 1;
 			}
-
+			uint16_t mask = skyArray_get_horizon_bitmap(array_r);
+			for (int i = 0; i < 16; ++i) {
+				int got = ((mask & (1<<i)) > 0);
+				if (got){
+					assert(succesfully_given[next_continuous_idx+i] == 1);
+				} else{
+					assert(succesfully_given[next_continuous_idx+i] == 0);
+				}
+				//if(mask) PRINTFF(0,"%d  %d\n",got, succesfully_given[next_continuous_idx+i]);
+			}
+			//if(mask) PRINTFF(0,"\n");
 		}
 
 	}

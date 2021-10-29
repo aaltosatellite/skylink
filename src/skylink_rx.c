@@ -5,10 +5,11 @@
 #include "skylink_rx.h"
 
 
-int sky_rx_process_ext_mac(SkyHandle self, ExtMACSpec macSpec);
-int sky_rx_process_ext_arq_setup(SkyHandle self, ExtArqSetup arqSetup, int vc);
+int sky_rx_process_ext_mac_reset(SkyHandle self, ExtMACSpec macSpec);
+int sky_rx_process_ext_arq_sequence_reset(SkyHandle self, ExtArqSeqReset arqSeqReset, int vc);
 int sky_rx_process_ext_arq_req(SkyHandle self, ExtArqReq arqReq, int vc);
-int sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame);
+int sky_rx_process_ext_hmac_tx_seq_reset(SkyHandle self, ExtHMACTxReset hmacTxReset, int vc);
+int sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type);
 
 
 
@@ -84,10 +85,18 @@ int sky_rx_1(SkyHandle self, SkyRadioFrame *frame)
 		return ret;
 	}
 
+	// This extension has to be checked here. Otherwise, if both peers use incorrect hmac-sequencing, we would be in lock state.
+	sky_rx_process_extensions(self, frame, EXTENSION_HMAC_INVALID_SEQ);
+
 	// Check authentication code if the frame claims it is authenticated.
 	if (frame->hmac_on) {
-		if ((ret = sky_hmac_check_authentication(self, frame)) < 0)
+		if ((ret = sky_hmac_check_authentication(self, frame)) < 0){
+			if(ret == SKY_RET_EXCESSIVE_HMAC_JUMP){
+				self->hmac->vc_enfocement_need[frame->vc] = 1;
+			}
 			return ret;
+		}
+
 	}
 
 	// If the virtual channel necessitates auth, return error.
@@ -100,7 +109,10 @@ int sky_rx_1(SkyHandle self, SkyRadioFrame *frame)
 		mac_update_belief(self->mac, &self->conf->mac, frame->rx_time_ms, frame->mac_length, frame->mac_remaining);
 	}
 
-	sky_rx_process_extensions(self, frame);
+	// Check the rest of extension types.
+	sky_rx_process_extensions(self, frame, EXTENSION_MAC_PARAMETERS);
+	sky_rx_process_extensions(self, frame, EXTENSION_ARQ_RESEND_REQ);
+	sky_rx_process_extensions(self, frame, EXTENSION_ARQ_SEQ_RESET);
 
 	int r = -1;
 	if(!self->conf->vc[frame->vc].arq_on){
@@ -112,39 +124,56 @@ int sky_rx_1(SkyHandle self, SkyRadioFrame *frame)
 			return SKY_RET_NO_MAC_SEQUENCE;
 		}
 		r = skyArray_push_rx_packet(self->arrayBuffers[frame->vc], frame->payload_read_start, frame->payload_read_length, frame->arq_sequence);
+		if (r == RING_RET_INVALID_SEQUENCE){
+			skyArray_set_receive_sequence(self->arrayBuffers[frame->vc], frame->arq_sequence, 0);
+			skyArray_push_rx_packet(self->arrayBuffers[frame->vc], frame->payload_read_start, frame->payload_read_length, frame->arq_sequence);
+		}
 	}
 	//todo: log behavior based on r.
 	return 0;
 }
 
 
-int sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame){
+
+
+int sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type){
 	for (int i = 0; i < frame->n_extensions; ++i) {
 		SkyPacketExtension* ext = &frame->extensions[i];
-		if(ext->type == EXTENSION_MAC_PARAMETERS){
-			sky_rx_process_ext_mac(self, ext->ext_union.MACSpec);
+		if((ext->type == EXTENSION_MAC_PARAMETERS) && (ext->type == this_type)){
+			sky_rx_process_ext_mac_reset(self, ext->ext_union.MACSpec);
 		}
-		if(ext->type == EXTENSION_ARQ_SETUP){
-			sky_rx_process_ext_arq_setup(self, ext->ext_union.ArqSetup, frame->vc);
+		if((ext->type == EXTENSION_ARQ_SEQ_RESET) && (ext->type == this_type)){
+			sky_rx_process_ext_arq_sequence_reset(self, ext->ext_union.ArqSeqReset, frame->vc);
 		}
-		if(ext->type == EXTENSION_ARQ_RESEND_REQ){
+		if((ext->type == EXTENSION_ARQ_RESEND_REQ) && (ext->type == this_type)){
 			sky_rx_process_ext_arq_req(self, ext->ext_union.ArqReq, frame->vc);
+		}
+		if((ext->type == EXTENSION_HMAC_INVALID_SEQ) && (ext->type == this_type)){
+			sky_rx_process_ext_hmac_tx_seq_reset(self, ext->ext_union.HMACTxReset, frame->vc);
 		}
 	}
 	return 0;
 }
 
 
-int sky_rx_process_ext_mac(SkyHandle self, ExtMACSpec macSpec){
-	//todo: implement. (the contents of this extension should probably be thought through);
+int sky_rx_process_ext_mac_reset(SkyHandle self, ExtMACSpec macSpec){
+	if(!mac_valid_window_length(&self->conf->mac, macSpec.window_size)){
+		return -1;
+	}
+	if(!mac_valid_gap_length(&self->conf->mac, macSpec.gap_size)){
+		return -1;
+	}
+	mac_set_gap_constant(self->mac, macSpec.gap_size);
+	mac_set_my_window_length(self->mac, macSpec.window_size);
+	mac_set_peer_window_length(self->mac, macSpec.window_size);
 	return 0;
 }
 
 
-int sky_rx_process_ext_arq_setup(SkyHandle self, ExtArqSetup arqSetup, int vc){
-	self->conf->vc[vc].arq_on = (arqSetup.toggle > 0);
-	if(arqSetup.toggle){
-		skyArray_set_receive_sequence(self->arrayBuffers[vc], arqSetup.enforced_sequence, 0); //sequence gets wrapped anyway..
+int sky_rx_process_ext_arq_sequence_reset(SkyHandle self, ExtArqSeqReset arqSeqReset, int vc){
+	self->conf->vc[vc].arq_on = (arqSeqReset.toggle > 0);
+	if(arqSeqReset.toggle){
+		skyArray_set_receive_sequence(self->arrayBuffers[vc], arqSeqReset.enforced_sequence, 0); //sequence gets wrapped anyway..
 	}
 	return 0;
 }
@@ -166,6 +195,11 @@ int sky_rx_process_ext_arq_req(SkyHandle self, ExtArqReq arqReq, int vc){
 }
 
 
+int sky_rx_process_ext_hmac_tx_seq_reset(SkyHandle self, ExtHMACTxReset hmacTxReset, int vc){
+	uint16_t new_sequence = hmacTxReset.correct_tx_sequence;
+	self->hmac->sequence_tx[vc] = new_sequence;
+	return 0;
+}
 
 
 

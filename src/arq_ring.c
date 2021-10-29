@@ -91,12 +91,12 @@ int rcvRing_rx_sequence_fits(SkyRcvRing* rcvRing, int sequence){
 
 int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, void* tgt, int* sequence){
 	if(!rcvRing_count_readable_packets(rcvRing)){
-		return -1;
+		return RING_RET_EMPTY;
 	}
 	RingItem* tail_item = &rcvRing->buff[rcvRing->tail];
 	int read = element_buffer_read(elementBuffer, tgt, tail_item->idx, SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE);
 	if(read < 0){
-		return -1; //todo: Should never occur. Grounds for full wipe in order to recover.
+		return RING_RET_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
 	}
 	*sequence = tail_item->sequence;
 	element_buffer_delete(elementBuffer, tail_item->idx);
@@ -112,16 +112,16 @@ int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer
 
 int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, void* src, int length, int sequence){
 	if(!rcvRing_rx_sequence_fits(rcvRing, sequence)){
-		return -1;
+		return RING_RET_INVALID_SEQUENCE;
 	}
 	int ring_idx = ring_wrap(rcvRing->head + sequence_wrap(sequence - rcvRing->head_sequence), rcvRing->length);
 	RingItem* item = &rcvRing->buff[ring_idx];
 	if(item->idx != EB_NULL_IDX){
-		return -1;
+		return RING_RET_PACKET_ALREADY_IN;
 	}
 	int idx = element_buffer_store(elementBuffer, src, length);
 	if(idx < 0){
-		return -1;
+		return RING_RET_BUFFER_FULL;
 	}
 	item->idx = idx;
 	item->sequence = sequence;
@@ -133,7 +133,7 @@ int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, vo
 
 int rcvRing_get_horizon_bitmap(SkyRcvRing* rcvRing){
 	uint16_t map = 0;
-	for (int i = 0; i < rcvRing->horizon_width; ++i) {
+	for (int i = 0; i < rcvRing->horizon_width +1; ++i) { //HEAD is contained in the mask, as the first bit.
 		int ring_idx = ring_wrap(rcvRing->head + i, rcvRing->length);
 		RingItem* item = &rcvRing->buff[ring_idx];
 		if(item->idx != EB_NULL_IDX){
@@ -198,11 +198,11 @@ static int sendRing_count_packets_to_send(SkySendRing* sendRing){
 
 static int sendRing_push_packet_to_send(SkySendRing* sendRing, ElementBuffer* elementBuffer, void* payload, int length){
 	if(sendRingFull(sendRing)){
-		return -1;
+		return RING_RET_RING_FULL;
 	}
 	int idx = element_buffer_store(elementBuffer, payload, length);
 	if(idx < 0){
-		return -1;
+		return RING_RET_BUFFER_FULL;
 	}
 	RingItem* item = &sendRing->buff[sendRing->head];
 	item->idx = idx;
@@ -217,12 +217,12 @@ static int sendRing_push_packet_to_send(SkySendRing* sendRing, ElementBuffer* el
 
 static int sendRing_read_packet_to_tx(SkySendRing* sendRing, ElementBuffer* elementBuffer, void* tgt, int* sequence){
 	if(sendRing_count_packets_to_send(sendRing) == 0){
-		return -1;
+		return RING_RET_EMPTY;
 	}
 	RingItem* item = &sendRing->buff[sendRing->tx_head];
 	int read = element_buffer_read(elementBuffer, tgt, item->idx, SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE);
 	if(read < 0){
-		return -1; //todo: Should never occur. Grounds for full wipe in order to recover.
+		return RING_RET_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
 	}
 	*sequence = sendRing->tx_sequence;
 	sendRing->tx_head = ring_wrap(sendRing->tx_head+1, sendRing->length);
@@ -254,24 +254,24 @@ static int sendRing_can_recall(SkySendRing* sendRing, int sequence){
 
 static int sendRing_recall(SkySendRing* sendRing, ElementBuffer* elementBuffer, int sequence, void* tgt){
 	if(!sendRing_can_recall(sendRing, sequence)){
-		return -1;
+		return RING_RET_CANNOT_RECALL;
 	}
 	int n = sequence_wrap(sequence - sendRing->tail_sequence);
 	int recall_ring_index = ring_wrap(sendRing->tail + n, sendRing->length);
 	RingItem* item = &sendRing->buff[recall_ring_index];
 	int read = element_buffer_read(elementBuffer, tgt, item->idx, SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE);
 	if(read < 0){
-		return -1; //todo: Should never occur. Grounds for full wipe in order to recover.
+		return RING_RET_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
 	}
 	return read;
 }
 
 static int sendRing_schedule_resend(SkySendRing* sendRing, int sequence){
 	if(sendRing->resend_count >= 16){
-		return -1;
+		return RING_RET_RESEND_FULL;
 	}
 	if(!sendRing_can_recall(sendRing, sequence)){
-		return -1;
+		return RING_RET_CANNOT_RECALL;
 	}
 	sendRing->resend_list[sendRing->resend_count] = sequence;
 	sendRing->resend_count++;
@@ -280,7 +280,7 @@ static int sendRing_schedule_resend(SkySendRing* sendRing, int sequence){
 
 static int sendRing_pop_resend_sequence(SkySendRing* sendRing){
 	if(sendRing->resend_count == 0){
-		return -1;
+		return RING_RET_EMPTY;
 	}
 	int r = sendRing->resend_list[0];
 	sendRing->resend_count--;
@@ -290,7 +290,7 @@ static int sendRing_pop_resend_sequence(SkySendRing* sendRing){
 
 static int sendRing_peek_next_tx_size(SkySendRing* sendRing, ElementBuffer* elementBuffer){
 	if(sendRing_count_packets_to_send(sendRing) == 0){
-		return -1;
+		return RING_RET_EMPTY;
 	}
 	RingItem* item = &sendRing->buff[sendRing->tx_head];
 	int length = element_buffer_get_data_length(elementBuffer, item->idx);
@@ -402,7 +402,7 @@ int skyArray_read_packet_for_tx(SkyArqRing* array, void* tgt, int* sequence){
 	if(sendRing_count_packets_to_send(array->primarySendRing)){
 		return sendRing_read_packet_to_tx( array->primarySendRing, array->elementBuffer, tgt, sequence);
 	}
-	return -1;
+	return RING_RET_EMPTY;
 }
 
 
@@ -425,7 +425,7 @@ int skyArray_recall(SkyArqRing* array, int sequence, void* tgt){
 	if(able == 2){
 		return sendRing_recall(array->secondarySendRing, array->elementBuffer, sequence, tgt);
 	}
-	return -1;
+	return RING_RET_CANNOT_RECALL;
 }
 
 
@@ -465,7 +465,7 @@ int skyArray_read_next_received(SkyArqRing* array, void* tgt, int* sequence){
 	if(rcvRing_count_readable_packets(array->primaryRcvRing) > 0){
 		return rcvRing_read_next_received(array->primaryRcvRing, array->elementBuffer, tgt, sequence);
 	}
-	return -1;
+	return RING_RET_EMPTY;
 }
 
 

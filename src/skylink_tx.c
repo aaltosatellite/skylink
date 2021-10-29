@@ -4,6 +4,35 @@
 
 #include "skylink_tx.h"
 
+int sky_tx_header_scan(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
+	uint16_t resend_map = skyArray_get_horizon_bitmap(self->arrayBuffers[vc]);
+	if(resend_map == 0){
+		return 0;
+	}
+	ExtArqReq extension;
+	extension.sequence = self->arrayBuffers[vc]->primaryRcvRing->head_sequence;
+	extension.mask1 = resend_map & 0xFF;
+	extension.mask2 = resend_map & 0xFF00;
+	frame->extensions[frame->n_extensions].type = EXTENSION_ARQ_RESEND_REQ;
+	frame->extensions[frame->n_extensions].ext_union.ArqReq = extension;
+	frame->n_extensions++;
+	return 1;
+}
+
+
+
+int sky_tx_hmac_hdr_scan(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
+	if(self->hmac->vc_enfocement_need[vc] == 0){
+		return 0;
+	}
+	ExtHMACTxReset extension;
+	extension.correct_tx_sequence = self->hmac->sequence_rx[vc] + 2; //+2 so that immediate sends don't ivalidate what we give here. Jump constant must be bigger.
+	frame->extensions[frame->n_extensions].type = EXTENSION_HMAC_INVALID_SEQ;
+	frame->extensions[frame->n_extensions].ext_union.HMACTxReset = extension;
+	frame->n_extensions++;
+	self->hmac->vc_enfocement_need[vc] = 0;
+	return 1;
+}
 
 
 
@@ -25,6 +54,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame *frame, uint8_t vc)
 	frame->arq_on = self->conf->vc[vc].arq_on;
 	frame->arq_sequence = ARQ_SEQUENCE_NAN;
 
+	frame->n_extensions = 0;
 	//todo: set extension headers.
 
 	/* Set MAC data fields. Could in principle be moved after the payload and ecoding phases, but would constitute a stamp procedure. */
@@ -70,8 +100,6 @@ int sky_tx(SkyHandle self, SkyRadioFrame *frame, uint8_t vc)
 
 	return 0;
 }
-
-
 
 
 

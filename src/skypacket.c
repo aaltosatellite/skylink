@@ -40,7 +40,7 @@ int sky_packet_add_extension_mac_params(SkyRadioFrame* frame, int default_window
 	//todo: check for invalid window and gap sizes?
 	SkyPacketExtension* extension = &frame->extensions[frame->n_extensions];
 	extension->type = EXTENSION_MAC_PARAMETERS;
-	extension->ext_union.MACSpec.default_window_size = default_window_size;
+	extension->ext_union.MACSpec.window_size = default_window_size;
 	extension->ext_union.MACSpec.gap_size = gap_size;
 	frame->n_extensions++;
 	return 0;
@@ -50,9 +50,9 @@ int sky_packet_add_extension_mac_params(SkyRadioFrame* frame, int default_window
 int sky_packet_add_extension_arq_setup(SkyRadioFrame* frame, int new_sequence, uint8_t toggle){
 	//todo: check for invalid sequence?
 	SkyPacketExtension* extension = &frame->extensions[frame->n_extensions];
-	extension->type = EXTENSION_ARQ_SETUP;
-	extension->ext_union.ArqSetup.enforced_sequence = new_sequence;
-	extension->ext_union.ArqSetup.toggle = toggle;
+	extension->type = EXTENSION_ARQ_SEQ_RESET;
+	extension->ext_union.ArqSeqReset.enforced_sequence = new_sequence;
+	extension->ext_union.ArqSeqReset.toggle = toggle;
 	frame->n_extensions++;
 	return 0;
 }
@@ -142,8 +142,8 @@ int sky_packet_stamp_arq(SkyRadioFrame* frame, uint8_t arq_sequence){
 static int encode_skylink_extension(SkyRadioFrame* frame, int i_extension, int cursor){
 	SkyPacketExtension* extension = &frame->extensions[i_extension];
 
-	if(extension->type == EXTENSION_ARQ_SETUP){
-		ExtArqSetup arqSetup = extension->ext_union.ArqSetup;
+	if(extension->type == EXTENSION_ARQ_SEQ_RESET){
+		ExtArqSeqReset arqSetup = extension->ext_union.ArqSeqReset;
 		frame->raw[cursor]  = (extension->type << 4) & 0xf0;
 		frame->raw[cursor] |= 2 & 0x0f;
 		frame->raw[cursor+1] = arqSetup.toggle;
@@ -165,11 +165,20 @@ static int encode_skylink_extension(SkyRadioFrame* frame, int i_extension, int c
 		ExtMACSpec macSpec = extension->ext_union.MACSpec;
 		frame->raw[cursor]  = (extension->type << 4) & 0xf0;
 		frame->raw[cursor] |= 4 & 0x0f;
-		uint16_t window_size_tx = sky_hton16(macSpec.default_window_size);
+		uint16_t window_size_tx = sky_hton16(macSpec.window_size);
 		uint16_t gap_size_tx = sky_hton16(macSpec.gap_size);
 		memcpy(frame->raw + cursor + 1, &window_size_tx, 2);
 		memcpy(frame->raw + cursor + 3, &gap_size_tx, 2);
 		return 1+4;
+	}
+
+	if(extension->type == EXTENSION_HMAC_INVALID_SEQ){
+		ExtHMACTxReset hmacTxReset = extension->ext_union.HMACTxReset;
+		frame->raw[cursor]  = (extension->type << 4) & 0xf0;
+		frame->raw[cursor] |= 2 & 0x0f;
+		uint16_t hmac_seq = sky_hton16(hmacTxReset.correct_tx_sequence);
+		memcpy(frame->raw + cursor + 1, &hmac_seq, 2);
+		return 1+2;
 	}
 
 	return -1;
@@ -270,13 +279,13 @@ static int decode_skylink_extension(SkyRadioFrame* frame, int n, int cursor){
 		return extension_len+1;
 	}
 
-	if(extension_type == EXTENSION_ARQ_SETUP){
+	if(extension_type == EXTENSION_ARQ_SEQ_RESET){
 		if(extension_len != 2){
 			return -1;
 		}
-		extension->type = EXTENSION_ARQ_SETUP;
-		extension->ext_union.ArqSetup.toggle = frame->raw[cursor + 1];
-		extension->ext_union.ArqSetup.enforced_sequence = frame->raw[cursor + 2];
+		extension->type = EXTENSION_ARQ_SEQ_RESET;
+		extension->ext_union.ArqSeqReset.toggle = frame->raw[cursor + 1];
+		extension->ext_union.ArqSeqReset.enforced_sequence = frame->raw[cursor + 2];
 		return extension_len+1;
 	}
 
@@ -286,9 +295,19 @@ static int decode_skylink_extension(SkyRadioFrame* frame, int n, int cursor){
 		}
 		extension->type = EXTENSION_MAC_PARAMETERS;
 		uint16_t default_window_size = *(uint16_t*)(&frame->raw[cursor+1]);
-		extension->ext_union.MACSpec.default_window_size = sky_hton16(default_window_size);
+		extension->ext_union.MACSpec.window_size = sky_hton16(default_window_size);
 		uint16_t gap_size = *(uint16_t*)(&frame->raw[cursor+3]);
 		extension->ext_union.MACSpec.gap_size = sky_hton16(gap_size);
+		return extension_len+1;
+	}
+
+	if(extension_type == EXTENSION_HMAC_INVALID_SEQ){
+		if(extension_len != 2){
+			return -1;
+		}
+		extension->type = EXTENSION_HMAC_INVALID_SEQ;
+		uint16_t hmac_tx_sequence = *(uint16_t*)(&frame->raw[cursor+1]);
+		extension->ext_union.HMACTxReset.correct_tx_sequence = sky_hton16(hmac_tx_sequence);
 		return extension_len+1;
 	}
 	return -1;
