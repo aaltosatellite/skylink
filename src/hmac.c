@@ -1,67 +1,77 @@
-#include "skylink/skylink.h"
-#include "skylink/hmac.h"
-#include "skylink/diag.h"
-#include "skylink/fec.h"
 
 #include <stdlib.h>
 #include <string.h>
-
+#include "skylink/skylink.h"
+#include "skylink/hmac.h"
 #include "skylink/platform.h"
 
-int sky_hmac_init(SkyHandle_t self, const uint8_t* key, unsigned int key_len) {
 
-	SkyHMAC_t* hmac = self->hmac;
+static int32_t wrap_hmac_sequence(int32_t sequence, int32_t period){
+	return ((sequence % period) + period) % period;
+}
+
+
+
+
+
+
+SkyHMAC* new_hmac_instance(HMACConfig* config) {
+	SkyHMAC* hmac = SKY_MALLOC(sizeof(SkyHMAC));
 	if (hmac == NULL) {
-		self->hmac = hmac = SKY_MALLOC(sizeof(SkyHMAC_t));
-		memset(hmac, 0, sizeof(SkyHMAC_t));
+		return NULL;
+	}
+	memset(hmac, 0, sizeof(SkyHMAC));
+
+	hmac->ctx = SKY_MALLOC(SKY_HMAC_CTX_SIZE);
+	if (hmac->ctx == NULL){
+		return NULL;
 	}
 
-	if (hmac == NULL)
-		return SKY_RET_MALLOC_FAILED;
+	hmac->key = SKY_MALLOC(config->key_length);
+	if (hmac->key == NULL){
+		return NULL;
+	}
+	memcpy(hmac->key, config->key, config->key_length);
+	hmac->key_len = config->key_length;
 
-	if (hmac->ctx == NULL)
-		hmac->ctx = SKY_MALLOC(SKY_HMAC_CTX_SIZE);
-
-	if (hmac->ctx == NULL)
-		return SKY_RET_MALLOC_FAILED;
-
-	hmac->key = key;
-	hmac->key_len = key_len;
-
-	return SKY_RET_OK;
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
+		hmac->sequence_tx[i] = 0;
+		hmac->sequence_rx[i] = 0;
+	}
+	return hmac;
 }
 
 
-int sky_hmac_frame_claims_authenticated(SkyRadioFrame* frame){
-	return frame->hmac_sequence != 0;
+void destroy_hmac(SkyHMAC* hmac){
+	free(hmac->ctx);
+	free(hmac->key);
+	free(hmac);
 }
 
 
-int sky_hmac_authenticate(SkyHandle_t self, SkyRadioFrame* frame) {
 
-	if (self->conf->phy.authenticate_tx == 0)
-		return SKY_RET_OK;
+int32_t sky_hmac_get_next_hmac_tx_sequence_and_advance(SkyHandle self, uint8_t vc){
+	int32_t seq = self->hmac->sequence_tx[vc];
+	self->hmac->sequence_tx[vc] = wrap_hmac_sequence(self->hmac->sequence_tx[vc] + 1, self->conf->hmac.cycle_length);
+	return seq;
+}
 
-	SkyHMAC_t* hmac = self->hmac;
-	if (hmac == NULL)
-		return SKY_RET_AUTH_UNINITIALIZED;
 
-	SKY_ASSERT(frame->length + SKY_HMAC_LENGTH <= SKY_FRAME_MAX_LEN);
+int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame) {
+	SkyHMAC* hmac = self->hmac;
+	if(frame->length > (SKY_FRAME_MAX_LEN - SKY_HMAC_LENGTH)){
+		return SKY_RET_INVALID_LENGTH;
+	}
 
-	// Indicate in the phy header that the frame is authenticated
-	//frame->hdr.flags |= SKY_FRAME_AUTHENTICATED;
 
-	/*
-	 * Calculate SHA256 hash
-	 */
+	// Calculate SHA256 hash
 	uint8_t full_hash[32];
 	cf_hmac_init(hmac->ctx, &cf_sha256, hmac->key, hmac->key_len);
 	cf_hmac_update(hmac->ctx, frame->raw, frame->length);
 	cf_hmac_finish(hmac->ctx, full_hash);
 
-	/*
-	 * Copy truncated hash to the end of the frame.
-	 */
+
+	//Copy truncated hash to the end of the frame.
 	memcpy(&frame->raw[frame->length], full_hash, SKY_HMAC_LENGTH);
 	frame->length += SKY_HMAC_LENGTH;
 
@@ -70,53 +80,50 @@ int sky_hmac_authenticate(SkyHandle_t self, SkyRadioFrame* frame) {
 
 
 
-int sky_hmac_check_authentication(SkyHandle_t self, SkyRadioFrame* frame) {
-	/*
-	 * If the frame is too short don't even try to calculate anything
-	 */
+int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
+	//If the frame is too short don't even try to calculate anything
 	if (frame->length < SKY_HMAC_LENGTH)
 		return SKY_RET_INVALID_LENGTH;
 
-	SkyHMAC_t* hmac = self->hmac;
-	if (hmac == NULL)
-		return SKY_RET_AUTH_UNINITIALIZED;
+	SkyHMAC* hmac = self->hmac;
 
-	/*
-	 * Calculate the hash for the frame
-	 */
+	//For functional safety, there is a hmac number that shorts the auth process.
+	if(frame->hmac_sequence == self->conf->hmac.magic_sequence){
+		return SKY_RET_OK;
+	}
+
+	//Calculate the hash for the frame
 	uint8_t calculated_hash[32];
 	cf_hmac_init(hmac->ctx, &cf_sha256, hmac->key, hmac->key_len);
 	cf_hmac_update(hmac->ctx, frame->raw, frame->length - SKY_HMAC_LENGTH);
 	cf_hmac_finish(hmac->ctx, calculated_hash);
 
+
+	//Compare the received hash to received one
 	uint8_t *frame_hash = &frame->raw[frame->length - SKY_HMAC_LENGTH];
-
-	/*
-	 * Compare the received hash to received one
-	 */
 	if (memcmp(frame_hash, calculated_hash, SKY_HMAC_LENGTH) != 0) {
-		SKY_PRINTF(SKY_DIAG_FRAMES, "%10u: HMAC failed\n", get_timestamp());
 		return SKY_RET_AUTH_FAILED;
 	}
 
+
+	//Check if the hmac sequence number is something we are expecting
+	int32_t jump = wrap_hmac_sequence( (int32_t)(frame->hmac_sequence - self->hmac->sequence_rx[frame->vc]), self->conf->hmac.cycle_length);
+	if (jump > self->conf->hmac.maximum_jump) {
+		//todo: set state varible to indicate need for extension to recalibrate appropriate hmac sequence.
+		return SKY_RET_AUTH_FAILED;
+	}
+
+
+	//The hmac sequence on our side jumps to the immediate next sequence number.
+	self->hmac->sequence_rx[frame->vc] = wrap_hmac_sequence((int32_t)(frame->hmac_sequence + 1), self->conf->hmac.cycle_length);
 	frame->length -= SKY_HMAC_LENGTH;
-
-	/*
-	 * Check if the sequence number is something we are expecting
-	 */
-	if (0) {
-		// TODO: Set a flag to indicate need to transmit sequence number on the next
-
-		return SKY_RET_AUTH_FAILED;
-	}
-
-	frame->flags |= SKY_FRAME_AUTHENTICATED;
 	return SKY_RET_OK;
 }
 
 
-int sky_hmac_vc_demands_auth(SkyHandle_t self, uint8_t vc){
-	return self->conf->vc[vc].require_authentication;
+int sky_hmac_vc_demands_auth(SkyHandle self, uint8_t vc){
+	return self->conf->vc[vc].require_authentication > 0;
 }
+
 
 

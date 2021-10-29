@@ -7,10 +7,6 @@
 
 
 
-
-
-
-
 static int32_t min_i32(int32_t a, int32_t b){
 	if (a > b){
 		return b;
@@ -162,19 +158,29 @@ static int chain_is_ok_forward(ElementBuffer* buffer, idx_t idx){
 
 
 // ==== PUBLIC FUNCTIONS ===============================================================================================
-int init_element_buffer(ElementBuffer* buffer, uint8_t* pool, int32_t element_size, int32_t element_count){
+ElementBuffer* new_element_buffer(int32_t element_size, int32_t element_count){
+	ElementBuffer* ebuffer = SKY_MALLOC(sizeof(ElementBuffer));
+	uint8_t* pool = SKY_MALLOC(element_count * element_size);
 	if(element_count > EB_MAX_ELEMENT_COUNT){
-		return -1;
+		return NULL;
 	}
-	buffer->pool = pool;
-	buffer->last_write_index = 0;
-	buffer->free_elements = element_count;
-	buffer->element_size = element_size;
-	buffer->element_count = element_count;
-	buffer->element_usable_space = element_size - (int32_t)(2 * sizeof(idx_t));
-	wipe_element_buffer(buffer);
-	return 0;
+	ebuffer->pool = pool;
+	ebuffer->last_write_index = 0;
+	ebuffer->free_elements = element_count;
+	ebuffer->element_size = element_size;
+	ebuffer->element_count = element_count;
+	ebuffer->element_usable_space = element_size - (int32_t)(2 * sizeof(idx_t));
+	wipe_element_buffer(ebuffer);
+	return ebuffer;
 }
+
+
+void destroy_element_buffer(ElementBuffer* buffer){
+	SKY_FREE(buffer->pool);
+	SKY_FREE(buffer);
+}
+
+
 void wipe_element_buffer(ElementBuffer* buffer){
 	for (idx_t i = 0; i < buffer->element_count; ++i) {
 		BufferElement el = element_i(buffer, i);
@@ -185,26 +191,10 @@ void wipe_element_buffer(ElementBuffer* buffer){
 }
 
 
-
-ElementBuffer* new_element_buffer(int32_t element_size, int32_t element_count){
-	ElementBuffer* elementBuffer = SKY_MALLOC(sizeof(ElementBuffer));
-	uint8_t* pool = SKY_MALLOC(element_count * element_size);
-	init_element_buffer(elementBuffer, pool, element_size, element_count);
-	return elementBuffer;
-}
-void destroy_element_buffer(ElementBuffer* buffer){
-	SKY_FREE(buffer->pool);
-	SKY_FREE(buffer);
-}
-
-
-
-
 int element_buffer_element_requirement_for(ElementBuffer* buffer, int32_t length){
 	int32_t n = (length + EB_LEN_BYTES + buffer->element_usable_space - 1) / buffer->element_usable_space;
 	return n;
 }
-
 
 
 int element_buffer_store(ElementBuffer* buffer, uint8_t* data, pl_len_t length){

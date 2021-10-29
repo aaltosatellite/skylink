@@ -2,12 +2,18 @@
 // Created by elmore on 14.10.2021.
 //
 
-#ifndef SKYLINK_SKYLINK_ARRAY_H
-#define SKYLINK_SKYLINK_ARRAY_H
+#ifndef SKYLINK_ARQ_RING_H
+#define SKYLINK_ARQ_RING_H
 
 #include "elementbuffer.h"
-#include "skylink/platform.h"
-#include "skylink/diag.h"
+#include "platform.h"
+#include "diag.h"
+#include "conf.h"
+
+
+
+#define ARQ_SEQUENCE_MODULO 			250
+#define SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE	260
 
 
 //todo: define sequences as a new type (uint16 probably?) This would save 2*lots of bytes
@@ -18,17 +24,19 @@ struct sky_ring_item_s {
 typedef struct sky_ring_item_s RingItem;
 
 
-
 struct sky_send_ring_s {
 	RingItem* buff;					//The ring.
 	int length;						//Size of the ring
+	int n_recall;					//The max separation between tx_head and tail. (tx_sequence - n_recall) is the earliest packet that can be retransmitted by ARQ.
 	int head;						//Ring index for next packet pushed by upper stack.
 	int tx_head;					//The first untransmitted packet. (if tx_head == head, nothing to transmit)
 	int tail;						//Last packet in memory. Moves forward as more is sent, lags behind n_reacall at max.
 	int head_sequence;				//Sequence of the next packet, if ARQ enabled.
 	int tx_sequence;				//sequence of the first untransmitted packet. That is, the packet pointed to by tx_head.
 	int tail_sequence;				//sequence of the packet at tail. Essentially "ring[wrap(tail)].sequence".
-	int n_recall;					//The max separation between tx_head and tail. (tx_sequence - n_recall) is the earliest packet that can be retransmitted by ARQ.
+	int storage_count;				//Number of packets stored.
+	int resend_count;
+	uint8_t resend_list[16];
 };
 typedef struct sky_send_ring_s SkySendRing;
 
@@ -45,6 +53,8 @@ struct sky_rcv_ring_s {
 
 	int head_sequence;				//Sequence number that a packet at head would have. Essentially "ring[wrap(head-1)].sequence + 1"
 	int tail_sequence;				//Sequence number of tail.
+
+	int storage_count;				//Number of packets stored.
 };
 typedef struct sky_rcv_ring_s SkyRcvRing;
 /*
@@ -65,96 +75,91 @@ typedef struct sky_rcv_ring_s SkyRcvRing;
  */
 
 
-struct skylink_array_s {
+// Notice: arrays are duplicated. This facilitates sequence number- and arq state switching on the fly without some absolutely brainmelting trickery.
+// Otherwise the receive- and send-windowing, that relies on sequence numbering, would have to be able to handle discontinuities
+// in sequences when needed, while discontinuities are the sole thing they are set to battle.
+struct arq_ring_s {
 	ElementBuffer* elementBuffer;
-	SkyRcvRing* rcvRing;
-	SkySendRing* sendRing;
-	uint8_t arq_on;
+	SkySendRing* primarySendRing;
+	SkySendRing* secondarySendRing;
+	SkyRcvRing* primaryRcvRing;
+	SkyRcvRing* secondaryRcvRing;
 };
-typedef struct skylink_array_s SkylinkArray;
+typedef struct arq_ring_s SkyArqRing;
 
 
-struct sky_array_config {
-	int element_size;
-	int element_count;
-
-	int rcv_ring_length;
-	int horizon_width;
-
-	int send_ring_length;
-	int n_recall;
-
-	uint8_t arq_on;
-};
-typedef struct sky_array_config SkyArrayConfig;
 
 
-struct sky_array_alloc{
-	SkylinkArray* skylinkArray;
-
-	SkySendRing* sendRing;
-	RingItem* sendbuff;
-
-	SkyRcvRing* rcvRing;
-	RingItem* rcvbuff;
-
-	ElementBuffer* elementBuffer;
-	uint8_t* element_pool;
-};
-typedef struct sky_array_alloc SkyArrayAllocation;
 
 
-int init_send_ring(SkySendRing* sendRing, RingItem* ring, int length, int n_recall);
-SkySendRing* new_send_ring(int length, int n_recall);
-void destroy_send_ring(SkySendRing* sendRing);
-void wipe_rcv_ring(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer);
 
-int init_rcv_ring(SkyRcvRing* rcvRing, RingItem* ring, int length, int horizon_width);
-SkyRcvRing* new_rcv_ring(int length, int horizon_width);
-void destroy_rcv_ring(SkyRcvRing* rcvRing);
-void wipe_send_ring(SkySendRing* sendRing, ElementBuffer* elementBuffer);
 
-int init_skylink_array(SkyArrayAllocation* alloc, SkyArrayConfig* conf);
-SkylinkArray* new_skylink_array(int element_size, int element_count, int rcv_ring_leng, int send_ring_len, uint8_t arq_on, int n_recall, int horizon_width);
-void destroy_skylink_array(SkylinkArray* array);
-void wipe_skylink_array(SkylinkArray* array);
 
+
+
+
+SkyArqRing* new_arq_ring(SkyArrayConfig* config);
+void destroy_arq_ring(SkyArqRing* array);
+void wipe_arq_ring(SkyArqRing* array, int initial_send_sequence, int initial_rcv_sequence);
+
+//swaps the send rings, and wipes the new primary ring to the new sequence.
+int skyArray_set_send_sequence(SkyArqRing* array, uint16_t sequence, int wipe_all);
+
+//swaps the recive rings, and wipes the new primary ring to the new sequence.
+int skyArray_set_receive_sequence(SkyArqRing* array, uint16_t sequence, int wipe_all);
+
+//If the secondary rings contain stuff, but are inactive, frees the space held by them (wipes them)
+void skyArray_clean_unreachable(SkyArqRing* array);
 
 
 
 
 //=== SEND =============================================================================================================
 //======================================================================================================================
-int skyArray_push_packet_to_send(SkylinkArray* array, void* payload, int length); //push packet to buffer. Return the save address index, or -1.
+//push packet to buffer. Return the save address index, or -1.
+int skyArray_push_packet_to_send(SkyArqRing* array, void* payload, int length);
 
-int skyArray_packets_to_tx(SkylinkArray* array); //returns the number of messages in buffer.
+//reads next message to be sent.
+int skyArray_read_packet_for_tx(SkyArqRing* array, void* tgt, int* sequence);
 
-int skyArray_read_packet_for_tx(SkylinkArray* array, void* tgt); //reads next message to be sent.
+//returns the number of messages in buffer.
+int skyArray_count_packets_to_tx(SkyArqRing* array);
 
-int skyArray_can_recall(SkylinkArray* array, int sequence); //return boolean wether a message of particular sequence is still recallable.
+//return boolean wether a message of particular sequence is still recallable.
+int skyArray_can_recall(SkyArqRing* array, int sequence);
 
-int skyArray_recall(SkylinkArray* array, int sequence, void* tgt); //reads a message that has laready been sent recently, if it is at most n<n_recall behind current sequence to be sent.
+//reads a message that has laready been sent recently, if it is at most n<n_recall behind current sequence to be sent.
+int skyArray_recall(SkyArqRing* array, int sequence, void* tgt);
+
+//schedules packet of a sequence to be resent. Returns 0/-1 according to if the packet was recallable.
+int skyArray_schedule_resend(SkyArqRing* arqRing, int sequence);
+
+//pops a sequence number from resend list. (FiFo) returns sequence number or -1 if list is empty.
+int skyArray_pop_resend_sequence(SkyArqRing* arqRing);
 //======================================================================================================================
 //======================================================================================================================
-
 
 
 
 //=== RECEIVE ==========================================================================================================
 //======================================================================================================================
-int skyArray_get_readable_rcv_packet_count(SkylinkArray* array); //how many messages there are in buffer as a continuous sequence, an thus readable by skyArray_read_next_received()
+//pushes latest radio received message in without ARQ. Fills in the next sequence.
+int skyArray_push_rx_packet_monotonic(SkyArqRing* array, void* src, int length);
 
-int skyArray_read_next_received(SkylinkArray* array, void* tgt, int* sequence); //read next message to tgt buffer. Return number of bytes written on success, -1 on fail.
+//pushes a radio received message of particular sequence to buffer.
+int skyArray_push_rx_packet(SkyArqRing* array, void* src, int length, int sequence);
 
-int skyArray_rx_sequence_fits(SkylinkArray* array, int sequence); //returns a boolean as to a particular sequence is in the receive-horizon. ie. if it is at most horrizon-width from head
+//read next message to tgt buffer. Return number of bytes written on success, -1 on fail.
+int skyArray_read_next_received(SkyArqRing* array, void* tgt, int* sequence);
 
-int skyArray_push_rx_packet(SkylinkArray* array, void* src, int length, int sequence); //pushes a recently radio received message of particular sequence to buffer.
+//how many messages there are in buffer as a continuous sequence, an thus readable by skyArray_read_next_received()
+int skyArray_count_readable_rcv_packets(SkyArqRing* array);
 
-uint16_t skyArray_get_horizon_bitmap(SkylinkArray* array); 		//bitmap of which messages we have received after the last continuous sequence.
+//bitmap of which messages we have received after the last continuous sequence.
+uint16_t skyArray_get_horizon_bitmap(SkyArqRing* array);
 //======================================================================================================================
 //======================================================================================================================
 
 
 
-
-#endif //SKYLINK_SKYLINK_ARRAY_H
+#endif //SKYLINK_ARQ_RING_H

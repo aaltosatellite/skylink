@@ -2,16 +2,18 @@
 // Created by elmore on 8.10.2021.
 //
 
-#include "tests/elebuffer_tests.h"
-#include "tests/tools/tools.h"
+#include "elebuffer_tests.h"
+#include "ring_test.h"
+#include "packet_encode_test.h"
+#include "fec_test.h"
+#include "tools/tools.h"
 
 int main() {
-	PRINTFF(0,"A\n");
 	reseed_random();
-	test1();
-	test2();
-
-	test_ratios();
+	//elebuffer_tests();
+	//ring_tests();
+	packet_tests();
+	fec_test();
 }
 
 

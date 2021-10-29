@@ -2,10 +2,9 @@
  * Skylink Protocol: Sublayer for forward error correction
  */
 
-#include "skylink/skylink.h"
+
 #include "skylink/fec.h"
-#include "skylink/diag.h"
-#include <string.h>
+
 
 
 #if SKY_FRAME_MAX_LEN < RS_MSGLEN + RS_PARITYS
@@ -15,6 +14,7 @@
 #if RS_MSGLEN + RS_PARITYS > 255
 #error "Too big Reed-Solomon codeword"
 #endif
+
 
 #if 1
 /*
@@ -104,16 +104,16 @@ static const uint8_t whitening[WHITENING_LEN] = {
 /*
  * Default configuration for the PHY layer
  */
-SkyPHYConfig_t phy_defaults = {
+SkyPHYConfig phy_defaults = {
 	.enable_scrambler = 1,
 	.enable_rs = 1,
 };
 
-SkyPHYConfig_t* conf = &phy_defaults;
+SkyPHYConfig* conf = &phy_defaults;
 
 
 /** Decode a received frame */
-int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics_t *diag)
+int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
 {
 	int ret = 0;
 
@@ -121,14 +121,15 @@ int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics_t *diag)
 		/*
 		 * Remove scrambler/whitening
 		 */
-		for (unsigned i = 0; i < frame->length; i++)
+		for (unsigned i = 0; i < frame->length; i++){
 			frame->raw[i] ^= whitening[i % WHITENING_LEN];
+		}
 	}
 
 	if (conf->enable_rs) {
-
-		if (frame->length < RS_PARITYS || frame->length > (RS_MSGLEN + RS_PARITYS))
+		if (frame->length < RS_PARITYS || frame->length > (RS_MSGLEN + RS_PARITYS)){
 			return SKY_RET_RS_INVALID_LENGTH;
+		}
 
 		/*
 		 * Decode Reed-Solomon FEC
@@ -138,14 +139,12 @@ int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics_t *diag)
 	 	 * the original metadata. */
 		if ((ret = decode_rs_8(frame->raw, NULL, 0, RS_MSGLEN + RS_PARITYS - frame->length)) < 0) {
 			diag->rx_fec_fail++;
-			SKY_PRINTF(SKY_DIAG_FRAMES, "%10u: FEC uncorrectable\n", get_timestamp());
 			return SKY_RET_RS_FAILED; /* Reed-Solomon decode failed */
 		}
 
 		// Frame is now "shorter"
 		frame->length -= RS_PARITYS;
 
-		SKY_PRINTF(SKY_DIAG_FRAMES, "%10u: FEC corrected %d\n", get_timestamp(), ret);
 
 		// Update FEC Telemetry
 		diag->rx_fec_ok++;
@@ -162,26 +161,21 @@ int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics_t *diag)
 /** Encode a frame to transmit */
 int sky_fec_encode(SkyRadioFrame *frame)
 {
-	SKY_ASSERT(frame);
-
 	if (conf->enable_rs) {
 		/*
 		 * Calculate Reed-Solomon parity bytes
 		 */
-		SKY_ASSERT(frame->length + RS_PARITYS < SKY_FRAME_MAX_LEN);
-
 		encode_rs_8(frame->raw, &frame->raw[frame->length], RS_MSGLEN - frame->length);
 		frame->length += RS_PARITYS;
-
-		SKY_PRINTF(SKY_DIAG_FRAMES, "FEC: %10u: Frame ready to transmit\n", get_timestamp());
 	}
 
 	if (conf->enable_scrambler) {
 		/*
 		 * Apply data whitening
 		 */
-		for (unsigned i = 0; i < frame->length; i++)
+		for (unsigned i = 0; i < frame->length; i++){
 			frame->raw[i] ^= whitening[i % WHITENING_LEN];
+		}
 	}
 
 	return SKY_RET_OK;

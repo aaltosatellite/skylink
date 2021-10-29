@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "skylink/skylink.h"
+#include "../skylink/skylink.h"
 
 
 #define RADIOFRAME_MAXLEN    256

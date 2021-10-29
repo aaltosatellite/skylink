@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "skylink/platform.h"
+#include "platform.h"
 
 
 typedef uint16_t idx_t;
@@ -38,10 +38,8 @@ typedef struct buffer_element_s BufferElement;
 
 
 
-
 ElementBuffer* new_element_buffer(int32_t element_size, int32_t element_count);
 void destroy_element_buffer(ElementBuffer* buffer);
-int init_element_buffer(ElementBuffer* buffer, uint8_t* pool, int32_t element_size, int32_t element_count);
 void wipe_element_buffer(ElementBuffer* buffer);
 
 int element_buffer_element_requirement_for(ElementBuffer* buffer, int32_t length);

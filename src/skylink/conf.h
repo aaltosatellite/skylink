@@ -5,7 +5,6 @@
 
 
 typedef struct {
-
 	/* Enable CCSDS randomizer/scrambler */
 	uint8_t enable_scrambler;
 
@@ -14,48 +13,72 @@ typedef struct {
 
 	uint32_t authenticate_tx;
 
-} SkyPHYConfig_t;
+} SkyPHYConfig;
 
 
 typedef struct {
+	int element_size;
+	int element_count;
 
-	/* MAC-mode: 0 = no-TDD, 1 = TDD*/
-	unsigned int mac_mode;
+	int rcv_ring_len;
+	int initial_rcv_sequence;
+	int horizon_width;
 
-	/* Minimum number of slots inside a window */
-	uint32_t min_slots;
+	int send_ring_len;
+	int initial_send_sequence;
+	int n_recall;
 
-	/* Maximum number of slots inside a window */
-	uint32_t max_slots;
-
-	/* Minimum time between windows size adjustments. */
-	uint32_t windows_adjust_interval;
-
-	/* Delay between communication direction (uplink/downlink) changes. */
-	uint32_t switching_delay;
-
-
-} SkyMACConfig_t;
+} SkyArrayConfig;
 
 
 
 typedef struct {
+	/* Default send window size. */
+	int32_t default_window_length;
 
+	/* Default gap size between windows. */
+	int32_t default_gap_length;
+
+	int32_t maximum_window_size;
+
+	int32_t minimum_window_size;
+
+	int32_t maximum_gap_size;
+
+	int32_t minimum_gap_size;
+
+	uint8_t unauthenticated_mac_updates;
+
+} SkyMACConfig;
+
+
+
+typedef struct {
 	/* Is authentication required for the channel */
 	uint8_t require_authentication;
 
-	/* Last sequence number */
-	uint8_t last_sequence;
+	uint8_t arq_on;
 
-} SkyVCConfig_t;
+} SkyVCConfig;
 
 
 
 typedef struct {
+	int32_t key_length;
 
-	uint8_t window_size;
+	uint8_t key[16];
 
-} SkyARQConfig_t;
+	uint16_t magic_sequence;
+
+	/* Length of the sequence cycle */
+	int32_t cycle_length;
+
+	/* Maximum jump in sequence allowed */
+	int32_t maximum_jump;
+
+} HMACConfig;
+
+
 
 
 

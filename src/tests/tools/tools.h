@@ -78,6 +78,7 @@ String* new_string(uint8_t* data, int32_t length);
 void destroy_string(String* str);
 String* clone_string(String* str);
 int strings_equal(String* str1, String* str2);
+String* get_random_string(int leng);
 // ===========================================================================================================
 
 // ===========================================================================================================

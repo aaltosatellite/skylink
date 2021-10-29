@@ -5,25 +5,17 @@
 
 
 
-#if defined(__unix__)
-
-
-/**
- * UNIX/POSIX
- */
-
-
+#if defined(__unix__) // UNIX/POSIX
+#include <time.h>
 
 /* Timestamps in microsecond, 32 bits. (wraps around every 4295 seconds) */
 typedef uint32_t timestamp_t;
 typedef int32_t timediff_t;
+typedef int32_t time_ms_t;
 
 timestamp_t get_timestamp();
 
 #define TIMESTAMP_MS ((timestamp_t)1000)
-
-
-#define SKY_BIG_ENDIAN
 
 #define SKY_MALLOC malloc
 #define SKY_CALLOC calloc
@@ -31,12 +23,8 @@ timestamp_t get_timestamp();
 
 
 
-#else
+#else //FreeRTOS
 
-
-/**
- * FreeRTOS
- */
 
 /* Timestamps in microsecond, 32 bits (wraps around every 4295 seconds) */
 typedef uint32_t timestamp_t;
@@ -46,12 +34,10 @@ timestamp_t get_timestamp();
 
 #define TIMESTAMP_MS ((timestamp_t)1000)
 
-
-#define SKY_LITTLE_ENDIAN
-
-#define SKY_MALLOC(s) pvMalloc(s)
-#define SKY_CALLOC(s) pvMalloc(s)
+#define SKY_MALLOC pvMalloc
+#define SKY_CALLOC pvMalloc
 #define SKY_FREE pvFree
+
 
 #endif
 

@@ -1,34 +1,42 @@
 
-#include "skylink/elementbuffer.h"
+#include "../skylink/elementbuffer.h"
 #include "tools/tools.h"
 #include "elebuffer_tests.h"
 
 
-void test1_pass(int verbose);
+static void test1_pass(int verbose);
+static void test1();
+static void test2();
+static void test_ratios();
+
+
+void elebuffer_tests(){
+	test1();
+	test2();
+	//test_ratios();
+}
 
 
 
 
 
-
-void test1(){
-	PRINTFF(0, "[TEST 1]\n");
+static void test1(){
+	PRINTFF(0, "[ELEMENT BUFFER TEST 1]\n");
 	test1_pass(1);
 	for (int i = 0; i < 30; ++i) {
 		test1_pass(0);
 	}
-	PRINTFF(0, "\t[OK]\n");
+	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
 
-void test1_pass(int verbose){
+static void test1_pass(int verbose){
 	reseed_random();
 	int elecount = 1700;
-	ElementBuffer* sbuffer = x_alloc(sizeof(ElementBuffer));
-	uint8_t* pool = x_alloc(elecount * 64 * 12);
-	init_element_buffer(sbuffer, pool, 64, elecount);
+	ElementBuffer* sbuffer = new_element_buffer(64, elecount);
 	sbuffer->last_write_index = randint_i32(0, elecount-1);
 
+	//generate N_pl test messages
 	if(verbose){
 		PRINTFF(0, "\tmaking test datas\n");
 	}
@@ -45,7 +53,7 @@ void test1_pass(int verbose){
 	int32_t* order1 = shuffled_order(N_pl);
 	uint8_t* tgt = malloc(2000);
 
-
+	//push the test messages into ebuffer
 	if(verbose){
 		PRINTFF(0, "\tStoring...\n");
 	}
@@ -58,6 +66,7 @@ void test1_pass(int verbose){
 		assert(valid);
 	}
 
+	//read all the messages back, and compare that they match
 	if(verbose){
 		PRINTFF(0, "\tReading...\n");
 	}
@@ -73,7 +82,7 @@ void test1_pass(int verbose){
 
 
 
-
+	//delete all messages.
 	if(verbose){
 		PRINTFF(0, "\tDeleting...\n");
 	}
@@ -119,12 +128,15 @@ void test1_pass(int verbose){
 	free(indexes);
 	free(tgt);
 	free(order1);
-
-	free(pool);
-	free(sbuffer);
+	destroy_element_buffer(sbuffer);
 }
-
 //======================================================================================================================
+//======================================================================================================================
+
+
+
+
+//== TEST 2 ============================================================================================================
 //======================================================================================================================
 struct testmsg{
 	String* data;
@@ -139,11 +151,12 @@ struct testjob{
 	int n_in;
 	ElementBuffer* buffer;
 	int general_direction;
+	int total_stored_content;
 };
 typedef struct testjob TestJob;
 
 
-void confirm_msg_i_in_buffer(ElementBuffer* buffer, TestMsg* msg){
+static void confirm_msg_i_in_buffer(ElementBuffer* buffer, TestMsg* msg){
 	uint8_t* tgt = x_alloc(msg->data->length + 2);
 	int leng = element_buffer_read(buffer, tgt, msg->index, msg->data->length);
 	assert(leng == msg->data->length);
@@ -152,7 +165,7 @@ void confirm_msg_i_in_buffer(ElementBuffer* buffer, TestMsg* msg){
 }
 
 
-TestMsg* new_random_msg(int32_t minlen, int32_t maxlen){
+static TestMsg* new_random_msg(int32_t minlen, int32_t maxlen){
 	TestMsg* msg = x_alloc(sizeof(TestMsg));
 	msg->in_buff = 0;
 	msg->index = -1;
@@ -166,7 +179,7 @@ TestMsg* new_random_msg(int32_t minlen, int32_t maxlen){
 
 
 
-int get_one_to_add(TestMsg** msgs, int n_msgs){
+static int get_one_to_add(TestMsg** msgs, int n_msgs){
 	int i = randint_i32(0, n_msgs-1);
 	while (msgs[i]->in_buff == 1){
 		i = randint_i32(0, n_msgs-1);
@@ -176,7 +189,7 @@ int get_one_to_add(TestMsg** msgs, int n_msgs){
 
 
 
-int get_one_to_remove(TestMsg** msgs, int n_msgs){
+static int get_one_to_remove(TestMsg** msgs, int n_msgs){
 	int i = randint_i32(0, n_msgs-1);
 	while (msgs[i]->in_buff == 0){
 		i = randint_i32(0, n_msgs-1);
@@ -186,7 +199,7 @@ int get_one_to_remove(TestMsg** msgs, int n_msgs){
 
 
 
-int pick_direction(TestJob* job){
+static int pick_direction(TestJob* job){
 	if(job->n_in == 0){
 		return 1;
 	}
@@ -207,15 +220,14 @@ int pick_direction(TestJob* job){
 
 
 
-TestJob new_job(int minlen, int maxlen, int elecount){
+static TestJob new_job(int minlen, int maxlen, int elecount){
 	TestJob job;
 	job.n_msgs = elecount * 2;
 	job.general_direction = 1;
 	job.n_in = 0;
-	job.buffer = x_alloc(sizeof(ElementBuffer));
-	uint8_t* pool = x_alloc(64*elecount*10);
-	init_element_buffer(job.buffer, pool, 64, elecount);
+	job.buffer = new_element_buffer(64, elecount);
 	job.msgs = x_alloc(sizeof(TestMsg*) * job.n_msgs);
+	job.total_stored_content = 0;
 	for (int i = 0; i < job.n_msgs; ++i) {
 		job.msgs[i] = new_random_msg(minlen, maxlen);
 	}
@@ -223,7 +235,7 @@ TestJob new_job(int minlen, int maxlen, int elecount){
 }
 
 
-void destroy_job(TestJob* job){
+static void destroy_job(TestJob* job){
 	for (int i = 0; i < job->n_msgs; ++i) {
 		TestMsg* msg = job->msgs[i];
 		destroy_string(msg->data);
@@ -236,7 +248,7 @@ void destroy_job(TestJob* job){
 
 
 
-int up_cycle(TestJob* job) {
+static int up_cycle(TestJob* job) {
 	int i = get_one_to_add(job->msgs, job->n_msgs);
 	assert(job->msgs[i]->in_buff == 0);
 	TestMsg *msg = job->msgs[i];
@@ -253,6 +265,7 @@ int up_cycle(TestJob* job) {
 		msg->in_buff = 1;
 		msg->index = ret;
 		job->n_in++;
+		job->total_stored_content += msg->data->length;
 		confirm_msg_i_in_buffer(job->buffer, msg);
 	}
 	int valid = element_buffer_entire_buffer_is_ok(job->buffer);
@@ -261,7 +274,7 @@ int up_cycle(TestJob* job) {
 }
 
 
-int down_cycle(TestJob* job){
+static int down_cycle(TestJob* job){
 	int i = get_one_to_remove(job->msgs, job->n_msgs);
 	TestMsg* msg = job->msgs[i];
 	assert(job->msgs[i]->in_buff == 1);
@@ -274,12 +287,13 @@ int down_cycle(TestJob* job){
 	msg->in_buff = 0;
 	msg->index = -1;
 	job->n_in--;
+	job->total_stored_content -= msg->data->length;
 	int valid = element_buffer_entire_buffer_is_ok(job->buffer);
 	assert(valid);
 	return 1;
 }
 
-void random_confirm(TestJob* job, int n){
+static void random_confirm(TestJob* job, int n){
 	for (int i = 0; i < n; ++i) {
 		int idx = randint_i32(0, job->n_msgs-1);
 		TestMsg* msg = job->msgs[idx];
@@ -289,7 +303,7 @@ void random_confirm(TestJob* job, int n){
 	}
 }
 
-void cycling(TestJob* job, int break_switch){
+static void cycling(TestJob* job, int break_switch){
 	int failed_adds_in_row = 0;
 	int switchs = 0;
 	int c = 0;
@@ -327,13 +341,18 @@ void cycling(TestJob* job, int break_switch){
 
 		if((job->general_direction == 1) && (failed_adds_in_row > 3)){
 			job->general_direction = -1;
-			PRINTFF(0, "\t[Uphill]\n");
+			double space = (double)job->buffer->element_count * (double)job->buffer->element_size;
+			double filled = (double)job->total_stored_content;
+			double ff = filled / space;
+			PRINTFF(0, "\t[Downhill] [fill fraction: %lf]\n",ff);
+
 			switchs++;
 		}
 
 		if((job->general_direction == -1) && (job->n_in == 0)){
 			job->general_direction = 1;
-			PRINTFF(0, "\t[Downhill]\n");
+
+			PRINTFF(0, "\t[Uphill]\n");
 			switchs++;
 		}
 
@@ -345,8 +364,8 @@ void cycling(TestJob* job, int break_switch){
 
 
 
-void test2(){
-	PRINTFF(0, "[TEST 2]\n");
+static void test2(){
+	PRINTFF(0, "[ELEMENT BUFFER TEST 2]\n");
 	reseed_random();
 	int elecount = randint_i32(5000,8000);
 	PRINTFF(0, "[elecount: %d ]\n", elecount);
@@ -355,25 +374,18 @@ void test2(){
 	cycling(&job, 6);
 
 	destroy_job(&job);
-	PRINTFF(0, "[OK]\n");
+	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
+//======================================================================================================================
+//======================================================================================================================
 
 
 
-String* get_random_string(int leng){
-	uint8_t* b = x_alloc(leng);
-	fillrand(b, leng);
-	String* s = new_string(b, leng);
-	free(b);
-	return s;
-}
 
-
-
-double test_ratio(int elecount, int elesize, int pl_minsize, int pl_maxsize){
-	ElementBuffer* buffer = x_alloc(sizeof(ElementBuffer));
-	uint8_t* pool = x_alloc(elesize*elecount*2);
-	init_element_buffer(buffer, pool, elesize, elecount);
+//==== STORAGE SPACE UTILIZATION RATIO TEST ============================================================================
+//======================================================================================================================
+static double obtain_ratio(int elecount, int elesize, int pl_minsize, int pl_maxsize){
+	ElementBuffer* buffer = new_element_buffer(elesize, elecount);
 	int n_strings = 0;
 	int content  = 0;
 	uint8_t* payload = x_alloc(pl_maxsize+20);
@@ -393,16 +405,15 @@ double test_ratio(int elecount, int elesize, int pl_minsize, int pl_maxsize){
 	double fill = (double) content;
 	double total = (double) (elecount * buffer->element_size);
 	double ratio = fill / total;
-	free(buffer);
-	free(pool);
+	destroy_element_buffer(buffer);
 	return ratio;
 }
 
-double obtain_ratio_avg(int n, int elecount, int elesize, int pl_minsize, int pl_maxsize){
+static double obtain_ratio_avg(int n, int elecount, int elesize, int pl_minsize, int pl_maxsize){
 	double sum = 0.0;
 
 	for (int i = 0; i < n; ++i) {
-		double ratio_ = test_ratio(elecount, elesize, pl_minsize, pl_maxsize);
+		double ratio_ = obtain_ratio(elecount, elesize, pl_minsize, pl_maxsize);
 		sum = sum + ratio_;
 	}
 	double dn = (double)n;
@@ -410,14 +421,15 @@ double obtain_ratio_avg(int n, int elecount, int elesize, int pl_minsize, int pl
 }
 
 
-void test_ratios(){
+static void test_ratios(){
 	int elecount = 9000;
 	int pl_minsize = 40;
 	int pl_maxsize = 255;
 
-	int elesize_min = 15;
-	int elesize_max = 95;
-	int n_size_tests = 81;
+	int elesize_min = 28;
+	int elesize_max = 50;
+	int n_size_tests = elesize_max - elesize_min + 1;
+	int avg_over	= 5000;
 	int* elesizes = x_alloc(sizeof(int)*n_size_tests);
 	double span = (double)elesize_max - (double)elesize_min;
 	double step = span / (double)(n_size_tests-1);
@@ -429,7 +441,7 @@ void test_ratios(){
 	for (int i = 0; i < n_size_tests; ++i) {
 		int size = elesizes[i];
 		PRINTFF(0, "[size: %d]:",size);
-		double ratio = obtain_ratio_avg(120, elecount, size, pl_minsize, pl_maxsize);
+		double ratio = obtain_ratio_avg(avg_over, elecount, size, pl_minsize, pl_maxsize);
 		PRINTFF(0, "\t %lf ",ratio);
 		/*
 		if(ratio > old_ratio){
@@ -438,7 +450,7 @@ void test_ratios(){
 			PRINTFF(0,"-");
 		}
 		*/
-		int k = (int)(300*(ratio-0.65));
+		int k = (int)(900*(ratio-0.77));
 		for (int j = 0; j < k; ++j) {
 			PRINTFF(0,":");
 		}

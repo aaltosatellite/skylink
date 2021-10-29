@@ -70,7 +70,7 @@ timestamp_t get_timestamp() {
 }
 
 
-int modem_tx(SkyRadioFrame_t* frame, timestamp_t t) {
+int modem_tx(SkyRadioFrame* frame, timestamp_t t) {
 	//assert(frame);
 
 	struct suoframe fr;
@@ -92,7 +92,7 @@ int modem_tx(SkyRadioFrame_t* frame, timestamp_t t) {
 }
 
 
-int modem_rx(SkyRadioFrame_t* frame, int flags) {
+int modem_rx(SkyRadioFrame* frame, int flags) {
 	struct suoframe suo_frame;
 	int len = zmq_recv(suo_rx, &suo_frame, 64+RADIOFRAME_MAXLEN, 0);
 
@@ -154,7 +154,7 @@ int modem_rx(SkyRadioFrame_t* frame, int flags) {
 		// Copy data from Suo frame to Skylink frame
 		frame->length = suo_frame.len;
 		frame->timestamp = suo_frame.time / 1000;
-		frame->meta.rssi = suo_frame.metadata[0];
+		//frame->meta.rssi = suo_frame.metadata[0];
 		memcpy(frame->raw, suo_frame.data, suo_frame.len);
 
 		return 1;

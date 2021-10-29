@@ -5,8 +5,8 @@
 #include <stdlib.h>
 
 
-#include "skylink/skylink.h"
-#include "skylink/endian.h"
+#include "../skylink/skylink.h"
+#include "../skylink/endian.h"
 
 
 /*
@@ -43,7 +43,7 @@ struct zmq_vc {
 
 struct zmq_vc vcs[SKY_NUM_VIRTUAL_CHANNELS];
 
-extern SkyHandle_t sky;
+extern SkyHandle sky;
 extern void *zmq;
 
 #define PACKET_RX_MAXLEN  0x1000
@@ -138,7 +138,7 @@ void vc_check() {
 
 		uint8_t data[PACKET_RX_MAXLEN];
 		unsigned flags = 0;
-		ret = sky_buf_read(sky->rxbuf[vc], data, PACKET_RX_MAXLEN, &flags);
+		ret = 0; //sky_buf_read(sky->rxbuf[vc], data, PACKET_RX_MAXLEN, &flags);
 		if (ret >= 0) {
 			fprintf(stderr, " %d bytes to  VC%d", ret, vc);
 
@@ -146,10 +146,10 @@ void vc_check() {
 				SKY_PRINTF(SKY_DIAG_BUG, "zmq_send() failed: %s", zmq_strerror(errno));
 
 
-			if ((flags & (BUF_FIRST_SEG|BUF_LAST_SEG)) != (BUF_FIRST_SEG|BUF_LAST_SEG)) {
-				SKY_PRINTF(SKY_DIAG_DEBUG, "RX %d len %5d flags %u: Buffer read fragmented a packet. This shouldn't really happen here.\n",
-					vc, ret, flags);
-			}
+			//if ((flags & (BUF_FIRST_SEG|BUF_LAST_SEG)) != (BUF_FIRST_SEG|BUF_LAST_SEG)) {
+			//	SKY_PRINTF(SKY_DIAG_DEBUG, "RX %d len %5d flags %u: Buffer read fragmented a packet. This shouldn't really happen here.\n",
+			//		vc, ret, flags);
+			//}
 		}
 
 
@@ -211,7 +211,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * Write data to buffer
 		 */
-		sky_buf_write(sky->txbuf[vc], msg, msg_len, BUF_FIRST_SEG | BUF_LAST_SEG);
+		//sky_buf_write(sky->txbuf[vc], msg, msg_len, BUF_FIRST_SEG | BUF_LAST_SEG);
 		break; // No response
 	}
 	case VC_CTRL_GET_BUFFER: {

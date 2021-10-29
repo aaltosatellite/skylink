@@ -5,6 +5,9 @@
  * Skylink protocol Forward Error Correction (FEC) defines.
  */
 
+#include "skylink.h"
+#include "diag.h"
+#include <string.h>
 
 /*
  */
@@ -25,7 +28,7 @@
 
 
 
-int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics_t *diag);
+int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag);
 
 int sky_fec_encode(SkyRadioFrame *frame);
 
@@ -42,7 +45,7 @@ int sky_fec_encode(SkyRadioFrame *frame);
  *   Returns the number of errors corrected.
  *   On error returns a negative return code.
  */
-//int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics_t *diag);
+//int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics *diag);
 
 
 /*
@@ -62,10 +65,10 @@ int sky_fec_encode(SkyRadioFrame *frame);
 
 #ifdef SKY_INCLUDE_DEPENDENCIES
 
-#include "ext/libfec/fec.h"
-#include "ext/cifra/sha2.h"
-#include "ext/cifra/hmac.h"
-#include "ext/gr-satellites/golay24.h"
+#include "../ext/libfec/fec.h"
+#include "../ext/cifra/sha2.h"
+#include "../ext/cifra/hmac.h"
+#include "../ext/gr-satellites/golay24.h"
 
 #define SKY_HMAC_CTX_SIZE  (sizeof(cf_hmac_ctx))
 

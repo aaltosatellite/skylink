@@ -10,12 +10,12 @@ void modem_wait_for_sync();
 /*
  * Transmit a frame.
  */
-int modem_tx(SkyRadioFrame_t* frame, timestamp_t t);
+int modem_tx(SkyRadioFrame* frame, timestamp_t t);
 
 /*
  * Receive a frame
  */
-int modem_rx(SkyRadioFrame_t* frame, int flags);
+int modem_rx(SkyRadioFrame* frame, int flags);
 
 int tick();
 

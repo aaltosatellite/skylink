@@ -490,3 +490,10 @@ void PRINTFF(uint32_t col, const char* restrict fmt, ...){
 	fflush(stdout);
 }
 
+String* get_random_string(int leng){
+	uint8_t* b = x_alloc(leng);
+	fillrand(b, leng);
+	String* s = new_string(b, leng);
+	free(b);
+	return s;
+}

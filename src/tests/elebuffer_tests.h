@@ -5,8 +5,6 @@
 #ifndef SKYLINK_ELEBUFFER_TESTS_H
 #define SKYLINK_ELEBUFFER_TESTS_H
 
-void test1();
-void test2();
-void test_ratios();
+void elebuffer_tests();
 
 #endif //SKYLINK_ELEBUFFER_TESTS_H

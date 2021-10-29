@@ -7,9 +7,9 @@
 
 
 #include "suo.h"
-#include "skylink/skylink.h"
-#include "skylink/platform.h"
-#include "skylink/hmac.h"
+#include "../skylink/skylink.h"
+#include "../skylink/platform.h"
+#include "../skylink/hmac.h"
 #include "vcs.h"
 #include "modem.h"
 
@@ -22,7 +22,7 @@
 void *zmq = NULL;
 
 struct sky_all sky_;
-SkyHandle_t sky = &sky_;
+SkyHandle sky = &sky_;
 SkyConfig_t sky_config;
 
 int main(int argc, char* argv[]) __attribute__((noreturn));
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	sky_config.phy.enable_rs = 1;
 	sky_config.phy.enable_scrambler = 1;
 
-	/*
+	/*xbuf[vc] = sky_buf_init(0x4000);
 	* MAC configurations
 	*/
 	sky_config.mac.min_slots = 4;
@@ -83,8 +83,8 @@ int main(int argc, char *argv[])
 
 	// Reserve buffers
 	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
-		sky->rxbuf[vc] = sky_buf_init(0x4000);
-		sky->txbuf[vc] = sky_buf_init(0x4000);
+		//sky->arrayBuffers =
+		//sky->txbuf[vc] = sky_buf_init(0x4000);
 	}
 
 	// Kick the actual protocol implementation running
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 	// modem_wait_for_sync();
 
 	int ret;
-	SkyRadioFrame_t frame;
+	SkyRadioFrame frame;
 
 
 	SKY_PRINTF(SKY_DIAG_DEBUG, "Running...\n");

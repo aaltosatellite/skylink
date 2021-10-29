@@ -1,36 +1,48 @@
 #ifndef __SKYLINK_HMAC_H__
 #define __SKYLINK_HMAC_H__
 
-#include "skylink/skylink.h"
-
 #include <stdint.h>
+#include "skylink.h"
+#include "../ext/cifra/hmac.h"
+#include "../ext/cifra/sha2.h"
 
 
+#define SKY_HMAC_CTX_SIZE  (sizeof(cf_hmac_ctx))
 
+/*
+ * Allocate and initialize HMAC state instance
+ */
+SkyHMAC* new_hmac_instance(HMACConfig* config);
 
 
 /*
- * Initialize HMAC
+ * Free HMAC resources
  */
-int sky_hmac_init(SkyHandle_t self, const uint8_t* key, unsigned int key_len);
+void destroy_hmac(SkyHMAC* hmac);
+
 
 /*
- * Return boolean as to if a frame claims it is authenticated.
+ * Get next sequence number from transmit counter and advance it by one (and wrap modulo cycle)
  */
-int sky_hmac_frame_claims_authenticated(SkyRadioFrame* frame);
+int sky_hmac_get_next_hmac_tx_sequence_and_advance(SkyHandle self, uint8_t vc);
+
 
 /*
  * Authenticate a frame.
  */
-int sky_hmac_authenticate(SkyHandle_t self, SkyRadioFrame* frame);
+int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame);
+
 
 /*
  * Check the frame authentication.
  */
-int sky_hmac_check_authentication(SkyHandle_t self, SkyRadioFrame* frame);
+int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame);
 
 
-int sky_hmac_vc_demands_auth(SkyHandle_t self, uint8_t vc);
+/*
+ * Return booelan (0/1) wether the virtual channel requires authentication
+ */
+int sky_hmac_vc_demands_auth(SkyHandle self, uint8_t vc);
 
 
 #endif /* __SKYLINK_HMAC_H__ */

@@ -15,7 +15,7 @@
 #define SKY_DIAG_FRAMES     0x0100
 #define SKY_DIAG_BUFFER     0x0200
 
-void asrt(int x);
+
 
 #define DEBUG
 #ifdef DEBUG
@@ -23,20 +23,17 @@ void asrt(int x);
 #ifdef __unix__
 #include <assert.h>
 /* Assert for POSIX platforms */
-void asrt(int x){
-	assert(x);
-}
+
 #define SKY_ASSERT(...)   assert(__VA_ARGS__);
 #else
 /* Assert for embedded platforms */
 #define SKY_ASSERT(...)    if ((__VA_ARGS__) != 0) while(1);
-#endif
+#endif //__unix__
 
-#else
+#else //DEBUG
 /* No asserts  in release build */
 #define SKY_ASSERT(...)   do { } while(0)
-void asrt(int x){}
-#endif
+#endif //DEBUG
 
 
 /* Global define for debug print flags */
@@ -47,21 +44,40 @@ extern unsigned int sky_diag_mask;
 
 #ifdef __unix__
 #include <stdio.h>
+#include <stdint.h>
 /* printf for POSIX platforms */
 #define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) != 0) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
 #else
 /* printf for embedded platforms */
 #include "SEGGER_RTT.h"
 #define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) != 0) { SEGGER_RTT_printf(0, __VA_ARGS__); }
-#endif
+#endif //__unix__
 
 #else
 /* No debug prints in release build */
 #define SKY_PRINTF(...)  //do { } while(0)
-#endif
+#endif //DEBUG
 
 
 /**/
 void sky_diag_dump_hex(uint8_t* data, unsigned int len);
+
+
+
+/*
+ * Protocol diagnostic information.
+ */
+typedef struct sky_diag {
+	uint16_t rx_frames;      // Total number of received frames
+	uint16_t rx_fec_ok;      // Number of successfully decoded codewords
+	uint16_t rx_fec_fail;    // Number of failed decodes
+	uint16_t rx_fec_octs;    // Total number of octets successfully decoded
+	uint16_t rx_fec_errs;    // Number of octet errors corrected
+	uint16_t tx_frames;      // Total number of transmitted frames
+} SkyDiagnostics;
+
+SkyDiagnostics* new_diagnostics();
+
+void destroy_diagnostics(SkyDiagnostics* diag);
 
 #endif /* __SKYLINK_DIAG_H__ */
