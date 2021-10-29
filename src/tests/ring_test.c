@@ -68,7 +68,7 @@ static void test1_round(){
 	//attempt recall. Should fail.
 	assert(skyArray_can_recall(array, sq0_send) == 0);
 	r = skyArray_recall(array, 0, &tgt);
-	assert(r == -1);
+	assert(r == RING_RET_CANNOT_RECALL);
 
 	//read for tx. assert data matches.
 	int seq_read_for_tx = -1;
@@ -112,7 +112,7 @@ static void test1_round(){
 
 	//push data as rx, as sequence = sq0+6. should fail.
 	r = skyArray_push_rx_packet(array, s6->data, s6->length, sq0+6);
-	assert(r == -1);
+	assert(r == RING_RET_INVALID_SEQUENCE);
 	assert(skyArray_count_readable_rcv_packets(array) == 1);
 
 	//push data as rx, as sequence = sq0+1.
@@ -143,7 +143,7 @@ static void test1_round(){
 	assert(skyArray_count_readable_rcv_packets(array) == 0);
 
 	r = skyArray_read_next_received(array, tgt, &seq);
-	assert(r == -1);
+	assert(r == RING_RET_EMPTY);
 	assert(skyArray_count_readable_rcv_packets(array) == 0);
 
 	uint16_t window5 = skyArray_get_horizon_bitmap(array);
@@ -437,8 +437,8 @@ static void test3_round(){
 			int sq_tx = -1;
 			int r = skyArray_read_packet_for_tx(array, tgt, &sq_tx);
 			if(in_buffer == 0) {
-				assert(r == -1);
-				assert(sq_tx == -1);
+				assert(r == RING_RET_EMPTY);
+				assert(sq_tx == RING_RET_EMPTY);
 			} else {
 				assert(r >= 0);
 				assert(sq_tx == wrap_seq(s_seq0+next_idx_to_tx));
