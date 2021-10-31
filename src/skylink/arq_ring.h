@@ -94,6 +94,7 @@ struct arq_ring_s {
 	SkySendRing* secondarySendRing;
 	SkyRcvRing* primaryRcvRing;
 	SkyRcvRing* secondaryRcvRing;
+	uint8_t state_enforcement_need;
 };
 typedef struct arq_ring_s SkyArqRing;
 
@@ -149,6 +150,9 @@ int skyArray_pop_resend_sequence(SkyArqRing* arqRing);
 
 //returns the length of the next payload that would be read from transmit ring. -1 if there is nothing to read.
 int skyArray_peek_next_tx_size(SkyArqRing* arqRing);
+
+//return the sequence number that the next transmitted packet will have, save for unexpected intervening sequence resets.
+int skyArray_get_next_transmitted_sequence(SkyArqRing* arqRing);
 //======================================================================================================================
 //======================================================================================================================
 

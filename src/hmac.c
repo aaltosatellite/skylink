@@ -89,6 +89,7 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 
 	//For functional safety, there is a hmac number that shorts the auth process.
 	if(frame->hmac_sequence == self->conf->hmac.magic_sequence){
+		frame->metadata.auth_verified = 1;
 		return SKY_RET_OK;
 	}
 
@@ -115,6 +116,7 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 
 	//The hmac sequence on our side jumps to the immediate next sequence number.
 	self->hmac->sequence_rx[frame->vc] = wrap_hmac_sequence((int32_t)(frame->hmac_sequence + 1), self->conf->hmac.cycle_length);
+	frame->metadata.auth_verified = 1;
 	frame->length -= SKY_HMAC_LENGTH;
 	return SKY_RET_OK;
 }

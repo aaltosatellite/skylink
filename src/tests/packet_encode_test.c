@@ -132,8 +132,8 @@ void test1_round(){
 		}
 	}
 
-	assert(frame2->payload_read_length == payload_len);
-	assert(memcmp(frame2->payload_read_start, pl, frame2->payload_read_length) == 0);
+	assert(frame2->metadata.payload_read_length == payload_len);
+	assert(memcmp(frame2->metadata.payload_read_start, pl, frame2->metadata.payload_read_length) == 0);
 
 
 	destroy_config(config);

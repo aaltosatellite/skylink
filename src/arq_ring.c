@@ -296,6 +296,10 @@ static int sendRing_peek_next_tx_size(SkySendRing* sendRing, ElementBuffer* elem
 	int length = element_buffer_get_data_length(elementBuffer, item->idx);
 	return length;
 }
+
+static int sendRing_get_next_tx_sequence(SkySendRing* sendRing){
+	return sendRing->tx_sequence;
+}
 //===== SEND RING ======================================================================================================
 
 
@@ -334,6 +338,7 @@ void wipe_arq_ring(SkyArqRing* array, int initial_send_sequence, int initial_rcv
 	wipe_rcv_ring(array->primaryRcvRing, array->elementBuffer, initial_rcv_sequence);
 	wipe_rcv_ring(array->secondaryRcvRing, array->elementBuffer, initial_rcv_sequence);
 	wipe_element_buffer(array->elementBuffer);
+	array->state_enforcement_need = 0;
 }
 
 
@@ -440,6 +445,10 @@ int skyArray_pop_resend_sequence(SkyArqRing* arqRing){
 
 int skyArray_peek_next_tx_size(SkyArqRing* arqRing){
 	return sendRing_peek_next_tx_size(arqRing->primarySendRing, arqRing->elementBuffer);
+}
+
+int skyArray_get_next_transmitted_sequence(SkyArqRing* arqRing){
+	return sendRing_get_next_tx_sequence(arqRing->primarySendRing);
 }
 //======================================================================================================================
 //======================================================================================================================

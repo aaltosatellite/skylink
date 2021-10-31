@@ -110,14 +110,13 @@ int encode_skylink_packet(SkyRadioFrame* frame){
 		cursor += r;
 	}
 
-	frame->encoding_cursor = cursor;
 	frame->length = cursor;
 	return 0;
 }
 
 
 int sky_packet_available_payload_space(SkyRadioFrame* frame){
-	return RS_MSGLEN - (frame->encoding_cursor + SKY_HMAC_LENGTH);
+	return RS_MSGLEN - (frame->length + SKY_HMAC_LENGTH);
 }
 
 
@@ -125,7 +124,7 @@ int sky_packet_extend_with_payload(SkyRadioFrame* frame, void* payload, int leng
 	if(sky_packet_available_payload_space(frame) < length){
 		return -1;
 	}
-	memcpy(&frame->raw[frame->encoding_cursor], payload, length);
+	memcpy(&frame->raw[frame->length], payload, length);
 	frame->length += length;
 	return 0;
 }
@@ -249,8 +248,8 @@ int decode_skylink_packet(SkyRadioFrame* frame){
 		n_ext++;
 	}
 
-	frame->payload_read_length = frame->length - cursor;
-	frame->payload_read_start = frame->raw + cursor;
+	frame->metadata.payload_read_length = frame->length - cursor;
+	frame->metadata.payload_read_start = frame->raw + cursor;
 	return 0;
 }
 

@@ -73,6 +73,7 @@ typedef struct sky_diag {
 	uint16_t rx_fec_fail;    // Number of failed decodes
 	uint16_t rx_fec_octs;    // Total number of octets successfully decoded
 	uint16_t rx_fec_errs;    // Number of octet errors corrected
+	uint16_t rx_arq_resets;  // Number of octet errors corrected
 	uint16_t tx_frames;      // Total number of transmitted frames
 } SkyDiagnostics;
 

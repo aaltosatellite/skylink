@@ -112,17 +112,21 @@ typedef struct skylink_packet_extension_s SkyPacketExtension;
 /* extensions ====================================================================================== */
 
 
-
-
+struct frame_metadata {
+	int payload_read_length;
+	uint8_t* payload_read_start;
+	uint8_t auth_verified;
+	int32_t rx_time_ms;
+};
+typedef struct frame_metadata FrameMetadata;
 
 /* Struct to store raw radio frame to be transmitted over the radio or frame which was received */
 struct radioframe {
+	FrameMetadata metadata;
 	uint8_t raw[SKY_FRAME_MAX_LEN + 3 + 1];
 	uint16_t length;
-	int32_t rx_time_ms;
 
 	uint8_t identity[SKY_IDENTITY_LEN];
-
 	uint8_t hmac_on;
 	uint8_t arq_on;
 	uint8_t vc;
@@ -132,10 +136,6 @@ struct radioframe {
 	uint16_t mac_remaining;
 	uint8_t arq_sequence;
 	SkyPacketExtension extensions[SKY_MAX_EXTENSION_COUNT];
-
-	int payload_read_length;
-	int encoding_cursor;
-	uint8_t* payload_read_start;
 };
 typedef struct radioframe SkyRadioFrame;
 

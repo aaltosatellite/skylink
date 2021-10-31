@@ -34,11 +34,11 @@ int sky_hmac_vc_demands_auth(SkyHandle self, uint8_t vc);
 
 
 /* Marks a vc number as requiring hmac-sequence reset. This is used after a peer attempts authentication with too big sequence jump. */
-int sky_hmac_mark_vc_for_enforcement(SkyHandle self, uint8_t vc);
+//int sky_hmac_mark_vc_for_enforcement(SkyHandle self, uint8_t vc);
 
 
 /* The obvious inverse of above function. */
-int sky_hmac_clear_vc_of_enforcement(SkyHandle self, uint8_t vc);
+//int sky_hmac_clear_vc_of_enforcement(SkyHandle self, uint8_t vc);
 
 
 
