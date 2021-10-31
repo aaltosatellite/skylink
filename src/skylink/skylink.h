@@ -148,7 +148,7 @@ struct sky_mac_s {
 	int32_t my_window_length;
 	int32_t peer_window_length;
 	int32_t gap_constant;
-	int32_t cycle_time;
+	int32_t tail_constant;
 };
 typedef struct sky_mac_s MACSystem;
 

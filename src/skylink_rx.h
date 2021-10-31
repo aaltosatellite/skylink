@@ -14,4 +14,7 @@
 #include "skylink/utilities.h"
 
 
+int sky_rx_0(SkyHandle self, SkyRadioFrame* frame);
+int sky_rx_1(SkyHandle self, SkyRadioFrame* frame);
+
 #endif //SKYLINK_CMAKE_SKYLINK_RX_H

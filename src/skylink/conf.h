@@ -39,6 +39,9 @@ typedef struct {
 	/* Default gap size between windows. */
 	int32_t default_gap_length;
 
+	/* Default tail end time of the cycle */
+	int32_t default_tail_length;
+
 	int32_t maximum_window_size;
 
 	int32_t minimum_window_size;

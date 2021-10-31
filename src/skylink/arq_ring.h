@@ -91,7 +91,6 @@ typedef struct sky_rcv_ring_s SkyRcvRing;
 struct arq_ring_s {
 	ElementBuffer* elementBuffer;
 	SkySendRing* primarySendRing;
-	SkySendRing* secondarySendRing;
 	SkyRcvRing* primaryRcvRing;
 	SkyRcvRing* secondaryRcvRing;
 	uint8_t state_enforcement_need;
@@ -114,7 +113,7 @@ void destroy_arq_ring(SkyArqRing* array);
 void wipe_arq_ring(SkyArqRing* array, int initial_send_sequence, int initial_rcv_sequence);
 
 //swaps the send rings, and wipes the new primary ring to the new sequence.
-int skyArray_set_send_sequence(SkyArqRing* array, uint16_t sequence, int wipe_all);
+int skyArray_set_send_sequence(SkyArqRing* array, uint16_t sequence);
 
 //swaps the recive rings, and wipes the new primary ring to the new sequence.
 int skyArray_set_receive_sequence(SkyArqRing* array, uint16_t sequence, int wipe_all);
@@ -131,25 +130,19 @@ void skyArray_clean_unreachable(SkyArqRing* array);
 int skyArray_push_packet_to_send(SkyArqRing* array, void* payload, int length);
 
 //reads next message to be sent.
-int skyArray_read_packet_for_tx(SkyArqRing* array, void* tgt, int* sequence);
+int skyArray_read_packet_for_tx(SkyArqRing* array, void* tgt, int* sequence, int include_resend);
 
 //returns the number of messages in buffer.
-int skyArray_count_packets_to_tx(SkyArqRing* array);
+int skyArray_count_packets_to_tx(SkyArqRing* array, int include_resend);
 
 //return boolean wether a message of particular sequence is still recallable.
 int skyArray_can_recall(SkyArqRing* array, int sequence);
 
-//reads a message that has laready been sent recently, if it is at most n<n_recall behind current sequence to be sent.
-int skyArray_recall(SkyArqRing* array, int sequence, void* tgt);
-
 //schedules packet of a sequence to be resent. Returns 0/-1 according to if the packet was recallable.
 int skyArray_schedule_resend(SkyArqRing* arqRing, int sequence);
 
-//pops a sequence number from resend list. (FiFo) returns sequence number or -1 if list is empty.
-int skyArray_pop_resend_sequence(SkyArqRing* arqRing);
-
 //returns the length of the next payload that would be read from transmit ring. -1 if there is nothing to read.
-int skyArray_peek_next_tx_size(SkyArqRing* arqRing);
+int skyArray_peek_next_tx_size(SkyArqRing* arqRing, int include_resend);
 
 //return the sequence number that the next transmitted packet will have, save for unexpected intervening sequence resets.
 int skyArray_get_next_transmitted_sequence(SkyArqRing* arqRing);

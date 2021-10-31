@@ -18,7 +18,7 @@ void packet_tests(){
 
 void test1(){
 	PRINTFF(0,"[Packet Test 1: ENCODE-DECODE]\n");
-	for (int i = 0; i < 4000; ++i) {
+	for (int i = 0; i < 4500; ++i) {
 		test1_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
@@ -29,6 +29,8 @@ void test1_round(){
 	SkyConfig* config = new_vanilla_config();
 	SkyRadioFrame* frame = new_frame();
 	SkyRadioFrame* frame2 = new_frame();
+	fillrand((uint8_t*)frame, sizeof(FrameMetadata));
+	fillrand((uint8_t*)frame2, sizeof(FrameMetadata));
 
 
 	uint8_t identity[SKY_IDENTITY_LEN];
@@ -84,19 +86,34 @@ void test1_round(){
 		sky_packet_add_extension_arq_resend_request(frame, rr_sequence, mask1, mask2);
 	}
 
+	int extension_hmac_enforcement = 0;
+	uint16_t hmac_enforcement = randint_i32(0,65000);
+	if(randint_i32(0,1) == 1){
+		n_extensions++;
+		extension_hmac_enforcement = 1;
+		sky_packet_add_extension_hmac_enforcement(frame, hmac_enforcement);
+	}
 
-	int payload_len = randint_i32(0,187); //187 seems to be the max with this setup...
+
+	int payload_len = randint_i32(0,184); //184 seems to be the max with this setup...
 	uint8_t* pl = x_alloc(payload_len);
 	fillrand(pl, payload_len);
 
-
-	encode_skylink_packet(frame);
+	encode_skylink_packet_extensions(frame);
+	if(n_extensions >= 4){
+		assert(sky_packet_available_payload_space(frame) <= 184);
+	}
+	if(n_extensions == 0){
+		assert(sky_packet_available_payload_space(frame) == (RS_MSGLEN - (SKY_HMAC_LENGTH + I_PK_EXTENSIONS)) );
+	}
 	sky_packet_extend_with_payload(frame, pl, payload_len);
+	encode_skylink_packet_header(frame);
+
 
 	memcpy(frame2->raw ,frame->raw, frame->length);
 	frame2->length = frame->length;
-	decode_skylink_packet(frame2);
-
+	int r = decode_skylink_packet(frame2);
+	assert(r == 0);
 
 	assert(frame2->vc == vc);
 	assert(frame2->mac_length == mac_length);
@@ -129,6 +146,11 @@ void test1_round(){
 			assert(ext.ext_union.ArqReq.sequence == rr_sequence);
 			assert(ext.ext_union.ArqReq.mask1 == mask1);
 			assert(ext.ext_union.ArqReq.mask2 == mask2);
+		}
+
+		if(ext.type == EXTENSION_HMAC_INVALID_SEQ){
+			assert(extension_hmac_enforcement == 1);
+			assert(ext.ext_union.HMACTxReset.correct_tx_sequence == hmac_enforcement);
 		}
 	}
 

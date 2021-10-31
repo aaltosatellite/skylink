@@ -8,6 +8,7 @@
 #include <string.h>
 #include "skylink.h"
 #include "hmac.h"
+#include "fec.h"
 //#include "utilities.h"
 
 
@@ -46,9 +47,13 @@ int sky_packet_add_extension_arq_setup(SkyRadioFrame* frame, int new_sequence, u
 
 int sky_packet_add_extension_arq_resend_request(SkyRadioFrame* frame, int sequence, uint8_t mask1, uint8_t mask2);
 
+int sky_packet_add_extension_hmac_enforcement(SkyRadioFrame* frame, uint16_t hmac_sequence);
+
 int sky_packet_assign_hmac_sequence(SkyHandle self, SkyRadioFrame* frame);
 
-int encode_skylink_packet(SkyRadioFrame* frame);
+int encode_skylink_packet_extensions(SkyRadioFrame* frame);
+
+int encode_skylink_packet_header(SkyRadioFrame* frame);
 
 int sky_packet_available_payload_space(SkyRadioFrame* frame);
 

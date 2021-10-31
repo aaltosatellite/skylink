@@ -3,8 +3,7 @@
 //
 
 #include "skylink/skypacket.h"
-#include "skylink/hmac.h"
-#include "skylink/fec.h"
+
 
 
 
@@ -69,8 +68,32 @@ int sky_packet_add_extension_arq_resend_request(SkyRadioFrame* frame, int sequen
 	return 0;
 }
 
+int sky_packet_add_extension_hmac_enforcement(SkyRadioFrame* frame, uint16_t hmac_sequence){
+	SkyPacketExtension* extension = &frame->extensions[frame->n_extensions];
+	extension->type = EXTENSION_HMAC_INVALID_SEQ;
+	extension->ext_union.HMACTxReset.correct_tx_sequence = hmac_sequence;
+	frame->n_extensions++;
+	return 0;
+}
 
-int encode_skylink_packet(SkyRadioFrame* frame){
+
+int encode_skylink_packet_extensions(SkyRadioFrame* frame){
+	int cursor = I_PK_EXTENSIONS;
+	frame->length = cursor;
+	for (int i = 0; i < frame->n_extensions; ++i) {
+		int r = encode_skylink_extension(frame, i, cursor);
+		if(r < 0){
+			return SKY_RET_INVALID_EXTENSION;
+		}
+		cursor += r;
+	}
+	frame->length = cursor;
+	return 0;
+}
+
+
+
+int encode_skylink_packet_header(SkyRadioFrame* frame){
 	frame->raw[0] = SKYLINK_START_BYTE;
 	frame->raw[1] = SKYLINK_VERSION_BYTE;
 
@@ -85,7 +108,7 @@ int encode_skylink_packet(SkyRadioFrame* frame){
 	}
 	frame->raw[I_PK_FLAG] = flag;
 
-	uint8_t vc_n_ext = ((frame->vc << 4) | (frame->n_extensions & 0x0F));
+	uint8_t vc_n_ext = (((frame->vc & 0x0F) << 4) | (frame->n_extensions & 0x0F));
 	frame->raw[I_PK_VC_N_EXT] = vc_n_ext;
 
 	uint16_t hmac_tx = sky_hton16(frame->hmac_sequence);
@@ -101,16 +124,8 @@ int encode_skylink_packet(SkyRadioFrame* frame){
 		frame->raw[I_PK_ARQ_SEQUENCE] = frame->arq_sequence;
 	}
 
-	int cursor = I_PK_EXTENSIONS;
-	for (int i = 0; i < frame->n_extensions; ++i) {
-		int r = encode_skylink_extension(frame, i, cursor);
-		if(r < 0){
-			return SKY_RET_INVALID_EXTENSION;
-		}
-		cursor += r;
-	}
+	//Observe: Extensions must be encoded separately. Probably before header.
 
-	frame->length = cursor;
 	return 0;
 }
 
@@ -261,15 +276,15 @@ static int decode_skylink_extension(SkyRadioFrame* frame, int n, int cursor){
 	}
 	uint8_t extension_type = (frame->raw[cursor] & 0xf0) >> 4;
 	uint8_t extension_len = frame->raw[cursor] & 0x0f;
-	if(frame->length < (cursor + 2 + extension_len)){
-		return -1;
+	if(frame->length < (cursor + 1 + extension_len)){
+		return -2;
 	}
 
 	SkyPacketExtension* extension = &frame->extensions[n];
 
 	if(extension_type == EXTENSION_ARQ_RESEND_REQ){
 		if(extension_len != 3){
-			return -1;
+			return -3;
 		}
 		extension->type = EXTENSION_ARQ_RESEND_REQ;
 		extension->ext_union.ArqReq.sequence = frame->raw[cursor + 1];
@@ -280,7 +295,7 @@ static int decode_skylink_extension(SkyRadioFrame* frame, int n, int cursor){
 
 	if(extension_type == EXTENSION_ARQ_SEQ_RESET){
 		if(extension_len != 2){
-			return -1;
+			return -4;
 		}
 		extension->type = EXTENSION_ARQ_SEQ_RESET;
 		extension->ext_union.ArqSeqReset.toggle = frame->raw[cursor + 1];
@@ -290,7 +305,7 @@ static int decode_skylink_extension(SkyRadioFrame* frame, int n, int cursor){
 
 	if(extension_type == EXTENSION_MAC_PARAMETERS){
 		if(extension_len != 4){
-			return -1;
+			return -5;
 		}
 		extension->type = EXTENSION_MAC_PARAMETERS;
 		uint16_t default_window_size = *(uint16_t*)(&frame->raw[cursor+1]);
@@ -302,14 +317,14 @@ static int decode_skylink_extension(SkyRadioFrame* frame, int n, int cursor){
 
 	if(extension_type == EXTENSION_HMAC_INVALID_SEQ){
 		if(extension_len != 2){
-			return -1;
+			return -6;
 		}
 		extension->type = EXTENSION_HMAC_INVALID_SEQ;
 		uint16_t hmac_tx_sequence = *(uint16_t*)(&frame->raw[cursor+1]);
 		extension->ext_union.HMACTxReset.correct_tx_sequence = sky_hton16(hmac_tx_sequence);
 		return extension_len+1;
 	}
-	return -1;
+	return -7;
 }
 //=== DECODING =========================================================================================================
 //======================================================================================================================

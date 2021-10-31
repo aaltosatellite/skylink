@@ -11,7 +11,7 @@
 int main() {
 	reseed_random();
 	//elebuffer_tests();
-	ring_tests();
+	//ring_tests();
 	packet_tests();
 	fec_test();
 }

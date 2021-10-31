@@ -57,34 +57,37 @@ static void test1_round(){
 	String* s6 = get_random_string(randint_i32(0,SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE));
 
 	//check the msg counts are 0.
-	assert(skyArray_count_packets_to_tx(array) == 0);
+	assert(skyArray_count_packets_to_tx(array, 1) == 0);
 	assert(skyArray_count_readable_rcv_packets(array) == 0);
 
 	//generate random string and push it to send.
 	int r = skyArray_push_packet_to_send(array, s0->data, s0->length);
 	assert(r == 0);
-	assert(skyArray_count_packets_to_tx(array) == 1);
+	assert(skyArray_count_packets_to_tx(array, 1) == 1);
 
 	//attempt recall. Should fail.
 	assert(skyArray_can_recall(array, sq0_send) == 0);
-	r = skyArray_recall(array, 0, &tgt);
+	r = skyArray_schedule_resend(array, sq0_send);
 	assert(r == RING_RET_CANNOT_RECALL);
 
 	//read for tx. assert data matches.
 	int seq_read_for_tx = -1;
-	r = skyArray_read_packet_for_tx(array, tgt, &seq_read_for_tx);
+	r = skyArray_read_packet_for_tx(array, tgt, &seq_read_for_tx, 1);
 	assert(r == s0->length);
 	assert(seq_read_for_tx == sq0_send);
 	assert(memcmp(tgt, s0->data, s0->length) == 0);
-	assert(skyArray_count_packets_to_tx(array) == 0);
+	assert(skyArray_count_packets_to_tx(array, 1) == 0);
 
 	//recall. This should succeed.
 	fillrand(tgt, s0->length+10);
 	assert(skyArray_can_recall(array, sq0_send) == 1);
 	assert(skyArray_can_recall(array, sq0_send+1) == 0);
-	r = skyArray_recall(array, sq0_send, tgt);
-	assert(r == s0->length);
+	r = skyArray_schedule_resend(array, sq0_send);
+	assert(r == 0);
+	skyArray_read_packet_for_tx(array, tgt, &seq_read_for_tx, 1);
+	assert(seq_read_for_tx == sq0_send);
 	assert(memcmp(tgt, s0->data, s0->length) == 0);
+
 
 	//push data as rx, as sequence = sq0.
 	uint16_t window0 = skyArray_get_horizon_bitmap(array);
@@ -413,7 +416,7 @@ static void test3_round(){
 	int in_buffer = 0;
 	while (next_idx_to_tx < NMSG) {
 
-		assert(skyArray_count_packets_to_tx(array) == (next_idx_to_push - next_idx_to_tx));
+		assert(skyArray_count_packets_to_tx(array, 0) == (next_idx_to_push - next_idx_to_tx));
 		assert(tail_seq == array->primarySendRing->tail_sequence);
 		assert(wrap_seq(s_seq0+next_idx_to_push) == array->primarySendRing->head_sequence);
 
@@ -435,7 +438,11 @@ static void test3_round(){
 
 		if ((randint_i32(0, 10000) % 7) == 0) { //pull
 			int sq_tx = -1;
-			int r = skyArray_read_packet_for_tx(array, tgt, &sq_tx);
+			int peeked0 = skyArray_peek_next_tx_size(array, 0);
+			int peeked1 = skyArray_peek_next_tx_size(array, 1);
+			int r = skyArray_read_packet_for_tx(array, tgt, &sq_tx, randint_i32(0,1));
+			assert(peeked0 == r);
+			assert(peeked1 == r);
 			if(in_buffer == 0) {
 				assert(r == RING_RET_EMPTY);
 				assert(sq_tx == RING_RET_EMPTY);
@@ -453,22 +460,59 @@ static void test3_round(){
 		}
 
 		if ((randint_i32(0, 10000) % 7) == 0) { //recall
-			for (int i = 0; i < 30; ++i) {
-				int seq_shift = randint_i32(-2, n_recall+2);
-				int seq = wrap_seq(tail_seq + seq_shift);
-				int r = skyArray_recall(array, seq, tgt);
+			for (int i = 0; i < 10; ++i) {
 				int next_seq_to_tx = wrap_seq(s_seq0 + next_idx_to_tx);
 				int tail_idx = next_idx_to_tx - wrap_seq(next_seq_to_tx - tail_seq);
-				if( wrap_seq(seq - tail_seq) < wrap_seq(next_seq_to_tx - tail_seq) ){
-					assert(r >= 0);
-					assert(r == messages[tail_idx + seq_shift]->length);
-					assert(memcmp(tgt, messages[tail_idx + seq_shift]->data, r) == 0);
-				} else {
-					assert(r < 0);
+				int n_successful_schedules = 0;
+				int successful_scheduled_indexes[35];
+				int successful_scheduled_sequences[35];
+				int n_schedule_trials = randint_i32(1, 35);
+				for (int j = 0; j < n_schedule_trials; ++j) {
+					int seq_shift = randint_i32(-2, n_recall+2);
+					int seq = wrap_seq(tail_seq + seq_shift);
+					int idx = tail_idx + seq_shift;
+					if (idx < 0){
+						continue;
+					}
+					int r1 = skyArray_can_recall(array, seq);
+					int r2 = skyArray_schedule_resend(array, seq);
+					if( wrap_seq(seq - tail_seq) < wrap_seq(next_seq_to_tx - tail_seq) ){
+						assert(r1 == 1);
+						if(n_successful_schedules < 16){
+							assert(r2 == 0);
+							assert(array->primarySendRing->resend_count <= 16);
+							successful_scheduled_indexes[n_successful_schedules] = idx;
+							successful_scheduled_sequences[n_successful_schedules] = seq;
+							n_successful_schedules++;
+						} else{
+							assert(r2 == RING_RET_RESEND_FULL);
+							assert(array->primarySendRing->resend_count == 16);
+						}
+					} else {
+						assert(r1 == 0);
+						if(n_successful_schedules < 16){
+							assert(r2 == RING_RET_CANNOT_RECALL);
+						}
+						else{
+							assert(r2 == RING_RET_RESEND_FULL);
+						}
+					}
 				}
+				for (int j = 0; j < n_successful_schedules; ++j) {
+
+					int idx = successful_scheduled_indexes[j];
+					int seq = successful_scheduled_sequences[j];
+					int srcall = 1000;
+					int peeked = skyArray_peek_next_tx_size(array, 1);
+					int r3 = skyArray_read_packet_for_tx(array, tgt, &srcall, 1);
+					//PRINTFF(0,"(%d/%d): %d %d    L: %d vs %d\n", j , n_successful_schedules, seq, srcall,  messages[idx]->length, r3);
+					assert(r3 == messages[idx]->length);
+					assert(memcmp(tgt, messages[idx]->data, r3) == 0);
+					assert(r3 == peeked);
+				}
+				assert(array->primarySendRing->resend_count == 0);
 			}
 		}
-
 	}
 	for (int i = 0; i < n_strings; ++i) {
 		destroy_string(messages[i]);

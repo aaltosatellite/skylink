@@ -32,7 +32,8 @@ SkyConfig* new_vanilla_config(){
 	config->mac.maximum_window_size = 200;
 	config->mac.minimum_window_size = 25;
 	config->mac.default_window_length = 50;
-	config->mac.default_gap_length = 50;
+	config->mac.default_gap_length = 150;
+	config->mac.default_tail_length = 5;
 
 	config->identity[0] = 'O';
 	config->identity[1] = 'H';

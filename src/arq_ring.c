@@ -191,8 +191,26 @@ static void destroy_send_ring(SkySendRing* sendRing){
 }
 
 
-static int sendRing_count_packets_to_send(SkySendRing* sendRing){
-	return ring_wrap(sendRing->head - sendRing->tx_head, sendRing->length);
+//This function employs two ring inexings with different modulos. If you are not the original author (Markus), get some coffee.
+static int sendRing_can_recall(SkySendRing* sendRing, int sequence){
+	int n_tx_head_ahead_of_tail = ring_wrap(sendRing->tx_head - sendRing->tail, sendRing->length);
+	int sequence_ahead_of_tail = sequence_wrap(sequence - sendRing->tail_sequence);
+	if(sequence_ahead_of_tail >= n_tx_head_ahead_of_tail){
+		return 0;
+	}
+	return 1;
+}
+
+
+//This function employs two ring inexings with different modulos. If you are not the original author (Markus), get some coffee.
+static int sendRing_get_recall_ring_index(SkySendRing* sendRing, int recall_sequence){
+	int n_tx_head_ahead_of_tail = ring_wrap(sendRing->tx_head - sendRing->tail, sendRing->length);
+	int sequence_ahead_of_tail = sequence_wrap(recall_sequence - sendRing->tail_sequence);
+	if(sequence_ahead_of_tail >= n_tx_head_ahead_of_tail){
+		return RING_RET_CANNOT_RECALL;
+	}
+	int index = ring_wrap(sendRing->tail + sequence_ahead_of_tail, sendRing->length);
+	return index;
 }
 
 
@@ -215,8 +233,43 @@ static int sendRing_push_packet_to_send(SkySendRing* sendRing, ElementBuffer* el
 }
 
 
-static int sendRing_read_packet_to_tx(SkySendRing* sendRing, ElementBuffer* elementBuffer, void* tgt, int* sequence){
-	if(sendRing_count_packets_to_send(sendRing) == 0){
+static int sendRing_schedule_resend(SkySendRing* sendRing, int sequence){
+	if(sendRing->resend_count >= 16){
+		return RING_RET_RESEND_FULL;
+	}
+	if(!sendRing_can_recall(sendRing, sequence)){
+		return RING_RET_CANNOT_RECALL;
+	}
+	sendRing->resend_list[sendRing->resend_count] = sequence;
+	sendRing->resend_count++;
+	return 0;
+}
+
+
+static int sendRing_count_packets_to_send(SkySendRing* sendRing, int include_resend){
+	int n = ring_wrap(sendRing->head - sendRing->tx_head, sendRing->length);
+	if(include_resend){
+		n = n + sendRing->resend_count;
+	}
+	return n;
+}
+
+
+static int sendRing_pop_resend_sequence(SkySendRing* sendRing){
+	if(sendRing->resend_count == 0){
+		return RING_RET_EMPTY;
+	}
+	int r = sendRing->resend_list[0];
+	sendRing->resend_count--;
+	if(sendRing->resend_count > 0){
+		memmove(sendRing->resend_list, sendRing->resend_list+1, sendRing->resend_count);
+	}
+	return r;
+}
+
+
+static int sendRing_read_new_packet_to_tx_(SkySendRing* sendRing, ElementBuffer* elementBuffer, void* tgt, int* sequence){ //NEXT PACKET
+	if(sendRing_count_packets_to_send(sendRing, 0) == 0){
 		return RING_RET_EMPTY;
 	}
 	RingItem* item = &sendRing->buff[sendRing->tx_head];
@@ -241,61 +294,55 @@ static int sendRing_read_packet_to_tx(SkySendRing* sendRing, ElementBuffer* elem
 }
 
 
-//This function employs two ring inexings with different modulos. If you are not the original author (Markus), get some coffee.
-static int sendRing_can_recall(SkySendRing* sendRing, int sequence){
-	int n_tx_head_ahead_of_tail = ring_wrap(sendRing->tx_head - sendRing->tail, sendRing->length);
-	int sequence_ahead_of_tail = sequence_wrap(sequence - sendRing->tail_sequence);
-	if(sequence_ahead_of_tail >= n_tx_head_ahead_of_tail){
-		return 0;
+static int sendRing_read_recall_packet_to_tx_(SkySendRing* sendRing, ElementBuffer* elementBuffer, void* tgt, int* sequence){
+	int recall_seq = sendRing_pop_resend_sequence(sendRing);
+	if(recall_seq < 0){
+		return RING_RET_EMPTY;
 	}
-	return 1;
-}
-
-
-static int sendRing_recall(SkySendRing* sendRing, ElementBuffer* elementBuffer, int sequence, void* tgt){
-	if(!sendRing_can_recall(sendRing, sequence)){
+	int recall_ring_index = sendRing_get_recall_ring_index(sendRing, recall_seq);
+	if(recall_ring_index < 0){
 		return RING_RET_CANNOT_RECALL;
 	}
-	int n = sequence_wrap(sequence - sendRing->tail_sequence);
-	int recall_ring_index = ring_wrap(sendRing->tail + n, sendRing->length);
 	RingItem* item = &sendRing->buff[recall_ring_index];
 	int read = element_buffer_read(elementBuffer, tgt, item->idx, SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE);
 	if(read < 0){
 		return RING_RET_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
 	}
+	*sequence = recall_seq;
 	return read;
 }
 
-static int sendRing_schedule_resend(SkySendRing* sendRing, int sequence){
-	if(sendRing->resend_count >= 16){
-		return RING_RET_RESEND_FULL;
+
+static int sendRing_read_to_tx(SkySendRing* sendRing, ElementBuffer* elementBuffer, void* tgt, int* sequence, int include_resend){
+	int read = RING_RET_EMPTY;
+	if(include_resend && (sendRing->resend_count > 0)){
+		read = sendRing_read_recall_packet_to_tx_(sendRing, elementBuffer, tgt, sequence);
+		if(read >= 0){
+			return read;
+		}
 	}
-	if(!sendRing_can_recall(sendRing, sequence)){
-		return RING_RET_CANNOT_RECALL;
-	}
-	sendRing->resend_list[sendRing->resend_count] = sequence;
-	sendRing->resend_count++;
-	return 0;
+	read = sendRing_read_new_packet_to_tx_(sendRing, elementBuffer, tgt, sequence);
+	return read;
 }
 
-static int sendRing_pop_resend_sequence(SkySendRing* sendRing){
-	if(sendRing->resend_count == 0){
+
+static int sendRing_peek_next_tx_size(SkySendRing* sendRing, ElementBuffer* elementBuffer, int include_resend){
+	if(sendRing_count_packets_to_send(sendRing, include_resend) == 0){
 		return RING_RET_EMPTY;
 	}
-	int r = sendRing->resend_list[0];
-	sendRing->resend_count--;
-	memmove(sendRing->resend_list, sendRing->resend_list+1, sendRing->resend_count);
-	return r;
-}
-
-static int sendRing_peek_next_tx_size(SkySendRing* sendRing, ElementBuffer* elementBuffer){
-	if(sendRing_count_packets_to_send(sendRing) == 0){
-		return RING_RET_EMPTY;
+	if(include_resend && (sendRing->resend_count > 0)){
+		int idx = sendRing_get_recall_ring_index(sendRing, sendRing->resend_list[0]);
+		if(idx >= 0){
+			RingItem* item = &sendRing->buff[idx];
+			int length = element_buffer_get_data_length(elementBuffer, item->idx);
+			return length;
+		}
 	}
 	RingItem* item = &sendRing->buff[sendRing->tx_head];
 	int length = element_buffer_get_data_length(elementBuffer, item->idx);
 	return length;
 }
+
 
 static int sendRing_get_next_tx_sequence(SkySendRing* sendRing){
 	return sendRing->tx_sequence;
@@ -313,7 +360,6 @@ SkyArqRing* new_arq_ring(SkyArrayConfig* config){
 	}
 	SkyArqRing* arqRing = SKY_MALLOC(sizeof(SkyArqRing));
 	arqRing->primarySendRing = new_send_ring(config->send_ring_len, config->n_recall, config->initial_send_sequence);
-	arqRing->secondarySendRing = new_send_ring(config->send_ring_len, config->n_recall, config->initial_send_sequence);
 	arqRing->primaryRcvRing = new_rcv_ring(config->rcv_ring_len, config->horizon_width, config->initial_rcv_sequence);
 	arqRing->secondaryRcvRing = new_rcv_ring(config->rcv_ring_len, config->horizon_width, config->initial_rcv_sequence);
 	arqRing->elementBuffer = new_element_buffer(config->element_size, config->element_count);
@@ -324,7 +370,6 @@ SkyArqRing* new_arq_ring(SkyArrayConfig* config){
 
 void destroy_arq_ring(SkyArqRing* array){
 	destroy_send_ring(array->primarySendRing);
-	destroy_send_ring(array->secondarySendRing);
 	destroy_rcv_ring(array->primaryRcvRing);
 	destroy_rcv_ring(array->secondaryRcvRing);
 	destroy_element_buffer(array->elementBuffer);
@@ -334,7 +379,6 @@ void destroy_arq_ring(SkyArqRing* array){
 
 void wipe_arq_ring(SkyArqRing* array, int initial_send_sequence, int initial_rcv_sequence){
 	wipe_send_ring(array->primarySendRing, array->elementBuffer, initial_send_sequence);
-	wipe_send_ring(array->secondarySendRing, array->elementBuffer, initial_send_sequence);
 	wipe_rcv_ring(array->primaryRcvRing, array->elementBuffer, initial_rcv_sequence);
 	wipe_rcv_ring(array->secondaryRcvRing, array->elementBuffer, initial_rcv_sequence);
 	wipe_element_buffer(array->elementBuffer);
@@ -342,14 +386,8 @@ void wipe_arq_ring(SkyArqRing* array, int initial_send_sequence, int initial_rcv
 }
 
 
-int skyArray_set_send_sequence(SkyArqRing* array, uint16_t sequence, int wipe_all){
-	wipe_send_ring(array->secondarySendRing, array->elementBuffer, sequence);
-	if(wipe_all){
-		wipe_send_ring(array->primarySendRing, array->elementBuffer, sequence);
-	}
-	SkySendRing* x = array->secondarySendRing;
-	array->secondarySendRing = array->primarySendRing;
-	array->primarySendRing = x;
+int skyArray_set_send_sequence(SkyArqRing* array, uint16_t sequence){
+	wipe_send_ring(array->primarySendRing, array->elementBuffer, sequence);
 	return 0;
 }
 
@@ -372,11 +410,6 @@ void skyArray_clean_unreachable(SkyArqRing* array){
 			wipe_rcv_ring(array->secondaryRcvRing, array->elementBuffer, 0);
 		}
 	}
-	if (sendRing_count_packets_to_send(array->secondarySendRing) == 0){
-		if(array->secondarySendRing->storage_count > 0){
-			wipe_send_ring(array->secondarySendRing, array->elementBuffer, 0);
-		}
-	}
 }
 //===== SKYLINK ARRAY ==================================================================================================
 
@@ -392,63 +425,36 @@ int skyArray_push_packet_to_send(SkyArqRing* array, void* payload, int length){
 	return sendRing_push_packet_to_send(array->primarySendRing, array->elementBuffer, payload, length);
 }
 
+int skyArray_schedule_resend(SkyArqRing* arqRing, int sequence){
+	return sendRing_schedule_resend(arqRing->primarySendRing, sequence);
+}
 
-int skyArray_count_packets_to_tx(SkyArqRing* array){
-	int s1 = sendRing_count_packets_to_send(array->primarySendRing);
-	int s2 = sendRing_count_packets_to_send(array->secondarySendRing);
-	return s1 + s2;
+int skyArray_count_packets_to_tx(SkyArqRing* array, int include_resend){
+	return sendRing_count_packets_to_send(array->primarySendRing, include_resend);
 }
 
 
-int skyArray_read_packet_for_tx(SkyArqRing* array, void* tgt, int* sequence){
-	if(sendRing_count_packets_to_send(array->secondarySendRing)){ //secondary comes first, as it needs to be emptied first, after switching.
-		return sendRing_read_packet_to_tx(array->secondarySendRing, array->elementBuffer, tgt, sequence);
-	}
-	if(sendRing_count_packets_to_send(array->primarySendRing)){
-		return sendRing_read_packet_to_tx( array->primarySendRing, array->elementBuffer, tgt, sequence);
+int skyArray_read_packet_for_tx(SkyArqRing* array, void* tgt, int* sequence, int include_resend){
+	if(sendRing_count_packets_to_send(array->primarySendRing, include_resend) > 0){
+		return sendRing_read_to_tx(array->primarySendRing, array->elementBuffer, tgt, sequence, include_resend);
 	}
 	return RING_RET_EMPTY;
 }
 
+int skyArray_peek_next_tx_size(SkyArqRing* arqRing, int include_resend){
+	int x = sendRing_peek_next_tx_size(arqRing->primarySendRing, arqRing->elementBuffer, include_resend);
+	return x;
+}
+
+int skyArray_get_next_transmitted_sequence(SkyArqRing* arqRing){
+	return sendRing_get_next_tx_sequence(arqRing->primarySendRing);
+}
 
 int skyArray_can_recall(SkyArqRing* array, int sequence){
 	if (sendRing_can_recall(array->primarySendRing, sequence)){
 		return 1;
 	}
-	if (sendRing_can_recall(array->secondarySendRing, sequence)){
-		return 2;
-	}
 	return 0;
-}
-
-
-int skyArray_recall(SkyArqRing* array, int sequence, void* tgt){
-	int able = skyArray_can_recall(array, sequence);
-	if(able == 1){
-		return sendRing_recall(array->primarySendRing, array->elementBuffer, sequence, tgt);
-	}
-	if(able == 2){
-		return sendRing_recall(array->secondarySendRing, array->elementBuffer, sequence, tgt);
-	}
-	return RING_RET_CANNOT_RECALL;
-}
-
-
-int skyArray_schedule_resend(SkyArqRing* arqRing, int sequence){
-	return sendRing_schedule_resend(arqRing->primarySendRing, sequence);
-}
-
-
-int skyArray_pop_resend_sequence(SkyArqRing* arqRing){
-	return sendRing_pop_resend_sequence(arqRing->primarySendRing);
-}
-
-int skyArray_peek_next_tx_size(SkyArqRing* arqRing){
-	return sendRing_peek_next_tx_size(arqRing->primarySendRing, arqRing->elementBuffer);
-}
-
-int skyArray_get_next_transmitted_sequence(SkyArqRing* arqRing){
-	return sendRing_get_next_tx_sequence(arqRing->primarySendRing);
 }
 //======================================================================================================================
 //======================================================================================================================

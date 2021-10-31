@@ -5,43 +5,19 @@
 #include "skylink_rx.h"
 
 
+void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type);
 void sky_rx_process_ext_mac_reset(SkyHandle self, ExtMACSpec macSpec);
 void sky_rx_process_ext_arq_sequence_reset(SkyHandle self, ExtArqSeqReset arqSeqReset, int vc);
 void sky_rx_process_ext_arq_req(SkyHandle self, ExtArqReq arqReq, int vc);
 void sky_rx_process_ext_hmac_tx_seq_reset(SkyHandle self, ExtHMACTxReset hmacTxReset, int vc);
-void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type);
 
 
 
 
 
 
-SkyHandle new_skylink(SkyConfig* config){
-	SkyHandle handle = SKY_MALLOC(sizeof(struct sky_all));
-	handle->conf = config;
-	handle->mac = new_mac_system(&config->mac);
-	handle->hmac = new_hmac_instance(&config->hmac);
-	handle->diag = new_diagnostics();
-	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		handle->arrayBuffers[i] = new_arq_ring(&config->array);
-	}
-	return handle;
-}
 
 
-void destroy_skylink(SkyHandle self){
-	destroy_mac_system(self->mac);
-	destroy_hmac(self->hmac);
-	destroy_diagnostics(self->diag);
-	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		destroy_arq_ring(self->arrayBuffers[i]);
-	}
-}
-
-
-
-int sky_rx_0(SkyHandle self, SkyRadioFrame* frame);
-int sky_rx_1(SkyHandle self, SkyRadioFrame* frame);
 
 
 
@@ -120,15 +96,26 @@ int sky_rx_1(SkyHandle self, SkyRadioFrame *frame){
 
 
 	if(!self->conf->vc[frame->vc].arq_on){
-		skyArray_push_rx_packet_monotonic(self->arrayBuffers[frame->vc], frame->metadata.payload_read_start, frame->metadata.payload_read_length);
+		if(!(frame->arq_on)){
+			/* ARQ is configured off, and frame does not have ARQ either sequence. All is fine. */
+			skyArray_push_rx_packet_monotonic(self->arrayBuffers[frame->vc], frame->metadata.payload_read_start, frame->metadata.payload_read_length);
+		}
+		if(frame->arq_on){
+			/* ARQ is configured off, but frame has ARQ sequence. What to do? */
+
+		}
+
 	}
+
 
 	if(self->conf->vc[frame->vc].arq_on){
 		if(!frame->arq_on){
+			/* ARQ is configured on, but frame does not have ARQ sequence. Toggle the need for ARQ state enforcement. */
 			self->arrayBuffers[frame->vc]->state_enforcement_need = 1;
 			return SKY_RET_NO_MAC_SEQUENCE;
 		}
 		if(frame->arq_on) {
+			/* ARQ is configured on, and frame has ARQ too. All is fine. */
 			int r = skyArray_push_rx_packet(self->arrayBuffers[frame->vc], frame->metadata.payload_read_start, frame->metadata.payload_read_length, frame->arq_sequence);
 			if (r == RING_RET_INVALID_SEQUENCE){
 				/* Observe: If the received arq-sequence is past our horizon, we shall jump aboard the sequencing here,
@@ -140,6 +127,7 @@ int sky_rx_1(SkyHandle self, SkyRadioFrame *frame){
 			}
 		}
 	}
+
 
 	//todo: log behavior based on r.
 	return 0;
@@ -182,9 +170,11 @@ void sky_rx_process_ext_mac_reset(SkyHandle self, ExtMACSpec macSpec){
 
 void sky_rx_process_ext_arq_sequence_reset(SkyHandle self, ExtArqSeqReset arqSeqReset, int vc){
 	self->conf->vc[vc].arq_on = (arqSeqReset.toggle > 0);
-	if(arqSeqReset.toggle){
-		skyArray_set_receive_sequence(self->arrayBuffers[vc], arqSeqReset.enforced_sequence, 0); //sequence gets wrapped anyway..
-	}
+	/* This extension only toggles ARQ on or off. The ONLY way misaligned sequences realign,
+	 * is through out-of-horizon reception */
+	//if(arqSeqReset.toggle){
+	//	skyArray_set_receive_sequence(self->arrayBuffers[vc], arqSeqReset.enforced_sequence, 0); //sequence gets wrapped anyway..
+	//}
 }
 
 
