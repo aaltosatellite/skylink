@@ -314,9 +314,7 @@ static void cycling(TestJob* job, int break_switch){
 		assert ((job->general_direction == 1) || (job->general_direction == -1));
 
 		if(dir == 1){
-			//PRINTFF(0, "+");
 			int added = up_cycle(job);
-			//PRINTFF(0, "+");
 			if(added){
 				failed_adds_in_row = 0;
 			} else {
@@ -324,14 +322,10 @@ static void cycling(TestJob* job, int break_switch){
 			}
 		}
 		if(dir == -1){
-			//PRINTFF(0, "-");
 			down_cycle(job);
-			//PRINTFF(0, "-");
 		}
 
-		//PRINTFF(0, "/");
 		random_confirm(job, 20);
-		//PRINTFF(0, "/");
 
 
 		//if((c % 1000) == 0){
@@ -344,7 +338,7 @@ static void cycling(TestJob* job, int break_switch){
 			double space = (double)job->buffer->element_count * (double)job->buffer->element_size;
 			double filled = (double)job->total_stored_content;
 			double ff = filled / space;
-			//PRINTFF(0, "\t[Downhill] [fill fraction: %lf]\n",ff);
+			PRINTFF(0, "\t[Downhill] [fill fraction: %lf]\n",ff);
 			assert(ff > 0.77);
 
 			switchs++;

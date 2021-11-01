@@ -74,6 +74,7 @@ void destroy_handle(SkyHandle self){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		destroy_arq_ring(self->arrayBuffers[i]);
 	}
+	free(self);
 }
 
 

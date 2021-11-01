@@ -64,13 +64,11 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame) {
 		return SKY_RET_INVALID_LENGTH;
 	}
 
-
 	// Calculate SHA256 hash
 	uint8_t full_hash[32];
 	cf_hmac_init(hmac->ctx, &cf_sha256, hmac->key, hmac->key_len);
 	cf_hmac_update(hmac->ctx, frame->raw, frame->length);
 	cf_hmac_finish(hmac->ctx, full_hash);
-
 
 	//Copy truncated hash to the end of the frame.
 	memcpy(&frame->raw[frame->length], full_hash, SKY_HMAC_LENGTH);
@@ -91,6 +89,7 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 	//For functional safety, there is a hmac number that shorts the auth process.
 	if(frame->hmac_sequence == self->conf->hmac.magic_sequence){
 		frame->metadata.auth_verified = 1;
+		frame->length -= SKY_HMAC_LENGTH;
 		return SKY_RET_OK;
 	}
 
@@ -100,20 +99,19 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 	cf_hmac_update(hmac->ctx, frame->raw, frame->length - SKY_HMAC_LENGTH);
 	cf_hmac_finish(hmac->ctx, calculated_hash);
 
-
-	//Compare the received hash to received one
+	//Compare the calculated hash to received one
 	uint8_t *frame_hash = &frame->raw[frame->length - SKY_HMAC_LENGTH];
 	if (memcmp(frame_hash, calculated_hash, SKY_HMAC_LENGTH) != 0) {
 		return SKY_RET_AUTH_FAILED;
 	}
 
-
 	//Check if the hmac sequence number is something we are expecting
 	int32_t jump = wrap_hmac_sequence( (int32_t)(frame->hmac_sequence - self->hmac->sequence_rx[frame->vc]));
 	if (jump > self->conf->hmac.maximum_jump) {
+		//printf("(%d  %d)", frame->hmac_sequence, self->hmac->sequence_rx[frame->vc] );
+		//printf("(%d)\n", wrap_hmac_sequence( (int32_t)(frame->hmac_sequence - self->hmac->sequence_rx[frame->vc])));
 		return SKY_RET_EXCESSIVE_HMAC_JUMP;
 	}
-
 
 	//The hmac sequence on our side jumps to the immediate next sequence number.
 	self->hmac->sequence_rx[frame->vc] = wrap_hmac_sequence((int32_t)(frame->hmac_sequence + 1));
@@ -121,6 +119,7 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 	frame->length -= SKY_HMAC_LENGTH;
 	return SKY_RET_OK;
 }
+
 
 
 int sky_hmac_vc_demands_auth(SkyHandle self, uint8_t vc){

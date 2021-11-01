@@ -49,8 +49,6 @@ int sky_packet_add_extension_arq_resend_request(SkyRadioFrame* frame, int sequen
 
 int sky_packet_add_extension_hmac_enforcement(SkyRadioFrame* frame, uint16_t hmac_sequence);
 
-int sky_packet_assign_hmac_sequence(SkyHandle self, SkyRadioFrame* frame);
-
 int encode_skylink_packet_extensions(SkyRadioFrame* frame);
 
 int encode_skylink_packet_header(SkyRadioFrame* frame);

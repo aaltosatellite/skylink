@@ -28,13 +28,6 @@ void destroy_frame(SkyRadioFrame* frame){
 
 //=== ENCODING =========================================================================================================
 //======================================================================================================================
-int sky_packet_assign_hmac_sequence(SkyHandle self, SkyRadioFrame* frame){
-	int32_t s = sky_hmac_get_next_hmac_tx_sequence_and_advance(self, frame->vc);
-	frame->hmac_sequence = (uint16_t) s;
-	return 0;
-}
-
-
 int sky_packet_add_extension_mac_params(SkyRadioFrame* frame, int default_window_size, int gap_size){
 	//todo: check for invalid window and gap sizes?
 	SkyPacketExtension* extension = &frame->extensions[frame->n_extensions];

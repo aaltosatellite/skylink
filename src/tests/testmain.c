@@ -5,6 +5,7 @@
 #include "elebuffer_tests.h"
 #include "ring_test.h"
 #include "packet_encode_test.h"
+#include "hmac_tests.h"
 #include "fec_test.h"
 #include "tools/tools.h"
 
@@ -14,6 +15,7 @@ int main() {
 	ring_tests();
 	packet_tests();
 	fec_test();
+	hmac_tests();
 }
 
 

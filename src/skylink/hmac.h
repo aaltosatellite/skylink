@@ -12,15 +12,16 @@
 #define HMAC_NO_SEQUENCE	65010
 
 
-/* Positive modulo by max hmac sequence */
-int32_t wrap_hmac_sequence(int32_t sequence);
 
 /* Allocate and initialize HMAC state instance */
 SkyHMAC* new_hmac_instance(HMACConfig* config);
 
-
 /* Free HMAC resources */
 void destroy_hmac(SkyHMAC* hmac);
+
+
+
+
 
 
 /* Get next sequence number from transmit counter and advance it by one (and wrap modulo cycle) */
@@ -37,6 +38,10 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame);
 
 /* Return booelan (0/1) wether the virtual channel requires authentication */
 int sky_hmac_vc_demands_auth(SkyHandle self, uint8_t vc);
+
+/* Positive modulo by max hmac sequence */
+int32_t wrap_hmac_sequence(int32_t sequence);
+
 
 
 /* Marks a vc number as requiring hmac-sequence reset. This is used after a peer attempts authentication with too big sequence jump. */
