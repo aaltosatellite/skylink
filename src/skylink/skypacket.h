@@ -18,7 +18,7 @@
 #define EXTENSION_ARQ_RESEND_REQ		1
 #define EXTENSION_ARQ_SEQ_RESET			2
 #define EXTENSION_MAC_PARAMETERS		3
-#define EXTENSION_HMAC_INVALID_SEQ		4
+#define EXTENSION_HMAC_ENFORCEMENT		4
 
 
 //bytearray indexes of specific segments of a packed message.
@@ -65,6 +65,8 @@ int sky_packet_stamp_arq(SkyRadioFrame* frame, uint8_t arq_sequence);
 
 
 // decoding ============================================================================================================
+void initialize_for_decoding(SkyRadioFrame* frame);
+
 int decode_skylink_packet(SkyRadioFrame* frame);
 // =====================================================================================================================
 

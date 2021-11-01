@@ -4,19 +4,9 @@
 
 #include "skylink_cycle.h"
 
-#define RADIO_OFF	0
-#define RADIO_RX	1
-#define RADIO_TX	2
-int radio_mode = RADIO_OFF;
 
 
-void set_radio_rx(){
-	radio_mode = RADIO_RX;
-}
 
-void set_radio_tx(){
-	radio_mode = RADIO_TX;
-}
 
 
 SkyHandle new_skylink(SkyConfig* config){
@@ -42,27 +32,44 @@ void destroy_skylink(SkyHandle self){
 }
 
 
+void tx_cycle(SkyHandle self, SkyRadioFrame* frame){
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
+		uint8_t vc = self->conf->vc_priority[i];
+		int content = sky_tx(self, frame, vc);
+		if(content || (self->radio->packets_transmitted_this_cycle < 2)){
+			radio_transmit(self->radio, frame->raw, frame->length);
+		}
+	}
+}
 
 
 
+void rx_cycle(SkyHandle self, SkyRadioFrame* frame){
+	int length = 0;
+	radio_receive(self->radio, frame->raw, &length);
+	frame->length = (uint16_t) length;
+	if(frame->length > 0){
+		sky_rx_0(self, frame);
+	}
+}
 
-void cycle(SkyHandle self){
+
+
+void cycle(SkyHandle self, SkyRadioFrame* frame){
 	int32_t now_ms = get_time_ms();
-	if(mac_can_send(self->mac, now_ms)){
-		if(radio_mode != RADIO_TX){
-			set_radio_tx();
+	int can_send = mac_can_send(self->mac, now_ms);
+	if(can_send){
+		if(self->radio->mode != RADIO_TX){
+			set_radio_tx(self->radio);
 		}
-		//tx_cycle(self);
+		tx_cycle(self, frame);
 	}
-
 	else {
-		if(radio_mode != RADIO_RX){
-			set_radio_rx();
+		if(self->radio->mode != RADIO_RX){
+			set_radio_rx(self->radio);
 		}
-		//rx_cycle(self);
+		rx_cycle(self, frame);
 	}
-
-
 }
 
 

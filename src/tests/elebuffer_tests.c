@@ -334,9 +334,9 @@ static void cycling(TestJob* job, int break_switch){
 		//PRINTFF(0, "/");
 
 
-		if((c % 1000) == 0){
-			PRINTFF(0,"\t\t[free elements: %d]\n", job->buffer->free_elements);
-		}
+		//if((c % 1000) == 0){
+		//	PRINTFF(0,"\t\t[free elements: %d]\n", job->buffer->free_elements);
+		//}
 
 
 		if((job->general_direction == 1) && (failed_adds_in_row > 3)){
@@ -344,7 +344,8 @@ static void cycling(TestJob* job, int break_switch){
 			double space = (double)job->buffer->element_count * (double)job->buffer->element_size;
 			double filled = (double)job->total_stored_content;
 			double ff = filled / space;
-			PRINTFF(0, "\t[Downhill] [fill fraction: %lf]\n",ff);
+			//PRINTFF(0, "\t[Downhill] [fill fraction: %lf]\n",ff);
+			assert(ff > 0.77);
 
 			switchs++;
 		}

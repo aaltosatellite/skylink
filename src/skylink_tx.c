@@ -4,6 +4,22 @@
 
 #include "skylink_tx.h"
 
+/*
+int sky_tx_content_to_transmit(SkyHandle self, uint8_t vc){
+	if(skyArray_count_packets_to_tx(self->arrayBuffers[vc], 1)){
+		return 1;
+	}
+	if(skyArray_get_horizon_bitmap(self->arrayBuffers[vc])){
+		return 1;
+	}
+	if(self->arrayBuffers[vc]->state_enforcement_need == 0){
+		return 1;
+	}
+	return 0;
+}
+*/
+
+
 int sky_tx_extension_eval_arq_rr(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	uint16_t resend_map = skyArray_get_horizon_bitmap(self->arrayBuffers[vc]);
 	if(resend_map == 0){
@@ -41,24 +57,22 @@ int sky_tx_extension_eval_hmac_enforce(SkyHandle self, SkyRadioFrame* frame, uin
 	}
 	self->hmac->vc_enfocement_need[vc] = 0;
 	ExtHMACTxReset extension;
-	extension.correct_tx_sequence = self->hmac->sequence_rx[vc] + 2; //+2 so that immediate sends don't ivalidate what we give here. Jump constant must be bigger.
-	frame->extensions[frame->n_extensions].type = EXTENSION_HMAC_INVALID_SEQ;
+	extension.correct_tx_sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 2); //+2 so that immediate sends don't ivalidate what we give here. Jump constant must be bigger.
+	if(!self->conf->vc[vc].require_authentication){
+		extension.correct_tx_sequence = HMAC_NO_SEQUENCE;
+	}
+	frame->extensions[frame->n_extensions].type = EXTENSION_HMAC_ENFORCEMENT;
 	frame->extensions[frame->n_extensions].ext_union.HMACTxReset = extension;
 	frame->n_extensions++;
 	return 1;
 }
 
 
-int sky_tx_fetch_payload(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 
 
-}
+int sky_tx(SkyHandle self, SkyRadioFrame *frame, uint8_t vc){
+	int content = 0;
 
-
-
-
-int sky_tx(SkyHandle self, SkyRadioFrame *frame, uint8_t vc)
-{
 	/* identity gets copied to the raw-array from frame's own identity field */
 	memcpy(frame->identity, self->conf->identity, SKY_IDENTITY_LEN);
 
@@ -77,9 +91,9 @@ int sky_tx(SkyHandle self, SkyRadioFrame *frame, uint8_t vc)
 
 	/* Add extension to the packet. ARQ */
 	frame->n_extensions = 0;
-	sky_tx_extension_eval_arq_rr(self, frame, vc);
-	sky_tx_extension_eval_arq_enforce(self, frame, vc);
-	sky_tx_extension_eval_hmac_enforce(self, frame, vc);
+	content |= sky_tx_extension_eval_arq_rr(self, frame, vc);
+	content |= sky_tx_extension_eval_arq_enforce(self, frame, vc);
+	content |= sky_tx_extension_eval_hmac_enforce(self, frame, vc);
 
 	/* Encode the extensions. After this step, we know the remaining space in frame. */
 	encode_skylink_packet_extensions(frame);
@@ -88,10 +102,11 @@ int sky_tx(SkyHandle self, SkyRadioFrame *frame, uint8_t vc)
 	int next_pl_size = skyArray_peek_next_tx_size(self->arrayBuffers[vc], 1);
 	if((next_pl_size >= 0) && (sky_packet_available_payload_space(frame) >= next_pl_size)){
 		int arq_sequence = -1;
-		int r = skyArray_read_packet_for_tx(self->arrayBuffers[vc], frame->raw + frame->length, &arq_sequence, 1);
-		if((r >= 0) && (self->conf->vc[vc].arq_on)){
+		skyArray_read_packet_for_tx(self->arrayBuffers[vc], frame->raw + frame->length, &arq_sequence, 1);
+		if(self->conf->vc[vc].arq_on){
 			frame->arq_sequence = (uint8_t)arq_sequence;
 		}
+		content = 1;
 	}
 
 	/* Set MAC data fields. */
@@ -125,7 +140,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame *frame, uint8_t vc)
 
 	++self->diag->tx_frames;
 
-	return 0;
+	return content;
 }
 
 

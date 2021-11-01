@@ -41,7 +41,7 @@ void test1_round(){
 	int arq_on = randint_i32(0,1);
 	int arq_sequence = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
 	int hmac_on = randint_i32(0,1);
-	int hmac_sequence = randint_i32(0, config->hmac.cycle_length);
+	int hmac_sequence = randint_i32(0, HMAC_CYCLE_LENGTH-1);
 
 
 	memcpy(frame->identity, identity, SKY_IDENTITY_LEN);
@@ -148,7 +148,7 @@ void test1_round(){
 			assert(ext.ext_union.ArqReq.mask2 == mask2);
 		}
 
-		if(ext.type == EXTENSION_HMAC_INVALID_SEQ){
+		if(ext.type == EXTENSION_HMAC_ENFORCEMENT){
 			assert(extension_hmac_enforcement == 1);
 			assert(ext.ext_union.HMACTxReset.correct_tx_sequence == hmac_enforcement);
 		}

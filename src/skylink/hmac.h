@@ -8,6 +8,12 @@
 
 
 #define SKY_HMAC_CTX_SIZE  (sizeof(cf_hmac_ctx))
+#define HMAC_CYCLE_LENGTH	65000
+#define HMAC_NO_SEQUENCE	65010
+
+
+/* Positive modulo by max hmac sequence */
+int32_t wrap_hmac_sequence(int32_t sequence);
 
 /* Allocate and initialize HMAC state instance */
 SkyHMAC* new_hmac_instance(HMACConfig* config);

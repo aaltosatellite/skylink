@@ -5,7 +5,7 @@
 #include "tst_utilities.h"
 
 
-
+uint8_t arr_[16] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
 
 SkyConfig* new_vanilla_config(){
 	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
@@ -13,19 +13,15 @@ SkyConfig* new_vanilla_config(){
 	config->array.horizon_width = 5;
 	config->array.send_ring_len = 12;
 	config->array.rcv_ring_len 	= 12;
-	config->array.element_count  = 2000;
-	config->array.element_size = 64;
+	config->array.element_count = 3600;
+	config->array.element_size  = 36;
 	config->array.initial_send_sequence = 0;
 	config->array.initial_rcv_sequence = 0;
 
-	config->hmac.key[0] = 1;
-	config->hmac.key[1] = 2;
-	config->hmac.key[2] = 3;
-	config->hmac.key[3] = 4;
-	config->hmac.key_length = 4;
+	config->hmac.key_length = 8;
+	memcpy(config->hmac.key, arr_, config->hmac.key_length);
 	config->hmac.magic_sequence = 7777;
-	config->hmac.cycle_length = 65000;
-	config->hmac.maximum_jump = 50;
+	config->hmac.maximum_jump = 24;
 
 	config->mac.maximum_gap_size = 200;
 	config->mac.minimum_gap_size = 25;
@@ -40,6 +36,11 @@ SkyConfig* new_vanilla_config(){
 	config->identity[2] = 'F';
 	config->identity[3] = 'S';
 	config->identity[4] = '1';
+
+	config->vc_priority[0] = 0;
+	config->vc_priority[1] = 1;
+	config->vc_priority[2] = 2;
+	config->vc_priority[3] = 3;
 
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		config->vc[i].require_authentication = 1;

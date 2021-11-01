@@ -13,4 +13,6 @@
 #include "skylink/fec.h"
 #include "skylink/utilities.h"
 
+int sky_tx(SkyHandle self, SkyRadioFrame *frame, uint8_t vc);
+
 #endif //SKYLINK_CMAKE_SKYLINK_TX_H

@@ -5,14 +5,12 @@
 #include "skylink_rx.h"
 
 
-void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type);
-void sky_rx_process_ext_mac_reset(SkyHandle self, ExtMACSpec macSpec);
-void sky_rx_process_ext_arq_sequence_reset(SkyHandle self, ExtArqSeqReset arqSeqReset, int vc);
-void sky_rx_process_ext_arq_req(SkyHandle self, ExtArqReq arqReq, int vc);
-void sky_rx_process_ext_hmac_tx_seq_reset(SkyHandle self, ExtHMACTxReset hmacTxReset, int vc);
-
-
-
+static void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type);
+static void sky_rx_process_ext_mac_reset(SkyHandle self, ExtMACSpec macSpec);
+static void sky_rx_process_ext_arq_sequence_reset(SkyHandle self, ExtArqSeqReset arqSeqReset, int vc);
+static void sky_rx_process_ext_arq_req(SkyHandle self, ExtArqReq arqReq, int vc);
+static void sky_rx_process_ext_hmac_enforcement(SkyHandle self, ExtHMACTxReset hmacTxReset, int vc);
+static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame);
 
 
 
@@ -48,12 +46,15 @@ int sky_rx_0(SkyHandle self, SkyRadioFrame* frame){
 		return ret;
 	}
 
+	//
+	initialize_for_decoding(frame);
+
 	return sky_rx_1(self, frame);
 }
 
 
 
-int sky_rx_1(SkyHandle self, SkyRadioFrame *frame){
+static int sky_rx_1(SkyHandle self, SkyRadioFrame *frame){
 	int ret;
 
 	// Decode packet
@@ -62,13 +63,14 @@ int sky_rx_1(SkyHandle self, SkyRadioFrame *frame){
 	}
 
 	// This extension has to be checked here. Otherwise, if both peers use incorrect hmac-sequencing, we would be in lock state.
-	sky_rx_process_extensions(self, frame, EXTENSION_HMAC_INVALID_SEQ);
+	sky_rx_process_extensions(self, frame, EXTENSION_HMAC_ENFORCEMENT);
 
 
 	//todo: set metadata on auth and such negative on frame init.
 
 	// If the virtual channel necessitates auth, but the frame isn't, return error.
 	if(sky_hmac_vc_demands_auth(self, frame->vc) && (!frame->hmac_on)){
+		self->hmac->vc_enfocement_need[frame->vc] = 1;
 		return SKY_RET_AUTH_MISSING;
 	}
 
@@ -136,7 +138,7 @@ int sky_rx_1(SkyHandle self, SkyRadioFrame *frame){
 
 
 
-void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type){
+static void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type){
 	for (int i = 0; i < frame->n_extensions; ++i) {
 		SkyPacketExtension* ext = &frame->extensions[i];
 		if((ext->type == EXTENSION_MAC_PARAMETERS) && (ext->type == this_type)){
@@ -148,14 +150,14 @@ void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t thi
 		if((ext->type == EXTENSION_ARQ_RESEND_REQ) && (ext->type == this_type)){
 			sky_rx_process_ext_arq_req(self, ext->ext_union.ArqReq, frame->vc);
 		}
-		if((ext->type == EXTENSION_HMAC_INVALID_SEQ) && (ext->type == this_type)){
-			sky_rx_process_ext_hmac_tx_seq_reset(self, ext->ext_union.HMACTxReset, frame->vc);
+		if((ext->type == EXTENSION_HMAC_ENFORCEMENT) && (ext->type == this_type)){
+			sky_rx_process_ext_hmac_enforcement(self, ext->ext_union.HMACTxReset, frame->vc);
 		}
 	}
 }
 
 
-void sky_rx_process_ext_mac_reset(SkyHandle self, ExtMACSpec macSpec){
+static void sky_rx_process_ext_mac_reset(SkyHandle self, ExtMACSpec macSpec){
 	if(!mac_valid_window_length(&self->conf->mac, macSpec.window_size)){
 		return;
 	}
@@ -168,7 +170,7 @@ void sky_rx_process_ext_mac_reset(SkyHandle self, ExtMACSpec macSpec){
 }
 
 
-void sky_rx_process_ext_arq_sequence_reset(SkyHandle self, ExtArqSeqReset arqSeqReset, int vc){
+static void sky_rx_process_ext_arq_sequence_reset(SkyHandle self, ExtArqSeqReset arqSeqReset, int vc){
 	self->conf->vc[vc].arq_on = (arqSeqReset.toggle > 0);
 	/* This extension only toggles ARQ on or off. The ONLY way misaligned sequences realign,
 	 * is through out-of-horizon reception */
@@ -178,7 +180,7 @@ void sky_rx_process_ext_arq_sequence_reset(SkyHandle self, ExtArqSeqReset arqSeq
 }
 
 
-void sky_rx_process_ext_arq_req(SkyHandle self, ExtArqReq arqReq, int vc){
+static void sky_rx_process_ext_arq_req(SkyHandle self, ExtArqReq arqReq, int vc){
 	uint16_t mask = arqReq.mask1 + (arqReq.mask2 << 8);
 	for (int i = 0; i < 16; ++i) {
 		if(mask & (1<<i)){
@@ -198,9 +200,15 @@ void sky_rx_process_ext_arq_req(SkyHandle self, ExtArqReq arqReq, int vc){
 }
 
 
-void sky_rx_process_ext_hmac_tx_seq_reset(SkyHandle self, ExtHMACTxReset hmacTxReset, int vc){
+static void sky_rx_process_ext_hmac_enforcement(SkyHandle self, ExtHMACTxReset hmacTxReset, int vc){
+	//todo: should include toggle!
+	//self->conf->vc->require_authentication = 1;
 	uint16_t new_sequence = hmacTxReset.correct_tx_sequence;
-	self->hmac->sequence_tx[vc] = new_sequence;
+	if(new_sequence == HMAC_NO_SEQUENCE){
+		self->conf->vc[vc].require_authentication = 0;
+	} else {
+		self->hmac->sequence_tx[vc] = wrap_hmac_sequence(new_sequence);
+	}
 }
 
 

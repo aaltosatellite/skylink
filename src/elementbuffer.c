@@ -32,7 +32,8 @@ static BufferElement as_element(void* mem){
 }
 
 static idx_t wrap_element(ElementBuffer* buffer, int32_t idx){
-	int32_t r = (buffer->element_count + (int32_t)idx) % buffer->element_count;
+	int32_t m = (int32_t) buffer->element_count;
+	int32_t r = ((idx % m) + m) % m;
 	return (idx_t) r;
 }
 

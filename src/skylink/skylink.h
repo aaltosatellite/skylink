@@ -182,6 +182,7 @@ typedef struct sky_conf {
 	SkyMACConfig mac;
 	SkyPHYConfig phy;
 	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
+	uint8_t vc_priority[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t identity[SKY_IDENTITY_LEN];
 } SkyConfig;
 
@@ -203,6 +204,7 @@ struct sky_all {
 	SkyArqRing* 	arrayBuffers[SKY_NUM_VIRTUAL_CHANNELS]; //ARQ capable buffers.
 	MACSystem* 		mac;                    				// MAC state
 	SkyHMAC* 		hmac;
+	SkyRadio*		radio;
 };
 typedef struct sky_all* SkyHandle;
 //================================================================================================================================

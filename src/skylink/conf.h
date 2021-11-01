@@ -16,21 +16,6 @@ typedef struct {
 } SkyPHYConfig;
 
 
-typedef struct {
-	int element_size;
-	int element_count;
-
-	int rcv_ring_len;
-	int initial_rcv_sequence;
-	int horizon_width;
-
-	int send_ring_len;
-	int initial_send_sequence;
-	int n_recall;
-
-} SkyArrayConfig;
-
-
 
 typedef struct {
 	/* Default send window size for both me and peer */
@@ -59,12 +44,18 @@ typedef struct {
 
 
 typedef struct {
-	/* Is authentication required for the channel */
-	uint8_t require_authentication;
+	int element_size;
+	int element_count;
 
-	uint8_t arq_on;
+	int rcv_ring_len;
+	int initial_rcv_sequence;
+	int horizon_width;
 
-} SkyVCConfig;
+	int send_ring_len;
+	int initial_send_sequence;
+	int n_recall;
+
+} SkyArrayConfig;
 
 
 
@@ -76,7 +67,7 @@ typedef struct {
 	uint16_t magic_sequence;
 
 	/* Length of the sequence cycle */
-	int32_t cycle_length;
+	//int32_t cycle_length;
 
 	/* Maximum jump in sequence allowed */
 	int32_t maximum_jump;
@@ -85,6 +76,13 @@ typedef struct {
 
 
 
+typedef struct {
+	/* Is authentication required for the channel */
+	uint8_t require_authentication;
+
+	uint8_t arq_on;
+
+} SkyVCConfig;
 
 
 

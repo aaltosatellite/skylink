@@ -6,8 +6,9 @@
 #include "skylink/platform.h"
 
 
-static int32_t wrap_hmac_sequence(int32_t sequence, int32_t period){
-	return ((sequence % period) + period) % period;
+
+int32_t wrap_hmac_sequence(int32_t sequence){
+	return ((sequence % HMAC_CYCLE_LENGTH) + HMAC_CYCLE_LENGTH) % HMAC_CYCLE_LENGTH;
 }
 
 
@@ -52,7 +53,7 @@ void destroy_hmac(SkyHMAC* hmac){
 
 int32_t sky_hmac_get_next_hmac_tx_sequence_and_advance(SkyHandle self, uint8_t vc){
 	int32_t seq = self->hmac->sequence_tx[vc];
-	self->hmac->sequence_tx[vc] = wrap_hmac_sequence(self->hmac->sequence_tx[vc] + 1, self->conf->hmac.cycle_length);
+	self->hmac->sequence_tx[vc] = wrap_hmac_sequence(self->hmac->sequence_tx[vc] + 1);
 	return seq;
 }
 
@@ -108,14 +109,14 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 
 
 	//Check if the hmac sequence number is something we are expecting
-	int32_t jump = wrap_hmac_sequence( (int32_t)(frame->hmac_sequence - self->hmac->sequence_rx[frame->vc]), self->conf->hmac.cycle_length);
+	int32_t jump = wrap_hmac_sequence( (int32_t)(frame->hmac_sequence - self->hmac->sequence_rx[frame->vc]));
 	if (jump > self->conf->hmac.maximum_jump) {
 		return SKY_RET_EXCESSIVE_HMAC_JUMP;
 	}
 
 
 	//The hmac sequence on our side jumps to the immediate next sequence number.
-	self->hmac->sequence_rx[frame->vc] = wrap_hmac_sequence((int32_t)(frame->hmac_sequence + 1), self->conf->hmac.cycle_length);
+	self->hmac->sequence_rx[frame->vc] = wrap_hmac_sequence((int32_t)(frame->hmac_sequence + 1));
 	frame->metadata.auth_verified = 1;
 	frame->length -= SKY_HMAC_LENGTH;
 	return SKY_RET_OK;
