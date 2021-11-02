@@ -20,7 +20,7 @@ int sky_tx_content_to_transmit(SkyHandle self, uint8_t vc){
 */
 
 
-int sky_tx_extension_eval_arq_rr(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
+static int sky_tx_extension_eval_arq_rr(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	uint16_t resend_map = skyArray_get_horizon_bitmap(self->arrayBuffers[vc]);
 	if(resend_map == 0){
 		return 0;
@@ -36,7 +36,7 @@ int sky_tx_extension_eval_arq_rr(SkyHandle self, SkyRadioFrame* frame, uint8_t v
 }
 
 
-int sky_tx_extension_eval_arq_enforce(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
+static int sky_tx_extension_eval_arq_enforce(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	if(self->arrayBuffers[vc]->state_enforcement_need == 0){
 		return 0;
 	}
@@ -51,7 +51,7 @@ int sky_tx_extension_eval_arq_enforce(SkyHandle self, SkyRadioFrame* frame, uint
 }
 
 
-int sky_tx_extension_eval_hmac_enforce(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
+static int sky_tx_extension_eval_hmac_enforce(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	if(self->hmac->vc_enfocement_need[vc] == 0){
 		return 0;
 	}
@@ -102,10 +102,11 @@ int sky_tx(SkyHandle self, SkyRadioFrame *frame, uint8_t vc){
 	int next_pl_size = skyArray_peek_next_tx_size(self->arrayBuffers[vc], 1);
 	if((next_pl_size >= 0) && (sky_packet_available_payload_space(frame) >= next_pl_size)){
 		int arq_sequence = -1;
-		skyArray_read_packet_for_tx(self->arrayBuffers[vc], frame->raw + frame->length, &arq_sequence, 1);
+		int read = skyArray_read_packet_for_tx(self->arrayBuffers[vc], frame->raw + frame->length, &arq_sequence, 1);
 		if(self->conf->vc[vc].arq_on){
 			frame->arq_sequence = (uint8_t)arq_sequence;
 		}
+		frame->length += read;
 		content = 1;
 	}
 

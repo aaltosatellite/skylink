@@ -141,6 +141,34 @@ typedef struct radioframe SkyRadioFrame;
 
 
 
+typedef union {
+	uint8_t raw[SKY_FRAME_MAX_LEN + 5];
+	struct __attribute__((__packed__)) {
+		uint8_t start_byte;
+		uint8_t identity[SKY_IDENTITY_LEN];
+		uint8_t vc : 3;
+		uint8_t flags : 5;
+		uint8_t ext_length;
+		uint16_t auth_sequence;
+		uint16_t mac_window;
+		uint16_t mac_remaining;
+		uint8_t arq_sequence;
+	};
+} RadioFrame2;
+
+typedef struct {
+	uint16_t length;
+	int32_t reception_time;
+	uint8_t auth_verified;
+	RadioFrame2 radioFrame;
+} RCVFrame;
+
+typedef struct {
+	uint16_t length;
+	RadioFrame2 radioFrame;
+} SendFrame;
+
+
 
 /* MAC-system */
 struct sky_mac_s {

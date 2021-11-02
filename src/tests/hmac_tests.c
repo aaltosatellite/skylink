@@ -11,7 +11,7 @@ static void test1_round();
 
 
 void hmac_tests(){
-	test1(3000);
+	test1(3500);
 }
 
 
@@ -29,6 +29,7 @@ static void test1(int rounds){
 
 
 
+
 static void test1_round(){
 	SkyConfig* config1 = new_vanilla_config();
 	SkyConfig* config2 = new_vanilla_config();
@@ -39,7 +40,7 @@ static void test1_round(){
 	SkyHandle self1 = new_handle(config1);
 	SkyHandle self2 = new_handle(config2);
 
-	int corrupt_key = randint_i32(0,1);
+	int corrupt_key = (randint_i32(0,2) == 0);
 	if(corrupt_key){
 		fillrand(self2->hmac->key, self2->hmac->key_len);
 	}
@@ -61,6 +62,7 @@ static void test1_round(){
 	frame->length = length;
 	frame->vc = vc;
 
+
 	int hmac_seq = sky_hmac_get_next_hmac_tx_sequence_and_advance(self1, vc);
 	assert(hmac_seq == wrap_hmac_sequence(self1->hmac->sequence_tx[vc]-1));
 	frame->hmac_sequence = hmac_seq;
@@ -73,7 +75,7 @@ static void test1_round(){
 	assert(frame->length == length + SKY_HMAC_LENGTH);
 
 
-	int corrupt_pl = randint_i32(0, 1);
+	int corrupt_pl = (randint_i32(0, 2) == 0);
 	if(corrupt_pl){
 		int i = randint_i32(0, length+SKY_HMAC_LENGTH-1);
 		uint8_t old = frame->raw[i];
@@ -106,14 +108,7 @@ static void test1_round(){
 	destroy_config(config1);
 	destroy_config(config2);
 	destroy_frame(frame);
-
 }
-
-
-
-
-
-
 
 
 

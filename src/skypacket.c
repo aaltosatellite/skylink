@@ -21,8 +21,16 @@ void destroy_frame(SkyRadioFrame* frame){
 }
 
 
+SendFrame* new_send_frame(){
+	SendFrame* frame = SKY_MALLOC(sizeof(SendFrame));
+	return frame;
+}
 
 
+RCVFrame* new_receive_frame(){
+	RCVFrame* frame = SKY_MALLOC(sizeof(RCVFrame));
+	return frame;
+}
 
 
 

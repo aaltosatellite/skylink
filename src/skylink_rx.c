@@ -19,26 +19,29 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame);
 
 
 
-int sky_rx_0(SkyHandle self, SkyRadioFrame* frame){
-	// Read Golay decoded len
-	uint32_t coded_len = (frame->raw[0] << 16) | (frame->raw[1] << 8) | frame->raw[2];
+int sky_rx_0(SkyHandle self, SkyRadioFrame* frame, int contains_golay){
+	int ret = 0;
+	if(contains_golay) {
+		// Read Golay decoded len
+		uint32_t coded_len = (frame->raw[0] << 16) | (frame->raw[1] << 8) | frame->raw[2];
 
-	int ret = decode_golay24(&coded_len);
-	if (ret < 0) {
-		// TODO: log the number of corrected bits?
-		self->diag->rx_fec_fail++;
-		return SKY_RET_GOLAY_FAILED;
-	}
+		ret = decode_golay24(&coded_len);
+		if (ret < 0) {
+			// TODO: log the number of corrected bits?
+			self->diag->rx_fec_fail++;
+			return SKY_RET_GOLAY_FAILED;
+		}
 
-	if ((coded_len & 0xF00) != (SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED)){
-		return -1;
-	}
+		if ((coded_len & 0xF00) != (SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED)) {
+			return -1;
+		}
 
-	frame->length = coded_len & SKY_GOLAY_PAYLOAD_LENGTH_MASK;
+		frame->length = coded_len & SKY_GOLAY_PAYLOAD_LENGTH_MASK;
 
-	// Remove the length header from the rest of the data
-	for (unsigned int i = 0; i < frame->length; i++){
-		frame->raw[i] = frame->raw[i + 3];
+		// Remove the length header from the rest of the data
+		for (unsigned int i = 0; i < frame->length; i++) {
+			frame->raw[i] = frame->raw[i + 3];
+		}
 	}
 
 	// Decode FEC
@@ -46,7 +49,6 @@ int sky_rx_0(SkyHandle self, SkyRadioFrame* frame){
 		return ret;
 	}
 
-	//
 	initialize_for_decoding(frame);
 
 	return sky_rx_1(self, frame);
