@@ -56,9 +56,8 @@ static int sky_tx_extension_eval_hmac_enforce(SkyHandle self, SendFrame* frame, 
 
 
 
-int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc){
+int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 	int content = 0;
-
 	/* identity gets copied to the raw-array from frame's own identity field */
 	memcpy(frame->radioFrame.identity, self->conf->identity, SKY_IDENTITY_LEN);
 
@@ -81,13 +80,12 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc){
 
 
 	/* Add extension to the packet. ARQ */
+	frame->radioFrame.length = EXTENSION_START_IDX;
 	frame->radioFrame.ext_length = 0;
 	content |= sky_tx_extension_eval_arq_rr(self, frame, vc);
 	content |= sky_tx_extension_eval_arq_enforce(self, frame, vc);
 	content |= sky_tx_extension_eval_hmac_enforce(self, frame, vc);
 
-	/* Encode the extensions. After this step, we know the remaining space in frame. */
-	//encode_skylink_packet_extensions(frame);
 
 	/* If there is enough space in frame, copy a payload to the end. Then add ARQ the sequence number obtained from ArqRing. */
 	int next_pl_size = skyArray_peek_next_tx_size(self->arrayBuffers[vc], 1);
@@ -101,12 +99,11 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc){
 		content = 1;
 	}
 
+
 	/* Set MAC data fields. */
 	int32_t now_ms = get_time_ms();
 	mac_set_frame_fields(self->mac, &frame->radioFrame, now_ms);
 
-	/* Encode the above information, not the extensions. */
-	//encode_skylink_packet_header(frame);
 
 	/* Authenticate the frame */
 	if(self->conf->vc[vc].require_authentication){
@@ -121,17 +118,18 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc){
 		frame->radioFrame.raw[i + 3] = frame->radioFrame.raw[i];
 	}
 
-	/* Encode length field. */
-	uint32_t phy_header = frame->radioFrame.length | SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED;
-	encode_golay24(&phy_header);
-	frame->radioFrame.raw[0] = 0xff & (phy_header >> 16);
-	frame->radioFrame.raw[1] = 0xff & (phy_header >> 8);
-	frame->radioFrame.raw[2] = 0xff & (phy_header >> 0);
+	if(insert_golay){
+		/* Encode length field. */
+		uint32_t phy_header = frame->radioFrame.length | SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED;
+		encode_golay24(&phy_header);
+		frame->radioFrame.raw[0] = 0xff & (phy_header >> 16);
+		frame->radioFrame.raw[1] = 0xff & (phy_header >> 8);
+		frame->radioFrame.raw[2] = 0xff & (phy_header >> 0);
 
-	frame->radioFrame.length += 3; //todo: necessary?
+		frame->radioFrame.length += 3;
 
-	++self->diag->tx_frames;
-
+		++self->diag->tx_frames;
+	}
 	return content;
 }
 

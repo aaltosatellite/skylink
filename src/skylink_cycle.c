@@ -35,7 +35,7 @@ void destroy_skylink(SkyHandle self){
 void tx_cycle(SkyHandle self, SendFrame* frame){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		uint8_t vc = self->conf->vc_priority[i];
-		int content = sky_tx(self, frame, vc);
+		int content = sky_tx(self, frame, vc, 1);
 		if(content || (self->radio->packets_transmitted_this_cycle < 2)){
 			radio_transmit(self->radio, frame->radioFrame.raw, frame->radioFrame.length);
 		}

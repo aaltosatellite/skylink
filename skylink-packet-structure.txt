@@ -20,37 +20,27 @@ RX prcess order:
 
 
 
-
 ----------------------------------- 0
-SKYLINK             1 Bytes  '\n'        'S'        this is a skylink frame
-VERSION             1 Bytes  's'         '1'        version number
------------------------------------ 2
-IDENTITY            N_i Bytes                       identity of sender (5 bytes thought enough to contain OH-callsign)
------------------------------------ 2+N_i
-VC                  2 bits                          virtual channel 0-3
-HMAC_SEQ            14 bits                         sequence number for hmac. Not used for ARQ (IF ZERO, NO HMAC
------------------------------------ 2+N_i+2
-MAC                 4 Bytes                         MAC count
------------------------------------ 2+N_i+2+2
-N_EXTENSIONS        1 Byte
------------------------------------ 2+N_i+2+2
-
------------------------------------ 2+N_i+2+2+1
-x N_EXTENSIONS:
-    EXTENSION_TYPE      4 bits
-    EXTENSION_LEN       4 bits
-    EXTENSION           EXTENSION_LEN bytes
-
-        ARQ_SEQ ----------- 1 Bytes
-        SEQ                 1 Bytes
-        ---------------------------
-
-        ARQ_RESEND_REQ ---- 3 Bytes
-        SEQ                 1 Bytes
-        MASK                2 Bytes
-        ---------------------------
+SKYLINK             1 Bytes                         this is a skylink frame
 -----------------------------------
+IDENTITY            5 Bytes                         identity of sender (5 bytes thought enough to contain OH-callsign)
+-----------------------------------
+VC                  3 bits                          virtual channel 0-3
+FLAGS               5 bits                          flags for authentication, arq, payload...
+-----------------------------------
+EXTENSIONS_LENGTH   1 Byte                          length of the extension field. uint8
+-----------------------------------
+AUTH_SEQUENCE       2 Bytes                         sequence for hmac packet authentication. uint16.
+-----------------------------------
+MAC_WINDOW          2 Bytes                         MAC window length. uint16
+MAC_REMAINING       2 Bytes                         MAC remaining milliseconds of the window. uint16
+-----------------------------------
+ARQ_SEQUENCE        1 Bytes                         sequence for ARQ. uint8.
+----------------------------------- 15
+EXTENSIONS          X Bytes
+----------------------------------- 15+X
+PAYLOAD             Y Bytes
+----------------------------------- 15+X+Y
 
 
------------------------------------ ??
-PAYLOAD
+
