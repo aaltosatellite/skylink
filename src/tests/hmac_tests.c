@@ -6,21 +6,21 @@
 
 
 
-static void test1(int rounds);
+static void test1();
 static void test1_round();
 
 
 void hmac_tests(){
-	test1(3500);
+	test1();
 }
 
 
 
 
 
-static void test1(int rounds){
+static void test1(){
 	PRINTFF(0,"[HMAC TEST 1]\n");
-	for (int i = 0; i < rounds; ++i) {
+	for (int i = 0; i < 5500; ++i) {
 		test1_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
@@ -56,22 +56,24 @@ static void test1_round(){
 	self1->hmac->sequence_tx[vc] = wrap_hmac_sequence(self2->hmac->sequence_rx[vc] + shift_tx);
 
 
-	SkyRadioFrame* frame = new_frame();
+	SendFrame* sframe = new_send_frame();
+	RCVFrame* rframe = new_receive_frame();
+	RadioFrame2* frame = &sframe->radioFrame;
 	fillrand(frame->raw, 255);
-	int length = randint_i32(0, SKY_FRAME_MAX_LEN - (SKY_HMAC_LENGTH+1));
+	int length = randint_i32(I_PK_EXTENSIONS, SKY_FRAME_MAX_LEN - (SKY_HMAC_LENGTH+1));
 	frame->length = length;
 	frame->vc = vc;
 
 
 	int hmac_seq = sky_hmac_get_next_hmac_tx_sequence_and_advance(self1, vc);
 	assert(hmac_seq == wrap_hmac_sequence(self1->hmac->sequence_tx[vc]-1));
-	frame->hmac_sequence = hmac_seq;
+	frame->auth_sequence = hmac_seq;
 	if(randint_i32(0, 100) == 0){
-		frame->hmac_sequence = config1->hmac.magic_sequence;
+		frame->auth_sequence = config1->hmac.magic_sequence;
 	}
 
 
-	sky_hmac_extend_with_authentication(self1, frame);
+	sky_hmac_extend_with_authentication(self1, sframe);
 	assert(frame->length == length + SKY_HMAC_LENGTH);
 
 
@@ -85,29 +87,33 @@ static void test1_round(){
 	}
 
 
-	int r1 = sky_hmac_check_authentication(self2, frame);
+	memcpy(&rframe->radioFrame, &sframe->radioFrame, sizeof(RadioFrame2));
+	int r1 = sky_hmac_check_authentication(self2, rframe);
+	RadioFrame2* frame2 = &rframe->radioFrame;
 
-
-	if(frame->hmac_sequence == config1->hmac.magic_sequence){
+	if(frame2->auth_sequence == config1->hmac.magic_sequence){
 		assert(r1 == 0);
-		assert(frame->length == length);
+		assert(frame2->length == length);
 	}
 
-	if (frame->hmac_sequence != config1->hmac.magic_sequence){
+
+	if (frame2->auth_sequence != config1->hmac.magic_sequence){
 		if((shift_tx <= config1->hmac.maximum_jump) && (!corrupt_pl) && (!corrupt_key)){
 			assert(r1 == 0);
-			assert(frame->length == length);
+			assert(frame2->length == length);
+			assert(rframe->auth_verified == 1);
 		} else {
 			assert(r1 < 0);
-			assert(frame->length == length + SKY_HMAC_LENGTH);
+			assert(frame2->length == length + SKY_HMAC_LENGTH);
+			assert(rframe->auth_verified == 0);
 		}
 	}
-
 	destroy_handle(self1);
 	destroy_handle(self2);
 	destroy_config(config1);
 	destroy_config(config2);
-	destroy_frame(frame);
+	destroy_send_frame(sframe);
+	destroy_receive_frame(rframe);
 }
 
 

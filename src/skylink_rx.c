@@ -5,12 +5,12 @@
 #include "skylink_rx.h"
 
 
-static void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type);
+static void sky_rx_process_extensions(SkyHandle self, RCVFrame* frame, uint8_t this_type);
 static void sky_rx_process_ext_mac_reset(SkyHandle self, ExtMACSpec macSpec);
 static void sky_rx_process_ext_arq_sequence_reset(SkyHandle self, ExtArqSeqReset arqSeqReset, int vc);
 static void sky_rx_process_ext_arq_req(SkyHandle self, ExtArqReq arqReq, int vc);
 static void sky_rx_process_ext_hmac_enforcement(SkyHandle self, ExtHMACTxReset hmacTxReset, int vc);
-static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame);
+static int sky_rx_1(SkyHandle self, RCVFrame* frame);
 
 
 
@@ -19,11 +19,12 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame);
 
 
 
-int sky_rx_0(SkyHandle self, SkyRadioFrame* frame, int contains_golay){
+int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
 	int ret = 0;
+	RadioFrame2* radioFrame = &frame->radioFrame;
 	if(contains_golay) {
 		// Read Golay decoded len
-		uint32_t coded_len = (frame->raw[0] << 16) | (frame->raw[1] << 8) | frame->raw[2];
+		uint32_t coded_len = (radioFrame->raw[0] << 16) | (radioFrame->raw[1] << 8) | radioFrame->raw[2];
 
 		ret = decode_golay24(&coded_len);
 		if (ret < 0) {
@@ -36,52 +37,53 @@ int sky_rx_0(SkyHandle self, SkyRadioFrame* frame, int contains_golay){
 			return -1;
 		}
 
-		frame->length = coded_len & SKY_GOLAY_PAYLOAD_LENGTH_MASK;
+		radioFrame->length = (int32_t)coded_len & SKY_GOLAY_PAYLOAD_LENGTH_MASK;
 
 		// Remove the length header from the rest of the data
-		for (unsigned int i = 0; i < frame->length; i++) {
-			frame->raw[i] = frame->raw[i + 3];
+		for (int i = 0; i < radioFrame->length; i++) {
+			radioFrame->raw[i] = radioFrame->raw[i + 3];
 		}
 	}
 
 	// Decode FEC
-	if ((ret = sky_fec_decode(frame, self->diag)) < 0){
+	if ((ret = sky_fec_decode(radioFrame, self->diag)) < 0){
 		return ret;
 	}
 
-	initialize_for_decoding(frame);
+	//initialize_for_decoding(frame);
 
 	return sky_rx_1(self, frame);
 }
 
 
 
-static int sky_rx_1(SkyHandle self, SkyRadioFrame *frame){
+static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 	int ret;
+	RadioFrame2* radioFrame = &frame->radioFrame;
 
 	// Decode packet
-	if((ret = decode_skylink_packet(frame)) < 0){
-		return ret;
-	}
+	//if((ret = decode_skylink_packet(frame)) < 0){
+	//	return ret;
+	//}
+	//todo: error checks?
 
 	// This extension has to be checked here. Otherwise, if both peers use incorrect hmac-sequencing, we would be in lock state.
 	sky_rx_process_extensions(self, frame, EXTENSION_HMAC_ENFORCEMENT);
 
 
-	//todo: set metadata on auth and such negative on frame init.
 
 	// If the virtual channel necessitates auth, but the frame isn't, return error.
-	if(sky_hmac_vc_demands_auth(self, frame->vc) && (!frame->hmac_on)){
-		self->hmac->vc_enfocement_need[frame->vc] = 1;
+	if( (self->conf->vc[radioFrame->vc].require_authentication > 0)  && (!(radioFrame->flags & SKY_FLAG_AUTHENTICATED))){
+		self->hmac->vc_enfocement_need[radioFrame->vc] = 1;
 		return SKY_RET_AUTH_MISSING;
 	}
 
 	// Check authentication code if the frame claims it is authenticated.
-	if (frame->hmac_on) {
+	if (radioFrame->flags & SKY_FLAG_AUTHENTICATED) {
 		ret = sky_hmac_check_authentication(self, frame);
 		if (ret < 0){
 			if(ret == SKY_RET_EXCESSIVE_HMAC_JUMP){
-				self->hmac->vc_enfocement_need[frame->vc] = 1;
+				self->hmac->vc_enfocement_need[radioFrame->vc] = 1;
 			}
 			return ret;
 		}
@@ -89,8 +91,8 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame *frame){
 
 
 	// Update MAC status
-	if((frame->hmac_on) || self->conf->mac.unauthenticated_mac_updates){
-		mac_update_belief(self->mac, &self->conf->mac, frame->metadata.rx_time_ms, frame->mac_length, frame->mac_remaining);
+	if((radioFrame->flags & SKY_FLAG_AUTHENTICATED) || self->conf->mac.unauthenticated_mac_updates){
+		mac_update_belief(self->mac, &self->conf->mac, frame->rx_time_ms, frame->radioFrame.mac_window, frame->radioFrame.mac_remaining);
 	}
 
 	// Check the rest of extension types.
@@ -99,12 +101,18 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame *frame){
 	sky_rx_process_extensions(self, frame, EXTENSION_ARQ_SEQ_RESET);
 
 
-	if(!self->conf->vc[frame->vc].arq_on){
-		if(!(frame->arq_on)){
+	if(!(frame->radioFrame.flags & SKY_FLAG_HAS_PAYLOAD)){
+		return 0;
+	}
+
+	if(!self->conf->vc[frame->radioFrame.vc].arq_on){
+		if(!(frame->radioFrame.flags & SKY_FLAG_ARQ_ON)){
 			/* ARQ is configured off, and frame does not have ARQ either sequence. All is fine. */
-			skyArray_push_rx_packet_monotonic(self->arrayBuffers[frame->vc], frame->metadata.payload_read_start, frame->metadata.payload_read_length);
+			int pl_length = frame->radioFrame.length - (I_PK_EXTENSIONS + frame->radioFrame.ext_length);
+			uint8_t* pl_start = frame->radioFrame.raw + frame->radioFrame.ext_length;
+			skyArray_push_rx_packet_monotonic(self->arrayBuffers[frame->radioFrame.vc], pl_start, pl_length);
 		}
-		if(frame->arq_on){
+		if(frame->radioFrame.flags & SKY_FLAG_ARQ_ON){
 			/* ARQ is configured off, but frame has ARQ sequence. What to do? */
 
 		}
@@ -112,21 +120,23 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame *frame){
 	}
 
 
-	if(self->conf->vc[frame->vc].arq_on){
-		if(!frame->arq_on){
+	if(self->conf->vc[radioFrame->vc].arq_on){
+		if(!(radioFrame->flags & SKY_FLAG_ARQ_ON)){
 			/* ARQ is configured on, but frame does not have ARQ sequence. Toggle the need for ARQ state enforcement. */
-			self->arrayBuffers[frame->vc]->state_enforcement_need = 1;
+			self->arrayBuffers[radioFrame->vc]->state_enforcement_need = 1;
 			return SKY_RET_NO_MAC_SEQUENCE;
 		}
-		if(frame->arq_on) {
+		if(radioFrame->flags & SKY_FLAG_ARQ_ON) {
 			/* ARQ is configured on, and frame has ARQ too. All is fine. */
-			int r = skyArray_push_rx_packet(self->arrayBuffers[frame->vc], frame->metadata.payload_read_start, frame->metadata.payload_read_length, frame->arq_sequence);
+			int pl_length = frame->radioFrame.length - (I_PK_EXTENSIONS + frame->radioFrame.ext_length);
+			uint8_t* pl_start = frame->radioFrame.raw + frame->radioFrame.ext_length;
+			int r = skyArray_push_rx_packet(self->arrayBuffers[radioFrame->vc], pl_start, pl_length, radioFrame->arq_sequence);
 			if (r == RING_RET_INVALID_SEQUENCE){
 				/* Observe: If the received arq-sequence is past our horizon, we shall jump aboard the sequencing here,
 				 * instead of waiting for a sequence enforcement by the sender. (See comments in sky_rx_process_ext_arq_req) †
 				 */
-				skyArray_set_receive_sequence(self->arrayBuffers[frame->vc], frame->arq_sequence, 0);
-				skyArray_push_rx_packet(self->arrayBuffers[frame->vc], frame->metadata.payload_read_start, frame->metadata.payload_read_length, frame->arq_sequence);
+				skyArray_set_receive_sequence(self->arrayBuffers[radioFrame->vc], radioFrame->arq_sequence, 0);
+				skyArray_push_rx_packet(self->arrayBuffers[radioFrame->vc], pl_start, pl_length, radioFrame->arq_sequence);
 				self->diag->rx_arq_resets++;
 			}
 		}
@@ -140,23 +150,36 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame *frame){
 
 
 
-static void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type){
-	for (int i = 0; i < frame->n_extensions; ++i) {
-		SkyPacketExtension* ext = &frame->extensions[i];
-		if((ext->type == EXTENSION_MAC_PARAMETERS) && (ext->type == this_type)){
-			sky_rx_process_ext_mac_reset(self, ext->ext_union.MACSpec);
+static void sky_rx_process_extensions(SkyHandle self, RCVFrame* frame, uint8_t this_type){
+	if((frame->radioFrame.ext_length + I_PK_EXTENSIONS) > frame->radioFrame.length){
+		return; //todo error: too short packet.
+	}
+	if(frame->radioFrame.ext_length <= 1){
+		return; //no extensions.
+	}
+	int cursor = I_PK_EXTENSIONS;
+	while ((cursor - I_PK_EXTENSIONS) < frame->radioFrame.ext_length){
+		SkyPacketExtension ext;
+		int r = interpret_extension(&frame->radioFrame.raw[cursor], frame->radioFrame.length - cursor, &ext);
+		if(r < 0){
+			return;
 		}
-		if((ext->type == EXTENSION_ARQ_SEQ_RESET) && (ext->type == this_type)){
-			sky_rx_process_ext_arq_sequence_reset(self, ext->ext_union.ArqSeqReset, frame->vc);
+		if((ext.type == EXTENSION_MAC_PARAMETERS) && (ext.type == this_type)){
+			sky_rx_process_ext_mac_reset(self, ext.ext_union.MACSpec);
 		}
-		if((ext->type == EXTENSION_ARQ_RESEND_REQ) && (ext->type == this_type)){
-			sky_rx_process_ext_arq_req(self, ext->ext_union.ArqReq, frame->vc);
+		if((ext.type == EXTENSION_ARQ_SEQ_RESET) && (ext.type == this_type)){
+			sky_rx_process_ext_arq_sequence_reset(self, ext.ext_union.ArqSeqReset, frame->radioFrame.vc);
 		}
-		if((ext->type == EXTENSION_HMAC_ENFORCEMENT) && (ext->type == this_type)){
-			sky_rx_process_ext_hmac_enforcement(self, ext->ext_union.HMACTxReset, frame->vc);
+		if((ext.type == EXTENSION_ARQ_RESEND_REQ) && (ext.type == this_type)){
+			sky_rx_process_ext_arq_req(self, ext.ext_union.ArqReq, frame->radioFrame.vc);
+		}
+		if((ext.type == EXTENSION_HMAC_ENFORCEMENT) && (ext.type == this_type)){
+			sky_rx_process_ext_hmac_enforcement(self, ext.ext_union.HMACTxReset, frame->radioFrame.vc);
 		}
 	}
 }
+
+
 
 
 static void sky_rx_process_ext_mac_reset(SkyHandle self, ExtMACSpec macSpec){

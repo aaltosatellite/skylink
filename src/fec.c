@@ -113,7 +113,7 @@ SkyPHYConfig* conf = &phy_defaults;
 
 
 /** Decode a received frame */
-int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
+int sky_fec_decode(RadioFrame2 *frame, SkyDiagnostics *diag)
 {
 	int ret = 0;
 
@@ -121,7 +121,7 @@ int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
 		/*
 		 * Remove scrambler/whitening
 		 */
-		for (unsigned i = 0; i < frame->length; i++){
+		for (int i = 0; i < frame->length; i++){
 			frame->raw[i] ^= whitening[i % WHITENING_LEN];
 		}
 	}
@@ -159,7 +159,7 @@ int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
 
 
 /** Encode a frame to transmit */
-int sky_fec_encode(SkyRadioFrame *frame)
+int sky_fec_encode(RadioFrame2 *frame)
 {
 	if (conf->enable_rs) {
 		/*
@@ -173,7 +173,7 @@ int sky_fec_encode(SkyRadioFrame *frame)
 		/*
 		 * Apply data whitening
 		 */
-		for (unsigned i = 0; i < frame->length; i++){
+		for (int i = 0; i < frame->length; i++){
 			frame->raw[i] ^= whitening[i % WHITENING_LEN];
 		}
 	}

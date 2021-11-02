@@ -123,11 +123,11 @@ int mac_stamp_packet_bytes(MACSystem* macSystem, uint8_t* tgt, int32_t now_ms){
 }
 
 
-int mac_set_frame_fields(MACSystem* macSystem, SkyRadioFrame* frame, int32_t now_ms){
+int mac_set_frame_fields(MACSystem* macSystem, RadioFrame2* frame, int32_t now_ms){
 	uint16_t w = (uint16_t)macSystem->my_window_length;
 	int32_t R = mac_own_window_remaining(macSystem, now_ms);
 	uint16_t r = (uint16_t)R;
-	frame->mac_length = w;
+	frame->mac_window = w;
 	frame->mac_remaining = r;
 	return 0;
 }

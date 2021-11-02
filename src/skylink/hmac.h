@@ -29,15 +29,12 @@ int sky_hmac_get_next_hmac_tx_sequence_and_advance(SkyHandle self, uint8_t vc);
 
 
 /* Authenticate a frame. */
-int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame);
+int sky_hmac_extend_with_authentication(SkyHandle self, SendFrame* frame);
 
 
 /* Check the frame authentication. */
-int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame);
+int sky_hmac_check_authentication(SkyHandle self, RCVFrame* frame);
 
-
-/* Return booelan (0/1) wether the virtual channel requires authentication */
-int sky_hmac_vc_demands_auth(SkyHandle self, uint8_t vc);
 
 /* Positive modulo by max hmac sequence */
 int32_t wrap_hmac_sequence(int32_t sequence);

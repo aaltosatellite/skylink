@@ -57,6 +57,6 @@ int mac_stamp_packet_bytes(MACSystem* macSystem, uint8_t* tgt, int32_t now_ms);
 
 
 // Writes out the two uint16 values to the provided spot in buffer.
-int mac_set_frame_fields(MACSystem* macSystem, SkyRadioFrame* frame, int32_t now_ms);
+int mac_set_frame_fields(MACSystem* macSystem, RadioFrame2* frame, int32_t now_ms);
 
 #endif //SKYLINK_CMAKE_MAC_2_H

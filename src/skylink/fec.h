@@ -28,9 +28,9 @@
 
 
 
-int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag);
+int sky_fec_decode(RadioFrame2 *frame, SkyDiagnostics *diag);
 
-int sky_fec_encode(SkyRadioFrame *frame);
+int sky_fec_encode(RadioFrame2 *frame);
 
 
 /*

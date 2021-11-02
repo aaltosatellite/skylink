@@ -14,7 +14,6 @@
 
 #define SKY_PLAIN_FRAME_MIN_LENGTH		15
 #define SKYLINK_START_BYTE				'S' 	//all packets start with this
-#define SKYLINK_VERSION_BYTE			'1'		//the version id of the protocol.
 #define EXTENSION_ARQ_RESEND_REQ		1
 #define EXTENSION_ARQ_SEQ_RESET			2
 #define EXTENSION_MAC_PARAMETERS		3
@@ -29,16 +28,20 @@
 #define I_PK_MAC_LENGTH					(2+5+1+1+2)
 #define I_PK_MAC_LEFT					(2+5+1+1+2+2)
 #define I_PK_ARQ_SEQUENCE				(2+5+1+1+2+2+2)
-#define I_PK_EXTENSIONS					(2+5+1+1+2+2+2+1)
+#define I_PK_EXTENSIONS					(1+5+1+1+2+2+2+1)
 
 
 
-SkyRadioFrame* new_frame();
-
-void destroy_frame(SkyRadioFrame* frame);
-
+//SkyRadioFrame* new_frame();
+//void destroy_frame(SkyRadioFrame* frame);
 
 
+SendFrame* new_send_frame();
+RCVFrame* new_receive_frame();
+void destroy_receive_frame(RCVFrame* frame);
+void destroy_send_frame(SendFrame* frame);
+
+/*
 
 // encoding ============================================================================================================
 int sky_packet_add_extension_mac_params(SkyRadioFrame* frame, int default_window_size, int gap_size);
@@ -65,9 +68,25 @@ int sky_packet_stamp_arq(SkyRadioFrame* frame, uint8_t arq_sequence);
 // decoding ============================================================================================================
 void initialize_for_decoding(SkyRadioFrame* frame);
 
+
+
 int decode_skylink_packet(SkyRadioFrame* frame);
 // =====================================================================================================================
+*/
 
 
+int sky_packet_add_extension_arq_rr(SendFrame* frame, uint8_t sequence, uint8_t mask1, uint8_t mask2);
+
+int sky_packet_add_extension_arq_enforce(SendFrame* frame, uint8_t toggle, uint8_t sequence);
+
+int sky_packet_add_extension_hmac_enforce(SendFrame* frame, uint16_t sequence);
+
+int sky_packet_add_extension_mac_params(SendFrame* frame, uint16_t gap_size, uint16_t window_size);
+
+int available_payload_space(RadioFrame2* radioFrame);
+
+int sky_packet_extend_with_payload(SendFrame* frame, void* pl, int32_t length);
+
+int interpret_extension(void* ptr, int max_length, SkyPacketExtension* extension);
 
 #endif //SKYLINK_CMAKE_SKYPACKET_H

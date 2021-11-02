@@ -41,7 +41,7 @@ void test1(){
 
 
 static int test1_round(){
-	SkyRadioFrame* frame = new_frame();
+	SendFrame* frame = new_send_frame();
 	SkyDiagnostics* diag = new_diagnostics();
 
 	int length = randint_i32(16+8, RS_MSGLEN);
@@ -50,43 +50,43 @@ static int test1_round(){
 	//make a reference payload.
 	uint8_t* ref = x_alloc(RS_MSGLEN*3);
 	fillrand(ref, RS_MSGLEN*3);
-	memcpy(frame->raw, ref, length);
-	frame->length = length;
+	memcpy(frame->radioFrame.raw, ref, length);
+	frame->radioFrame.length = length;
 
 
 	//fec encode it.
-	sky_fec_encode(frame);
+	sky_fec_encode(&frame->radioFrame);
 
 
 	//take a reference of the encoded product.
-	uint8_t* encoded_ref = x_alloc(frame->length);
-	memcpy(encoded_ref, frame->raw, frame->length);
+	uint8_t* encoded_ref = x_alloc(frame->radioFrame.length);
+	memcpy(encoded_ref, frame->radioFrame.raw, frame->radioFrame.length);
 
 
 	//Corrupt the shit.
 	int n_corrupt_bits = 0;
-	int* corrupt_indexes = get_n_unique_random_integers(n_corrupt_bytes, 0, frame->length-1);
+	int* corrupt_indexes = get_n_unique_random_integers(n_corrupt_bytes, 0, frame->radioFrame.length-1);
 	for (int i = 0; i < n_corrupt_bytes; ++i) {
 		int idx = corrupt_indexes[i];
-		uint8_t old = frame->raw[idx];
-		while (frame->raw[idx] == old){
-			frame->raw[idx] = (uint8_t) randint_i32(0, 255);
+		uint8_t old = frame->radioFrame.raw[idx];
+		while (frame->radioFrame.raw[idx] == old){
+			frame->radioFrame.raw[idx] = (uint8_t) randint_i32(0, 255);
 		}
-		n_corrupt_bits = n_corrupt_bits + count_differing_bits(frame->raw[idx], old);
+		n_corrupt_bits = n_corrupt_bits + count_differing_bits(frame->radioFrame.raw[idx], old);
 	}
 
 
 	//Assert that we in fact did what we meant.
 	if(n_corrupt_bytes != 0){
-		assert(memcmp(encoded_ref, frame->raw, frame->length) != 0);
+		assert(memcmp(encoded_ref, frame->radioFrame.raw, frame->radioFrame.length) != 0);
 	}
 	if(n_corrupt_bytes == 0){
-		assert(memcmp(encoded_ref, frame->raw, frame->length) == 0);
+		assert(memcmp(encoded_ref, frame->radioFrame.raw, frame->radioFrame.length) == 0);
 	}
 
 
 	//attempt fec deocde.
-	int r = sky_fec_decode(frame, diag);
+	int r = sky_fec_decode(&frame->radioFrame, diag);
 	if(r == 0){
 		//PRINTFF(0, "SUCCESS: %d bits,  %d bytes.\n", n_corrupt_bits, n_corrupt_bytes);
 	}
@@ -98,18 +98,18 @@ static int test1_round(){
 	//Assert that the fec response was understood correctly...
 	if(n_corrupt_bytes == 0){
 		assert(r == 0);
-		assert(memcmp(ref, frame->raw, length) == 0);
+		assert(memcmp(ref, frame->radioFrame.raw, length) == 0);
 	}
 	if(r == 0){
-		assert(memcmp(ref, frame->raw, length) == 0);
-		assert(frame->length == length);
+		assert(memcmp(ref, frame->radioFrame.raw, length) == 0);
+		assert(frame->radioFrame.length == length);
 	}
 	if(r != 0){
-		assert(memcmp(ref, frame->raw, length) != 0);
+		assert(memcmp(ref, frame->radioFrame.raw, length) != 0);
 	}
 
 
-	destroy_frame(frame);
+	destroy_send_frame(frame);
 	destroy_diagnostics(diag);
 	free(corrupt_indexes);
 	free(encoded_ref);

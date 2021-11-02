@@ -50,9 +50,9 @@
 
 //HMAC
 #define SKY_HMAC_LENGTH 				8
-#define SKY_FLAG_FRAME_AUTHENTICATED 	0b00000001
-#define SKY_FLAG_ARQ_ON 				0b00000010
-#define SKY_FLAG_HAS_PAYLOAD 			0b00000100
+#define SKY_FLAG_AUTHENTICATED 			0b000001
+#define SKY_FLAG_ARQ_ON 				0b000010
+#define SKY_FLAG_HAS_PAYLOAD 			0b000100
 
 //Physical layer radio frame structure.
 #define SKY_NUM_VIRTUAL_CHANNELS  		4
@@ -68,7 +68,15 @@
 //============ STRUCTS ===========================================================================================================
 //================================================================================================================================
 /* extensions ====================================================================================== */
-struct extension_arq_req {
+struct __attribute__((__packed__)) extension_typemask {
+	uint8_t type	:4;
+	uint8_t length	:4;
+};
+typedef struct extension_typemask ExtensionTypemask;
+
+struct __attribute__((__packed__)) extension_arq_req  {
+	uint8_t type	:4;
+	uint8_t length	:4;
 	uint8_t sequence;
 	uint8_t mask1;
 	uint8_t mask2;
@@ -76,20 +84,26 @@ struct extension_arq_req {
 typedef struct extension_arq_req ExtArqReq;
 
 
-struct extension_arq_setup {
+struct __attribute__((__packed__)) extension_arq_setup {
+	uint8_t type	:4;
+	uint8_t length	:4;
 	uint8_t toggle;
 	uint8_t enforced_sequence;
 };
 typedef struct extension_arq_setup ExtArqSeqReset;
 
 
-struct extension_mac_spec {
+struct __attribute__((__packed__)) extension_mac_spec {
+	uint8_t type	:4;
+	uint8_t length	:4;
 	uint16_t window_size;
 	uint16_t gap_size;
 };
 typedef struct extension_mac_spec ExtMACSpec;
 
-struct extension_hmac_tx_reset {
+struct __attribute__((__packed__)) extension_hmac_tx_reset {
+	uint8_t type	:4;
+	uint8_t length	:4;
 	uint16_t correct_tx_sequence;
 };
 typedef struct extension_hmac_tx_reset ExtHMACTxReset;
@@ -105,13 +119,13 @@ typedef union extension_union unifExt;
 
 
 struct skylink_packet_extension_s {
-	uint8_t type;
+	int type;
 	unifExt ext_union;
 };
 typedef struct skylink_packet_extension_s SkyPacketExtension;
 /* extensions ====================================================================================== */
 
-
+/*
 struct frame_metadata {
 	int payload_read_length;
 	uint8_t* payload_read_start;
@@ -119,8 +133,10 @@ struct frame_metadata {
 	int32_t rx_time_ms;
 };
 typedef struct frame_metadata FrameMetadata;
+*/
 
 /* Struct to store raw radio frame to be transmitted over the radio or frame which was received */
+/*
 struct radioframe {
 	FrameMetadata metadata;
 	uint8_t raw[SKY_FRAME_MAX_LEN + 3 + 1];
@@ -138,11 +154,14 @@ struct radioframe {
 	SkyPacketExtension extensions[SKY_MAX_EXTENSION_COUNT];
 };
 typedef struct radioframe SkyRadioFrame;
-
+*/
 
 
 typedef union {
-	uint8_t raw[SKY_FRAME_MAX_LEN + 5];
+	struct __attribute__((__packed__)) {
+		uint8_t raw[SKY_FRAME_MAX_LEN + 5];
+		int32_t length;
+	};
 	struct __attribute__((__packed__)) {
 		uint8_t start_byte;
 		uint8_t identity[SKY_IDENTITY_LEN];
@@ -157,14 +176,12 @@ typedef union {
 } RadioFrame2;
 
 typedef struct {
-	uint16_t length;
-	int32_t reception_time;
+	int32_t rx_time_ms;
 	uint8_t auth_verified;
 	RadioFrame2 radioFrame;
 } RCVFrame;
 
 typedef struct {
-	uint16_t length;
 	RadioFrame2 radioFrame;
 } SendFrame;
 
