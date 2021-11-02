@@ -44,7 +44,7 @@ void test1_round(){
 	int hmac_on = randint_i32(0,1);
 	int hmac_sequence = randint_i32(0, HMAC_CYCLE_LENGTH-1);
 
-	radioFrame_s->length = I_PK_EXTENSIONS;
+	radioFrame_s->length = EXTENSION_START_IDX;
 	radioFrame_s->start_byte = SKYLINK_START_BYTE;
 	memcpy(radioFrame_s->identity, identity, SKY_IDENTITY_LEN);
 	radioFrame_s->vc = vc;
@@ -114,7 +114,7 @@ void test1_round(){
 		assert(available_payload_space(&sframe->radioFrame) == 185);
 	}
 	if(n_extensions == 0){
-		assert(available_payload_space(&sframe->radioFrame) == (RS_MSGLEN - (SKY_HMAC_LENGTH + I_PK_EXTENSIONS)) );
+		assert(available_payload_space(&sframe->radioFrame) == (RS_MSGLEN - (SKY_HMAC_LENGTH + EXTENSION_START_IDX)) );
 	}
 
 
@@ -123,13 +123,13 @@ void test1_round(){
 	fillrand(pl, payload_len);
 	int r = sky_packet_extend_with_payload(sframe, pl, payload_len);
 	assert(r == 0);
-	assert(sframe->radioFrame.length == (payload_len + I_PK_EXTENSIONS + sframe->radioFrame.ext_length));
+	assert(sframe->radioFrame.length == (payload_len + EXTENSION_START_IDX + sframe->radioFrame.ext_length));
 
 	if(n_extensions == 4){
 		assert(available_payload_space(&sframe->radioFrame) <= 185);
 	}
 	if(n_extensions == 0){
-		assert(available_payload_space(&sframe->radioFrame) <= (RS_MSGLEN - (SKY_HMAC_LENGTH + I_PK_EXTENSIONS)) );
+		assert(available_payload_space(&sframe->radioFrame) <= (RS_MSGLEN - (SKY_HMAC_LENGTH + EXTENSION_START_IDX)) );
 	}
 
 	memcpy(rframe->radioFrame.raw ,sframe->radioFrame.raw, sframe->radioFrame.length);
@@ -150,7 +150,7 @@ void test1_round(){
 	assert(radioFrame_r->ext_length == radioFrame_s->ext_length);
 
 	int ext_remaining = radioFrame_r->ext_length;
-	int ext_cursor = I_PK_EXTENSIONS;
+	int ext_cursor = EXTENSION_START_IDX;
 	while (ext_remaining) {
 		SkyPacketExtension ext;
 		int r2 = interpret_extension(radioFrame_r->raw + ext_cursor, ext_remaining, &ext);
@@ -185,9 +185,9 @@ void test1_round(){
 	assert(ext_remaining == 0);
 
 
-	int rcvd_pl_len = rframe->radioFrame.length - (rframe->radioFrame.ext_length + I_PK_EXTENSIONS);
+	int rcvd_pl_len = rframe->radioFrame.length - (rframe->radioFrame.ext_length + EXTENSION_START_IDX);
 	assert(rcvd_pl_len == payload_len);
-	assert(memcmp(rframe->radioFrame.raw + radioFrame_r->ext_length + I_PK_EXTENSIONS, pl, rcvd_pl_len) == 0);
+	assert(memcmp(rframe->radioFrame.raw + radioFrame_r->ext_length + EXTENSION_START_IDX, pl, rcvd_pl_len) == 0);
 
 
 	destroy_config(config);

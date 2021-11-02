@@ -57,7 +57,6 @@
 //Physical layer radio frame structure.
 #define SKY_NUM_VIRTUAL_CHANNELS  		4
 #define SKY_FRAME_MAX_LEN       		0x100
-#define SKY_MAX_EXTENSION_COUNT			8
 #define SKY_IDENTITY_LEN				5
 
 
@@ -125,38 +124,9 @@ struct skylink_packet_extension_s {
 typedef struct skylink_packet_extension_s SkyPacketExtension;
 /* extensions ====================================================================================== */
 
-/*
-struct frame_metadata {
-	int payload_read_length;
-	uint8_t* payload_read_start;
-	uint8_t auth_verified;
-	int32_t rx_time_ms;
-};
-typedef struct frame_metadata FrameMetadata;
-*/
-
-/* Struct to store raw radio frame to be transmitted over the radio or frame which was received */
-/*
-struct radioframe {
-	FrameMetadata metadata;
-	uint8_t raw[SKY_FRAME_MAX_LEN + 3 + 1];
-	uint16_t length;
-
-	uint8_t identity[SKY_IDENTITY_LEN];
-	uint8_t hmac_on;
-	uint8_t arq_on;
-	uint8_t vc;
-	uint8_t n_extensions;
-	uint16_t hmac_sequence;
-	uint16_t mac_length;
-	uint16_t mac_remaining;
-	uint8_t arq_sequence;
-	SkyPacketExtension extensions[SKY_MAX_EXTENSION_COUNT];
-};
-typedef struct radioframe SkyRadioFrame;
-*/
 
 
+/* frames ========================================================================================== */
 typedef union {
 	struct __attribute__((__packed__)) {
 		uint8_t raw[SKY_FRAME_MAX_LEN + 5];
@@ -184,6 +154,7 @@ typedef struct {
 typedef struct {
 	RadioFrame2 radioFrame;
 } SendFrame;
+/* frames ========================================================================================== */
 
 
 
@@ -215,7 +186,8 @@ typedef struct sky_hmac SkyHMAC;
 
 
 
-/* Protocol configuration struct.
+/*
+ * Protocol configuration struct.
  *
  * Some of the parameters can be changed while the link is running.
  * Where feasible, sublayer implementations should read their parameters

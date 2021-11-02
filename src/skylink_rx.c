@@ -108,7 +108,7 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 	if(!self->conf->vc[frame->radioFrame.vc].arq_on){
 		if(!(frame->radioFrame.flags & SKY_FLAG_ARQ_ON)){
 			/* ARQ is configured off, and frame does not have ARQ either sequence. All is fine. */
-			int pl_length = frame->radioFrame.length - (I_PK_EXTENSIONS + frame->radioFrame.ext_length);
+			int pl_length = frame->radioFrame.length - (EXTENSION_START_IDX + frame->radioFrame.ext_length);
 			uint8_t* pl_start = frame->radioFrame.raw + frame->radioFrame.ext_length;
 			skyArray_push_rx_packet_monotonic(self->arrayBuffers[frame->radioFrame.vc], pl_start, pl_length);
 		}
@@ -128,7 +128,7 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 		}
 		if(radioFrame->flags & SKY_FLAG_ARQ_ON) {
 			/* ARQ is configured on, and frame has ARQ too. All is fine. */
-			int pl_length = frame->radioFrame.length - (I_PK_EXTENSIONS + frame->radioFrame.ext_length);
+			int pl_length = frame->radioFrame.length - (EXTENSION_START_IDX + frame->radioFrame.ext_length);
 			uint8_t* pl_start = frame->radioFrame.raw + frame->radioFrame.ext_length;
 			int r = skyArray_push_rx_packet(self->arrayBuffers[radioFrame->vc], pl_start, pl_length, radioFrame->arq_sequence);
 			if (r == RING_RET_INVALID_SEQUENCE){
@@ -151,14 +151,14 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 
 
 static void sky_rx_process_extensions(SkyHandle self, RCVFrame* frame, uint8_t this_type){
-	if((frame->radioFrame.ext_length + I_PK_EXTENSIONS) > frame->radioFrame.length){
+	if((frame->radioFrame.ext_length + EXTENSION_START_IDX) > frame->radioFrame.length){
 		return; //todo error: too short packet.
 	}
 	if(frame->radioFrame.ext_length <= 1){
 		return; //no extensions.
 	}
-	int cursor = I_PK_EXTENSIONS;
-	while ((cursor - I_PK_EXTENSIONS) < frame->radioFrame.ext_length){
+	int cursor = EXTENSION_START_IDX;
+	while ((cursor - EXTENSION_START_IDX) < frame->radioFrame.ext_length){
 		SkyPacketExtension ext;
 		int r = interpret_extension(&frame->radioFrame.raw[cursor], frame->radioFrame.length - cursor, &ext);
 		if(r < 0){

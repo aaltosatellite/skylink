@@ -60,7 +60,7 @@ static void test1_round(){
 	RCVFrame* rframe = new_receive_frame();
 	RadioFrame2* frame = &sframe->radioFrame;
 	fillrand(frame->raw, 255);
-	int length = randint_i32(I_PK_EXTENSIONS, SKY_FRAME_MAX_LEN - (SKY_HMAC_LENGTH+1));
+	int length = randint_i32(EXTENSION_START_IDX, SKY_FRAME_MAX_LEN - (SKY_HMAC_LENGTH + 1));
 	frame->length = length;
 	frame->vc = vc;
 
