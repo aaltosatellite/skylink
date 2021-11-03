@@ -12,11 +12,11 @@
 
 int main() {
 	reseed_random();
-	elebuffer_tests();
-	ring_tests();
-	packet_tests();
-	fec_test();
-	hmac_tests();
+	//elebuffer_tests();
+	//ring_tests();
+	//packet_tests();
+	//fec_test();
+	//hmac_tests();
 	txrx_tests();
 }
 

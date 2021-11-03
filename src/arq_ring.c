@@ -228,7 +228,7 @@ static int sendRing_push_packet_to_send(SkySendRing* sendRing, ElementBuffer* el
 
 	sendRing->storage_count++;
 	sendRing->head = ring_wrap(sendRing->head+1, sendRing->length);
-	sendRing->head_sequence = sequence_wrap(sendRing->head_sequence + 1); //matters only with arq on
+	sendRing->head_sequence = sequence_wrap(sendRing->head_sequence + 1);
 	return 0;
 }
 
@@ -279,7 +279,7 @@ static int sendRing_read_new_packet_to_tx_(SkySendRing* sendRing, ElementBuffer*
 	}
 	*sequence = sendRing->tx_sequence;
 	sendRing->tx_head = ring_wrap(sendRing->tx_head+1, sendRing->length);
-	sendRing->tx_sequence = sequence_wrap(sendRing->tx_sequence + 1); //matters only with arq on
+	sendRing->tx_sequence = sequence_wrap(sendRing->tx_sequence + 1);
 
 	if (ring_wrap(sendRing->tx_head - sendRing->tail, sendRing->length) > sendRing->n_recall) {
 		RingItem* tail_item = &sendRing->buff[sendRing->tail];
@@ -288,7 +288,7 @@ static int sendRing_read_new_packet_to_tx_(SkySendRing* sendRing, ElementBuffer*
 		tail_item->sequence = 0;
 		sendRing->storage_count--;
 		sendRing->tail = ring_wrap(sendRing->tail+1, sendRing->length);
-		sendRing->tail_sequence = sequence_wrap(sendRing->tail_sequence + 1); //matters only with arq on
+		sendRing->tail_sequence = sequence_wrap(sendRing->tail_sequence + 1);
 	}
 	return read;
 }
@@ -383,6 +383,7 @@ void wipe_arq_ring(SkyArqRing* array, int new_send_sequence, int new_rcv_sequenc
 	wipe_rcv_ring(array->secondaryRcvRing, array->elementBuffer, new_rcv_sequence);
 	wipe_element_buffer(array->elementBuffer);
 	array->state_enforcement_need = 0;
+	array->resend_request_need = 0;
 }
 
 

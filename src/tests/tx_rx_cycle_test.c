@@ -18,8 +18,8 @@ void txrx_tests(){
 
 
 void test1(){
-	PRINTFF(0,"[Packet Test 1: TX-RX]\n");
-	for (int i = 0; i < 1; ++i) {
+	PRINTFF(0,"[TX-RX Test 1: basic case]\n");
+	for (int i = 0; i < 5; ++i) {
 		test1_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
@@ -121,41 +121,39 @@ void test1_round(){
 
 
 
-	//uint16_t mask = spin_to_seq(ring1, ring2, seq_arq_1to2, 0);
-	//assert(mask == 0);
+	uint16_t mask = spin_to_seq(ring1, ring2, seq_arq_1to2, 0);
+	assert(mask == 0);
 
-	SendFrame* sendFrame = new_send_frame();
-	RCVFrame* rcvFrame = new_receive_frame();
+	SendFrame *sendFrame = new_send_frame();
+	RCVFrame *rcvFrame = new_receive_frame();
+	uint8_t *tgt = malloc(1000);
 
-	int len_pl = randint_i32(1,100);
-	String* payload = get_random_string(len_pl);
-	skyArray_push_packet_to_send(handle1->arrayBuffers[vc], payload->data, payload->length);
+	for (int i = 0; i < ARQ_SEQUENCE_MODULO*2; ++i) {
+		int len_pl = randint_i32(1, 100);
+		String *payload = get_random_string(len_pl);
+		skyArray_push_packet_to_send(handle1->arrayBuffers[vc], payload->data, payload->length);
 
+		int content = sky_tx(handle1, sendFrame, vc, 1);
+		memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame2));
+		//rcvFrame->radioFrame.length = sendFrame->radioFrame.length;
+		sky_rx_0(handle2, rcvFrame, 1);
 
-	int content = sky_tx(handle1, sendFrame, vc, 1);
-	memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame2));
-	rcvFrame->radioFrame.length = sendFrame->radioFrame.length;
+		int sequence = -1;
+		int read = skyArray_read_next_received(handle2->arrayBuffers[vc], tgt, &sequence);
 
-	sky_rx_0(handle2, rcvFrame, 1);
+		int c0 = (content == 1);
+		int c1 = (read == len_pl);
+		int c2 = (sequence == sequence_wrap(seq_arq_1to2+i) );
+		int c3 = (memcmp(tgt, payload->data, payload->length) == 0);
+		destroy_string(payload);
+		assert(c0);
+		assert(c1);
+		assert(c2);
+		assert(c3);
+	}
 
-	uint8_t* tgt = malloc(1000);
-	int sequence = -1;
-	int read = skyArray_read_next_received(handle2->arrayBuffers[vc], tgt, &sequence);
-
-	int c0 = (content == 1);
-	int c1 = (read == len_pl);
-	int c2 = (sequence == seq_arq_1to2);
-	int c3 = (memcmp(tgt, payload->data, payload->length) == 0);
-	assert(c0);
-	assert(c1);
-	assert(c2);
-	assert(c3);
-
-	//initiate_random_frame(sendFrame);
-
-	//sleepms(2000);
 	free(tgt);
-	destroy_string(payload);
+
 	destroy_receive_frame(rcvFrame);
 	destroy_send_frame(sendFrame);
 	destroy_handle(handle1);

@@ -8,10 +8,11 @@
 
 static int sky_tx_extension_eval_arq_rr(SkyHandle self, SendFrame* frame, uint8_t vc){
 	uint16_t resend_map = skyArray_get_horizon_bitmap(self->arrayBuffers[vc]);
-	if(resend_map == 0){
+	if( (resend_map == 0) && (self->arrayBuffers[vc]->resend_request_need == 0) ){
 		return 0;
 	}
-	sky_packet_add_extension_arq_rr(frame, self->arrayBuffers[vc]->primaryRcvRing->head_sequence, resend_map&0xFF, ((resend_map &0xFF00) >> 8));
+	self->arrayBuffers[vc]->resend_request_need = 0;
+	sky_packet_add_extension_arq_rr(frame, self->arrayBuffers[vc]->primaryRcvRing->head_sequence, resend_map & 0xFF, ((resend_map & 0xFF00) >> 8));
 	return 1;
 }
 
@@ -81,9 +82,7 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 	if((next_pl_size >= 0) && (available_payload_space(&frame->radioFrame) >= next_pl_size)){
 		int arq_sequence = -1;
 		int read = skyArray_read_packet_for_tx(self->arrayBuffers[vc], frame->radioFrame.raw + frame->radioFrame.length, &arq_sequence, 1);
-		if(self->conf->vc[vc].arq_on){
-			frame->radioFrame.arq_sequence = (uint8_t)arq_sequence;
-		}
+		frame->radioFrame.arq_sequence = (uint8_t)arq_sequence;
 		frame->radioFrame.flags |= SKY_FLAG_HAS_PAYLOAD;
 		frame->radioFrame.length += read;
 		content = 1;

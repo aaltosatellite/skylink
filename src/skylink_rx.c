@@ -102,10 +102,18 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 	sky_rx_process_extensions(self, frame, EXTENSION_ARQ_RESEND_REQ);
 	sky_rx_process_extensions(self, frame, EXTENSION_ARQ_SEQ_RESET);
 
+	// Even payloadless packets contain ARQ sequence. Here we can deduce if we have missed some.
+	if(self->conf->vc[radioFrame->vc].arq_on){
+		if(radioFrame->arq_sequence != self->arrayBuffers[radioFrame->vc]->primaryRcvRing->head_sequence){
+			self->arrayBuffers[radioFrame->vc]->resend_request_need = 1;
+		}
+	}
 
+	// If there is no payload, we can return now.
 	if(!(frame->radioFrame.flags & SKY_FLAG_HAS_PAYLOAD)){
 		return 0;
 	}
+
 
 	if(!self->conf->vc[frame->radioFrame.vc].arq_on){
 		if(!(frame->radioFrame.flags & SKY_FLAG_ARQ_ON)){
@@ -116,7 +124,9 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 		}
 		if(frame->radioFrame.flags & SKY_FLAG_ARQ_ON){
 			/* ARQ is configured off, but frame has ARQ sequence. What to do? */
-
+			int pl_length = frame->radioFrame.length - (EXTENSION_START_IDX + frame->radioFrame.ext_length);
+			uint8_t* pl_start = frame->radioFrame.raw + EXTENSION_START_IDX + frame->radioFrame.ext_length;
+			skyArray_push_rx_packet_monotonic(self->arrayBuffers[frame->radioFrame.vc], pl_start, pl_length);
 		}
 
 	}
@@ -213,7 +223,7 @@ static void sky_rx_process_ext_arq_req(SkyHandle self, ExtArqReq arqReq, int vc)
 		if(mask & (1<<i)){
 			continue;
 		}
-		uint8_t sequence = (uint8_t) positive_modulo(arqReq.sequence + i, ARQ_SEQUENCE_MODULO);
+		uint8_t sequence = (uint8_t) positive_modulo(arqReq.sequence + 1 + i, ARQ_SEQUENCE_MODULO);
 		int r = skyArray_schedule_resend(self->arrayBuffers[vc], sequence);
 		if(r < 0){
 			/* †

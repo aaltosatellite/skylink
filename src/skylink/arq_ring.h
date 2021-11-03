@@ -95,6 +95,7 @@ struct arq_ring_s {
 	SkyRcvRing* primaryRcvRing;
 	SkyRcvRing* secondaryRcvRing;
 	uint8_t state_enforcement_need;
+	uint8_t resend_request_need;
 };
 typedef struct arq_ring_s SkyArqRing;
 
