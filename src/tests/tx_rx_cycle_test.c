@@ -18,7 +18,7 @@ void txrx_tests(){
 
 
 void test1(){
-	PRINTFF(0,"[Packet Test 1: ENCODE-DECODE]\n");
+	PRINTFF(0,"[Packet Test 1: TX-RX]\n");
 	for (int i = 0; i < 1; ++i) {
 		test1_round();
 	}
