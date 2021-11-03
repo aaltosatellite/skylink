@@ -102,7 +102,6 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 
 
 	/* Apply Forward Error Correction (FEC) coding */
-	printf("Len before: %d \n\n", frame->radioFrame.length);
 	sky_fec_encode(&frame->radioFrame);
 
 

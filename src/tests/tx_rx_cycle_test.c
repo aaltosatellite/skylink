@@ -133,7 +133,6 @@ void test1_round(){
 
 
 	int content = sky_tx(handle1, sendFrame, vc, 1);
-	PRINTFF(0,"content:%d,  length:%d\n",content, sendFrame->radioFrame.length);
 	memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame2));
 	rcvFrame->radioFrame.length = sendFrame->radioFrame.length;
 
@@ -143,13 +142,14 @@ void test1_round(){
 	int sequence = -1;
 	int read = skyArray_read_next_received(handle2->arrayBuffers[vc], tgt, &sequence);
 
+	int c0 = (content == 1);
 	int c1 = (read == len_pl);
 	int c2 = (sequence == seq_arq_1to2);
 	int c3 = (memcmp(tgt, payload->data, payload->length) == 0);
-
-	PRINTFF(0,"CHECKS:  %d %d\n", read, len_pl);
-	PRINTFF(0,"CHECKS:  %d %d\n",  sequence, seq_arq_1to2);
-	PRINTFF(0,"CHECKS:  %d\n",  c3);
+	assert(c0);
+	assert(c1);
+	assert(c2);
+	assert(c3);
 
 	//initiate_random_frame(sendFrame);
 

@@ -22,7 +22,6 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame);
 int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
 	int ret = 0;
 	if(frame->radioFrame.length < SKY_PLAIN_FRAME_MIN_LENGTH){
-		printf("-1\n\n");
 		return SKY_RET_INVALID_LENGTH;
 	}
 	RadioFrame2* radioFrame = &frame->radioFrame;
@@ -34,12 +33,10 @@ int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
 		if (ret < 0) {
 			// TODO: log the number of corrected bits?
 			self->diag->rx_fec_fail++;
-			printf("-2\n\n");
 			return SKY_RET_GOLAY_FAILED;
 		}
 
 		if ((coded_len & 0xF00) != (SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED)) {
-			printf("-3\n\n");
 			return -1;
 		}
 
@@ -53,7 +50,6 @@ int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
 
 	// Decode FEC
 	if ((ret = sky_fec_decode(radioFrame, self->diag)) < 0){
-		printf("-4\n\n");
 		return ret;
 	}
 
@@ -64,11 +60,9 @@ int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
 
 static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 	if(frame->radioFrame.length < SKY_PLAIN_FRAME_MIN_LENGTH){
-		printf("-5\n\n");
 		return SKY_RET_INVALID_LENGTH;
 	}
 	if(frame->radioFrame.vc >= SKY_NUM_VIRTUAL_CHANNELS){
-		printf("-6\n\n");
 		return SKY_RET_INVALID_VC;
 	}
 
@@ -83,7 +77,6 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 	// If the virtual channel necessitates auth, but the frame isn't, return error.
 	if( (self->conf->vc[radioFrame->vc].require_authentication > 0)  && (!(radioFrame->flags & SKY_FLAG_AUTHENTICATED))){
 		self->hmac->vc_enfocement_need[radioFrame->vc] = 1;
-		printf("-7\n\n");
 		return SKY_RET_AUTH_MISSING;
 	}
 
@@ -94,7 +87,6 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 			if(ret == SKY_RET_EXCESSIVE_HMAC_JUMP){
 				self->hmac->vc_enfocement_need[radioFrame->vc] = 1;
 			}
-			printf("-8  %d\n\n", ret);
 			return ret;
 		}
 	}
@@ -112,7 +104,6 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 
 
 	if(!(frame->radioFrame.flags & SKY_FLAG_HAS_PAYLOAD)){
-		printf("-9\n\n");
 		return 0;
 	}
 
@@ -135,7 +126,6 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 		if(!(radioFrame->flags & SKY_FLAG_ARQ_ON)){
 			/* ARQ is configured on, but frame does not have ARQ sequence. Toggle the need for ARQ state enforcement. */
 			self->arrayBuffers[radioFrame->vc]->state_enforcement_need = 1;
-			printf("-10\n\n");
 			return SKY_RET_NO_MAC_SEQUENCE;
 		}
 		if(radioFrame->flags & SKY_FLAG_ARQ_ON) {
