@@ -72,7 +72,7 @@ add_executable(skylink_gs
         src/hmac.c
 
         src/skylink/skylink.h
-        src/skylink.c
+        old_sources/skylink.c
 
         src/skylink/arq_ring.h
         src/arq_ring.c

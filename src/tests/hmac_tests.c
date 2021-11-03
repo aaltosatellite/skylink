@@ -58,7 +58,7 @@ static void test1_round(){
 
 	SendFrame* sframe = new_send_frame();
 	RCVFrame* rframe = new_receive_frame();
-	RadioFrame2* frame = &sframe->radioFrame;
+	RadioFrame* frame = &sframe->radioFrame;
 	fillrand(frame->raw, 255);
 	int length = randint_i32(EXTENSION_START_IDX, SKY_FRAME_MAX_LEN - (SKY_HMAC_LENGTH + 1));
 	frame->length = length;
@@ -87,9 +87,9 @@ static void test1_round(){
 	}
 
 
-	memcpy(&rframe->radioFrame, &sframe->radioFrame, sizeof(RadioFrame2));
+	memcpy(&rframe->radioFrame, &sframe->radioFrame, sizeof(RadioFrame));
 	int r1 = sky_hmac_check_authentication(self2, rframe);
-	RadioFrame2* frame2 = &rframe->radioFrame;
+	RadioFrame* frame2 = &rframe->radioFrame;
 
 	if(frame2->auth_sequence == config1->hmac.magic_sequence){
 		assert(r1 == 0);

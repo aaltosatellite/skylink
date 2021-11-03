@@ -24,7 +24,7 @@ int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
 	if(frame->radioFrame.length < SKY_PLAIN_FRAME_MIN_LENGTH){
 		return SKY_RET_INVALID_LENGTH;
 	}
-	RadioFrame2* radioFrame = &frame->radioFrame;
+	RadioFrame* radioFrame = &frame->radioFrame;
 	if(contains_golay) {
 		// Read Golay decoded len
 		uint32_t coded_len = (radioFrame->raw[0] << 16) | (radioFrame->raw[1] << 8) | radioFrame->raw[2];
@@ -59,20 +59,21 @@ int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
 
 
 static int sky_rx_1(SkyHandle self, RCVFrame* frame){
-	if(frame->radioFrame.length < SKY_PLAIN_FRAME_MIN_LENGTH){
+	RadioFrame* radioFrame = &frame->radioFrame;
+
+	// Some error checks
+	if(radioFrame->length < SKY_PLAIN_FRAME_MIN_LENGTH){
 		return SKY_RET_INVALID_LENGTH;
 	}
-	if(frame->radioFrame.vc >= SKY_NUM_VIRTUAL_CHANNELS){
+	if(radioFrame->vc >= SKY_NUM_VIRTUAL_CHANNELS){
 		return SKY_RET_INVALID_VC;
 	}
-
-	RadioFrame2* radioFrame = &frame->radioFrame;
-
-	//todo: error checks?
+	if(radioFrame->ext_length > (radioFrame->length - EXTENSION_START_IDX)){
+		return SKY_RET_INVALID_EXT_LENGTH;
+	}
 
 	// This extension has to be checked here. Otherwise, if both peers use incorrect hmac-sequencing, we would be in lock state.
 	sky_rx_process_extensions(self, frame, EXTENSION_HMAC_ENFORCEMENT);
-
 
 	// If the virtual channel necessitates auth, but the frame isn't, return error.
 	if( (self->conf->vc[radioFrame->vc].require_authentication > 0)  && (!(radioFrame->flags & SKY_FLAG_AUTHENTICATED))){
@@ -90,7 +91,6 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 			return ret;
 		}
 	}
-
 
 	// Update MAC status
 	if((radioFrame->flags & SKY_FLAG_AUTHENTICATED) || self->conf->mac.unauthenticated_mac_updates){
@@ -153,7 +153,6 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 			}
 		}
 	}
-
 
 	//todo: log behavior based on r.
 	return 0;

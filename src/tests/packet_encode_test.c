@@ -31,8 +31,8 @@ void test1_round(){
 	RCVFrame* rframe = new_receive_frame();
 	fillrand((uint8_t*)sframe, sizeof(SendFrame));
 	fillrand((uint8_t*)rframe, sizeof(RCVFrame));
-	RadioFrame2* radioFrame_s = &sframe->radioFrame;
-	RadioFrame2* radioFrame_r = &rframe->radioFrame;
+	RadioFrame* radioFrame_s = &sframe->radioFrame;
+	RadioFrame* radioFrame_r = &rframe->radioFrame;
 
 	uint8_t identity[SKY_IDENTITY_LEN];
 	fillrand(identity, SKY_IDENTITY_LEN);

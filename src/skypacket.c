@@ -80,7 +80,7 @@ int sky_packet_add_extension_mac_params(SendFrame* frame, uint16_t gap_size, uin
 }
 
 
-int available_payload_space(RadioFrame2* radioFrame){
+int available_payload_space(RadioFrame* radioFrame){
 	return RS_MSGLEN - (radioFrame->length + SKY_HMAC_LENGTH);
 }
 

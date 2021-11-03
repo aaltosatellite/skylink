@@ -22,6 +22,7 @@
 #define SKY_RET_INVALID_LENGTH     	(-1)
 #define SKY_RET_MALLOC_FAILED      	(-2)
 #define SKY_RET_INVALID_VC      	(-3)
+#define SKY_RET_INVALID_EXT_LENGTH  (-4)
 
 // FEC
 #define SKY_RET_GOLAY_FAILED       	(-10)
@@ -60,6 +61,7 @@ struct __attribute__((__packed__)) extension_typemask {
 };
 typedef struct extension_typemask ExtensionTypemask;
 
+
 struct __attribute__((__packed__)) extension_arq_req  {
 	uint8_t type	:4;
 	uint8_t length	:4;
@@ -86,6 +88,7 @@ struct __attribute__((__packed__)) extension_mac_spec {
 	uint16_t gap_size;
 };
 typedef struct extension_mac_spec ExtMACSpec;
+
 
 struct __attribute__((__packed__)) extension_hmac_tx_reset {
 	uint8_t type	:4;
@@ -116,30 +119,30 @@ typedef struct skylink_packet_extension_s SkyPacketExtension;
 /* frames ========================================================================================== */
 typedef union {
 	struct __attribute__((__packed__)) {
-		uint8_t raw[SKY_FRAME_MAX_LEN + 5];
+		uint8_t raw[SKY_FRAME_MAX_LEN + 6];
 		int32_t length;
 	};
 	struct __attribute__((__packed__)) {
 		uint8_t start_byte;
 		uint8_t identity[SKY_IDENTITY_LEN];
-		uint8_t vc : 3;
-		uint8_t flags : 5;
+		uint8_t vc 		: 3;
+		uint8_t flags 	: 5;
 		uint8_t ext_length;
 		uint16_t auth_sequence;
 		uint16_t mac_window;
 		uint16_t mac_remaining;
 		uint8_t arq_sequence;
 	};
-} RadioFrame2;
+} RadioFrame;
 
 typedef struct {
 	int32_t rx_time_ms;
 	uint8_t auth_verified;
-	RadioFrame2 radioFrame;
+	RadioFrame radioFrame;
 } RCVFrame;
 
 typedef struct {
-	RadioFrame2 radioFrame;
+	RadioFrame radioFrame;
 } SendFrame;
 /* frames ========================================================================================== */
 

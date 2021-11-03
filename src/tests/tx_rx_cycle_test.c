@@ -134,7 +134,7 @@ void test1_round(){
 		skyArray_push_packet_to_send(handle1->arrayBuffers[vc], payload->data, payload->length);
 
 		int content = sky_tx(handle1, sendFrame, vc, 1);
-		memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame2));
+		memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame));
 		//rcvFrame->radioFrame.length = sendFrame->radioFrame.length;
 		sky_rx_0(handle2, rcvFrame, 1);
 

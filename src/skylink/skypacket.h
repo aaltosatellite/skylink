@@ -45,7 +45,7 @@ int sky_packet_add_extension_hmac_enforce(SendFrame* frame, uint16_t sequence);
 
 int sky_packet_add_extension_mac_params(SendFrame* frame, uint16_t gap_size, uint16_t window_size);
 
-int available_payload_space(RadioFrame2* radioFrame);
+int available_payload_space(RadioFrame* radioFrame);
 
 int sky_packet_extend_with_payload(SendFrame* frame, void* pl, int32_t length);
 // encoding ============================================================================================================

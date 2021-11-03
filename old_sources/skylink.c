@@ -1,12 +1,12 @@
-#include "skylink/skylink.h"
-#include "skylink/diag.h"
-#include "skylink/fec.h"
-#include "skylink/hmac.h"
-#include "skylink/mac_2.h"
-#include "skylink/endian.h"
-#include "skylink/platform.h"
-#include "skylink/arq_ring.h"
-#include "skylink/skypacket.h"
+#include "skylink.h"
+#include "diag.h"
+#include "fec.h"
+#include "hmac.h"
+#include "mac_2.h"
+#include "endian.h"
+#include "platform.h"
+#include "arq_ring.h"
+#include "skypacket.h"
 
 #include <stdlib.h>
 #include <string.h>
