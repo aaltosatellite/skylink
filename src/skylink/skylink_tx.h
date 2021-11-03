@@ -13,6 +13,8 @@
 #include "fec.h"
 #include "utilities.h"
 
+
 int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay);
+
 
 #endif //SKYLINK_CMAKE_SKYLINK_TX_H

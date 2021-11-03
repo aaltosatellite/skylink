@@ -7,15 +7,17 @@
 #include "packet_encode_test.h"
 #include "hmac_tests.h"
 #include "fec_test.h"
+#include "tx_rx_cycle_test.h"
 #include "tools/tools.h"
 
 int main() {
 	reseed_random();
-	elebuffer_tests();
-	ring_tests();
-	packet_tests();
-	fec_test();
-	hmac_tests();
+	//elebuffer_tests();
+	//ring_tests();
+	//packet_tests();
+	//fec_test();
+	//hmac_tests();
+	txrx_tests();
 }
 
 

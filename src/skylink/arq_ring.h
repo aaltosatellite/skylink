@@ -5,6 +5,7 @@
 #ifndef SKYLINK_ARQ_RING_H
 #define SKYLINK_ARQ_RING_H
 
+#include <math.h>
 #include "elementbuffer.h"
 #include "platform.h"
 #include "diag.h"
@@ -103,14 +104,11 @@ typedef struct arq_ring_s SkyArqRing;
 
 
 
-
-
-
-
+int sequence_wrap(int sequence);
 
 SkyArqRing* new_arq_ring(SkyArrayConfig* config);
 void destroy_arq_ring(SkyArqRing* array);
-void wipe_arq_ring(SkyArqRing* array, int initial_send_sequence, int initial_rcv_sequence);
+void wipe_arq_ring(SkyArqRing* array, int new_send_sequence, int new_rcv_sequence);
 
 //swaps the send rings, and wipes the new primary ring to the new sequence.
 int skyArray_set_send_sequence(SkyArqRing* array, uint16_t sequence);

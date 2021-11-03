@@ -4,6 +4,20 @@
 #include <stdint.h>
 
 
+//HMAC
+#define SKY_HMAC_LENGTH 				8
+#define SKY_FLAG_AUTHENTICATED 			0b000001
+#define SKY_FLAG_ARQ_ON 				0b000010
+#define SKY_FLAG_HAS_PAYLOAD 			0b000100
+
+
+//Physical layer radio frame structure.
+#define SKY_NUM_VIRTUAL_CHANNELS  		4
+#define SKY_FRAME_MAX_LEN       		0x100
+#define SKY_IDENTITY_LEN				5
+
+
+
 typedef struct {
 	/* Enable CCSDS randomizer/scrambler */
 	uint8_t enable_scrambler;

@@ -21,6 +21,10 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame);
 
 int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
 	int ret = 0;
+	if(frame->radioFrame.length < SKY_PLAIN_FRAME_MIN_LENGTH){
+		printf("-1\n\n");
+		return SKY_RET_INVALID_LENGTH;
+	}
 	RadioFrame2* radioFrame = &frame->radioFrame;
 	if(contains_golay) {
 		// Read Golay decoded len
@@ -30,10 +34,12 @@ int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
 		if (ret < 0) {
 			// TODO: log the number of corrected bits?
 			self->diag->rx_fec_fail++;
+			printf("-2\n\n");
 			return SKY_RET_GOLAY_FAILED;
 		}
 
 		if ((coded_len & 0xF00) != (SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED)) {
+			printf("-3\n\n");
 			return -1;
 		}
 
@@ -47,10 +53,9 @@ int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
 
 	// Decode FEC
 	if ((ret = sky_fec_decode(radioFrame, self->diag)) < 0){
+		printf("-4\n\n");
 		return ret;
 	}
-
-	//initialize_for_decoding(frame);
 
 	return sky_rx_1(self, frame);
 }
@@ -58,33 +63,38 @@ int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
 
 
 static int sky_rx_1(SkyHandle self, RCVFrame* frame){
-	int ret;
+	if(frame->radioFrame.length < SKY_PLAIN_FRAME_MIN_LENGTH){
+		printf("-5\n\n");
+		return SKY_RET_INVALID_LENGTH;
+	}
+	if(frame->radioFrame.vc >= SKY_NUM_VIRTUAL_CHANNELS){
+		printf("-6\n\n");
+		return SKY_RET_INVALID_VC;
+	}
+
 	RadioFrame2* radioFrame = &frame->radioFrame;
 
-	// Decode packet
-	//if((ret = decode_skylink_packet(frame)) < 0){
-	//	return ret;
-	//}
 	//todo: error checks?
 
 	// This extension has to be checked here. Otherwise, if both peers use incorrect hmac-sequencing, we would be in lock state.
 	sky_rx_process_extensions(self, frame, EXTENSION_HMAC_ENFORCEMENT);
 
 
-
 	// If the virtual channel necessitates auth, but the frame isn't, return error.
 	if( (self->conf->vc[radioFrame->vc].require_authentication > 0)  && (!(radioFrame->flags & SKY_FLAG_AUTHENTICATED))){
 		self->hmac->vc_enfocement_need[radioFrame->vc] = 1;
+		printf("-7\n\n");
 		return SKY_RET_AUTH_MISSING;
 	}
 
 	// Check authentication code if the frame claims it is authenticated.
 	if (radioFrame->flags & SKY_FLAG_AUTHENTICATED) {
-		ret = sky_hmac_check_authentication(self, frame);
+		int ret = sky_hmac_check_authentication(self, frame);
 		if (ret < 0){
 			if(ret == SKY_RET_EXCESSIVE_HMAC_JUMP){
 				self->hmac->vc_enfocement_need[radioFrame->vc] = 1;
 			}
+			printf("-8  %d\n\n", ret);
 			return ret;
 		}
 	}
@@ -102,6 +112,7 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 
 
 	if(!(frame->radioFrame.flags & SKY_FLAG_HAS_PAYLOAD)){
+		printf("-9\n\n");
 		return 0;
 	}
 
@@ -109,7 +120,7 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 		if(!(frame->radioFrame.flags & SKY_FLAG_ARQ_ON)){
 			/* ARQ is configured off, and frame does not have ARQ either sequence. All is fine. */
 			int pl_length = frame->radioFrame.length - (EXTENSION_START_IDX + frame->radioFrame.ext_length);
-			uint8_t* pl_start = frame->radioFrame.raw + frame->radioFrame.ext_length;
+			uint8_t* pl_start = frame->radioFrame.raw + EXTENSION_START_IDX + frame->radioFrame.ext_length;
 			skyArray_push_rx_packet_monotonic(self->arrayBuffers[frame->radioFrame.vc], pl_start, pl_length);
 		}
 		if(frame->radioFrame.flags & SKY_FLAG_ARQ_ON){
@@ -124,12 +135,13 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 		if(!(radioFrame->flags & SKY_FLAG_ARQ_ON)){
 			/* ARQ is configured on, but frame does not have ARQ sequence. Toggle the need for ARQ state enforcement. */
 			self->arrayBuffers[radioFrame->vc]->state_enforcement_need = 1;
+			printf("-10\n\n");
 			return SKY_RET_NO_MAC_SEQUENCE;
 		}
 		if(radioFrame->flags & SKY_FLAG_ARQ_ON) {
 			/* ARQ is configured on, and frame has ARQ too. All is fine. */
 			int pl_length = frame->radioFrame.length - (EXTENSION_START_IDX + frame->radioFrame.ext_length);
-			uint8_t* pl_start = frame->radioFrame.raw + frame->radioFrame.ext_length;
+			uint8_t* pl_start = frame->radioFrame.raw + EXTENSION_START_IDX + frame->radioFrame.ext_length;
 			int r = skyArray_push_rx_packet(self->arrayBuffers[radioFrame->vc], pl_start, pl_length, radioFrame->arq_sequence);
 			if (r == RING_RET_INVALID_SEQUENCE){
 				/* Observe: If the received arq-sequence is past our horizon, we shall jump aboard the sequencing here,

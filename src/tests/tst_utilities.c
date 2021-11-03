@@ -9,19 +9,46 @@ uint8_t arr_[16] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
 
 SkyConfig* new_vanilla_config(){
 	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
-	config->array.n_recall 		= 5;
-	config->array.horizon_width = 5;
-	config->array.send_ring_len = 12;
-	config->array.rcv_ring_len 	= 12;
-	config->array.element_count = 3600;
-	config->array.element_size  = 36;
-	config->array.initial_send_sequence = 0;
-	config->array.initial_rcv_sequence = 0;
+	config->array[0].n_recall 			= 16;
+	config->array[0].horizon_width 		= 16;
+	config->array[0].send_ring_len 		= 24;
+	config->array[0].rcv_ring_len 		= 24;
+	config->array[0].element_count	 	= 3600;
+	config->array[0].element_size  		= 36;
+	config->array[0].initial_send_sequence 	= 0;
+	config->array[0].initial_rcv_sequence 	= 0;
 
-	config->hmac.key_length = 8;
+	config->array[1].n_recall 			= 16;
+	config->array[1].horizon_width 		= 16;
+	config->array[1].send_ring_len 		= 24;
+	config->array[1].rcv_ring_len 		= 24;
+	config->array[1].element_count 		= 3600;
+	config->array[1].element_size  		= 36;
+	config->array[1].initial_send_sequence 	= 0;
+	config->array[1].initial_rcv_sequence 	= 0;
+
+	config->array[2].n_recall 			= 0;
+	config->array[2].horizon_width 		= 0;
+	config->array[2].send_ring_len 		= 8;
+	config->array[2].rcv_ring_len 		= 8;
+	config->array[2].element_count 		= 800;
+	config->array[2].element_size  		= 36;
+	config->array[2].initial_send_sequence 	= 0;
+	config->array[2].initial_rcv_sequence 	= 0;
+
+	config->array[3].n_recall 			= 0;
+	config->array[3].horizon_width 		= 0;
+	config->array[3].send_ring_len 		= 8;
+	config->array[3].rcv_ring_len 		= 8;
+	config->array[3].element_count 		= 800;
+	config->array[3].element_size  		= 36;
+	config->array[3].initial_send_sequence 	= 0;
+	config->array[3].initial_rcv_sequence 	= 0;
+
+	config->hmac.key_length 		= 8;
+	config->hmac.magic_sequence 	= 7777; //42863
+	config->hmac.maximum_jump 		= 24;
 	memcpy(config->hmac.key, arr_, config->hmac.key_length);
-	config->hmac.magic_sequence = 7777;
-	config->hmac.maximum_jump = 24;
 
 	config->mac.maximum_gap_size = 200;
 	config->mac.minimum_gap_size = 25;
@@ -30,6 +57,7 @@ SkyConfig* new_vanilla_config(){
 	config->mac.default_window_length = 50;
 	config->mac.default_gap_length = 150;
 	config->mac.default_tail_length = 5;
+	config->mac.unauthenticated_mac_updates = 0;
 
 	config->identity[0] = 'O';
 	config->identity[1] = 'H';
@@ -42,9 +70,14 @@ SkyConfig* new_vanilla_config(){
 	config->vc_priority[2] = 2;
 	config->vc_priority[3] = 3;
 
-	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		config->vc[i].require_authentication = 1;
-	}
+	config->vc[0].arq_on = 1;
+	config->vc[0].require_authentication = 1;
+	config->vc[1].arq_on = 1;
+	config->vc[1].require_authentication = 1;
+	config->vc[2].arq_on = 0;
+	config->vc[2].require_authentication = 0;
+	config->vc[3].arq_on = 0;
+	config->vc[3].require_authentication = 0;
 	return config;
 }
 
@@ -61,7 +94,7 @@ SkyHandle new_handle(SkyConfig* config){
 	handle->hmac = new_hmac_instance(&config->hmac);
 	handle->diag = new_diagnostics();
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		handle->arrayBuffers[i] = new_arq_ring(&config->array);
+		handle->arrayBuffers[i] = new_arq_ring(&config->array[i]);
 	}
 	return handle;
 }

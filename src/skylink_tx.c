@@ -4,20 +4,6 @@
 
 #include "skylink_tx.h"
 
-/*
-int sky_tx_content_to_transmit(SkyHandle self, uint8_t vc){
-	if(skyArray_count_packets_to_tx(self->arrayBuffers[vc], 1)){
-		return 1;
-	}
-	if(skyArray_get_horizon_bitmap(self->arrayBuffers[vc])){
-		return 1;
-	}
-	if(self->arrayBuffers[vc]->state_enforcement_need == 0){
-		return 1;
-	}
-	return 0;
-}
-*/
 
 
 static int sky_tx_extension_eval_arq_rr(SkyHandle self, SendFrame* frame, uint8_t vc){
@@ -59,6 +45,7 @@ static int sky_tx_extension_eval_hmac_enforce(SkyHandle self, SendFrame* frame, 
 int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 	int content = 0;
 	/* identity gets copied to the raw-array from frame's own identity field */
+	frame->radioFrame.start_byte = SKYLINK_START_BYTE;
 	memcpy(frame->radioFrame.identity, self->conf->identity, SKY_IDENTITY_LEN);
 
 	frame->radioFrame.vc = vc;
@@ -73,9 +60,9 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 	}
 
 	/* ARQ status. This is kind of dumb thing to do here, since we don't yet know if there will be a payload. */
+	frame->radioFrame.arq_sequence = ARQ_SEQUENCE_NAN;
 	if(self->conf->vc[vc].arq_on){
 		frame->radioFrame.flags |= SKY_FLAG_ARQ_ON;
-		frame->radioFrame.arq_sequence = ARQ_SEQUENCE_NAN;
 	}
 
 
@@ -95,6 +82,7 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 		if(self->conf->vc[vc].arq_on){
 			frame->radioFrame.arq_sequence = (uint8_t)arq_sequence;
 		}
+		frame->radioFrame.flags |= SKY_FLAG_HAS_PAYLOAD;
 		frame->radioFrame.length += read;
 		content = 1;
 	}
@@ -110,16 +98,20 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 		sky_hmac_extend_with_authentication(self, frame);
 	}
 
+
 	/* Apply Forward Error Correction (FEC) coding */
+	printf("Len before: %d \n\n", frame->radioFrame.length);
 	sky_fec_encode(&frame->radioFrame);
+
 
 	/* Move the data by 3 bytes to make room for the PHY header */
 	for (unsigned int i = frame->radioFrame.length; i != 0; i--){
 		frame->radioFrame.raw[i + 3] = frame->radioFrame.raw[i];
 	}
 
+
+	/* Encode length field. */
 	if(insert_golay){
-		/* Encode length field. */
 		uint32_t phy_header = frame->radioFrame.length | SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED;
 		encode_golay24(&phy_header);
 		frame->radioFrame.raw[0] = 0xff & (phy_header >> 16);

@@ -62,8 +62,6 @@ void test1_round(){
 	}
 
 	int n_extensions = 0;
-	int extension_cursors[10];
-	extension_cursors[0] = sframe->radioFrame.ext_length;
 
 	int extension_mac_params = 0;
 	int new_window = randint_i32(config->mac.minimum_window_size, config->mac.maximum_window_size);
@@ -72,7 +70,6 @@ void test1_round(){
 		n_extensions++;
 		extension_mac_params = 1;
 		sky_packet_add_extension_mac_params(sframe, new_gap, new_window);
-		extension_cursors[n_extensions] = sframe->radioFrame.ext_length;
 	}
 
 
@@ -83,7 +80,6 @@ void test1_round(){
 		n_extensions++;
 		extension_arq_settings = 1;
 		sky_packet_add_extension_arq_enforce(sframe, toggle, new_sequence0);
-		extension_cursors[n_extensions] = sframe->radioFrame.ext_length;
 	}
 
 
@@ -95,7 +91,6 @@ void test1_round(){
 		n_extensions++;
 		extension_arq_rrequest = 1;
 		sky_packet_add_extension_arq_rr(sframe, rr_sequence, mask1, mask2);
-		extension_cursors[n_extensions] = sframe->radioFrame.ext_length;
 	}
 
 
@@ -106,7 +101,6 @@ void test1_round(){
 		n_extensions++;
 		extension_hmac_enforcement = 1;
 		sky_packet_add_extension_hmac_enforce(sframe, hmac_enforcement);
-		extension_cursors[n_extensions] = sframe->radioFrame.ext_length;
 	}
 
 

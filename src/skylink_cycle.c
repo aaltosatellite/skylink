@@ -16,7 +16,7 @@ SkyHandle new_skylink(SkyConfig* config){
 	handle->hmac = new_hmac_instance(&config->hmac);
 	handle->diag = new_diagnostics();
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		handle->arrayBuffers[i] = new_arq_ring(&config->array);
+		handle->arrayBuffers[i] = new_arq_ring(&config->array[i]);
 	}
 	return handle;
 }

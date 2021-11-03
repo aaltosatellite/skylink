@@ -13,7 +13,9 @@ static void test_ratios();
 void elebuffer_tests(){
 	test1();
 	test2();
-	//test_ratios();
+	if(randint_i32(100,200) < 5){
+		test_ratios();
+	}
 }
 
 

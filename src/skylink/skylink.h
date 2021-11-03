@@ -6,11 +6,9 @@
 #define SKYLINK_SKYLINK_NEW_H
 
 
-
 #include "diag.h"
 #include "platform.h"
 #include "arq_ring.h"
-//#include "skypacket.h"
 #include "conf.h"
 
 
@@ -23,6 +21,7 @@
 #define SKY_RET_OK                  0
 #define SKY_RET_INVALID_LENGTH     	(-1)
 #define SKY_RET_MALLOC_FAILED      	(-2)
+#define SKY_RET_INVALID_VC      	(-3)
 
 // FEC
 #define SKY_RET_GOLAY_FAILED       	(-10)
@@ -44,20 +43,8 @@
 #define SKY_RET_INVALID_EXTENSION   (-42)
 
 
-//FEC
-#define SKY_FEC_MARGIN					32
 
 
-//HMAC
-#define SKY_HMAC_LENGTH 				8
-#define SKY_FLAG_AUTHENTICATED 			0b000001
-#define SKY_FLAG_ARQ_ON 				0b000010
-#define SKY_FLAG_HAS_PAYLOAD 			0b000100
-
-//Physical layer radio frame structure.
-#define SKY_NUM_VIRTUAL_CHANNELS  		4
-#define SKY_FRAME_MAX_LEN       		0x100
-#define SKY_IDENTITY_LEN				5
 
 
 
@@ -194,10 +181,10 @@ typedef struct sky_hmac SkyHMAC;
  * directly from here, allowing configuration changes.
  */
 typedef struct sky_conf {
-	HMACConfig	hmac;
-	SkyArrayConfig array;
-	SkyMACConfig mac;
 	SkyPHYConfig phy;
+	SkyMACConfig mac;
+	HMACConfig	hmac;
+	SkyArrayConfig array[SKY_NUM_VIRTUAL_CHANNELS];
 	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t vc_priority[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t identity[SKY_IDENTITY_LEN];
@@ -229,19 +216,6 @@ typedef struct sky_all* SkyHandle;
 //================================================================================================================================
 
 
-
-
-
-
-
-
-
-
-
-
-//================================================================================================================================
-//============ FUNCTIONS =========================================================================================================
-//================================================================================================================================
 
 
 

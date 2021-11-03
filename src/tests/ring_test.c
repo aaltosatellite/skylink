@@ -104,14 +104,14 @@ static void test1_round(){
 	assert(r == 0);
 	assert(skyArray_count_readable_rcv_packets(array) == 1);
 	uint16_t window2 = skyArray_get_horizon_bitmap(array);
-	assert(window2 == 0b010);
+	assert(window2 == 0b01);
 
 	//push data as rx, as sequence = sq0+4.
 	r = skyArray_push_rx_packet(array, s4->data, s4->length, sq0+4);
 	assert(r == 0);
 	assert(skyArray_count_readable_rcv_packets(array) == 1);
 	uint16_t window3 = skyArray_get_horizon_bitmap(array);
-	assert(window3 == 0b1010);
+	assert(window3 == 0b101);
 
 	//push data as rx, as sequence = sq0+6. should fail.
 	r = skyArray_push_rx_packet(array, s6->data, s6->length, sq0+6);
@@ -123,7 +123,7 @@ static void test1_round(){
 	assert(r == 0);
 	assert(skyArray_count_readable_rcv_packets(array) == 3);
 	uint16_t window4 = skyArray_get_horizon_bitmap(array);
-	assert(window4 == 0b010);
+	assert(window4 == 0b01);
 
 	//receive packets 0, 1, and 2
 	int seq = 100;
@@ -150,7 +150,7 @@ static void test1_round(){
 	assert(skyArray_count_readable_rcv_packets(array) == 0);
 
 	uint16_t window5 = skyArray_get_horizon_bitmap(array);
-	assert(window5 == 0b010);
+	assert(window5 == 0b01);
 
 
 	//push data as rx, as sequence = sq0+3.
@@ -165,7 +165,7 @@ static void test1_round(){
 	assert(r == 0);
 	assert(skyArray_count_readable_rcv_packets(array) == 2);
 	uint16_t window7 = skyArray_get_horizon_bitmap(array);
-	assert(window7 == 0b010); //next would be 5.
+	assert(window7 == 0b01); //next would be 5.
 
 	//reset receive side sequence to sqn
 	int sqn = (sq0+50) % 250;
@@ -176,7 +176,7 @@ static void test1_round(){
 	assert(r == 0);
 	assert(skyArray_count_readable_rcv_packets(array) == 2);
 	uint16_t window8 = skyArray_get_horizon_bitmap(array);
-	assert(window8 == 0b010);
+	assert(window8 == 0b01);
 
 	//push data as rx, as sequence = sqn.
 	r = skyArray_push_rx_packet(array, s0->data, s0->length, sqn);
@@ -300,7 +300,7 @@ static void test2_round(){
 				continue;
 			}
 			String* s = messages[idx];
-			int head = array_r->primaryRcvRing->head_sequence;
+			//int head = array_r->primaryRcvRing->head_sequence;
 			int r = skyArray_push_rx_packet(array_r, s->data, s->length, seq);
 
 			if(wrap_seq(seq - next_continuous_seq) > horizon){ //outside window
@@ -340,9 +340,9 @@ static void test2_round(){
 			for (int i = 0; i < 16; ++i) {
 				int got = ((mask & (1<<i)) > 0);
 				if (got){
-					assert(succesfully_given[next_continuous_idx+i] == 1);
+					assert(succesfully_given[next_continuous_idx+i+1] == 1);
 				} else{
-					assert(succesfully_given[next_continuous_idx+i] == 0);
+					assert(succesfully_given[next_continuous_idx+i+1] == 0);
 				}
 				//if(mask) PRINTFF(0,"%d  %d\n",got, succesfully_given[next_continuous_idx+i]);
 			}
@@ -409,7 +409,7 @@ static void test3_round(){
 	SkyArqRing* array = new_arq_ring(&config);
 	uint8_t* tgt = x_alloc(10000);
 	PRINTFF(0,"\t[ring length: %d] [recall depth: %d] [N_msgs: %d]\n", send_ring_len, n_recall, NMSG);
-
+	//PRINTFF(0,"1");
 	int next_idx_to_tx = 0;
 	int next_idx_to_push = 0;
 	int tail_seq = s_seq0;
@@ -435,7 +435,7 @@ static void test3_round(){
 				next_idx_to_push++;
 			}
 		}
-
+		//PRINTFF(0,"2");
 		if ((randint_i32(0, 10000) % 7) == 0) { //pull
 			int sq_tx = -1;
 			int peeked0 = skyArray_peek_next_tx_size(array, 0);
@@ -458,14 +458,14 @@ static void test3_round(){
 				}
 			}
 		}
-
+		//PRINTFF(0,"3");
 		if ((randint_i32(0, 10000) % 7) == 0) { //recall
 			for (int i = 0; i < 10; ++i) {
 				int next_seq_to_tx = wrap_seq(s_seq0 + next_idx_to_tx);
 				int tail_idx = next_idx_to_tx - wrap_seq(next_seq_to_tx - tail_seq);
 				int n_successful_schedules = 0;
 				int successful_scheduled_indexes[35];
-				int successful_scheduled_sequences[35];
+				//int successful_scheduled_sequences[35];
 				int n_schedule_trials = randint_i32(1, 35);
 				for (int j = 0; j < n_schedule_trials; ++j) {
 					int seq_shift = randint_i32(-2, n_recall+2);
@@ -482,7 +482,7 @@ static void test3_round(){
 							assert(r2 == 0);
 							assert(array->primarySendRing->resend_count <= 16);
 							successful_scheduled_indexes[n_successful_schedules] = idx;
-							successful_scheduled_sequences[n_successful_schedules] = seq;
+							//successful_scheduled_sequences[n_successful_schedules] = seq;
 							n_successful_schedules++;
 						} else{
 							assert(r2 == RING_RET_RESEND_FULL);
@@ -501,7 +501,7 @@ static void test3_round(){
 				for (int j = 0; j < n_successful_schedules; ++j) {
 
 					int idx = successful_scheduled_indexes[j];
-					int seq = successful_scheduled_sequences[j];
+					//int seq = successful_scheduled_sequences[j];
 					int srcall = 1000;
 					int peeked = skyArray_peek_next_tx_size(array, 1);
 					int r3 = skyArray_read_packet_for_tx(array, tgt, &srcall, 1);

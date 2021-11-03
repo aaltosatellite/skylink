@@ -13,7 +13,7 @@ static int sendRingFull(SkySendRing* sendRing){
 	return ring_wrap(sendRing->head+1, sendRing->length) == ring_wrap(sendRing->tail, sendRing->length);
 }
 
-static int sequence_wrap(int sequence){
+int sequence_wrap(int sequence){
 	return ring_wrap(sequence, ARQ_SEQUENCE_MODULO);
 }
 
@@ -50,7 +50,7 @@ static SkyRcvRing* new_rcv_ring(int length, int horizon_width, int initial_seque
 	RingItem* ring = SKY_MALLOC(sizeof(RingItem)*length);
 	rcvRing->length = length;
 	rcvRing->buff = ring;
-	rcvRing->horizon_width = horizon_width;
+	rcvRing->horizon_width =  (horizon_width <= 16) ? horizon_width : 16;
 	wipe_rcv_ring(rcvRing, NULL, sequence_wrap(initial_sequence) );
 	return rcvRing;
 }
@@ -133,8 +133,8 @@ int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, vo
 
 int rcvRing_get_horizon_bitmap(SkyRcvRing* rcvRing){
 	uint16_t map = 0;
-	for (int i = 0; i < rcvRing->horizon_width +1; ++i) { //HEAD is contained in the mask, as the first bit.
-		int ring_idx = ring_wrap(rcvRing->head + i, rcvRing->length);
+	for (int i = 0; i < rcvRing->horizon_width; ++i) { //HEAD is not contained in the mask.
+		int ring_idx = ring_wrap(rcvRing->head + 1 + i, rcvRing->length);
 		RingItem* item = &rcvRing->buff[ring_idx];
 		if(item->idx != EB_NULL_IDX){
 			map |= (1<<i);
@@ -179,7 +179,7 @@ static SkySendRing* new_send_ring(int length, int n_recall, int initial_sequence
 	RingItem* ring = SKY_MALLOC(sizeof(RingItem)*length);
 	sendRing->buff = ring;
 	sendRing->length = length;
-	sendRing->n_recall = n_recall;
+	sendRing->n_recall = (n_recall <= 16) ? n_recall : 16;
 	wipe_send_ring(sendRing, NULL, sequence_wrap(initial_sequence));
 	return sendRing;
 }
@@ -377,10 +377,10 @@ void destroy_arq_ring(SkyArqRing* array){
 }
 
 
-void wipe_arq_ring(SkyArqRing* array, int initial_send_sequence, int initial_rcv_sequence){
-	wipe_send_ring(array->primarySendRing, array->elementBuffer, initial_send_sequence);
-	wipe_rcv_ring(array->primaryRcvRing, array->elementBuffer, initial_rcv_sequence);
-	wipe_rcv_ring(array->secondaryRcvRing, array->elementBuffer, initial_rcv_sequence);
+void wipe_arq_ring(SkyArqRing* array, int new_send_sequence, int new_rcv_sequence){
+	wipe_send_ring(array->primarySendRing, array->elementBuffer, new_send_sequence);
+	wipe_rcv_ring(array->primaryRcvRing, array->elementBuffer, new_rcv_sequence);
+	wipe_rcv_ring(array->secondaryRcvRing, array->elementBuffer, new_rcv_sequence);
 	wipe_element_buffer(array->elementBuffer);
 	array->state_enforcement_need = 0;
 }
