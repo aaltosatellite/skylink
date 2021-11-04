@@ -49,7 +49,7 @@ int string_same_comparison(String** arr1, String** arr2, int n){
 
 void test1(){
 	PRINTFF(0,"[TX-RX Test 1: basic case]\n");
-	int N = 1000;
+	int N = 400;
 	for (int i = 0; i < N; ++i) {
 		int a1 = randint_i32(0,1);
 		int a2 = randint_i32(0,1);

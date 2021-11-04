@@ -481,9 +481,11 @@ static void test3_round(){
 						if(n_successful_schedules < 16){
 							assert(r2 == 0);
 							assert(array->primarySendRing->resend_count <= 16);
-							successful_scheduled_indexes[n_successful_schedules] = idx;
-							//successful_scheduled_sequences[n_successful_schedules] = seq;
-							n_successful_schedules++;
+							if(x_in_i32_arr(idx, successful_scheduled_indexes, n_successful_schedules) < 0){
+								successful_scheduled_indexes[n_successful_schedules] = idx;
+								//successful_scheduled_sequences[n_successful_schedules] = seq;
+								n_successful_schedules++;
+							}
 						} else{
 							assert(r2 == RING_RET_RESEND_FULL);
 							assert(array->primarySendRing->resend_count == 16);
@@ -506,6 +508,16 @@ static void test3_round(){
 					int peeked = skyArray_peek_next_tx_size(array, 1);
 					int r3 = skyArray_read_packet_for_tx(array, tgt, &srcall, 1);
 					//PRINTFF(0,"(%d/%d): %d %d    L: %d vs %d\n", j , n_successful_schedules, seq, srcall,  messages[idx]->length, r3);
+
+					//PRINTFF(0,"%d  ",idx);
+					//PRINTFF(0,"%d  ",r3);
+					//PRINTFF(0,"%d  ",messages[idx-2]->length);
+					//PRINTFF(0,"%d  ",messages[idx-1]->length);
+					//PRINTFF(0,"%d  ",messages[idx]->length);
+					//PRINTFF(0,"%d  ",messages[idx+1]->length);
+					//PRINTFF(0,"%d  ",messages[idx+2]->length);
+					//PRINTFF(0,"\n");
+
 					assert(r3 == messages[idx]->length);
 					assert(memcmp(tgt, messages[idx]->data, r3) == 0);
 					assert(r3 == peeked);

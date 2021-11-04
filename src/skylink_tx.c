@@ -60,6 +60,7 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 		frame->radioFrame.auth_sequence = sky_hmac_get_next_hmac_tx_sequence_and_advance(self, vc);
 	}
 
+
 	/* ARQ status. The purpose of arq_sequence number on frames without payload is to provide
 	 * the peer with information where the sequencing goes. This permits asking resend for payloads
 	 * that were the last in a series of transmissions. */
@@ -105,9 +106,6 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 	sky_fec_encode(&frame->radioFrame);
 
 
-
-
-
 	/* Encode length field. */
 	if(insert_golay){
 		/* Move the data by 3 bytes to make room for the PHY header */
@@ -125,8 +123,6 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 	++self->diag->tx_frames;
 	return content;
 }
-
-
 
 
 
