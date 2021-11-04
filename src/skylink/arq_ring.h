@@ -23,29 +23,28 @@
 
 
 #define ARQ_SEQUENCE_MODULO 			250
-#define ARQ_SEQUENCE_NAN 				(ARQ_SEQUENCE_MODULO+1)
 #define SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE	260
 
 
 //todo: define sequences as a new type (uint16 probably?) This would save 2*lots of bytes
 struct sky_ring_item_s {
 	idx_t idx;
-	int sequence;
+	int16_t sequence;
 };
 typedef struct sky_ring_item_s RingItem;
 
 
 struct sky_send_ring_s {
-	RingItem* buff;					//The ring.
-	int length;						//Size of the ring
-	int n_recall;					//The max separation between tx_head and tail. (tx_sequence - n_recall) is the earliest packet that can be retransmitted by ARQ.
-	int head;						//Ring index for next packet pushed by upper stack.
-	int tx_head;					//The first untransmitted packet. (if tx_head == head, nothing to transmit)
-	int tail;						//Last packet in memory. Moves forward as more is sent, lags behind n_reacall at max.
-	int head_sequence;				//Sequence of the next packet, if ARQ enabled.
-	int tx_sequence;				//sequence of the first untransmitted packet. That is, the packet pointed to by tx_head.
-	int tail_sequence;				//sequence of the packet at tail. Essentially "ring[wrap(tail)].sequence".
-	int storage_count;				//Number of packets stored.
+	RingItem* buff;					// The ring.
+	int length;						// Size of the ring
+	int n_recall;					// The max separation between tx_head and tail. (tx_sequence - n_recall) is the earliest packet that can be retransmitted by ARQ.
+	int head;						// Ring index for next packet pushed by upper stack.
+	int tx_head;					// The first untransmitted packet. (if tx_head == head, nothing to transmit)
+	int tail;						// Last packet in memory. Moves forward as more is sent, lags behind n_reacall at max.
+	int head_sequence;				// Sequence of the next packet, if ARQ enabled.
+	int tx_sequence;				// sequence of the first untransmitted packet. That is, the packet pointed to by tx_head.
+	int tail_sequence;				// sequence of the packet at tail. Essentially "ring[wrap(tail)].sequence".
+	int storage_count;				// Number of packets stored.
 	int resend_count;
 	uint8_t resend_list[16];
 };
@@ -53,19 +52,19 @@ typedef struct sky_send_ring_s SkySendRing;
 
 
 struct sky_rcv_ring_s {
-	RingItem* buff;					//The ring.
-	int length;						//Size of the ring
+	RingItem* buff;					// The ring.
+	int length;						// Size of the ring
 	int horizon_width;				// Width of out of order buffer. Up to this many+1 sequence numbers are accepted.
 									// In situation where head_sequence = 5, and horizon_width = 3, we have packet 4, but not 5.
 									// We accept packts 5,6,7,8. We reject 9 and all with higher sequence number.
 									// (head_sequence + horizon_width) = last sequence number that will be accepted.
-	int head;						//Ring index after packet up to which all packets have been received. At a vacant slot, when rcv is not choked*.
-	int tail;						//Ring index AT last unread received packet. Moves forward as the upper stack reads from this. tail=head means empty.
+	int head;						// Ring index after packet up to which all packets have been received. At a vacant slot, when rcv is not choked*.
+	int tail;						// Ring index AT last unread received packet. Moves forward as the upper stack reads from this. tail=head means empty.
 
-	int head_sequence;				//Sequence number that a packet at head would have. Essentially "ring[wrap(head-1)].sequence + 1"
-	int tail_sequence;				//Sequence number of tail.
+	int head_sequence;				// Sequence number that a packet at head would have. Essentially "ring[wrap(head-1)].sequence + 1"
+	int tail_sequence;				// Sequence number of tail.
 
-	int storage_count;				//Number of packets stored.
+	int storage_count;				// Number of packets stored.
 };
 typedef struct sky_rcv_ring_s SkyRcvRing;
 /*

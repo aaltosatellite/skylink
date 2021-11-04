@@ -169,4 +169,4 @@ add_executable(submodule_tests
         src/skylink_cycle.h
 
         src/tests/hmac_tests.c
-        src/tests/hmac_tests.h src/tests/tx_rx_cycle_test.c src/tests/tx_rx_cycle_test.h)
+        src/tests/hmac_tests.h src/tests/tx_rx_cycle_test.c src/tests/tx_rx_cycle_test.h src/tests/zmq_trial.c src/tests/zmq_trial.h src/tests/tx_rx_zmq.c src/tests/tx_rx_zmq.h)

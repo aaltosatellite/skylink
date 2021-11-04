@@ -19,7 +19,7 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame);
 
 
 
-int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay){
+int sky_rx(SkyHandle self, RCVFrame* frame, int contains_golay){
 	int ret = 0;
 	if(frame->radioFrame.length < SKY_PLAIN_FRAME_MIN_LENGTH){
 		return SKY_RET_INVALID_LENGTH;
@@ -143,6 +143,7 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 			int pl_length = frame->radioFrame.length - (EXTENSION_START_IDX + frame->radioFrame.ext_length);
 			uint8_t* pl_start = frame->radioFrame.raw + EXTENSION_START_IDX + frame->radioFrame.ext_length;
 			int r = skyArray_push_rx_packet(self->arrayBuffers[radioFrame->vc], pl_start, pl_length, radioFrame->arq_sequence);
+			//printf("\treceived seq: %d,  it fits: %d,  head seq: %d\n", radioFrame->arq_sequence, r, self->arrayBuffers[radioFrame->vc]->primaryRcvRing->head_sequence);
 			if (r == RING_RET_INVALID_SEQUENCE){
 				/* Observe: If the received arq-sequence is past our horizon, we shall jump aboard the sequencing here,
 				 * instead of waiting for a sequence enforcement by the sender. (See comments in sky_rx_process_ext_arq_req) †
@@ -175,6 +176,7 @@ static void sky_rx_process_extensions(SkyHandle self, RCVFrame* frame, uint8_t t
 		if(r < 0){
 			return;
 		}
+		cursor += r;
 		if((ext.type == EXTENSION_MAC_PARAMETERS) && (ext.type == this_type)){
 			sky_rx_process_ext_mac_reset(self, ext.ext_union.MACSpec);
 		}
@@ -218,12 +220,24 @@ static void sky_rx_process_ext_arq_sequence_reset(SkyHandle self, ExtArqSeqReset
 
 static void sky_rx_process_ext_arq_req(SkyHandle self, ExtArqReq arqReq, int vc){
 	uint16_t mask = arqReq.mask1 + (arqReq.mask2 << 8);
+	//printf("\trr head: %d. \n", arqReq.sequence);
+	int r = skyArray_schedule_resend(self->arrayBuffers[vc], arqReq.sequence);
+	//printf("\tschedule resend for: %d.  success:%d\n", arqReq.sequence, r);
+	if(r < 0){
+		return;
+	}
+
 	for (int i = 0; i < 16; ++i) {
 		if(mask & (1<<i)){
 			continue;
 		}
-		uint8_t sequence = (uint8_t) positive_modulo(arqReq.sequence + 1 + i, ARQ_SEQUENCE_MODULO);
-		int r = skyArray_schedule_resend(self->arrayBuffers[vc], sequence);
+		uint8_t sequence = (uint8_t)sequence_wrap(arqReq.sequence + i + 1);
+		if(sequence == self->arrayBuffers[vc]->primarySendRing->tx_sequence){
+			//printf("\treached tx-head at %d. Break.\n", self->arrayBuffers[vc]->primarySendRing->tx_sequence);
+			return;
+		}
+		r = skyArray_schedule_resend(self->arrayBuffers[vc], sequence);
+		//printf("\tschedule resend for: %d.  success:%d\n",sequence, r);
 		if(r < 0){
 			/* †
 			 * No. When unable to resend sequence requested, we send nothing. Was sich überhaupt sagen lässt, lässt

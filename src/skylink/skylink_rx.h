@@ -14,7 +14,7 @@
 #include "utilities.h"
 
 
-int sky_rx_0(SkyHandle self, RCVFrame* frame, int contains_golay);
+int sky_rx(SkyHandle self, RCVFrame* frame, int contains_golay);
 
 
 #endif //SKYLINK_CMAKE_SKYLINK_RX_H

@@ -8,6 +8,7 @@
 #include "hmac_tests.h"
 #include "fec_test.h"
 #include "tx_rx_cycle_test.h"
+#include "zmq_trial.h"
 #include "tools/tools.h"
 
 int main() {
@@ -18,6 +19,7 @@ int main() {
 	//fec_test();
 	//hmac_tests();
 	txrx_tests();
+	//zmq_trial();
 }
 
 

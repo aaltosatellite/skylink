@@ -13,6 +13,15 @@ static int sendRingFull(SkySendRing* sendRing){
 	return ring_wrap(sendRing->head+1, sendRing->length) == ring_wrap(sendRing->tail, sendRing->length);
 }
 
+static int x_in_array(uint8_t x, uint8_t* array, int length){
+	for (int i = 0; i < length; ++i) {
+		if(array[i] == x){
+			return i;
+		}
+	}
+	return -1;
+}
+
 int sequence_wrap(int sequence){
 	return ring_wrap(sequence, ARQ_SEQUENCE_MODULO);
 }
@@ -239,6 +248,9 @@ static int sendRing_schedule_resend(SkySendRing* sendRing, int sequence){
 	}
 	if(!sendRing_can_recall(sendRing, sequence)){
 		return RING_RET_CANNOT_RECALL;
+	}
+	if(x_in_array(sequence, sendRing->resend_list, sendRing->resend_count) >= 0){
+		return 0;
 	}
 	sendRing->resend_list[sendRing->resend_count] = sequence;
 	sendRing->resend_count++;

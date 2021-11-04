@@ -8,7 +8,7 @@
 
 static int sky_tx_extension_eval_arq_rr(SkyHandle self, SendFrame* frame, uint8_t vc){
 	uint16_t resend_map = skyArray_get_horizon_bitmap(self->arrayBuffers[vc]);
-	if( (resend_map == 0) && (self->arrayBuffers[vc]->resend_request_need == 0) ){
+	if( (resend_map == 0) || (self->arrayBuffers[vc]->resend_request_need == 0) ){
 		return 0;
 	}
 	self->arrayBuffers[vc]->resend_request_need = 0;
@@ -86,6 +86,7 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 		frame->radioFrame.flags |= SKY_FLAG_HAS_PAYLOAD;
 		frame->radioFrame.length += read;
 		content = 1;
+		//printf("\tsending seq: %d.  next seq: %d\n", arq_sequence, self->arrayBuffers[vc]->primarySendRing->tx_sequence);
 	}
 
 

@@ -116,6 +116,54 @@ void destroy_handle(SkyHandle self){
 
 
 
+uint16_t spin_to_seq(SkyArqRing* ring1, SkyArqRing* ring2, int target_sequence, int first_ahead){
+	uint8_t* tgt = malloc(1000);
+	int i = 0;
+	int first_tgt_sequence = sequence_wrap(target_sequence - first_ahead);
+	while (1){
+		i++;
+		String* s = get_random_string(randint_i32(0,100));
+		skyArray_push_packet_to_send(ring1, s->data, s->length);
+		int seq;
+		skyArray_read_packet_for_tx(ring1, tgt, &seq, 1);
+		skyArray_push_rx_packet(ring2, tgt, s->length, seq);
+		skyArray_read_next_received(ring2, tgt, &seq);
+		//PRINTFF(0,"%d %d\n",ring1->primarySendRing->tx_sequence, ring2->primaryRcvRing->head_sequence);
+		assert(ring1->primarySendRing->tx_sequence == ring2->primaryRcvRing->head_sequence);
+		destroy_string(s);
+		if((i > 100) && (ring1->primarySendRing->tx_sequence == first_tgt_sequence)){
+			break;
+		}
+	}
+	assert(skyArray_get_horizon_bitmap(ring2) == 0);
+	assert(skyArray_count_readable_rcv_packets(ring1) == 0);
+	assert(skyArray_count_readable_rcv_packets(ring2) == 0);
+	uint16_t mask = 0;
+	if(first_ahead > 0){
+		for (int j = 0; j < first_ahead; ++j) {
+			String* s = get_random_string(randint_i32(0,100));
+			skyArray_push_packet_to_send(ring1, s->data, s->length);
+			int seq;
+			skyArray_read_packet_for_tx(ring1, tgt, &seq, 1);
+			if(j > 0){
+				int through = randint_i32(0, 3) == 0;
+				if(through){
+					skyArray_push_rx_packet(ring2, tgt, s->length, seq);
+					if((j < 16) && (j <= ring2->primaryRcvRing->horizon_width) ){
+						mask |= (1<<(j-1));
+					}
+				}
+			}
+			assert(ring1->primarySendRing->tx_sequence != ring2->primaryRcvRing->head_sequence);
+			destroy_string(s);
+		}
+	}
+	assert(ring1->primarySendRing->tx_sequence == target_sequence);
+	assert(mask == skyArray_get_horizon_bitmap(ring2));
+	free(tgt);
+	return mask;
+}
+
 
 
 

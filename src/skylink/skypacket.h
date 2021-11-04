@@ -25,8 +25,6 @@
 #define SKY_PLAIN_FRAME_MIN_LENGTH		EXTENSION_START_IDX
 
 
-//SkyRadioFrame* new_frame();
-//void destroy_frame(SkyRadioFrame* frame);
 
 
 SendFrame* new_send_frame();
