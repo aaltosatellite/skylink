@@ -49,7 +49,7 @@ void rx_cycle(SkyHandle self, RCVFrame* frame){
 	radio_receive(self->radio, frame->radioFrame.raw, &length);
 	frame->radioFrame.length = (uint16_t) length;
 	if(frame->radioFrame.length > 0){
-		sky_rx_0(self, frame, 1);
+		sky_rx(self, frame, 1);
 	}
 }
 

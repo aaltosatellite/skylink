@@ -7,7 +7,7 @@
 
 static void test1();
 static void test2();
-static void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign);
+static void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, int golay_on);
 
 
 
@@ -55,7 +55,8 @@ void test1(){
 		int a2 = randint_i32(0,1);
 		int a3 = randint_i32(0,1);
 		int a4 = randint_i32(0,1);
-		test1_round(a1,a2,a3,a4);
+		int a5 = randint_i32(0,1);
+		test1_round(a1,a2,a3,a4, a5);
 		if(i % 20 == 0){
 			PRINTFF(0, "%d / %d\n",i,N);
 		}
@@ -108,7 +109,7 @@ void instantiate_testjob(TestJob* job){
 
 
 
-void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign ){
+void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, int golay_on){
 	TestJob job;
 	job.max_jump = 35;
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
@@ -178,9 +179,9 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign ){
 		}
 		//PRINTFF(0, "n_sent:     %d \n", n_sent);
 
-		sky_tx(handle1, sendFrame, vc, 1);
+		sky_tx(handle1, sendFrame, vc, golay_on);
 		memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame));
-		sky_rx_0(handle2, rcvFrame, 1);
+		sky_rx(handle2, rcvFrame, golay_on);
 
 		while (skyArray_count_readable_rcv_packets(ring2)){
 			int seq = -1;
@@ -190,9 +191,9 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign ){
 			n_received++;
 		}
 		//PRINTFF(0, "n_received: %d \n\n", n_received);
-		sky_tx(handle2, sendFrame, vc, 1);
+		sky_tx(handle2, sendFrame, vc, golay_on);
 		memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame));
-		sky_rx_0(handle1, rcvFrame, 1);
+		sky_rx(handle1, rcvFrame, golay_on);
 	}
 
 	//PRINTFF(0, "tx_ahead:  %d\n", tx_ahead);

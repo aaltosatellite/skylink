@@ -105,24 +105,24 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 	sky_fec_encode(&frame->radioFrame);
 
 
-	/* Move the data by 3 bytes to make room for the PHY header */
-	for (unsigned int i = frame->radioFrame.length; i != 0; i--){
-		frame->radioFrame.raw[i + 3] = frame->radioFrame.raw[i];
-	}
+
 
 
 	/* Encode length field. */
 	if(insert_golay){
+		/* Move the data by 3 bytes to make room for the PHY header */
+		for (unsigned int i = frame->radioFrame.length; i != 0; i--){
+			frame->radioFrame.raw[i + 3] = frame->radioFrame.raw[i];
+		}
+
 		uint32_t phy_header = frame->radioFrame.length | SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED;
 		encode_golay24(&phy_header);
 		frame->radioFrame.raw[0] = 0xff & (phy_header >> 16);
 		frame->radioFrame.raw[1] = 0xff & (phy_header >> 8);
 		frame->radioFrame.raw[2] = 0xff & (phy_header >> 0);
-
 		frame->radioFrame.length += 3;
-
-		++self->diag->tx_frames;
 	}
+	++self->diag->tx_frames;
 	return content;
 }
 
