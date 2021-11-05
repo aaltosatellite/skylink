@@ -79,8 +79,6 @@ typedef struct {
 
 	uint8_t key[16];
 
-	uint16_t magic_sequence;
-
 	/* Length of the sequence cycle */
 	//int32_t cycle_length;
 

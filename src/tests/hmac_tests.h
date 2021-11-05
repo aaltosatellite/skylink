@@ -8,7 +8,7 @@
 #include "../skylink/fec.h"
 #include "../skylink/diag.h"
 #include "../skylink/hmac.h"
-#include "../skylink/skypacket.h"
+#include "../skylink/frame.h"
 #include "tst_utilities.h"
 #include "tools/tools.h"
 

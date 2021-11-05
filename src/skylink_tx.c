@@ -6,7 +6,7 @@
 #include "skylink/conf.h"
 #include "skylink/fec.h"
 #include "skylink/arq_ring.h"
-#include "skylink/skypacket.h"
+#include "skylink/frame.h"
 #include "skylink/mac.h"
 #include "skylink/hmac.h"
 #include "skylink/utilities.h"

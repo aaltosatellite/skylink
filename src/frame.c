@@ -2,7 +2,7 @@
 // Created by elmore on 16.10.2021.
 //
 
-#include "skylink/skypacket.h"
+#include "skylink/frame.h"
 #include "skylink/fec.h"
 
 

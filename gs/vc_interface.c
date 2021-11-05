@@ -6,7 +6,7 @@
 
 
 #include "../skylink/skylink.h"
-#include "../skylink/endian.h"
+#include "../skylink/utilities.h"
 
 
 /*

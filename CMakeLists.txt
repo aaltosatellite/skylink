@@ -59,7 +59,6 @@ add_executable(skylink_gs
 
         src/skylink/conf.h
         src/skylink/diag.h
-        src/skylink/endian.h
         src/skylink/platform.h
 
         src/skylink/elementbuffer.h
@@ -84,7 +83,7 @@ add_executable(skylink_gs
         src/tests/tools/tools.c
 
         src/mac.c
-        src/skypacket.c
+        src/frame.c
         )
 endif()
 
@@ -134,7 +133,6 @@ add_executable(submodule_tests
         src/skylink/conf.h
         src/skylink/diag.h
         src/skylink/elementbuffer.h
-        src/skylink/endian.h
         src/skylink/fec.h
         src/skylink/hmac.h
         src/skylink/platform.h
@@ -148,8 +146,8 @@ add_executable(submodule_tests
         #src/skylink.c
 
         src/arq_ring.c
-        src/skypacket.c
-        src/skylink/skypacket.h
+        src/frame.c
+        src/skylink/frame.h
         src/skylink/mac.h
         src/tests/packet_encode_test.c
         src/tests/packet_encode_test.h

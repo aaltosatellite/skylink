@@ -13,9 +13,6 @@ int32_t wrap_hmac_sequence(int32_t sequence){
 
 
 
-
-
-
 SkyHMAC* new_hmac_instance(HMACConfig* config) {
 	SkyHMAC* hmac = SKY_MALLOC(sizeof(SkyHMAC));
 	if (hmac == NULL) {
@@ -43,6 +40,7 @@ SkyHMAC* new_hmac_instance(HMACConfig* config) {
 }
 
 
+
 void destroy_hmac(SkyHMAC* hmac){
 	free(hmac->ctx);
 	free(hmac->key);
@@ -56,6 +54,7 @@ int32_t sky_hmac_get_next_hmac_tx_sequence_and_advance(SkyHandle self, uint8_t v
 	self->hmac->sequence_tx[vc] = wrap_hmac_sequence(self->hmac->sequence_tx[vc] + 1);
 	return seq;
 }
+
 
 
 int sky_hmac_extend_with_authentication(SkyHandle self, SendFrame* frame) {
@@ -88,13 +87,6 @@ int sky_hmac_check_authentication(SkyHandle self, RCVFrame* frame) {
 
 	SkyHMAC* hmac = self->hmac;
 
-	//For functional safety, there is a hmac number that shorts the auth process.
-	if(frame->radioFrame.auth_sequence == self->conf->hmac.magic_sequence){
-		frame->auth_verified = 1;
-		frame->radioFrame.length -= SKY_HMAC_LENGTH;
-		return SKY_RET_OK;
-	}
-
 	//Calculate the hash for the frame
 	uint8_t calculated_hash[32];
 	cf_hmac_init(hmac->ctx, &cf_sha256, hmac->key, hmac->key_len);
@@ -121,8 +113,10 @@ int sky_hmac_check_authentication(SkyHandle self, RCVFrame* frame) {
 }
 
 
+
 void sky_hmac_remove_hash(RCVFrame* frame){
 	frame->radioFrame.length -= SKY_HMAC_LENGTH;
 	return;
 }
+
 

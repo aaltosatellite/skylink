@@ -2,8 +2,8 @@
 // Created by elmore on 27.10.2021.
 //
 
-#ifndef SKYLINK_CMAKE_SKYPACKET_H
-#define SKYLINK_CMAKE_SKYPACKET_H
+#ifndef SKYLINK_CMAKE_FRAME_H
+#define SKYLINK_CMAKE_FRAME_H
 
 #include <string.h>
 #include "skylink.h"
@@ -55,4 +55,4 @@ int interpret_extension(void* ptr, int max_length, SkyPacketExtension* extension
 
 
 
-#endif //SKYLINK_CMAKE_SKYPACKET_H
+#endif //SKYLINK_CMAKE_FRAME_H

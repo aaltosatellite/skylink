@@ -46,7 +46,6 @@ SkyConfig* new_vanilla_config(){
 	config->array[3].initial_rcv_sequence 	= 0;
 
 	config->hmac.key_length 		= 8;
-	config->hmac.magic_sequence 	= 7777; //42863
 	config->hmac.maximum_jump 		= 24;
 	memcpy(config->hmac.key, arr_, config->hmac.key_length);
 

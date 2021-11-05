@@ -9,7 +9,7 @@
 #include <math.h>
 #include "../skylink/arq_ring.h"
 #include "../skylink/skylink.h"
-#include "../skylink/skypacket.h"
+#include "../skylink/frame.h"
 #include "../skylink/utilities.h"
 #include "tst_utilities.h"
 #include "tools/tools.h"
@@ -81,7 +81,6 @@ void rsleep_us(int64_t us){
 
 
 
-
 SkylinkPeer* new_peer(int ID, int tx_port, int rx_port, int pl_rx_port, int pl_tx_port, double relative_speed, double send_speed_bps, double switch_delay_ms){
 	char url[64];
 	SkylinkPeer* peer = malloc(sizeof(SkylinkPeer));
@@ -120,6 +119,7 @@ SkylinkPeer* new_peer(int ID, int tx_port, int rx_port, int pl_rx_port, int pl_t
 }
 
 
+
 void turn_to_rx(SkylinkPeer* peer){
 	if(peer->physicalParams.RADIO_MODE != RX_MODE){
 		peer->physicalParams.RADIO_MODE = RX_MODE;
@@ -129,6 +129,7 @@ void turn_to_rx(SkylinkPeer* peer){
 		zmq_send(peer->tx_socket, tgt, 5, 0);
 	}
 }
+
 
 
 void turn_to_tx(SkylinkPeer* peer){
@@ -148,6 +149,7 @@ void turn_to_tx(SkylinkPeer* peer){
 }
 
 
+
 int peer_tx_cycle(SkylinkPeer* peer){
 	uint8_t tgt[700];
 	memcpy(tgt, &peer->ID, 4);
@@ -161,6 +163,8 @@ int peer_tx_cycle(SkylinkPeer* peer){
 	}
 	return 0;
 }
+
+
 
 int peer_packet_send_cycle(SkylinkPeer* peer){
 	uint8_t tgt[700];
@@ -202,6 +206,7 @@ int peer_packet_rcv_cycle(SkylinkPeer* peer){
 }
 
 
+
 _Noreturn void the_cycle(SkylinkPeer* peer){
 	relative_time_speed = peer->physicalParams.relative_speed;
 	SkyHandle self = peer->self;
@@ -223,9 +228,6 @@ _Noreturn void the_cycle(SkylinkPeer* peer){
 		peer_packet_rcv_cycle(peer);
 		rsleep_us(500);
 	}
-
-
-
 }
 
 

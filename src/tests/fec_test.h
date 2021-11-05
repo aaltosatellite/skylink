@@ -7,7 +7,7 @@
 
 #include "../skylink/fec.h"
 #include "../skylink/diag.h"
-#include "../skylink/skypacket.h"
+#include "../skylink/frame.h"
 #include "tools/tools.h"
 
 

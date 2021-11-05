@@ -6,7 +6,7 @@
 #define SKYLINK_CMAKE_PACKET_ENCODE_TEST_H
 
 #include "../skylink/skylink.h"
-#include "../skylink/skypacket.h"
+#include "../skylink/frame.h"
 #include "tools/tools.h"
 
 void packet_tests();
