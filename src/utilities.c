@@ -31,11 +31,17 @@ inline uint32_t __attribute__ ((__const__)) sky_ntoh32(uint32_t vn) {
 	return sky_hton32(vn);
 }
 
+int positive_modulo(int x, int m){
+	return ((x % m) + m) % m;
+}
 
+
+// UNIX ================================================================================================================
 #ifdef __unix__
 
 #include <stdlib.h>
-#include <string.h>
+
+
 
 int32_t get_time_ms(){
 	struct timespec t;
@@ -47,49 +53,15 @@ int32_t get_time_ms(){
 
 
 
-// radio =====================================================================================================================
-SkyRadio* new_radio(){
-	SkyRadio* radio = malloc(sizeof(SkyRadio));
-	radio->received = 0;
-	radio->transmitted = 0;
-	radio->mode = RADIO_OFF;
-	radio->packets_transmitted_this_cycle = 0;
-	return radio;
-}
-
-
-void set_radio_rx(SkyRadio* radio){
-	radio->mode = RADIO_RX;
-}
-
-void set_radio_tx(SkyRadio* radio){
-	radio->mode = RADIO_TX;
-	radio->packets_transmitted_this_cycle = 0;
-}
-
-
-void radio_transmit(SkyRadio* radio, void* data, int length){
-	memcpy(radio->transmission_buffer, data, length);
-	radio->packets_transmitted_this_cycle++;
-}
-
-void radio_receive(SkyRadio* radio, void* data, int* length){
-	memcpy(data, radio->reception_buffer, radio->received);
-	*length = radio->received;
-	radio->received = 0;
-}
-// radio =====================================================================================================================
-
-
-
-
+// UNIX ================================================================================================================
 #else
+// ARM =================================================================================================================
 //todo: implement FreeRTOS get_time_ms()
 #endif
+// ARM =================================================================================================================
 
-int positive_modulo(int x, int m){
-	return ((x % m) + m) % m;
-}
+
+
 
 
 

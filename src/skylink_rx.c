@@ -2,7 +2,13 @@
 // Created by elmore on 29.10.2021.
 //
 
-#include "skylink_rx.h"
+#include "skylink/skylink.h"
+#include "skylink/conf.h"
+#include "skylink/fec.h"
+#include "skylink/arq_ring.h"
+#include "skylink/skypacket.h"
+#include "skylink/mac.h"
+#include "skylink/hmac.h"
 
 
 static void sky_rx_process_extensions(SkyHandle self, RCVFrame* frame, uint8_t this_type);
@@ -75,20 +81,25 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 	// This extension has to be checked here. Otherwise, if both peers use incorrect hmac-sequencing, we would be in lock state.
 	sky_rx_process_extensions(self, frame, EXTENSION_HMAC_ENFORCEMENT);
 
-	// If the virtual channel necessitates auth, but the frame isn't, return error.
-	if( (self->conf->vc[radioFrame->vc].require_authentication > 0)  && (!(radioFrame->flags & SKY_FLAG_AUTHENTICATED))){
-		self->hmac->vc_enfocement_need[radioFrame->vc] = 1;
-		return SKY_RET_AUTH_MISSING;
-	}
-
-	// Check authentication code if the frame claims it is authenticated.
-	if (radioFrame->flags & SKY_FLAG_AUTHENTICATED) {
+	// The virtual channel necessitates auth.
+	if(self->conf->vc[radioFrame->vc].require_authentication > 0){
+		if (!(radioFrame->flags & SKY_FLAG_AUTHENTICATED)){
+			self->hmac->vc_enfocement_need[radioFrame->vc] = 1;
+			return SKY_RET_AUTH_MISSING;
+		}
 		int ret = sky_hmac_check_authentication(self, frame);
 		if (ret < 0){
 			if(ret == SKY_RET_EXCESSIVE_HMAC_JUMP){
 				self->hmac->vc_enfocement_need[radioFrame->vc] = 1;
 			}
 			return ret;
+		}
+	}
+
+	// The virtual channel does not require auth, but it is there. Just remove the hash.
+	if(self->conf->vc[radioFrame->vc].require_authentication == 0){
+		if (radioFrame->flags & SKY_FLAG_AUTHENTICATED){
+			sky_hmac_remove_hash(frame);
 		}
 	}
 

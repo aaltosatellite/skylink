@@ -509,15 +509,6 @@ static void test3_round(){
 					int r3 = skyArray_read_packet_for_tx(array, tgt, &srcall, 1);
 					//PRINTFF(0,"(%d/%d): %d %d    L: %d vs %d\n", j , n_successful_schedules, seq, srcall,  messages[idx]->length, r3);
 
-					//PRINTFF(0,"%d  ",idx);
-					//PRINTFF(0,"%d  ",r3);
-					//PRINTFF(0,"%d  ",messages[idx-2]->length);
-					//PRINTFF(0,"%d  ",messages[idx-1]->length);
-					//PRINTFF(0,"%d  ",messages[idx]->length);
-					//PRINTFF(0,"%d  ",messages[idx+1]->length);
-					//PRINTFF(0,"%d  ",messages[idx+2]->length);
-					//PRINTFF(0,"\n");
-
 					assert(r3 == messages[idx]->length);
 					assert(memcmp(tgt, messages[idx]->data, r3) == 0);
 					assert(r3 == peeked);

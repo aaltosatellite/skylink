@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "platform.h"
+
 
 
 typedef uint16_t idx_t;

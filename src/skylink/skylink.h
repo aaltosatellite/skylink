@@ -211,13 +211,16 @@ struct sky_all {
 	SkyArqRing* 	arrayBuffers[SKY_NUM_VIRTUAL_CHANNELS]; //ARQ capable buffers.
 	MACSystem* 		mac;                    				// MAC state
 	SkyHMAC* 		hmac;
-	SkyRadio*		radio;
 };
 typedef struct sky_all* SkyHandle;
 //================================================================================================================================
 //============ STRUCTS ===========================================================================================================
 //================================================================================================================================
 
+
+int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay);
+
+int sky_rx(SkyHandle self, RCVFrame* frame, int contains_golay);
 
 
 

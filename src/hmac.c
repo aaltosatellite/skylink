@@ -121,5 +121,8 @@ int sky_hmac_check_authentication(SkyHandle self, RCVFrame* frame) {
 }
 
 
-
+void sky_hmac_remove_hash(RCVFrame* frame){
+	frame->radioFrame.length -= SKY_HMAC_LENGTH;
+	return;
+}
 

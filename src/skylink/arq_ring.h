@@ -5,10 +5,8 @@
 #ifndef SKYLINK_ARQ_RING_H
 #define SKYLINK_ARQ_RING_H
 
-#include <math.h>
+
 #include "elementbuffer.h"
-#include "platform.h"
-#include "diag.h"
 #include "conf.h"
 
 

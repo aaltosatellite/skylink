@@ -3,7 +3,7 @@
 //
 
 #include "skylink/elementbuffer.h"
-
+#include "platform.h"
 
 
 

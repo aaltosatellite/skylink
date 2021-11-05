@@ -3,6 +3,7 @@
 //
 
 #include "skylink/skypacket.h"
+#include "skylink/fec.h"
 
 
 SendFrame* new_send_frame(){

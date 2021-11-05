@@ -7,7 +7,7 @@
 
 #include "../skylink/skylink.h"
 #include "../skylink/conf.h"
-#include "../skylink/mac_2.h"
+#include "../skylink/mac.h"
 #include "../skylink/hmac.h"
 #include "tools/tools.h"
 

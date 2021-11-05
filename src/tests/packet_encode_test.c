@@ -4,6 +4,7 @@
 
 #include "packet_encode_test.h"
 #include "tst_utilities.h"
+#include "../skylink/fec.h"
 
 static void test1();
 

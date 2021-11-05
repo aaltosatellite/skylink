@@ -4,6 +4,7 @@
 
 
 #include "skylink/fec.h"
+#include "skylink/diag.h"
 
 
 

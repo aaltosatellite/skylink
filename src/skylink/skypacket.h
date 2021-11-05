@@ -7,9 +7,8 @@
 
 #include <string.h>
 #include "skylink.h"
-#include "hmac.h"
-#include "fec.h"
-//#include "utilities.h"
+
+
 
 
 

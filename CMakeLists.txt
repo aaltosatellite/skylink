@@ -83,7 +83,7 @@ add_executable(skylink_gs
         src/tests/tools/tools.h
         src/tests/tools/tools.c
 
-        src/mac_2.c
+        src/mac.c
         src/skypacket.c
         )
 endif()
@@ -143,14 +143,14 @@ add_executable(submodule_tests
         src/elementbuffer.c
         src/fec.c
         src/hmac.c
-        src/mac_2.c
+        src/mac.c
 
         #src/skylink.c
 
         src/arq_ring.c
         src/skypacket.c
         src/skylink/skypacket.h
-        src/skylink/mac_2.h
+        src/skylink/mac.h
         src/tests/packet_encode_test.c
         src/tests/packet_encode_test.h
         src/tests/tst_utilities.c
@@ -160,13 +160,16 @@ add_executable(submodule_tests
         src/tests/fec_test.h
 
         src/skylink_rx.c
-        src/skylink/skylink_rx.h
-
         src/skylink_tx.c
-        src/skylink/skylink_tx.h
-
-        src/skylink_cycle.c
-        src/skylink_cycle.h
 
         src/tests/hmac_tests.c
-        src/tests/hmac_tests.h src/tests/tx_rx_cycle_test.c src/tests/tx_rx_cycle_test.h src/tests/zmq_trial.c src/tests/zmq_trial.h src/tests/tx_rx_zmq.c src/tests/tx_rx_zmq.h)
+        src/tests/hmac_tests.h
+
+        src/tests/tx_rx_cycle_test.c
+        src/tests/tx_rx_cycle_test.h
+
+        src/tests/zmq_trial.c
+        src/tests/zmq_trial.h
+
+        src/tests/tx_rx_zmq.c
+        src/tests/tx_rx_zmq.h)

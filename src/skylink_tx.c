@@ -2,7 +2,14 @@
 // Created by elmore on 29.10.2021.
 //
 
-#include "skylink_tx.h"
+#include "skylink/skylink.h"
+#include "skylink/conf.h"
+#include "skylink/fec.h"
+#include "skylink/arq_ring.h"
+#include "skylink/skypacket.h"
+#include "skylink/mac.h"
+#include "skylink/hmac.h"
+#include "skylink/utilities.h"
 
 
 
@@ -92,7 +99,7 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay){
 
 
 	/* Set MAC data fields. */
-	int32_t now_ms = get_time_ms();
+	int32_t now_ms = get_time_ms(); //todo: Provide as a function argument?
 	mac_set_frame_fields(self->mac, &frame->radioFrame, now_ms);
 
 

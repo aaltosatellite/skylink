@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include "tools/tools.h"
 
-void zmq_trial();
+_Noreturn void zmq_trial();
 
 
 #endif //SKYLINK_CMAKE_ZMQ_TRIAL_H

@@ -6,9 +6,8 @@
 #define SKYLINK_CMAKE_UTILITIES_H
 
 #include <stdint.h>
-
 #include <time.h>
-#include "platform.h"
+
 
 uint16_t sky_hton16(uint16_t vh);
 
@@ -22,19 +21,11 @@ uint32_t sky_ntoh32(uint32_t vn);
 
 int32_t get_time_ms();
 
+void sleep_ms(int64_t ms);
+
+void sleep_us(int64_t us);
+
 int positive_modulo(int x, int m);
 
-
-// radio =====================================================================================================================
-SkyRadio* new_radio();
-
-void set_radio_rx(SkyRadio* radio);
-
-void set_radio_tx(SkyRadio* radio);
-
-void radio_transmit(SkyRadio* radio, void* data, int length);
-
-void radio_receive(SkyRadio* radio, void* data, int* length);
-// radio =====================================================================================================================
 
 #endif //SKYLINK_CMAKE_UTILITIES_H

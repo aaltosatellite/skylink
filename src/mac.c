@@ -2,7 +2,7 @@
 // Created by elmore on 19.10.2021.
 //
 
-#include "skylink/mac_2.h"
+#include "skylink/mac.h"
 #include "skylink/conf.h"
 
 
@@ -126,6 +126,7 @@ int mac_stamp_packet_bytes(MACSystem* macSystem, uint8_t* tgt, int32_t now_ms){
 int mac_set_frame_fields(MACSystem* macSystem, RadioFrame* frame, int32_t now_ms){
 	uint16_t w = (uint16_t)macSystem->my_window_length;
 	int32_t R = mac_own_window_remaining(macSystem, now_ms);
+	R = (R < 1) ? 1 : R;
 	uint16_t r = (uint16_t)R;
 	frame->mac_window = w;
 	frame->mac_remaining = r;

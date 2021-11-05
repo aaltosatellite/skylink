@@ -3,7 +3,7 @@
 //
 
 #include "skylink/arq_ring.h"
-
+#include "skylink/platform.h"
 
 static int ring_wrap(int idx, int len){
 	return ((idx % len) + len) % len;

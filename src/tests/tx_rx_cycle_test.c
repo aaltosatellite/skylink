@@ -3,10 +3,14 @@
 //
 
 #include "tx_rx_cycle_test.h"
-
+#include "../skylink/elementbuffer.h"
+#include "../skylink/arq_ring.h"
+#include "../skylink/skypacket.h"
+#include "../skylink/skylink.h"
+#include "tst_utilities.h"
+#include "tools/tools.h"
 
 static void test1();
-static void test2();
 static void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, int golay_on);
 
 

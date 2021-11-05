@@ -2,9 +2,11 @@
 // Created by elmore on 28.10.2021.
 //
 
-#ifndef SKYLINK_CMAKE_MAC_2_H
-#define SKYLINK_CMAKE_MAC_2_H
+#ifndef SKYLINK_CMAKE_MAC_H
+#define SKYLINK_CMAKE_MAC_H
 
+#include <stdint.h>
+#include "conf.h"
 #include "skylink.h"
 
 
@@ -59,4 +61,4 @@ int mac_stamp_packet_bytes(MACSystem* macSystem, uint8_t* tgt, int32_t now_ms);
 // Writes out the two uint16 values to the provided spot in buffer.
 int mac_set_frame_fields(MACSystem* macSystem, RadioFrame* frame, int32_t now_ms);
 
-#endif //SKYLINK_CMAKE_MAC_2_H
+#endif //SKYLINK_CMAKE_MAC_H

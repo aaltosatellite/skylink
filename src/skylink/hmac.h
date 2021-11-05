@@ -2,7 +2,6 @@
 #define __SKYLINK_HMAC_H__
 
 #include <stdint.h>
-#include "skylink.h"
 #include "../ext/cifra/hmac.h"
 #include "../ext/cifra/sha2.h"
 
@@ -34,6 +33,10 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SendFrame* frame);
 
 /* Check the frame authentication. */
 int sky_hmac_check_authentication(SkyHandle self, RCVFrame* frame);
+
+
+/* Just remove the bytes in the end. */
+void sky_hmac_remove_hash(RCVFrame* frame);
 
 
 /* Positive modulo by max hmac sequence */
