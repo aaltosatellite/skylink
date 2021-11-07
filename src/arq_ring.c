@@ -4,6 +4,10 @@
 
 #include "skylink/arq_ring.h"
 #include "skylink/platform.h"
+#include "skylink/skylink.h"
+#include "skylink/utilities.h"
+
+
 
 static int ring_wrap(int idx, int len){
 	return ((idx % len) + len) % len;
@@ -11,15 +15,6 @@ static int ring_wrap(int idx, int len){
 
 static int sendRingFull(SkySendRing* sendRing){
 	return ring_wrap(sendRing->head+1, sendRing->length) == ring_wrap(sendRing->tail, sendRing->length);
-}
-
-static int x_in_array(uint8_t x, uint8_t* array, int length){
-	for (int i = 0; i < length; ++i) {
-		if(array[i] == x){
-			return i;
-		}
-	}
-	return -1;
 }
 
 int sequence_wrap(int sequence){
@@ -249,7 +244,7 @@ static int sendRing_schedule_resend(SkySendRing* sendRing, int sequence){
 	if(!sendRing_can_recall(sendRing, sequence)){
 		return RING_RET_CANNOT_RECALL;
 	}
-	if(x_in_array(sequence, sendRing->resend_list, sendRing->resend_count) >= 0){
+	if(x_in_u8_array(sequence, sendRing->resend_list, sendRing->resend_count) >= 0){
 		return 0;
 	}
 	sendRing->resend_list[sendRing->resend_count] = sequence;
@@ -281,6 +276,7 @@ static int sendRing_pop_resend_sequence(SkySendRing* sendRing){
 
 
 static int sendRing_read_new_packet_to_tx_(SkySendRing* sendRing, ElementBuffer* elementBuffer, void* tgt, int* sequence){ //NEXT PACKET
+	*sequence = 1;
 	if(sendRing_count_packets_to_send(sendRing, 0) == 0){
 		return RING_RET_EMPTY;
 	}
@@ -307,6 +303,7 @@ static int sendRing_read_new_packet_to_tx_(SkySendRing* sendRing, ElementBuffer*
 
 
 static int sendRing_read_recall_packet_to_tx_(SkySendRing* sendRing, ElementBuffer* elementBuffer, void* tgt, int* sequence){
+	*sequence = -1;
 	int recall_seq = sendRing_pop_resend_sequence(sendRing);
 	if(recall_seq < 0){
 		return RING_RET_EMPTY;

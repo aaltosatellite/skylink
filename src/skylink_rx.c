@@ -27,8 +27,8 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame);
 
 int sky_rx(SkyHandle self, RCVFrame* frame, int contains_golay){
 	int ret = 0;
-	if(frame->radioFrame.length < SKY_PLAIN_FRAME_MIN_LENGTH){
-		return SKY_RET_INVALID_LENGTH;
+	if(frame->radioFrame.length < SKY_ENCODED_FRAME_MIN_LENGTH){
+		return SKY_RET_INVALID_ENCODED_LENGTH;
 	}
 	RadioFrame* radioFrame = &frame->radioFrame;
 	if(contains_golay) {
@@ -43,7 +43,7 @@ int sky_rx(SkyHandle self, RCVFrame* frame, int contains_golay){
 		}
 
 		if ((coded_len & 0xF00) != (SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED)) {
-			return -1;
+			return SKY_RET_GOLAY_MISCONFIGURED;
 		}
 
 		radioFrame->length = (int32_t)coded_len & SKY_GOLAY_PAYLOAD_LENGTH_MASK;
@@ -69,7 +69,7 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 
 	// Some error checks
 	if(radioFrame->length < SKY_PLAIN_FRAME_MIN_LENGTH){
-		return SKY_RET_INVALID_LENGTH;
+		return SKY_RET_INVALID_PLAIN_LENGTH;
 	}
 	if(radioFrame->vc >= SKY_NUM_VIRTUAL_CHANNELS){
 		return SKY_RET_INVALID_VC;

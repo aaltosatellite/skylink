@@ -27,5 +27,7 @@ void sleep_us(int64_t us);
 
 int positive_modulo(int x, int m);
 
+int x_in_u8_array(uint8_t x, uint8_t* array, int length);
+
 
 #endif //SKYLINK_CMAKE_UTILITIES_H

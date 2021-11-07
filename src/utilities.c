@@ -36,6 +36,19 @@ int positive_modulo(int x, int m){
 }
 
 
+int x_in_u8_array(uint8_t x, uint8_t* array, int length){
+	for (int i = 0; i < length; ++i) {
+		if(array[i] == x){
+			return i;
+		}
+	}
+	return -1;
+}
+
+
+
+
+
 // UNIX ================================================================================================================
 #ifdef __unix__
 

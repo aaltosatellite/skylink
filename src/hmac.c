@@ -60,7 +60,7 @@ int32_t sky_hmac_get_next_hmac_tx_sequence_and_advance(SkyHandle self, uint8_t v
 int sky_hmac_extend_with_authentication(SkyHandle self, SendFrame* frame) {
 	SkyHMAC* hmac = self->hmac;
 	if(frame->radioFrame.length > (SKY_FRAME_MAX_LEN - SKY_HMAC_LENGTH)){
-		return SKY_RET_INVALID_LENGTH;
+		return SKY_RET_FRAME_TOO_LONG_FOR_HMAC;
 	}
 
 	// Calculate SHA256 hash
@@ -82,7 +82,7 @@ int sky_hmac_check_authentication(SkyHandle self, RCVFrame* frame) {
 	//If the frame is too short don't even try to calculate anything
 	frame->auth_verified = 0;
 	if (frame->radioFrame.length < SKY_HMAC_LENGTH){
-		return SKY_RET_INVALID_LENGTH;
+		return SKY_RET_FRAME_TOO_SHORT_FOR_HMAC;
 	}
 
 	SkyHMAC* hmac = self->hmac;

@@ -18,34 +18,49 @@
 /*
  * Return codes
  */
-#define SKY_RET_OK                  0
-#define SKY_RET_INVALID_LENGTH     	(-1)
-#define SKY_RET_MALLOC_FAILED      	(-2)
-#define SKY_RET_INVALID_VC      	(-3)
-#define SKY_RET_INVALID_EXT_LENGTH  (-4)
+#define SKY_RET_OK                  		0
+
+//RX
+#define SKY_RET_INVALID_ENCODED_LENGTH     	(-2)
+#define SKY_RET_INVALID_PLAIN_LENGTH     	(-3)
+#define SKY_RET_INVALID_VC      			(-5)
+#define SKY_RET_INVALID_EXT_LENGTH  		(-6)
 
 // FEC
-#define SKY_RET_GOLAY_FAILED       	(-10)
-#define SKY_RET_RS_FAILED          	(-11)
-#define SKY_RET_RS_INVALID_LENGTH  	(-12)
+#define SKY_RET_GOLAY_FAILED       			(-10)
+#define SKY_RET_GOLAY_MISCONFIGURED       	(-11)
+#define SKY_RET_RS_FAILED          			(-12)
+#define SKY_RET_RS_INVALID_LENGTH  			(-13)
 
 // MAC
-#define SKY_RET_MAC                	(-20)
+#define SKY_RET_MAC                			(-20)
+#define SKY_RET_INVALID_MAC_WINDOW_SIZE		(-21)
 
 // AUTH
-#define SKY_RET_AUTH_FAILED        	(-30)
-#define SKY_RET_AUTH_MISSING       	(-31)
-#define SKY_RET_NO_MAC_SEQUENCE     (-32)
-#define SKY_RET_EXCESSIVE_HMAC_JUMP (-33)
+#define SKY_RET_AUTH_FAILED        			(-30)
+#define SKY_RET_AUTH_MISSING       			(-31)
+#define SKY_RET_NO_MAC_SEQUENCE     		(-32)
+#define SKY_RET_EXCESSIVE_HMAC_JUMP 		(-33)
+#define SKY_RET_FRAME_TOO_LONG_FOR_HMAC 	(-34)
+#define SKY_RET_FRAME_TOO_SHORT_FOR_HMAC 	(-35)
 
 // PACKET
-#define SKY_RET_INVALID_PACKET		(-40)
-#define SKY_RET_PACKET_TOO_LONG		(-41)
-#define SKY_RET_INVALID_EXTENSION   (-42)
+#define SKY_RET_NO_SPACE_FOR_PAYLOAD   		(-40)
+#define SKY_RET_UNKNOWN_EXTENSION   		(-41)
+#define SKY_RET_EXT_DECODE_FAIL   			(-42)
 
+//ARQ RING
+#define RING_RET_EMPTY						(-50)
+#define RING_RET_INVALID_SEQUENCE			(-51)
+#define RING_RET_ELEMENTBUFFER_FAULT		(-52)
+#define RING_RET_BUFFER_FULL				(-53)
+#define RING_RET_RING_FULL					(-54)
+#define RING_RET_PACKET_ALREADY_IN			(-55)
+#define RING_RET_CANNOT_RECALL				(-56)
+#define RING_RET_RESEND_FULL				(-57)
 
-
-
+//SYSTEM
+#define SKY_RET_MALLOC_FAILED      			(-70)
 
 
 

@@ -106,7 +106,7 @@ int mac_can_send(MACSystem* macSystem, int32_t now_ms){
 
 int mac_update_belief(MACSystem* macSystem, SkyMACConfig* config, int32_t now_ms, int32_t peer_mac_length, int32_t peer_mac_remaining){
 	if(!mac_valid_window_length(config, peer_mac_length)){
-		return -1;
+		return SKY_RET_INVALID_MAC_WINDOW_SIZE;
 	}
 	if(peer_mac_length != macSystem->peer_window_length){
 		mac_set_peer_window_length(macSystem, peer_mac_length);

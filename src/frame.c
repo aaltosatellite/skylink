@@ -88,7 +88,7 @@ int available_payload_space(RadioFrame* radioFrame){
 
 int sky_packet_extend_with_payload(SendFrame* frame, void* pl, int32_t length){
 	if(available_payload_space(&frame->radioFrame) < length){
-		return -1;
+		return SKY_RET_NO_SPACE_FOR_PAYLOAD;
 	}
 	memcpy(frame->radioFrame.raw + EXTENSION_START_IDX + frame->radioFrame.ext_length, pl, length);
 	frame->radioFrame.length = EXTENSION_START_IDX + frame->radioFrame.ext_length + length;
@@ -105,7 +105,7 @@ int sky_packet_extend_with_payload(SendFrame* frame, void* pl, int32_t length){
 int interpret_extension(void* ptr, int max_length, SkyPacketExtension* extension){
 	extension->type = -1;
 	if(max_length < 2){
-		return -1;
+		return SKY_RET_EXT_DECODE_FAIL;
 	}
 	ExtensionTypemask* eMask = ptr;
 	if((eMask->type == EXTENSION_ARQ_RESEND_REQ) && (max_length >= eMask->length) && (eMask->length == 4)){
@@ -132,7 +132,7 @@ int interpret_extension(void* ptr, int max_length, SkyPacketExtension* extension
 		extension->ext_union.HMACTxReset = *ext;
 		return eMask->length;
 	}
-	return -1;
+	return SKY_RET_UNKNOWN_EXTENSION;
 }
 //=== DECODING =========================================================================================================
 //======================================================================================================================

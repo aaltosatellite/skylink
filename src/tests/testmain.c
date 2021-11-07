@@ -14,14 +14,17 @@
 
 int main(int argc, char *argv[]) {
 	reseed_random();
-	//elebuffer_tests();
-	//ring_tests();
-	//packet_tests();
-	//fec_test();
-	//hmac_tests();
-	//txrx_tests();
+	/*
+	elebuffer_tests();
+	ring_tests();
+	packet_tests();
+	fec_test();
+	hmac_tests();
+	txrx_tests();
+	*/
+
 	tx_rx_zmq_test(argc, argv);
-	//zmq_trial();
+
 }
 
 

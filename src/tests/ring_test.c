@@ -3,6 +3,7 @@
 //
 
 #include "ring_test.h"
+#include "../skylink/skylink.h"
 #include <assert.h>
 
 static void test1(int count);
@@ -445,7 +446,7 @@ static void test3_round(){
 			assert(peeked1 == r);
 			if(in_buffer == 0) {
 				assert(r == RING_RET_EMPTY);
-				assert(sq_tx == RING_RET_EMPTY);
+				assert(sq_tx == -1);
 			} else {
 				assert(r >= 0);
 				assert(sq_tx == wrap_seq(s_seq0+next_idx_to_tx));

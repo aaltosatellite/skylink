@@ -29,7 +29,7 @@ void destroy_mac_system(MACSystem* macSystem);
 
 // Recalibrates the cycle startpoint by 't_shift' milliseconds.
 // This is mainly useful if there is reason to suspect that gs and satellite are in lockstep and talk over
-// each other. Preferably use a large random number to shift by.
+// each other. Preferably use the current own window length with random sign to shift by.
 void mac_shift_windowing(MACSystem* macSystem, int32_t t_shift);
 
 
