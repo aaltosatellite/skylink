@@ -6,6 +6,6 @@
 #define SKYLINK_CMAKE_TX_RX_ZMQ_H
 
 
-void tx_rx_zmq();
+void tx_rx_zmq_test(int argc, char *argv[]);
 
 #endif //SKYLINK_CMAKE_TX_RX_ZMQ_H

@@ -54,6 +54,11 @@ void destroy_mac_system(MACSystem* macSystem){
 }
 
 
+void mac_shift_windowing(MACSystem* macSystem, int32_t t_shift){
+	macSystem->T0_ms = wrap_ms(macSystem->T0_ms + t_shift, macSystem);
+}
+
+
 int32_t mac_set_my_window_length(MACSystem* macSystem, int32_t new_length){
 	macSystem->my_window_length = new_length;
 	return 0;
@@ -69,6 +74,16 @@ int32_t mac_set_peer_window_length(MACSystem* macSystem, int32_t new_length){
 int32_t mac_set_gap_constant(MACSystem* macSystem, int32_t new_gap_constant){
 	macSystem->gap_constant = new_gap_constant;
 	return 0;
+}
+
+
+int32_t mac_time_to_own_window(MACSystem* macSystem, int32_t now_ms){
+	int32_t dt = wrap_ms(macSystem->T0_ms - now_ms, macSystem);
+	int32_t length_of_rest = macSystem->gap_constant + macSystem->peer_window_length + macSystem->tail_constant;
+	if(dt > length_of_rest){
+		return 0;
+	}
+	return dt;
 }
 
 

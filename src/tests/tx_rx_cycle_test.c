@@ -61,8 +61,8 @@ void test1(){
 		int a4 = randint_i32(0,1);
 		int a5 = randint_i32(0,1);
 		test1_round(a1,a2,a3,a4, a5);
-		if(i % 20 == 0){
-			PRINTFF(0, "%d / %d\n",i,N);
+		if(i % 1 == 0){
+			PRINTFF(0, "%d / %d \t\t(%d %d %d %d %d)\n",i,N,  a1,a2,a3,a4,a5);
 		}
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");

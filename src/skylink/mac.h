@@ -27,6 +27,17 @@ MACSystem* new_mac_system(SkyMACConfig* config);
 void destroy_mac_system(MACSystem* macSystem);
 
 
+// Recalibrates the cycle startpoint by 't_shift' milliseconds.
+// This is mainly useful if there is reason to suspect that gs and satellite are in lockstep and talk over
+// each other. Preferably use a large random number to shift by.
+void mac_shift_windowing(MACSystem* macSystem, int32_t t_shift);
+
+
+// Returns positive integer number of milliseconds to own transmit window opening,
+// or zero, if the window is open.
+int32_t mac_time_to_own_window(MACSystem* macSystem, int32_t now_ms);
+
+
 // Returns positive integer number of milliseconds of own transmit window remaining,
 // or negative integer signaling the number of milliseconds past the window closure.
 int32_t mac_own_window_remaining(MACSystem* macSystem, int32_t now_ms);

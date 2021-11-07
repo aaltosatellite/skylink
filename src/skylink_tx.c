@@ -15,7 +15,7 @@
 
 static int sky_tx_extension_eval_arq_rr(SkyHandle self, SendFrame* frame, uint8_t vc){
 	uint16_t resend_map = skyArray_get_horizon_bitmap(self->arrayBuffers[vc]);
-	if( (resend_map == 0) || (self->arrayBuffers[vc]->resend_request_need == 0) ){
+	if( (resend_map == 0) && (self->arrayBuffers[vc]->resend_request_need == 0) ){
 		return 0;
 	}
 	self->arrayBuffers[vc]->resend_request_need = 0;
@@ -40,11 +40,39 @@ static int sky_tx_extension_eval_hmac_enforce(SkyHandle self, SendFrame* frame, 
 		return 0;
 	}
 	self->hmac->vc_enfocement_need[vc] = 0;
-	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 2); //+2 so that immediate sends don't ivalidate what we give here. Jump constant must be bigger.
+	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 3); //+2 so that immediate sends don't ivalidate what we give here. Jump constant must be bigger.
 	sky_packet_add_extension_hmac_enforce(frame, sequence);
 	return 1;
 }
 
+
+
+
+
+int content_to_send(SkyHandle self, uint8_t vc){
+	if(self->hmac->vc_enfocement_need[vc]){
+		return 1;
+	}
+	if(self->arrayBuffers[vc]->state_enforcement_need){
+		return 1;
+	}
+	uint16_t resend_map = skyArray_get_horizon_bitmap(self->arrayBuffers[vc]);
+	if( (resend_map != 0) || (self->arrayBuffers[vc]->resend_request_need != 0) ){
+		return 1;
+	}
+	if(skyArray_count_packets_to_tx(self->arrayBuffers[vc], 1) != 0){
+		return 1;
+	}
+	return 0;
+}
+
+int any_content_to_send(SkyHandle self){
+	int r = 0;
+	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
+		r |= content_to_send(self, vc);
+	}
+	return r;
+}
 
 
 

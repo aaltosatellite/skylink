@@ -218,6 +218,10 @@ typedef struct sky_all* SkyHandle;
 //================================================================================================================================
 
 
+int content_to_send(SkyHandle self, uint8_t vc);
+
+int any_content_to_send(SkyHandle self);
+
 int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay);
 
 int sky_rx(SkyHandle self, RCVFrame* frame, int contains_golay);
