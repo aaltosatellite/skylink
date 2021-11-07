@@ -61,7 +61,7 @@ int sky_packet_add_extension_hmac_enforce(SendFrame* frame, uint16_t sequence){
 	ExtHMACTxReset* extension = ptr;
 	extension->type = EXTENSION_HMAC_ENFORCEMENT;
 	extension->length = 3;
-	extension->correct_tx_sequence = sequence; //+2 so that immediate sends don't ivalidate what we give here. Jump constant must be bigger.
+	extension->correct_tx_sequence = sequence;
 	frame->radioFrame.ext_length += 3;
 	frame->radioFrame.length = EXTENSION_START_IDX + frame->radioFrame.ext_length;
 	return 1;

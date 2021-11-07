@@ -105,7 +105,7 @@ void instantiate_testjob(TestJob* job){
 		handle2->hmac->sequence_rx[vc] = job->vcjobs[vc].auth_seq_1to2;
 		SkyArqRing* ring1 = handle1->arrayBuffers[vc];
 		SkyArqRing* ring2 = handle2->arrayBuffers[vc];
-		uint16_t mask = spin_to_seq(ring1, ring2, job->vcjobs[vc].arq_seq_1to2, job->vcjobs[vc].tx_ahead1);
+		spin_to_seq(ring1, ring2, job->vcjobs[vc].arq_seq_1to2, job->vcjobs[vc].tx_ahead1);
 	}
 	job->handle1 = handle1;
 	job->handle2 = handle2;
@@ -145,9 +145,8 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 	RCVFrame *rcvFrame = new_receive_frame();
 
 	String* sent_payloads[800];
-	int sent_sequences[800];
 	String* received_payloads[800];
-	int received_sequences[800];
+	//int received_sequences[800];
 	int n_sent = 0;
 	int n_received = 0;
 
@@ -190,7 +189,7 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 		while (skyArray_count_readable_rcv_packets(ring2)){
 			int seq = -1;
 			int read = skyArray_read_next_received(ring2, tgt, &seq);
-			received_sequences[n_received] = seq;
+			//received_sequences[n_received] = seq;
 			received_payloads[n_received] = new_string(tgt, read);
 			n_received++;
 		}
@@ -231,8 +230,6 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 		assert(n_received == (N_SEND- ama));
 		assert(same);
 	}
-	//PRINTFF(0,"WOOHOO!\n");
-
 
 
 	for (int i = 0; i < n_sent; ++i) {
@@ -241,7 +238,6 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 	for (int i = 0; i < n_received; ++i) {
 		destroy_string(received_payloads[i]);
 	}
-
 
 
 	free(tgt);

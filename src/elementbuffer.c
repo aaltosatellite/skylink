@@ -202,7 +202,7 @@ int element_buffer_store(ElementBuffer* buffer, uint8_t* data, pl_len_t length){
 	//calculate number of elements required.
 	int32_t n_required = element_buffer_element_requirement_for(buffer, length); //A fast ceil-division.
 	if(n_required > buffer->free_elements){
-		return -1;
+		return EBUFFER_RET_NO_SPACE;
 	}
 	if(n_required == 0){
 		n_required++;
@@ -212,7 +212,7 @@ int element_buffer_store(ElementBuffer* buffer, uint8_t* data, pl_len_t length){
 	idx_t indexes[42]; //todo parametrize this maximum element count used.
 	int r = element_buffer_get_n_free(buffer, n_required, buffer->last_write_index, indexes);
 	if(r < 0){
-		return -1; //exit if not enough space
+		return EBUFFER_RET_NO_SPACE; //exit if not enough space
 	}
 
 	//write the metadata to the first element
@@ -246,7 +246,7 @@ int element_buffer_store(ElementBuffer* buffer, uint8_t* data, pl_len_t length){
 int element_buffer_get_data_length(ElementBuffer* buffer, idx_t idx){
 	BufferElement el = element_i(buffer, idx);
 	if(!element_is_first(buffer, el)){
-		return -1;
+		return EBUFFER_RET_INVALID_INDEX;
 	}
 	int32_t len = *(pl_len_t*)(el.data);
 	return len;
@@ -257,13 +257,13 @@ int element_buffer_get_data_length(ElementBuffer* buffer, idx_t idx){
 int element_buffer_read(ElementBuffer* buffer, uint8_t* target, idx_t idx, int32_t max_len){
 	BufferElement el = element_i(buffer, idx);
 	if(!element_is_first(buffer, el)){
-		return -1;
+		return EBUFFER_RET_INVALID_INDEX;
 	}
 
 	//check if target buffer is long enough.
 	int32_t leng = *(pl_len_t*)(el.data);
 	if(leng > max_len){
-		return -1;
+		return EBUFFER_RET_TOO_LONG_PAYLOAD;
 	}
 
 	//read from first element
@@ -277,7 +277,7 @@ int element_buffer_read(ElementBuffer* buffer, uint8_t* target, idx_t idx, int32
 	for (int i = 1; i < n_elements; ++i) {
 		el = element_i(buffer, *previous_el.next);
 		if(element_is_free(el)){
-			return -1;
+			return EBUFFER_RET_CHAIN_CORRUPTED;
 		}
 		to_read = min_i32(buffer->element_usable_space, leng-cursor);
 		memcpy(target+cursor, el.data, to_read);
@@ -285,7 +285,7 @@ int element_buffer_read(ElementBuffer* buffer, uint8_t* target, idx_t idx, int32
 		previous_el = el;
 	}
 	if(!element_is_last(buffer, el)){
-		return -1;
+		return EBUFFER_RET_CHAIN_CORRUPTED;
 	}
 	return leng;
 }
@@ -295,7 +295,7 @@ int element_buffer_read(ElementBuffer* buffer, uint8_t* target, idx_t idx, int32
 int element_buffer_delete(ElementBuffer* buffer, idx_t idx){
 	BufferElement el = element_i(buffer, idx);
 	if(!element_is_first(buffer, el)){
-		return -1;
+		return EBUFFER_RET_INVALID_INDEX;
 	}
 	while(1){
 		idx_t next = *el.next;

@@ -40,12 +40,10 @@ static int sky_tx_extension_eval_hmac_enforce(SkyHandle self, SendFrame* frame, 
 		return 0;
 	}
 	self->hmac->vc_enfocement_need[vc] = 0;
-	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 3); //+2 so that immediate sends don't ivalidate what we give here. Jump constant must be bigger.
+	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 3); //+3 so that immediate sends don't ivalidate what we give here. Jump constant must be bigger.
 	sky_packet_add_extension_hmac_enforce(frame, sequence);
 	return 1;
 }
-
-
 
 
 
@@ -66,6 +64,8 @@ int content_to_send(SkyHandle self, uint8_t vc){
 	return 0;
 }
 
+
+
 int any_content_to_send(SkyHandle self){
 	int r = 0;
 	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
@@ -73,8 +73,6 @@ int any_content_to_send(SkyHandle self){
 	}
 	return r;
 }
-
-
 
 
 

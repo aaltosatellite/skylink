@@ -76,7 +76,7 @@ static void test1_pass(int verbose){
 		int leng_r_fail = element_buffer_read(sbuffer, tgt, indexes[i], lengths[i] - 1);
 		int leng_r = element_buffer_read(sbuffer, tgt, indexes[i], lengths[i]);
 		int leng_r2 = element_buffer_get_data_length(sbuffer, indexes[i]);
-		assert(leng_r_fail == -1);
+		assert(leng_r_fail == EBUFFER_RET_TOO_LONG_PAYLOAD);
 		assert(leng_r == lengths[i]);
 		assert(leng_r2 == lengths[i]);
 		assert(memcmp(tgt, datas[i], leng_r) == 0);
@@ -109,7 +109,7 @@ static void test1_pass(int verbose){
 		assert(valid);
 
 		int rd = element_buffer_read(sbuffer, tgt, idx, 1000);
-		assert(rd == -1);
+		assert(rd == EBUFFER_RET_INVALID_INDEX);
 	}
 
 
@@ -157,6 +157,9 @@ struct testjob{
 };
 typedef struct testjob TestJob;
 
+#define DIR_FORWARD		1
+#define DIR_BACKWARD	(-1)
+
 
 static void confirm_msg_i_in_buffer(ElementBuffer* buffer, TestMsg* msg){
 	uint8_t* tgt = x_alloc(msg->data->length + 2);
@@ -203,21 +206,21 @@ static int get_one_to_remove(TestMsg** msgs, int n_msgs){
 
 static int pick_direction(TestJob* job){
 	if(job->n_in == 0){
-		return 1;
+		return DIR_FORWARD;
 	}
 	if(job->n_in == job->n_msgs){
-		return -1;
+		return DIR_BACKWARD;
 	}
-	if(job->general_direction == 1){
+	if(job->general_direction == DIR_FORWARD){
 		if(randint_i32(1, 100) > 30){
-			return 1;
+			return DIR_FORWARD;
 		}
-		return -1;
+		return DIR_BACKWARD;
 	}
 	if(randint_i32(1, 100) > 30){
-		return -1;
+		return DIR_BACKWARD;
 	}
-	return 1;
+	return DIR_FORWARD;
 }
 
 
@@ -225,7 +228,7 @@ static int pick_direction(TestJob* job){
 static TestJob new_job(int minlen, int maxlen, int elecount){
 	TestJob job;
 	job.n_msgs = elecount * 2;
-	job.general_direction = 1;
+	job.general_direction = DIR_FORWARD;
 	job.n_in = 0;
 	job.buffer = new_element_buffer(64, elecount);
 	job.msgs = x_alloc(sizeof(TestMsg*) * job.n_msgs);
@@ -259,7 +262,7 @@ static int up_cycle(TestJob* job) {
 	int ret = element_buffer_store(job->buffer, msg->data->data, msg->data->length);
 	if (old_free < required) {
 		assert(job->buffer->free_elements == old_free);
-		assert(ret == -1);
+		assert(ret == EBUFFER_RET_NO_SPACE);
 	} else {
 		assert(job->buffer->free_elements == (old_free - required));
 		assert(ret >= 0);
@@ -312,8 +315,8 @@ static void cycling(TestJob* job, int break_switch){
 	while(1){
 		c++;
 		int dir = pick_direction(job);
-		assert ((dir == 1) || (dir == -1));
-		assert ((job->general_direction == 1) || (job->general_direction == -1));
+		assert ((dir == DIR_FORWARD) || (dir == DIR_BACKWARD));
+		assert ((job->general_direction == DIR_FORWARD) || (job->general_direction == DIR_BACKWARD));
 
 		if(dir == 1){
 			int added = up_cycle(job);
@@ -323,7 +326,7 @@ static void cycling(TestJob* job, int break_switch){
 				failed_adds_in_row++;
 			}
 		}
-		if(dir == -1){
+		if(dir == DIR_BACKWARD){
 			down_cycle(job);
 		}
 
@@ -335,8 +338,8 @@ static void cycling(TestJob* job, int break_switch){
 		//}
 
 
-		if((job->general_direction == 1) && (failed_adds_in_row > 3)){
-			job->general_direction = -1;
+		if((job->general_direction == DIR_FORWARD) && (failed_adds_in_row > 3)){
+			job->general_direction = DIR_BACKWARD;
 			double space = (double)job->buffer->element_count * (double)job->buffer->element_size;
 			double filled = (double)job->total_stored_content;
 			double ff = filled / space;
@@ -346,8 +349,8 @@ static void cycling(TestJob* job, int break_switch){
 			switchs++;
 		}
 
-		if((job->general_direction == -1) && (job->n_in == 0)){
-			job->general_direction = 1;
+		if((job->general_direction == DIR_BACKWARD) && (job->n_in == 0)){
+			job->general_direction = DIR_FORWARD;
 
 			PRINTFF(0, "\t[Uphill]\n");
 			switchs++;

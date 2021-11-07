@@ -16,7 +16,6 @@
 
 
 
-#define NO_MODE 		0
 #define RX_MODE 		1
 #define TX_MODE 		2
 
@@ -94,7 +93,7 @@ SkylinkPeer* new_peer(int ID, int tx_port, int rx_port, int pl_write_port, int p
 	peer->physicalParams.relative_speed = relative_speed;
 	peer->physicalParams.send_speed_bps = send_speed_bps;
 	peer->physicalParams.switch_delay_ms = switch_delay_ms;
-	peer->physicalParams.RADIO_MODE = 0;
+	peer->physicalParams.RADIO_MODE = RX_MODE;
 
 	peer->rcvFrame = new_receive_frame();
 	peer->sendFrame = new_send_frame();

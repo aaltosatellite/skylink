@@ -60,13 +60,9 @@ int mac_update_belief(MACSystem* macSystem, SkyMACConfig* config, int32_t now_ms
 
 
 // If fleeting transmission is detected, but not fully received, this cues the MAC-system, and updates belief by remaining=1ms.
-// BE CAREFUL: mac_update_belief is generally invoked only by authenticated messages to prevent shut-up-attack.
+// BE CAREFUL: mac_update_belief is generally invoked only by authenticated messages to prevent 'shut-up-attack'.
 // This function in principle gets invoked before any authentication can take place. Therefore use sparingly.
 int mac_carrier_sensed(MACSystem* macSystem, SkyMACConfig* config, int32_t now_ms);
-
-
-// Writes out the two uint16 values to the provided spot in buffer.
-int mac_stamp_packet_bytes(MACSystem* macSystem, uint8_t* tgt, int32_t now_ms);
 
 
 // Writes out the two uint16 values to the provided spot in buffer.

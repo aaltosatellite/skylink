@@ -10,6 +10,11 @@
 #include <string.h>
 
 
+#define EBUFFER_RET_INVALID_INDEX		(-110)
+#define EBUFFER_RET_CHAIN_CORRUPTED		(-111)
+#define EBUFFER_RET_NO_SPACE			(-112)
+#define EBUFFER_RET_TOO_LONG_PAYLOAD	(-113)
+
 
 typedef uint16_t idx_t;
 typedef uint16_t pl_len_t;

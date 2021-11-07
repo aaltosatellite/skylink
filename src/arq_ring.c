@@ -396,12 +396,6 @@ void wipe_arq_ring(SkyArqRing* array, int new_send_sequence, int new_rcv_sequenc
 }
 
 
-int skyArray_set_send_sequence(SkyArqRing* array, uint16_t sequence){
-	wipe_send_ring(array->primarySendRing, array->elementBuffer, sequence);
-	return 0;
-}
-
-
 int skyArray_set_receive_sequence(SkyArqRing* array, uint16_t sequence, int wipe_all){
 	wipe_rcv_ring(array->secondaryRcvRing, array->elementBuffer, sequence);
 	if(wipe_all){

@@ -4,7 +4,6 @@
 
 #include "skylink/mac.h"
 #include "skylink/conf.h"
-#include "skylink/utilities.h"
 
 
 static int32_t wrap_ms(int32_t time_ms, MACSystem* macSystem){ //This mess is a conversion from C-modulo, to always-positive-modulo.
@@ -14,20 +13,20 @@ static int32_t wrap_ms(int32_t time_ms, MACSystem* macSystem){ //This mess is a 
 
 
 int mac_valid_window_length(SkyMACConfig* config, int32_t length){
-	if(length < config->maximum_window_size){
+	if(length < config->maximum_window_length){
 		return 0;
 	}
-	if(length > config->minimum_window_size){
+	if(length > config->minimum_window_length){
 		return 0;
 	}
 	return 1;
 }
 
 int mac_valid_gap_length(SkyMACConfig* config, int32_t length){
-	if(length < config->maximum_gap_size){
+	if(length < config->maximum_gap_length){
 		return 0;
 	}
-	if(length > config->minimum_gap_size){
+	if(length > config->minimum_gap_length){
 		return 0;
 	}
 	return 1;
@@ -124,18 +123,6 @@ int mac_carrier_sensed(MACSystem* macSystem, SkyMACConfig* config, int32_t now_m
 	}
 	mac_update_belief(macSystem, config, now_ms, macSystem->peer_window_length, 1);
 	return 1;
-}
-
-
-int mac_stamp_packet_bytes(MACSystem* macSystem, uint8_t* tgt, int32_t now_ms){
-	uint16_t w = (uint16_t)macSystem->my_window_length;
-	int32_t R = mac_own_window_remaining(macSystem, now_ms);
-	uint16_t r = (uint16_t)R;
-	w = sky_hton16(w);
-	r = sky_hton16(r);
-	memcpy(tgt, &w, sizeof(uint16_t));
-	memcpy(tgt+sizeof(uint16_t), &r, sizeof(uint16_t));
-	return 0;
 }
 
 

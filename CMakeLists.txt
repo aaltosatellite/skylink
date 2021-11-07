@@ -104,9 +104,21 @@ add_executable(submodule_tests
         src/tests/elebuffer_tests.h
         src/tests/ring_test.c
         src/tests/ring_test.h
+        src/tests/packet_encode_test.c
+        src/tests/packet_encode_test.h
+        src/tests/tst_utilities.c
+        src/tests/tst_utilities.h
+        src/tests/fec_test.c
+        src/tests/fec_test.h
+        src/tests/hmac_tests.c
+        src/tests/hmac_tests.h
+        src/tests/tx_rx_cycle_test.c
+        src/tests/tx_rx_cycle_test.h
+        src/tests/zmq_trial.c
+        src/tests/zmq_trial.h
+        src/tests/tx_rx_zmq.c
+        src/tests/tx_rx_zmq.h
 
-        src/skylink/utilities.h
-        src/utilities.c
 
         #platforms/posix/debug.h
         #platforms/posix/timestamp.h
@@ -136,38 +148,21 @@ add_executable(submodule_tests
         src/skylink/fec.h
         src/skylink/hmac.h
         src/skylink/platform.h
+        src/skylink/utilities.h
         src/skylink/skylink.h
         src/skylink/arq_ring.h
+        src/skylink/frame.h
+        src/skylink/mac.h
         src/elementbuffer.c
         src/fec.c
         src/hmac.c
         src/mac.c
-
-        #src/skylink.c
-
+        src/utilities.c
         src/arq_ring.c
         src/frame.c
-        src/skylink/frame.h
-        src/skylink/mac.h
-        src/tests/packet_encode_test.c
-        src/tests/packet_encode_test.h
-        src/tests/tst_utilities.c
-        src/tests/tst_utilities.h
         src/diag.c
-        src/tests/fec_test.c
-        src/tests/fec_test.h
-
         src/skylink_rx.c
         src/skylink_tx.c
 
-        src/tests/hmac_tests.c
-        src/tests/hmac_tests.h
 
-        src/tests/tx_rx_cycle_test.c
-        src/tests/tx_rx_cycle_test.h
-
-        src/tests/zmq_trial.c
-        src/tests/zmq_trial.h
-
-        src/tests/tx_rx_zmq.c
-        src/tests/tx_rx_zmq.h)
+        )

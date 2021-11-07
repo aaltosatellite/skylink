@@ -49,10 +49,10 @@ SkyConfig* new_vanilla_config(){
 	config->hmac.maximum_jump 		= 24;
 	memcpy(config->hmac.key, arr_, config->hmac.key_length);
 
-	config->mac.maximum_gap_size = 200;
-	config->mac.minimum_gap_size = 25;
-	config->mac.maximum_window_size = 200;
-	config->mac.minimum_window_size = 25;
+	config->mac.maximum_gap_length = 200;
+	config->mac.minimum_gap_length = 25;
+	config->mac.maximum_window_length = 200;
+	config->mac.minimum_window_length = 25;
 	config->mac.default_window_length = 50;
 	config->mac.default_gap_length = 150;
 	config->mac.default_tail_length = 5;

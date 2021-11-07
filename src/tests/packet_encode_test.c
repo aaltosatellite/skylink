@@ -38,7 +38,7 @@ void test1_round(){
 	uint8_t identity[SKY_IDENTITY_LEN];
 	fillrand(identity, SKY_IDENTITY_LEN);
 	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
-	int mac_length = randint_i32(0, config->mac.maximum_window_size);
+	int mac_length = randint_i32(0, config->mac.maximum_window_length);
 	int mac_left = randint_i32(0, radioFrame_s->mac_window);
 	int arq_on = randint_i32(0,1);
 	int arq_sequence = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
@@ -65,8 +65,8 @@ void test1_round(){
 	int n_extensions = 0;
 
 	int extension_mac_params = 0;
-	int new_window = randint_i32(config->mac.minimum_window_size, config->mac.maximum_window_size);
-	int new_gap = randint_i32(config->mac.minimum_gap_size, config->mac.maximum_gap_size);
+	int new_window = randint_i32(config->mac.minimum_window_length, config->mac.maximum_window_length);
+	int new_gap = randint_i32(config->mac.minimum_gap_length, config->mac.maximum_gap_length);
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_mac_params = 1;
