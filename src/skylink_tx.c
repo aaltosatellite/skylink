@@ -31,7 +31,7 @@ static int sky_tx_extension_eval_arq_rr(SkyHandle self, SendFrame* frame, uint8_
 	uint16_t resend_map = skyArray_get_horizon_bitmap(self->arrayBuffers[vc]);
 	self->arrayBuffers[vc]->resend_request_need = 0;
 	sky_packet_add_extension_arq_rr(frame, self->arrayBuffers[vc]->primaryRcvRing->head_sequence, resend_map & 0xFF, ((resend_map & 0xFF00) >> 8));
-	printf("\tARQ resend request.\n");
+	//printf("\tARQ resend request.\n");
 	return 1;
 }
 
@@ -47,7 +47,7 @@ static int sky_tx_extension_eval_arq_enforce(SkyHandle self, SendFrame* frame, u
 	self->arrayBuffers[vc]->state_enforcement_need = 0;
 	uint8_t sequence = skyArray_get_next_transmitted_sequence(self->arrayBuffers[vc]);
 	sky_packet_add_extension_arq_enforce(frame, self->conf->vc->arq_on, sequence);
-	printf("\tEnforcing ARQ.\n");
+	//printf("\tEnforcing ARQ.\n");
 	return 1;
 }
 
@@ -63,7 +63,7 @@ static int sky_tx_extension_eval_hmac_enforce(SkyHandle self, SendFrame* frame, 
 	self->hmac->vc_enfocement_need[vc] = 0;
 	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 3); //+3 so that immediate sends don't invalidate what we give here. Jump constant must be bigger.
 	sky_packet_add_extension_hmac_enforce(frame, sequence);
-	printf("\tEnforcing AUTH sequence.\n");
+	//printf("\tEnforcing AUTH sequence.\n");
 	return 1;
 }
 
@@ -131,15 +131,11 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay, int32
 		frame->radioFrame.flags |= SKY_FLAG_HAS_PAYLOAD;
 		frame->radioFrame.length += read;
 		content = 1;
-		//printf("\tsending seq: %d.  next seq: %d\n", arq_sequence, self->arrayBuffers[vc]->primarySendRing->tx_sequence);
 	}
 
 
 	/* Set MAC data fields. */
 	mac_set_frame_fields(self->mac, &frame->radioFrame, now_ms);
-	//printf("\tsent mac remaining: %d\n", frame->radioFrame.mac_remaining);
-	//printf("\tsent mac remaining should be: %d\n", mac_own_window_remaining(self->mac, now_ms));
-	//printf("\tsent mac window: %d\n", frame->radioFrame.mac_window);
 
 	/* Set HMAC state and sequence */
 	frame->radioFrame.auth_sequence = 0;
