@@ -182,7 +182,7 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 		}
 		//PRINTFF(0, "n_sent:     %d \n", n_sent);
 
-		sky_tx(handle1, sendFrame, vc, golay_on);
+		sky_tx(handle1, sendFrame, vc, golay_on, 12); //This does NOT test MAC functionality
 		memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame));
 		sky_rx(handle2, rcvFrame, golay_on);
 
@@ -194,7 +194,7 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 			n_received++;
 		}
 		//PRINTFF(0, "n_received: %d \n\n", n_received);
-		sky_tx(handle2, sendFrame, vc, golay_on);
+		sky_tx(handle2, sendFrame, vc, golay_on, 12);//This does NOT test MAC functionality
 		memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame));
 		sky_rx(handle1, rcvFrame, golay_on);
 	}

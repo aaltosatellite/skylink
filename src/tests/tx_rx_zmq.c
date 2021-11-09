@@ -11,13 +11,12 @@
 #include "../skylink/skylink.h"
 #include "../skylink/frame.h"
 #include "../skylink/utilities.h"
+#include "../skylink/phy.h"
 #include "tst_utilities.h"
 #include "tools/tools.h"
 
 
 
-#define RX_MODE 		1
-#define TX_MODE 		2
 
 
 //extern double relative_time_speed;
@@ -28,7 +27,6 @@ typedef struct physical_params {
 	double send_speed_bps;
 	double switch_delay_ms;
 	uint8_t RADIO_MODE;
-	int frames_sent_this_cycle;
 } PhysicalParams;
 
 
@@ -52,11 +50,13 @@ typedef struct skylink_peer {
 
 
 
-double relative_time_speed = 1.0;
+double relative_time_speed = 0.2;
 
 int32_t rget_time_ms(){
+	/*
 	struct timespec t;
 	clock_gettime(CLOCK_REALTIME, &t);
+
 	uint64_t ts = t.tv_sec*1000;
 	ts += t.tv_nsec/1000000;
 
@@ -64,8 +64,15 @@ int32_t rget_time_ms(){
 	ft = ft * relative_time_speed;
 	ft = round(ft);
 	ts = (uint64_t)ft;
-
 	return (int32_t) (ts & 0x7FFFFFFF);
+	*/
+	int64_t X = real_microseconds();
+	double ms = (double)(X / 1000);
+	ms = ms * relative_time_speed;
+	X = (int64_t) ms;
+	X = X % 60000000;
+	int32_t rms = (int32_t) X;
+	return rms;
 }
 
 void rsleep_ms(int64_t ms){
@@ -93,7 +100,7 @@ SkylinkPeer* new_peer(int ID, int tx_port, int rx_port, int pl_write_port, int p
 	peer->physicalParams.relative_speed = relative_speed;
 	peer->physicalParams.send_speed_bps = send_speed_bps;
 	peer->physicalParams.switch_delay_ms = switch_delay_ms;
-	peer->physicalParams.RADIO_MODE = RX_MODE;
+
 
 	peer->rcvFrame = new_receive_frame();
 	peer->sendFrame = new_send_frame();
@@ -128,20 +135,27 @@ SkylinkPeer* new_peer(int ID, int tx_port, int rx_port, int pl_write_port, int p
 
 
 
-void turn_to_rx(SkylinkPeer* peer){
-	if(peer->physicalParams.RADIO_MODE != RX_MODE){
-		peer->physicalParams.RADIO_MODE = RX_MODE;
+void say_rx(SkylinkPeer* peer){
+	if(peer->physicalParams.RADIO_MODE != MODE_RX){
+		peer->physicalParams.RADIO_MODE = MODE_RX;
 		PRINTFF(0,"\n=== RX ================================\n");
+		uint8_t msg[6];
+		memcpy(msg, &peer->ID, 4);
+		msg[4] = 0;
+		zmq_send(peer->tx_socket, msg, 5, 0);
 	}
 }
 
 
 
-void turn_to_tx(SkylinkPeer* peer){
-	if(peer->physicalParams.RADIO_MODE != TX_MODE){
-		peer->physicalParams.RADIO_MODE = TX_MODE;
+void say_tx(SkylinkPeer* peer){
+	if(peer->physicalParams.RADIO_MODE != MODE_TX){
+		peer->physicalParams.RADIO_MODE = MODE_TX;
 		PRINTFF(0,"\n=== TX ================================\n");
-		peer->physicalParams.frames_sent_this_cycle = 0;
+		uint8_t msg[6];
+		memcpy(msg, &peer->ID, 4);
+		msg[4] = 1;
+		zmq_send(peer->tx_socket, msg, 5, 0);
 	}
 }
 
@@ -150,21 +164,16 @@ void turn_to_tx(SkylinkPeer* peer){
 int peer_tx_round(SkylinkPeer* peer){
 	uint8_t tgt[700];
 	memcpy(tgt, &peer->ID, 4);
-	int any_content = any_content_to_send(peer->self);
-	for (uint8_t vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
-		int content = content_to_send(peer->self, vc);
-		int b = (peer->physicalParams.frames_sent_this_cycle < 2) && (any_content == 0);
-		if (content || b){
-			int cc = sky_tx(peer->self, peer->sendFrame, vc, 1);
-			assert(cc == content);
-			peer->physicalParams.frames_sent_this_cycle++;
-			memcpy(tgt+4, peer->sendFrame->radioFrame.raw, peer->sendFrame->radioFrame.length);
-			zmq_send(peer->tx_socket, tgt, 4+peer->sendFrame->radioFrame.length, 0); //todo: DONTWAIT?
-			PRINTFF(0,"#2 Transmitted.\n");
-			return peer->sendFrame->radioFrame.length;
-		}
+	int vc = sky_tx_pick_vc(peer->self);
+	if(vc == -1){
+		return 0;
 	}
-	return 0;
+	int32_t now_ms = rget_time_ms();
+	sky_tx(peer->self, peer->sendFrame, vc, 1, now_ms);
+	memcpy(tgt+4, peer->sendFrame->radioFrame.raw, peer->sendFrame->radioFrame.length);
+	zmq_send(peer->tx_socket, tgt, 4+peer->sendFrame->radioFrame.length, 0); //todo: DONTWAIT?
+	PRINTFF(0,"#2 Transmitted. %dth in this window.\n", peer->self->phy->total_frames_sent_in_current_window);
+	return peer->sendFrame->radioFrame.length;
 }
 
 
@@ -232,7 +241,8 @@ _Noreturn void* tx_cycle(void* arg){
 		int32_t now_ms = rget_time_ms();
 		int can_send = mac_can_send(peer->self->mac, now_ms);
 		if(can_send){
-			turn_to_tx(peer);
+			turn_to_tx(peer->self->phy);
+			say_tx(peer);
 
 			int bytes_transmitted = peer_tx_round(peer);
 			if(bytes_transmitted){
@@ -243,19 +253,30 @@ _Noreturn void* tx_cycle(void* arg){
 				pthread_mutex_lock(&peer->mutex); 	//lock
 			} else {
 				pthread_mutex_unlock(&peer->mutex); //unlock
-				rsleep_us((uint32_t) 1200);
+				rsleep_us((uint32_t) 700);
 				pthread_mutex_lock(&peer->mutex); 	//lock
 			}
 		}
 
 		if(!can_send){
-			turn_to_rx(peer);
+			turn_to_rx(peer->self->phy);
+			say_rx(peer);
 
 			int32_t sleep_ms = mac_time_to_own_window(peer->self->mac, now_ms);
 			pthread_mutex_unlock(&peer->mutex); //unlock
 			if(sleep_ms > 0){
 				assert(mac_own_window_remaining(peer->self->mac, now_ms) <= 0);
-				rsleep_ms(sleep_ms);
+				int32_t a = mac_time_to_own_window(peer->self->mac, now_ms);
+				int32_t b = mac_own_window_remaining(peer->self->mac, now_ms);
+				int32_t c = peer->self->mac->gap_constant + peer->self->mac->peer_window_length + peer->self->mac->tail_constant;
+				assert(c == (a-b));
+				int64_t slepe_us = 2 * 1000;
+				if(sleep_ms < 2){
+					slepe_us = 400;
+				}
+				rsleep_us(slepe_us);
+
+
 			}
 			pthread_mutex_lock(&peer->mutex); 	//lock
 		}
@@ -284,15 +305,19 @@ void* ether_cycle(void* arg){
 				PRINTFF(0,"\n=== ERROR! TOO ONG RX-PACKET! (%d) ===\n",r);
 				quick_exit(3);
 			}
-
+			int64_t us1 = real_microseconds();
 			pthread_mutex_lock(&peer->mutex); 	//lock
-			PRINTFF(0,"#3   %d bytes rx'ed.\n", r);
-			if(peer->physicalParams.RADIO_MODE == RX_MODE){
+			int64_t us2 = real_microseconds();
+			PRINTFF(0,"#3   %d bytes rx'ed.  (locked in %ld us)\n", r, us2-us1);
+			if(peer->self->phy->radio_mode == MODE_RX){
 				memcpy(&peer->rcvFrame->radioFrame, &tgt[4], r-4);
 				peer->rcvFrame->radioFrame.length = r-4;
+				peer->rcvFrame->rx_time_ms = rget_time_ms();
 				int rxr = sky_rx(peer->self, peer->rcvFrame, 1);
 				PRINTFF(0,"#3.5 bytes successfully rx'ed. rx ret: %d\n", rxr);
 				peer_packets_from_ring_to_zmq(peer);
+			} else {
+				PRINTFF(0,"#3.6 >>>>>>>>>>>>>>>>>> MISSED RX PACKET!! <<<<<<<<<<<<<<<<<<<<<<<\n");
 			}
 			pthread_mutex_unlock(&peer->mutex); //unlock
 		}
@@ -309,7 +334,7 @@ void tx_rx_zmq_test(int argc, char *argv[]){
 	}
 	int ID = argv[1][0] - 48;
 	PRINTFF(0, "Starting peer cycle with ID=%d \n",ID);
-	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 10024, 0.0 );
+	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 2*1024, 0.0 );
 	relative_time_speed = peer->physicalParams.relative_speed;
 
 	pthread_create(&peer->thread1, NULL, tx_cycle, peer);

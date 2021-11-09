@@ -63,6 +63,9 @@
 #define SKY_RET_MALLOC_FAILED      			(-70)
 
 
+#define MODE_RX		11
+#define MODE_TX		22
+
 
 
 
@@ -189,6 +192,12 @@ typedef struct sky_hmac SkyHMAC;
 
 
 
+typedef struct sky_physical {
+	uint8_t radio_mode;
+	uint16_t frames_sent_in_current_window_per_vc[SKY_NUM_VIRTUAL_CHANNELS];
+	uint16_t total_frames_sent_in_current_window;
+} SkyPhysical;
+
 
 
 /*
@@ -221,6 +230,7 @@ typedef struct sky_conf {
  * since it ties several different blocks togehter.
  */
 struct sky_all {
+	SkyPhysical*	phy;
 	SkyConfig*		conf;                 					// Configuration
 	SkyDiagnostics*	diag;                 					// Diagnostics
 	SkyArqRing* 	arrayBuffers[SKY_NUM_VIRTUAL_CHANNELS]; //ARQ capable buffers.
@@ -232,12 +242,9 @@ typedef struct sky_all* SkyHandle;
 //============ STRUCTS ===========================================================================================================
 //================================================================================================================================
 
+int sky_tx_pick_vc(SkyHandle self);
 
-int content_to_send(SkyHandle self, uint8_t vc);
-
-int any_content_to_send(SkyHandle self);
-
-int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay);
+int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay, int32_t now_ms);
 
 int sky_rx(SkyHandle self, RCVFrame* frame, int contains_golay);
 

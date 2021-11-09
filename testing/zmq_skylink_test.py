@@ -5,7 +5,7 @@ import time
 import random
 from queue import Queue
 from zmq_test_tools import new_subber_bind, new_publisher_bind, Bookkeeper
-
+from realtime_plot.drawer import create_realplot
 rint = random.randint
 rng = random.random
 
@@ -15,10 +15,10 @@ PEERS = {5:7,
 		 7:5}
 
 RELATIVE_TIME_SPEED = 0.2
-TOTAL_LOSS_CHANCE 	= 0.00
-CORRUPT_CHANCE    	= 0.09
-PING_TIME_S	      	= 0.005
-
+TOTAL_LOSS_CHANCE 	= 0.03
+CORRUPT_CHANCE    	= 0.02
+PING_TIME_S	      	= 0.007
+SPEAKER_DETECTION_QUE = create_realplot(200, 40)
 
 
 def xsleep(t):
@@ -70,17 +70,22 @@ class EtherRcv:
 				continue
 			ts = xperf_counter()
 			src = int.from_bytes(msg[0:4], byteorder="little")
-			if src in PEERS:
-				tgt = PEERS[src]
-				pl = msg[4:]
-				self.log.append( (src, ts, len(pl)) )
-				thr = threading.Thread(target=ether_process, args=(tgt, pl, ts, self.etherque))
-				thr.start()
-				#print("2 Ether RCV from: {}".format(src))
+			if not (src in PEERS):
+				print("Ether RCV from: {} (no such peer)".format(src))
+				continue
+			tgt = PEERS[src]
+			if len(msg) == 5:
+				state = msg[4]
+				SPEAKER_DETECTION_QUE.put( (src,state) )
+				continue
 
-			else:
-				#print("Ether RCV from: {} (no such peer)".format(src))
-				pass
+			pl = msg[4:]
+			self.log.append( (src, ts, len(pl)) )
+			thr = threading.Thread(target=ether_process, args=(tgt, pl, ts, self.etherque))
+			thr.start()
+			#print("2 Ether RCV from: {}".format(src))
+
+
 		print("-B", threading.current_thread().getName())
 
 
@@ -113,6 +118,7 @@ class EtherSend:
 
 def ether_process(tgt:int, pl:bytes, ts:float, sendque:Queue):
 	if rng() < TOTAL_LOSS_CHANCE:
+		print("[Total loss.]")
 		return
 	pl = corrupt(pl, CORRUPT_CHANCE)
 	wait = (ts+PING_TIME_S) - xperf_counter()
@@ -128,6 +134,7 @@ def pl_generator(queue:Queue, tgt:int, rate:float):
 	print("+G", threading.current_thread().getName())
 	self = threading.current_thread()
 	self.is_on = True
+	time.sleep(5)
 	while self.is_on:
 		sleep = random.expovariate(rate)
 		xsleep(sleep)
@@ -204,7 +211,7 @@ if __name__ == '__main__':
 	t2.start()
 	t3.start()
 
-	for _ in range(160):
+	for _ in range(1600):
 		time.sleep(3)
 		manager.book.report()
 		print("({} threads.)".format(threading.active_count()))
@@ -214,7 +221,7 @@ if __name__ == '__main__':
 	manager.close()
 
 	for _ in range(3):
-		time.sleep(0.6)
+		time.sleep( 0.6)
 		print("{} threads.".format(threading.active_count()))
 
 

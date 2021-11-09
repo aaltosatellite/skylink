@@ -14,7 +14,7 @@ from collections import deque
 LISTENING 			= 0		#a state flag with no semantic meaning
 SENDING 			= 1		#a state flag with no semantic meaning
 MSG_SEND_TIME_MS 	= 4		#time it takes to send one message.
-SLOW_FACTOR		 	= 20	#time is slowed down by this factor. Makes simulating millisecond-scale stuff nicer.
+SLOW_FACTOR		 	= 12	#time is slowed down by this factor. Makes simulating millisecond-scale stuff nicer.
 
 MAX_WINDOW_SIZE 	= 160
 MIN_WINDOW_SIZE 	= 30
@@ -33,10 +33,11 @@ def xperf_counter():
 
 
 class MAC:
-	def __init__(self, T, window, peer_window, gap):
+	def __init__(self, T, window, peer_window, gap, tail):
 		self.window = window
 		self.peer_window = peer_window
 		self.gap = gap
+		self.tail = tail
 		self.T = self.wrap(T)
 
 	def wrap(self, t):
@@ -44,7 +45,8 @@ class MAC:
 		return (t + self.cycle()) % self.cycle()
 
 	def cycle(self):
-		return self.window+self.peer_window + self.gap * 2
+		#return self.window + self.gap + self.peer_window + self.gap
+		return self.window + self.gap + self.peer_window + self.tail
 
 	def get_own_window_remaining(self, ms_now):
 		dt = self.wrap(ms_now - self.T)
@@ -66,7 +68,8 @@ class MAC:
 		if length != self.peer_window:
 			self.peer_window = length
 
-		implied_epoch_start = self.wrap(ms_now + remaining + self.gap)
+		#implied_epoch_start = self.wrap(ms_now + remaining + self.gap)
+		implied_epoch_start = self.wrap(ms_now + remaining + self.tail)
 		self.T = implied_epoch_start
 
 
@@ -99,10 +102,10 @@ class MsgGenerator(threading.Thread):
 
 
 class Side:
-	def __init__(self, window, peer_window, gap, time_shift, ether_que:Queue, own_name, pair_name):
+	def __init__(self, window, peer_window, gap, tail, time_shift, ether_que:Queue, own_name, pair_name):
 		self.time_shift = time_shift
 		self.t0 = self.time_ms()
-		self.mac = MAC(self.t0, window, peer_window, gap)
+		self.mac = MAC(self.t0, window, peer_window, gap, tail)
 		self.sendque = Queue(1000)
 		self.rcvque  = Queue(1000)
 		self.ether_que  = ether_que
@@ -143,6 +146,7 @@ class Side:
 		peer_window, peer_remaining, pl = msg
 		self.mac.update_belief(now_ms, peer_window, peer_remaining)
 		self.received_list.append((pl, self.own_name, xperf_counter()))
+		PL_RCV_REFERENCE.append((pl, self.own_name, xperf_counter()))
 		print("<<RCV to:",self.own_name, pl[0:2].hex())
 
 
@@ -239,9 +243,9 @@ class DataScrubber(threading.Thread):
 		self.on = False
 
 
-Eth = Ether(0.025)
-sideA = Side(50,50,50,random.random()*1000000, ether_que=Eth.ether_que, own_name="A",pair_name="B")
-sideB = Side(50,50,50,random.random()*1000000, ether_que=Eth.ether_que, own_name="B",pair_name="A")
+Eth = Ether(0.0015)
+sideA = Side(50,50,150,5,random.random()*1000000, ether_que=Eth.ether_que, own_name="A",pair_name="B")
+sideB = Side(50,50,150,5,random.random()*1000000, ether_que=Eth.ether_que, own_name="B",pair_name="A")
 Eth.sides["A"] = sideA
 Eth.sides["B"] = sideB
 
@@ -256,12 +260,20 @@ scrubber = DataScrubber((sideA,sideB))
 scrubber.start()
 
 print("Started.")
-time.sleep(30)
+time.sleep(20)
 
 Eth.close()
 sideA.close()
 sideB.close()
 scrubber.close()
+time.sleep(2)
+
+n_generated = len(PL_GEN_REFERENCE)
+n_lost = len(PL_MISS_REFERENCE)
+n_received = len(PL_RCV_REFERENCE)
+
+print(100*round(n_received / n_generated, 2), "% received")
+print(100*round(n_lost / n_generated, 2), "% lost")
 
 dataA = np.array(scrubber.states["A"])
 dataB = np.array(scrubber.states["B"])
@@ -305,8 +317,8 @@ def TST1():
 		delta1 = rint(-300, 300)
 		delta2 = rint(-300, 300)
 		t0 = rint(1000,100000)
-		mac1 = MAC(t0+delta1, 43, 61, 52)
-		mac2 = MAC(t0+delta2, 61, 43, 52)
+		mac1 = MAC(t0+delta1, 43, 61, 52, 6)
+		mac2 = MAC(t0+delta2, 61, 43, 52, 6)
 
 		now_ = get_ms()
 		remaining2 = mac2.get_own_window_remaining(now_)

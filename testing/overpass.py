@@ -51,39 +51,74 @@ class Overpass:
 		d = np.linalg.norm(v, 2)
 		return d
 
+	def ping_at_t(self, t_offset):
+		d = self.d_at_t(t_offset)
+		return d / c_light
 
+	def over_horizon(self, t_offset, degrees):
+		r_gs_z = np.sin(self.gs_lat_rad) * Re
+		r_gs_x = np.cos(self.gs_lat_rad) * np.sin(self.gs_offset_rad + self.w_day*t_offset) * Re
+		r_gs_y = np.cos(self.gs_lat_rad) * np.cos(self.gs_offset_rad + self.w_day*t_offset) * Re
+		r_gs = npv3(r_gs_x,r_gs_y,r_gs_z)
+
+		r_sat_x = 0
+		r_sat_z = np.sin(self.gs_lat_rad + self.w_orbit*t_offset) * (Re + self.h_orbit)
+		r_sat_y = np.cos(self.gs_lat_rad + self.w_orbit*t_offset) * (Re + self.h_orbit)
+		r_sat = npv3(r_sat_x, r_sat_y, r_sat_z)
+
+		r_gs_sat = r_sat - r_gs
+
+		dotp = np.dot(r_gs, r_gs_sat)
+		mag_r_gs = np.linalg.norm(r_gs, 2)
+		mag_r_sat = np.linalg.norm(r_gs_sat, 2)
+		costheta = dotp / (mag_r_gs * mag_r_sat)
+		theta = np.arccos(costheta)
+		theta_deg = theta * 360 / (np.pi*2)
+		return (theta_deg+degrees) < 90
 
 
 
 if __name__ == '__main__':
 	#print(np.pi*2*(35785e3+Re) / v_orbit(35785e3) )
 	#print(24*3600)
-	overpass = Overpass(GS_offset_deg=20, GS_lat_deg=10.1, H_orbit_m=500e3)
+	overpass = Overpass(GS_offset_deg=9, GS_lat_deg=60.188, H_orbit_m=500e3)
+	DIST_VISIBLE = []
 	DIST = []
+	T_VISIBLE = []
 	T = []
-	for t in np.linspace(-60*20, 60*60*24, 800):
+	for t in np.linspace(-60*60*12, 60*60*12*4, 10000):
 		d_ = overpass.d_at_t(t)
 		DIST.append(d_)
-		T.append(t/60)
+		T.append(t/(60))
+		if overpass.over_horizon(t, 0):
+			DIST_VISIBLE.append(d_)
+			T_VISIBLE.append(t/(60))
+
 
 	DIST = np.array(DIST)
+	DIST_VISIBLE = np.array(DIST_VISIBLE)
 	DISTkm = DIST/1000.0
+	DIST_VISkm = DIST_VISIBLE/1000.0
 	PING = DIST / c_light
+	PING_VIS = DIST_VISIBLE / c_light
 	PINGms = PING*1000.0
+	PING_VISms = PING_VIS*1000.0
 
 	plt.subplot(211)
 	plt.title("distance")
-	plt.plot(T,DISTkm)
+	plt.plot(T, DISTkm)
+	plt.scatter(T_VISIBLE, DIST_VISkm, marker=".", color="red")
 	plt.grid()
 	plt.ylabel("km")
-	plt.xlabel("minute")
+	plt.xlabel("day")
 
 	plt.subplot(212)
 	plt.title("ping")
-	plt.plot(T,PINGms, color="red")
+	plt.plot(T, PINGms)
+	plt.scatter(T_VISIBLE, PING_VISms, marker="x", color="red")
 	plt.grid()
 	plt.ylabel("ms")
-	plt.xlabel("minute")
+	plt.xlabel("day")
 	plt.show()
 
 

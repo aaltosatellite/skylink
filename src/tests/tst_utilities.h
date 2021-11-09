@@ -9,6 +9,7 @@
 #include "../skylink/conf.h"
 #include "../skylink/mac.h"
 #include "../skylink/hmac.h"
+#include "../skylink/phy.h"
 #include "tools/tools.h"
 
 

@@ -10,3 +10,6 @@ build/
 cmake-build-debug/
 */cmake-build-debug/
 .idea/
+__pycache__/
+*/__pycache__/
+*/.idea/

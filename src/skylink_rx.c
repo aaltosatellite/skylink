@@ -9,6 +9,7 @@
 #include "skylink/frame.h"
 #include "skylink/mac.h"
 #include "skylink/hmac.h"
+#include "skylink/phy.h"
 
 
 static void sky_rx_process_extensions(SkyHandle self, RCVFrame* frame, uint8_t this_type);
@@ -26,6 +27,7 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame);
 
 
 int sky_rx(SkyHandle self, RCVFrame* frame, int contains_golay){
+	turn_to_rx(self->phy);
 	int ret = 0;
 	if(frame->radioFrame.length < SKY_ENCODED_FRAME_MIN_LENGTH){
 		return SKY_RET_INVALID_ENCODED_LENGTH;
@@ -105,6 +107,8 @@ static int sky_rx_1(SkyHandle self, RCVFrame* frame){
 
 	// Update MAC status
 	if((radioFrame->flags & SKY_FLAG_AUTHENTICATED) || self->conf->mac.unauthenticated_mac_updates){
+		//printf("\tgot mac remaining: %d\n", frame->radioFrame.mac_remaining);
+		//printf("\tgot mac window: %d\n", frame->radioFrame.mac_window);
 		mac_update_belief(self->mac, &self->conf->mac, frame->rx_time_ms, frame->radioFrame.mac_window, frame->radioFrame.mac_remaining);
 	}
 

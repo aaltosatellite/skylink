@@ -49,13 +49,15 @@ SkyConfig* new_vanilla_config(){
 	config->hmac.maximum_jump 		= 24;
 	memcpy(config->hmac.key, arr_, config->hmac.key_length);
 
-	config->mac.maximum_gap_length = 200;
-	config->mac.minimum_gap_length = 25;
-	config->mac.maximum_window_length = 200;
-	config->mac.minimum_window_length = 25;
-	config->mac.default_window_length = 50;
-	config->mac.default_gap_length = 150;
-	config->mac.default_tail_length = 5;
+	config->mac.maximum_gap_length 		= 1000;
+	config->mac.minimum_gap_length 		= 50;
+	config->mac.default_gap_length 		= 600;
+
+	config->mac.maximum_window_length 	= 250;
+	config->mac.minimum_window_length 	= 25;
+	config->mac.default_window_length 	= 210;
+
+	config->mac.default_tail_length 	= 32;
 	config->mac.unauthenticated_mac_updates = 0;
 
 	config->identity[0] = 'O';
@@ -92,6 +94,7 @@ SkyHandle new_handle(SkyConfig* config){
 	handle->mac = new_mac_system(&config->mac);
 	handle->hmac = new_hmac_instance(&config->hmac);
 	handle->diag = new_diagnostics();
+	handle->phy = new_physical();
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		handle->arrayBuffers[i] = new_arq_ring(&config->array[i]);
 	}
@@ -103,6 +106,7 @@ void destroy_handle(SkyHandle self){
 	destroy_mac_system(self->mac);
 	destroy_hmac(self->hmac);
 	destroy_diagnostics(self->diag);
+	destroy_physical(self->phy);
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		destroy_arq_ring(self->arrayBuffers[i]);
 	}

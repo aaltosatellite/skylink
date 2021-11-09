@@ -1,6 +1,8 @@
+import random
 import zmq
 import time
 import threading
+
 
 
 
@@ -81,6 +83,16 @@ class Bookkeeper:
 			print(S)
 
 
+
+
+if __name__ == '__main__':
+	que = create_realplot(200,40)
+
+	for i in range(1000):
+		time.sleep(0.1)
+		name = random.randint(4,5)
+		v = random.random()
+		que.put( (str(name),v) )
 
 
 

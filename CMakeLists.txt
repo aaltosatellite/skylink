@@ -87,15 +87,17 @@ add_executable(skylink_gs
         )
 endif()
 
-link_libraries(pthread)
 
+
+link_libraries(pthread)
 add_compile_options(-O2)
 add_compile_options(-g)
 add_compile_options(-Wall)
 add_compile_options(-Wextra)
+add_executable(module_tests
+        src/tests/module_tests.c
 
-add_executable(submodule_tests
-        src/tests/testmain.c
+
         src/tests/crc/crc_algos.c
         src/tests/crc/crc_algos.h
         src/tests/tools/tools.c
@@ -119,10 +121,6 @@ add_executable(submodule_tests
         src/tests/tx_rx_zmq.c
         src/tests/tx_rx_zmq.h
 
-
-        #platforms/posix/debug.h
-        #platforms/posix/timestamp.h
-        #platforms/posix/wrapmalloc.h
         src/ext/cifra/bitops.h
         src/ext/cifra/blockwise.c
         src/ext/cifra/blockwise.h
@@ -163,6 +161,84 @@ add_executable(submodule_tests
         src/diag.c
         src/skylink_rx.c
         src/skylink_tx.c
+        src/phy.c
+        src/skylink/phy.h
+        )
 
 
+
+link_libraries(pthread)
+add_compile_options(-O2)
+add_compile_options(-g)
+add_compile_options(-Wall)
+add_compile_options(-Wextra)
+add_executable(zmq_peer
+        src/tests/zmq_test_peer.c
+
+
+        src/tests/crc/crc_algos.c
+        src/tests/crc/crc_algos.h
+        src/tests/tools/tools.c
+        src/tests/tools/tools.h
+        src/tests/elebuffer_tests.c
+        src/tests/elebuffer_tests.h
+        src/tests/ring_test.c
+        src/tests/ring_test.h
+        src/tests/packet_encode_test.c
+        src/tests/packet_encode_test.h
+        src/tests/tst_utilities.c
+        src/tests/tst_utilities.h
+        src/tests/fec_test.c
+        src/tests/fec_test.h
+        src/tests/hmac_tests.c
+        src/tests/hmac_tests.h
+        src/tests/tx_rx_cycle_test.c
+        src/tests/tx_rx_cycle_test.h
+        src/tests/zmq_trial.c
+        src/tests/zmq_trial.h
+        src/tests/tx_rx_zmq.c
+        src/tests/tx_rx_zmq.h
+
+        src/ext/cifra/bitops.h
+        src/ext/cifra/blockwise.c
+        src/ext/cifra/blockwise.h
+        src/ext/cifra/chash.h
+        src/ext/cifra/handy.h
+        src/ext/cifra/hmac.c
+        src/ext/cifra/hmac.h
+        src/ext/cifra/sha2.h
+        src/ext/cifra/sha256.c
+        src/ext/cifra/tassert.h
+        src/ext/gr-satellites/golay24.c
+        src/ext/gr-satellites/golay24.h
+        src/ext/libfec/ccsds_tab.c
+        src/ext/libfec/decode_rs.h
+        src/ext/libfec/decode_rs_8.c
+        src/ext/libfec/encode_rs.h
+        src/ext/libfec/encode_rs_8.c
+        src/ext/libfec/fec.h
+        src/ext/libfec/fixed.h
+        src/skylink/conf.h
+        src/skylink/diag.h
+        src/skylink/elementbuffer.h
+        src/skylink/fec.h
+        src/skylink/hmac.h
+        src/skylink/platform.h
+        src/skylink/utilities.h
+        src/skylink/skylink.h
+        src/skylink/arq_ring.h
+        src/skylink/frame.h
+        src/skylink/mac.h
+        src/elementbuffer.c
+        src/fec.c
+        src/hmac.c
+        src/mac.c
+        src/utilities.c
+        src/arq_ring.c
+        src/frame.c
+        src/diag.c
+        src/skylink_rx.c
+        src/skylink_tx.c
+        src/phy.c
+        src/skylink/phy.h
         )

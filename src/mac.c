@@ -13,20 +13,20 @@ static int32_t wrap_ms(int32_t time_ms, MACSystem* macSystem){ //This mess is a 
 
 
 int mac_valid_window_length(SkyMACConfig* config, int32_t length){
-	if(length < config->maximum_window_length){
+	if(length < config->minimum_window_length){
 		return 0;
 	}
-	if(length > config->minimum_window_length){
+	if(length > config->maximum_window_length){
 		return 0;
 	}
 	return 1;
 }
 
 int mac_valid_gap_length(SkyMACConfig* config, int32_t length){
-	if(length < config->maximum_gap_length){
+	if(length < config->minimum_gap_length){
 		return 0;
 	}
-	if(length > config->minimum_gap_length){
+	if(length > config->maximum_gap_length){
 		return 0;
 	}
 	return 1;
