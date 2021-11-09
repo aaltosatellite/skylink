@@ -1,7 +1,7 @@
 //
 // Created by elmore on 28.10.2021.
 //
-#include "diag.h"
+#include "skylink/diag.h"
 #include "skylink/skylink.h"
 
 

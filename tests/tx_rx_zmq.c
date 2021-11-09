@@ -7,11 +7,11 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
-#include "../skylink/arq_ring.h"
-#include "../skylink/skylink.h"
-#include "../skylink/frame.h"
-#include "../skylink/utilities.h"
-#include "../skylink/phy.h"
+#include "../src/skylink/arq_ring.h"
+#include "../src/skylink/skylink.h"
+#include "../src/skylink/frame.h"
+#include "../src/skylink/utilities.h"
+#include "../src/skylink/phy.h"
 #include "tst_utilities.h"
 #include "tools/tools.h"
 

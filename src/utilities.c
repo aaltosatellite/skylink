@@ -2,7 +2,7 @@
 // Created by elmore on 25.10.2021.
 //
 
-#include "utilities.h"
+#include "skylink/utilities.h"
 
 
 uint16_t sky_hton16(uint16_t vh) {

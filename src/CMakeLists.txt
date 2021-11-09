@@ -5,6 +5,8 @@ set(CMAKE_C_STANDARD 11)
 include_directories(skylink) # Shall be removed
 include_directories(../platforms/posix)
 
+add_compile_options(-O2 -Wall)
+
 add_library(skylink SHARED
     arq_ring.c
     diag.c

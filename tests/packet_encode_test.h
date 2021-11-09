@@ -5,8 +5,8 @@
 #ifndef SKYLINK_CMAKE_PACKET_ENCODE_TEST_H
 #define SKYLINK_CMAKE_PACKET_ENCODE_TEST_H
 
-#include "../skylink/skylink.h"
-#include "../skylink/frame.h"
+#include "../src/skylink/skylink.h"
+#include "../src/skylink/frame.h"
 #include "tools/tools.h"
 
 void packet_tests();

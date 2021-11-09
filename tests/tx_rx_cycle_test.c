@@ -3,10 +3,10 @@
 //
 
 #include "tx_rx_cycle_test.h"
-#include "../skylink/elementbuffer.h"
-#include "../skylink/arq_ring.h"
-#include "../skylink/frame.h"
-#include "../skylink/skylink.h"
+#include "../src/skylink/elementbuffer.h"
+#include "../src/skylink/arq_ring.h"
+#include "../src/skylink/frame.h"
+#include "../src/skylink/skylink.h"
 #include "tst_utilities.h"
 #include "tools/tools.h"
 

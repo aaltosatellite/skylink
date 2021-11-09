@@ -5,9 +5,9 @@
 #ifndef SKYLINK_CMAKE_FEC_TEST_H
 #define SKYLINK_CMAKE_FEC_TEST_H
 
-#include "../skylink/fec.h"
-#include "../skylink/diag.h"
-#include "../skylink/frame.h"
+#include "../src/skylink/fec.h"
+#include "../src/skylink/diag.h"
+#include "../src/skylink/frame.h"
 #include "tools/tools.h"
 
 

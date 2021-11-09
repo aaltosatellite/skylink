@@ -3,7 +3,7 @@
 //
 
 #include "ring_test.h"
-#include "../skylink/skylink.h"
+#include "../src/skylink/skylink.h"
 #include <assert.h>
 
 static void test1(int count);

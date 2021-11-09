@@ -8,6 +8,8 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_BUILD_TYPE Debug) # Force debug mode
 
 
+
+
 find_package(ZeroMQ REQUIRED)
 
 

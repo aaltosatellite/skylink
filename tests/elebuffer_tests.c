@@ -1,5 +1,5 @@
 
-#include "../skylink/elementbuffer.h"
+#include "../src/skylink/elementbuffer.h"
 #include "tools/tools.h"
 #include "elebuffer_tests.h"
 
