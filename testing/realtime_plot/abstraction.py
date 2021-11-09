@@ -58,6 +58,8 @@ class PlotLine:
 		scope = scope[0], y2
 		if prior_scope:
 			scope = unite_scopes(scope, prior_scope)
+		if scope[0] == scope[1]:
+			return (0,1)
 		return scope
 
 	def get_x_scope(self, prior_scope=None):
@@ -67,6 +69,8 @@ class PlotLine:
 		scope = np.min(x), np.max(x)
 		if prior_scope:
 			scope = unite_scopes(scope, prior_scope)
+		if scope[0] == scope[1]:
+			return (0,1)
 		return scope
 
 

@@ -28,7 +28,7 @@ line_pens = [
 	QtGui.QPen(QtGui.QColor(200, 200, 200), 2.0)
 ]
 
-clrs = {0:"#ff5555", 1:"#55ff55", 2:"#5588ff"}
+clrs = {0:"#ff5555", 1:"#55ff55", 2:"#6699ff"}
 
 def get_color_name(i:int):
 	if i in clrs:
@@ -270,7 +270,7 @@ class MW(QtWidgets.QWidget):
 
 			if not name in self.names:
 				self.names[name] = True
-				label = QtWidgets.QLabel(str(name))
+				label = QtWidgets.QLabel(str(name)[:32])
 				color_name = get_color_name(len(self.names) -1)
 				label.setStyleSheet("background-color: {}; border: 1px solid black;".format(color_name))
 				self.name_hbox.addWidget(label)
@@ -280,7 +280,7 @@ def _mw_start(que, retention, interval_ms):
 	app = QtWidgets.QApplication(sys.argv)
 	mw = MW(que, retention, interval_ms)
 	mw.show()
-	mw.resize(800,600)
+	mw.resize(900,600)
 	app.exec_()
 
 

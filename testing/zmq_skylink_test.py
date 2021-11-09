@@ -15,17 +15,20 @@ PEERS = {5:7,
 		 7:5}
 
 RELATIVE_TIME_SPEED = 0.2
-TOTAL_LOSS_CHANCE 	= 0.03
-CORRUPT_CHANCE    	= 0.02
-PING_TIME_S	      	= 0.007
-SPEAKER_DETECTION_QUE = create_realplot(200, 40)
+TOTAL_LOSS_CHANCE 	= 0.04
+CORRUPT_CHANCE    	= 0.025
+PING_TIME_S	      	= 0.0075
+SPEAKER_DETECTION_QUE = create_realplot(250, 35)
+
 
 
 def xsleep(t):
 	time.sleep(t/RELATIVE_TIME_SPEED)
 
+
 def xperf_counter():
 	return time.perf_counter() * RELATIVE_TIME_SPEED
+
 
 
 
@@ -48,7 +51,6 @@ def corrupt(pl:bytes, chance_per_byte):
 
 
 
-
 class EtherRcv:
 	def __init__(self, port, etherque:Queue):
 		self.lag = 0.020
@@ -61,7 +63,7 @@ class EtherRcv:
 		self.on = False
 
 	def run(self):
-		print("+B", threading.current_thread().getName())
+		print("+Er", threading.current_thread().getName())
 		self.sock.set(zmq.RCVTIMEO, 20)
 		while self.on:
 			try:
@@ -84,9 +86,8 @@ class EtherRcv:
 			thr = threading.Thread(target=ether_process, args=(tgt, pl, ts, self.etherque))
 			thr.start()
 			#print("2 Ether RCV from: {}".format(src))
+		print("-Er", threading.current_thread().getName())
 
-
-		print("-B", threading.current_thread().getName())
 
 
 class EtherSend:
@@ -100,7 +101,7 @@ class EtherSend:
 		self.on = False
 
 	def run(self):
-		print("+A", threading.current_thread().getName())
+		print("+Es", threading.current_thread().getName())
 		while self.on:
 			try:
 				k = self.etherque.get(timeout=0.5)
@@ -112,7 +113,8 @@ class EtherSend:
 			b = a + pl
 			self.sock.send(b)
 			#print("3 Ether SEND to: {} : {}".format(tgt, len(b)))
-		print("-A", threading.current_thread().getName())
+		print("-Es", threading.current_thread().getName())
+
 
 
 
@@ -125,7 +127,6 @@ def ether_process(tgt:int, pl:bytes, ts:float, sendque:Queue):
 	if wait > 0:
 		xsleep(wait*0.999)
 	sendque.put( (tgt, pl, ts) )
-
 
 
 
@@ -157,7 +158,7 @@ class SkylinkManager:
 		self.read_from_B = list()
 		self.ID_A = 5
 		self.ID_B = 7
-		self.rate_A = 2.0
+		self.rate_A = 2.5
 		self.rate_B = 2.0
 		self.generator_A = threading.Thread(target=pl_generator, args=(self.push_queue, self.ID_A, self.rate_A))
 		self.generator_B = threading.Thread(target=pl_generator, args=(self.push_queue, self.ID_B, self.rate_B))
@@ -169,7 +170,7 @@ class SkylinkManager:
 		self.generator_B.is_on = False
 
 	def run(self):
-		print("+X", threading.current_thread().getName())
+		print("+M", threading.current_thread().getName())
 		self.generator_A.start()
 		self.generator_B.start()
 		self.read_sock.set(zmq.RCVTIMEO, 5)
@@ -180,8 +181,7 @@ class SkylinkManager:
 				msg = msg + b"\x00" + pl
 				self.write_sock.send(msg)
 				self.book.mark_sent(pl)
-				#print("send:", pl)
-				#print("1 Manager push to: ",tgt)
+				SPEAKER_DETECTION_QUE.put(("unconfirmed", len(self.book.sent) ))
 			except:
 				pass
 
@@ -189,11 +189,10 @@ class SkylinkManager:
 				rcv = self.read_sock.recv()
 				pl = rcv[5:]
 				self.book.mark_received(pl)
-				#src = int.from_bytes(rcv[0:4], "little")
-				#print("\t4 Manager rcv from: ", src)
+				SPEAKER_DETECTION_QUE.put(("unconfirmed", len(self.book.sent) ))
 			except:
 				pass
-		print("-X", threading.current_thread().getName())
+		print("-M", threading.current_thread().getName())
 
 
 
