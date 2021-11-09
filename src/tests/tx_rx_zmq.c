@@ -334,7 +334,7 @@ void tx_rx_zmq_test(int argc, char *argv[]){
 	}
 	int ID = argv[1][0] - 48;
 	PRINTFF(0, "Starting peer cycle with ID=%d \n",ID);
-	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 2*1024, 0.0 );
+	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 3*1200, 0.0 );
 	relative_time_speed = peer->physicalParams.relative_speed;
 
 	pthread_create(&peer->thread1, NULL, tx_cycle, peer);

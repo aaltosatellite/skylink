@@ -81,17 +81,16 @@ class Graph2(QtWidgets.QGraphicsView):
 		self.pens      = dict()
 		self.pathitems = dict()
 		self.top_margin = 0.1
-		self.x_margin_l = 25
+		self.x_margin_l = 40
 		self.x_margin_r = 10
 		self.y_margin_u = 10
-		self.y_margin_d = 25
+		self.y_margin_d = 24
 		self.scope = ((0,1), (0,1))
 		self.redraw()
 
 	def _update_scope(self):
 		if not self.plotLines:
 			return
-
 		old = tuple(self.scope)
 		self.scope = (None,None)
 		for name in self.plotLines:
@@ -113,7 +112,6 @@ class Graph2(QtWidgets.QGraphicsView):
 			plotline.add_y(point)
 		changed = self._update_scope()
 		if changed:
-			#print("ping", self.scope)
 			self.redraw()
 		else:
 			self.draw_name(name)
@@ -217,10 +215,13 @@ class MW(QtWidgets.QWidget):
 		self.addque = que
 		self.lo = QtWidgets.QVBoxLayout()
 		self.setLayout(self.lo)
+		self.notice_label = QtWidgets.QLabel("")
+		self.notice_label.setStyleSheet("background-color: #aaaaaa; border: 1px solid black;")
 		self.name_widget = QtWidgets.QWidget()
 		self.name_hbox = QtWidgets.QHBoxLayout()
 		self.name_widget.setLayout(self.name_hbox)
 		self.G = Graph2(self, retention, interval_ms)
+		self.layout().addWidget(self.notice_label)
 		self.layout().addWidget(self.G)
 		self.layout().addWidget(self.name_widget)
 		self.previous = dict()
@@ -246,6 +247,7 @@ class MW(QtWidgets.QWidget):
 			self.G.clear()
 			self.names.clear()
 			self.previous.clear()
+			self.notice_label.setText("")
 			self.lo.removeWidget(self.name_widget)
 			self.name_hbox = QtWidgets.QHBoxLayout()
 			self.name_widget = QtWidgets.QWidget()
@@ -256,7 +258,13 @@ class MW(QtWidgets.QWidget):
 	def _add_loop(self):
 		self.loopcount += 1
 		while not self.addque.empty():
-			name, p = self.addque.get_nowait()
+			x = self.addque.get_nowait()
+			try:
+				name, p = x
+				assert(type(p) in (int,float,np.float64))
+			except:
+				self.notice_label.setText("Received invalid data payloads. Give (name, value) tuples.")
+				continue
 			if not (type(p) in (int, float, np.float64)):
 				continue
 			if not (type(name) in (str, bytes, int)):

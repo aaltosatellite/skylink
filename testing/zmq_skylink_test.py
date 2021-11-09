@@ -18,7 +18,7 @@ RELATIVE_TIME_SPEED = 0.2
 TOTAL_LOSS_CHANCE 	= 0.04
 CORRUPT_CHANCE    	= 0.025
 PING_TIME_S	      	= 0.0075
-SPEAKER_DETECTION_QUE = create_realplot(250, 35)
+SPEAKER_DETECTION_QUE = create_realplot(300, 35)
 
 
 
@@ -158,8 +158,8 @@ class SkylinkManager:
 		self.read_from_B = list()
 		self.ID_A = 5
 		self.ID_B = 7
-		self.rate_A = 2.5
-		self.rate_B = 2.0
+		self.rate_A = 1.0
+		self.rate_B = 2.5
 		self.generator_A = threading.Thread(target=pl_generator, args=(self.push_queue, self.ID_A, self.rate_A))
 		self.generator_B = threading.Thread(target=pl_generator, args=(self.push_queue, self.ID_B, self.rate_B))
 		self.on = True

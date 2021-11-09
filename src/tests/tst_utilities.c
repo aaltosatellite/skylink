@@ -53,11 +53,11 @@ SkyConfig* new_vanilla_config(){
 	config->mac.minimum_gap_length 		= 50;
 	config->mac.default_gap_length 		= 600;
 
-	config->mac.maximum_window_length 	= 250;
+	config->mac.maximum_window_length 	= 350;
 	config->mac.minimum_window_length 	= 25;
-	config->mac.default_window_length 	= 210;
+	config->mac.default_window_length 	= 200;
 
-	config->mac.default_tail_length 	= 32;
+	config->mac.default_tail_length 	= 32*3;
 	config->mac.unauthenticated_mac_updates = 0;
 
 	config->identity[0] = 'O';
