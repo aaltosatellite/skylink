@@ -242,9 +242,7 @@ typedef struct sky_all* SkyHandle;
 //============ STRUCTS ===========================================================================================================
 //================================================================================================================================
 
-int sky_tx_pick_vc(SkyHandle self);
-
-int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay, int32_t now_ms);
+int sky_tx(SkyHandle self, SendFrame* frame, int insert_golay, int32_t now_ms);
 
 int sky_rx(SkyHandle self, RCVFrame* frame, int contains_golay);
 

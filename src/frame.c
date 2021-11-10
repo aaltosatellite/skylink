@@ -8,11 +8,13 @@
 
 SendFrame* new_send_frame(){
 	SendFrame* frame = SKY_MALLOC(sizeof(SendFrame));
+	memset(frame, 0, sizeof(SendFrame));
 	return frame;
 }
 
 RCVFrame* new_receive_frame(){
 	RCVFrame* frame = SKY_MALLOC(sizeof(RCVFrame));
+	memset(frame, 0, sizeof(RCVFrame ));
 	return frame;
 }
 

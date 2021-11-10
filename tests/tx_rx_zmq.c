@@ -53,19 +53,6 @@ typedef struct skylink_peer {
 double relative_time_speed = 0.2;
 
 int32_t rget_time_ms(){
-	/*
-	struct timespec t;
-	clock_gettime(CLOCK_REALTIME, &t);
-
-	uint64_t ts = t.tv_sec*1000;
-	ts += t.tv_nsec/1000000;
-
-	double ft = (double)ts;
-	ft = ft * relative_time_speed;
-	ft = round(ft);
-	ts = (uint64_t)ft;
-	return (int32_t) (ts & 0x7FFFFFFF);
-	*/
 	int64_t X = real_microseconds();
 	double ms = (double)(X / 1000);
 	ms = ms * relative_time_speed;
@@ -161,20 +148,6 @@ void say_tx(SkylinkPeer* peer){
 
 
 
-int peer_tx_round(SkylinkPeer* peer){
-	uint8_t tgt[700];
-	memcpy(tgt, &peer->ID, 4);
-	int vc = sky_tx_pick_vc(peer->self);
-	if(vc == -1){
-		return 0;
-	}
-	int32_t now_ms = rget_time_ms();
-	sky_tx(peer->self, peer->sendFrame, vc, 1, now_ms);
-	memcpy(tgt+4, peer->sendFrame->radioFrame.raw, peer->sendFrame->radioFrame.length);
-	zmq_send(peer->tx_socket, tgt, 4+peer->sendFrame->radioFrame.length, 0); //todo: DONTWAIT?
-	PRINTFF(0,"#2 Transmitted. %dth in this window.\n", peer->self->phy->total_frames_sent_in_current_window);
-	return peer->sendFrame->radioFrame.length;
-}
 
 
 
@@ -185,25 +158,10 @@ int peer_tx_round(SkylinkPeer* peer){
 
 
 
-void peer_packets_from_ring_to_zmq(SkylinkPeer* peer){
-	uint8_t tgt[700];
-	int sequence;
-	memcpy(tgt, &peer->ID, 4);
-	for (uint8_t vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
-		tgt[4] = vc;
-		int n = skyArray_count_readable_rcv_packets(peer->self->arrayBuffers[vc]);
-		while (n > 0){
-			int r = skyArray_read_next_received(peer->self->arrayBuffers[vc], tgt+5, &sequence);
-			zmq_send(peer->pl_read_socket, tgt, r + 5, 0);
-			PRINTFF(0,"#4 packets sent to read socket.\n");
-			n = skyArray_count_readable_rcv_packets(peer->self->arrayBuffers[vc]);
-		}
-	}
-}
 
 
-
-
+// == CYCLE 1: WRITE TO SENDING RING BUFFER ============================================================================
+// =====================================================================================================================
 void* write_to_send_cycle(void* arg){
 	SkylinkPeer* peer = arg;
 	uint8_t tgt[1000];
@@ -224,8 +182,27 @@ void* write_to_send_cycle(void* arg){
 		}
 	}
 }
+// =====================================================================================================================
+// =====================================================================================================================
 
 
+
+
+// == CYCLE 2: TRANSMIT & MOVE BETWEEN STATES ==========================================================================
+// =====================================================================================================================
+int peer_tx_round(SkylinkPeer* peer){
+	uint8_t tgt[500];
+	memcpy(tgt, &peer->ID, 4);
+	int32_t now_ms = rget_time_ms();
+	int send = sky_tx(peer->self, peer->sendFrame, 1, now_ms);
+	if(!send){
+		return 0;
+	}
+	memcpy(tgt+4, peer->sendFrame->radioFrame.raw, peer->sendFrame->radioFrame.length);
+	zmq_send(peer->tx_socket, tgt, 4+peer->sendFrame->radioFrame.length, 0); //todo: DONTWAIT?
+	PRINTFF(0,"#2 Transmitted. %dth in this window.\n", peer->self->phy->total_frames_sent_in_current_window);
+	return peer->sendFrame->radioFrame.length;
+}
 
 
 _Noreturn void* tx_cycle(void* arg){
@@ -270,20 +247,38 @@ _Noreturn void* tx_cycle(void* arg){
 				int32_t b = mac_own_window_remaining(peer->self->mac, now_ms);
 				int32_t c = peer->self->mac->gap_constant + peer->self->mac->peer_window_length + peer->self->mac->tail_constant;
 				assert(c == (a-b));
-				int64_t slepe_us = 2 * 1000;
+				int64_t slepe_us = 2000;
 				if(sleep_ms < 2){
 					slepe_us = 400;
 				}
 				rsleep_us(slepe_us);
-
-
 			}
 			pthread_mutex_lock(&peer->mutex); 	//lock
 		}
 	}
 }
+// =====================================================================================================================
+// =====================================================================================================================
 
 
+
+// == CYCLE 3: RECEIVE FROM ETHER AND PROCESS ==========================================================================
+// =====================================================================================================================
+void peer_packets_from_ring_to_zmq(SkylinkPeer* peer){
+	uint8_t tgt[700];
+	int sequence;
+	memcpy(tgt, &peer->ID, 4);
+	for (uint8_t vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
+		tgt[4] = vc;
+		int n = skyArray_count_readable_rcv_packets(peer->self->arrayBuffers[vc]);
+		while (n > 0){
+			int r = skyArray_read_next_received(peer->self->arrayBuffers[vc], tgt+5, &sequence);
+			zmq_send(peer->pl_read_socket, tgt, r + 5, 0);
+			PRINTFF(0,"#4 packets sent to read socket.\n");
+			n = skyArray_count_readable_rcv_packets(peer->self->arrayBuffers[vc]);
+		}
+	}
+}
 
 
 void* ether_cycle(void* arg){
@@ -317,13 +312,14 @@ void* ether_cycle(void* arg){
 				PRINTFF(0,"#3.5 bytes successfully rx'ed. rx ret: %d\n", rxr);
 				peer_packets_from_ring_to_zmq(peer);
 			} else {
-				PRINTFF(0,"#3.6 >>>>>>>>>>>>>>>>>> MISSED RX PACKET!! <<<<<<<<<<<<<<<<<<<<<<<\n");
+				PRINTFF(0,"#3.6 >>>>>>>>>>>>>>>>>> !MISSED RX PACKET! <<<<<<<<<<<<<<<<<<<<<<<\n");
 			}
 			pthread_mutex_unlock(&peer->mutex); //unlock
 		}
 	}
 }
-
+// =====================================================================================================================
+// =====================================================================================================================
 
 
 
@@ -334,7 +330,7 @@ void tx_rx_zmq_test(int argc, char *argv[]){
 	}
 	int ID = argv[1][0] - 48;
 	PRINTFF(0, "Starting peer cycle with ID=%d \n",ID);
-	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 3*1200, 0.0 );
+	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 1*1200, 0.0 );
 	relative_time_speed = peer->physicalParams.relative_speed;
 
 	pthread_create(&peer->thread1, NULL, tx_cycle, peer);

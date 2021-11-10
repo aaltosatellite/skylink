@@ -70,7 +70,7 @@ static int sky_tx_extension_eval_hmac_enforce(SkyHandle self, SendFrame* frame, 
 
 
 
-int sky_tx_pick_vc(SkyHandle self){
+static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		int vc = self->conf->vc_priority[i];
 		if(sky_tx_extension_needed_hmac_enforce(self, vc)){
@@ -87,7 +87,7 @@ int sky_tx_pick_vc(SkyHandle self){
 		}
 	}
 	if(self->phy->total_frames_sent_in_current_window < UTILITY_FRAMES_PER_WINDOW){
-		return self->conf->vc_priority[0];
+		return (now_ms & 0xFF) % SKY_NUM_VIRTUAL_CHANNELS;
 	}
 	return -1;
 }
@@ -95,9 +95,13 @@ int sky_tx_pick_vc(SkyHandle self){
 
 
 
-int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay, int32_t now_ms){
+int sky_tx(SkyHandle self, SendFrame* frame, int insert_golay, int32_t now_ms){
 	turn_to_tx(self->phy);
-	int content = 0;
+	int ivc = sky_tx_pick_vc(self, now_ms);
+	if(ivc < 0){
+		return 0;
+	}
+	uint8_t vc = (uint8_t)ivc;
 	/* identity gets copied to the raw-array from frame's own identity field */
 	frame->radioFrame.start_byte = SKYLINK_START_BYTE;
 	memcpy(frame->radioFrame.identity, self->conf->identity, SKY_IDENTITY_LEN);
@@ -117,9 +121,9 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay, int32
 	/* Add extension to the packet. ARQ */
 	frame->radioFrame.length = EXTENSION_START_IDX;
 	frame->radioFrame.ext_length = 0;
-	content |= sky_tx_extension_eval_arq_rr(self, frame, vc);
-	content |= sky_tx_extension_eval_arq_enforce(self, frame, vc);
-	content |= sky_tx_extension_eval_hmac_enforce(self, frame, vc);
+	sky_tx_extension_eval_arq_rr(self, frame, vc);
+	sky_tx_extension_eval_arq_enforce(self, frame, vc);
+	sky_tx_extension_eval_hmac_enforce(self, frame, vc);
 
 
 	/* If there is enough space in frame, copy a payload to the end. Then add ARQ the sequence number obtained from ArqRing. */
@@ -130,7 +134,6 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay, int32
 		frame->radioFrame.arq_sequence = (uint8_t)arq_sequence;
 		frame->radioFrame.flags |= SKY_FLAG_HAS_PAYLOAD;
 		frame->radioFrame.length += read;
-		content = 1;
 	}
 
 
@@ -174,7 +177,7 @@ int sky_tx(SkyHandle self, SendFrame* frame, uint8_t vc, int insert_golay, int32
 	++self->phy->frames_sent_in_current_window_per_vc[vc];
 	++self->phy->total_frames_sent_in_current_window;
 	++self->diag->tx_frames;
-	return content;
+	return 1;
 }
 
 

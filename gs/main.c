@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 		if (tick()) {
 
 			uint64_t t = get_timestamp() + tx_ahead_time;
-			if (sky_tx(sky, &frame, t) >= 0) {
+			if (sky__tx(sky, &frame, t) >= 0) {
 				modem_tx(&frame, t);
 
 				// Clear the frame and re-use the memory

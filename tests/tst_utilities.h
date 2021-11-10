@@ -51,6 +51,6 @@ void destroy_config(SkyConfig* config);
 
 void destroy_handle(SkyHandle self);
 
-uint16_t spin_to_seq(SkyArqRing* ring1, SkyArqRing* ring2, int target_sequence, int first_ahead);
+uint16_t spin_to_seq(SkyArqRing* ring1, SkyArqRing* ring2, int target_sequence);
 
 #endif //SKYLINK_CMAKE_TST_UTILITIES_H

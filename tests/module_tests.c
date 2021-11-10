@@ -19,8 +19,6 @@ int main() {
 	fec_test();
 	hmac_tests();
 	txrx_tests();
-
-	//tx_rx_zmq_test(argc, argv);
 }
 
 

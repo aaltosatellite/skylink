@@ -13,8 +13,8 @@ static void test3_send(int count);
 
 void ring_tests(){
 	test1(100);
-	test2_rcv(18);
-	test3_send(18);
+	test2_rcv(10);
+	test3_send(10);
 }
 
 

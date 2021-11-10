@@ -53,17 +53,17 @@ int string_same_comparison(String** arr1, String** arr2, int n){
 
 void test1(){
 	PRINTFF(0,"[TX-RX Test 1: basic case]\n");
-	int N = 400;
+	int N = 200;
 	for (int i = 0; i < N; ++i) {
 		int a1 = randint_i32(0,1);
 		int a2 = randint_i32(0,1);
 		int a3 = randint_i32(0,1);
 		int a4 = randint_i32(0,1);
 		int a5 = randint_i32(0,1);
-		test1_round(a1,a2,a3,a4, a5);
 		if(i % 1 == 0){
-			PRINTFF(0, "%d / %d \t\t(%d %d %d %d %d)\n",i,N,  a1,a2,a3,a4,a5);
+			PRINTFF(0, "%d / %d \t\t(%d %d %d %d %d)\t",i,N,  a1,a2,a3,a4,a5);
 		}
+		test1_round(a1,a2,a3,a4, a5);
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
@@ -105,7 +105,7 @@ void instantiate_testjob(TestJob* job){
 		handle2->hmac->sequence_rx[vc] = job->vcjobs[vc].auth_seq_1to2;
 		SkyArqRing* ring1 = handle1->arrayBuffers[vc];
 		SkyArqRing* ring2 = handle2->arrayBuffers[vc];
-		spin_to_seq(ring1, ring2, job->vcjobs[vc].arq_seq_1to2, job->vcjobs[vc].tx_ahead1);
+		spin_to_seq(ring1, ring2, job->vcjobs[vc].arq_seq_1to2);
 	}
 	job->handle1 = handle1;
 	job->handle2 = handle2;
@@ -116,6 +116,8 @@ void instantiate_testjob(TestJob* job){
 void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, int golay_on){
 	TestJob job;
 	job.max_jump = 35;
+	int64_t us1 = real_microseconds();
+	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		TestJobVC* vcjob = &job.vcjobs[i];
 		vcjob->ring_len 		= 28;
@@ -131,12 +133,12 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 		vcjob->arq_on2 			= arq_on > 0;
 		vcjob->hmac_on1 		= auth_on > 0; //randint_i32(0, 3) > 0;
 		vcjob->hmac_on2 		= auth_on > 0; //randint_i32(0, 3) > 0;
-		vcjob->auth1_tx_shift 	= (!auth_misalign) ? randint_i32(0, job.max_jump) : randint_i32(job.max_jump+1, job.max_jump*12);
-		vcjob->auth2_tx_shift 	= (!auth_misalign) ? randint_i32(0, job.max_jump) : randint_i32(job.max_jump+1, job.max_jump*12);
+		vcjob->auth1_tx_shift 	= (auth_misalign && (i==vc)) ? randint_i32(job.max_jump+1, job.max_jump*12) : randint_i32(0, job.max_jump);
+		vcjob->auth2_tx_shift 	= (auth_misalign && (i==vc)) ? randint_i32(job.max_jump+1, job.max_jump*12) : randint_i32(0, job.max_jump);
 		vcjob->tx_ahead1 		= 0;
 	}
 	instantiate_testjob(&job);
-	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
+	int64_t us2 = real_microseconds();
 
 	SkyHandle handle1 = job.handle1;
 	SkyHandle handle2 = job.handle2;
@@ -154,12 +156,13 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 	if(auth_on && auth_misalign){
 		ama = 1;
 	}
-	int tx_ahead = randint_i32(0, i32min(job.vcjobs[vc].horizon2 -ama, job.vcjobs[vc].recall1 -(1 + ama)) );
+	int ahead_limit = i32min(job.vcjobs[vc].horizon2 -ama, job.vcjobs[vc].recall1 -(1 + ama));
+	int tx_ahead = randint_i32(0, ahead_limit);
 	if (arq_misalign){
 		int x = job.vcjobs[vc].horizon2;
 		tx_ahead = randint_i32(x+1, x + 19);
 	}
-
+	int64_t us3 = real_microseconds();
 	for (int i = 0; i < tx_ahead; ++i) {
 		String* s = get_random_string(randint_i32(0,150) );
 		sent_payloads[n_sent] = s;
@@ -168,7 +171,7 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 		skyArray_read_packet_for_tx(job.handle1->arrayBuffers[vc], tgt, &seq, 1);
 		n_sent++;
 	}
-
+	int64_t us4 = real_microseconds();
 	SkyArqRing* ring1 = job.handle1->arrayBuffers[vc];
 	SkyArqRing* ring2 = job.handle2->arrayBuffers[vc];
 
@@ -180,12 +183,10 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 			n_sent++;
 			skyArray_push_packet_to_send(ring1, s->data, s->length);
 		}
-		//PRINTFF(0, "n_sent:     %d \n", n_sent);
 
-		sky_tx(handle1, sendFrame, vc, golay_on, 12); //This does NOT test MAC functionality
+		sky_tx(handle1, sendFrame, golay_on, 12); //This does NOT test MAC functionality
 		memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame));
 		sky_rx(handle2, rcvFrame, golay_on);
-
 		while (skyArray_count_readable_rcv_packets(ring2)){
 			int seq = -1;
 			int read = skyArray_read_next_received(ring2, tgt, &seq);
@@ -194,11 +195,12 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 			n_received++;
 		}
 		//PRINTFF(0, "n_received: %d \n\n", n_received);
-		sky_tx(handle2, sendFrame, vc, golay_on, 12);//This does NOT test MAC functionality
+		sky_tx(handle2, sendFrame, golay_on, 12);//This does NOT test MAC functionality
 		memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame));
 		sky_rx(handle1, rcvFrame, golay_on);
-	}
 
+	}
+	int64_t us5 = real_microseconds();
 	//PRINTFF(0, "tx_ahead:  %d\n", tx_ahead);
 	//PRINTFF(0, "recall 1:  %d\n", job.vcjobs[vc].recall1);
 	//PRINTFF(0, "horizon 2: %d\n", job.vcjobs[vc].horizon2);
@@ -217,17 +219,20 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 
 	if(!arq_on){
 		int same = string_same_comparison(&sent_payloads[tx_ahead+ama], &received_payloads[0], 25);
+		//PRINTFF(0,"\t+%d    %d     %d\n",n_received, (N_SEND-ama), vc);
 		assert(n_received == N_SEND-ama);
 		assert(same);
 	}
 	if(arq_on && (!arq_misalign)){
 		int same = string_same_comparison(&sent_payloads[0], &received_payloads[0], 25);
+		//PRINTFF(0,"\t-%d    %d    %d\n",n_received, (N_SEND-ama), vc);
 		assert(n_received == N_SEND-ama);
 		assert(same);
 	}
 	if(arq_on && arq_misalign){
 		int same = string_same_comparison(&sent_payloads[tx_ahead+ama], &received_payloads[0], 25);
-		assert(n_received == (N_SEND- ama));
+		//PRINTFF(0,"\t=%d    %d     %d\n",n_received, (N_SEND-ama), vc);
+		assert(n_received == (N_SEND-ama));
 		assert(same);
 	}
 
@@ -238,6 +243,16 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 	for (int i = 0; i < n_received; ++i) {
 		destroy_string(received_payloads[i]);
 	}
+	int64_t us6 = real_microseconds();
+
+	int64_t dt1 = us2-us1;
+	int64_t dt2 = us3-us2;
+	int64_t dt3 = us4-us3;
+	int64_t dt4 = us5-us4;
+	int64_t dt5 = us6-us5;
+	PRINTFF(0, "\t %ld  %ld  %ld  %ld  %ld\n", dt1, dt2, dt3, dt4, dt5);
+
+
 
 
 	free(tgt);

@@ -158,7 +158,7 @@ class SkylinkManager:
 		self.read_from_B = list()
 		self.ID_A = 5
 		self.ID_B = 7
-		self.rate_A = 1.0
+		self.rate_A = 2.0
 		self.rate_B = 2.5
 		self.generator_A = threading.Thread(target=pl_generator, args=(self.push_queue, self.ID_A, self.rate_A))
 		self.generator_B = threading.Thread(target=pl_generator, args=(self.push_queue, self.ID_B, self.rate_B))

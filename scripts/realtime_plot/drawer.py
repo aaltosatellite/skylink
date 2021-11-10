@@ -7,10 +7,11 @@ import multiprocessing
 import sys
 
 
-bg_color1 = QtGui.QColor(0,50,50)
-bg_color2 = QtGui.QColor(35,55,35)
-bg_color3 = QtGui.QColor(0x20,0x45,0x30)
-bg_color4 = QtGui.QColor(110,30,30)
+bg_color1 = QtGui.QColor(0,35,35)
+bg_color2 = QtGui.QColor(0,50,50)
+bg_color3 = QtGui.QColor(35,55,35)
+bg_color4 = QtGui.QColor(0x20,0x45,0x30)
+bg_color5 = QtGui.QColor(110,30,30)
 
 no_pen = QtGui.QPen(QtCore.Qt.NoPen)
 line_pen = QtGui.QPen(QtGui.QColor(200, 200, 200), 2.0)
@@ -20,12 +21,12 @@ dot_brush = QtGui.QBrush(QtGui.QColor(250,250,250))
 bar_brush = QtGui.QBrush(QtGui.QColor(60,60,60))
 
 line_pens = [
-	QtGui.QPen(QtGui.QColor(255, 110, 110), 2.0),
-	QtGui.QPen(QtGui.QColor(120, 255, 125), 2.0),
-	QtGui.QPen(QtGui.QColor(110, 120, 255), 2.0),
-	QtGui.QPen(QtGui.QColor(200, 200, 200), 2.0),
-	QtGui.QPen(QtGui.QColor(200, 200, 200), 2.0),
-	QtGui.QPen(QtGui.QColor(200, 200, 200), 2.0)
+	QtGui.QPen(QtGui.QColor(255, 110, 110), 1.2),
+	QtGui.QPen(QtGui.QColor(120, 255, 125), 1.2),
+	QtGui.QPen(QtGui.QColor(110, 120, 255), 1.2),
+	QtGui.QPen(QtGui.QColor(200, 200, 200), 1.2),
+	QtGui.QPen(QtGui.QColor(200, 200, 200), 1.2),
+	QtGui.QPen(QtGui.QColor(200, 200, 200), 1.2)
 ]
 
 clrs = {0:"#ff5555", 1:"#55ff55", 2:"#6699ff"}
@@ -224,8 +225,9 @@ class MW(QtWidgets.QWidget):
 		self.layout().addWidget(self.notice_label)
 		self.layout().addWidget(self.G)
 		self.layout().addWidget(self.name_widget)
-		self.previous = dict()
-		self.names    = dict()
+		self.previous 		= dict()
+		self.names    		= dict()
+		self.data_vectors   = dict()
 
 		self.loopcount = 0
 		self.starttime = time.perf_counter()
@@ -235,9 +237,10 @@ class MW(QtWidgets.QWidget):
 		self.timer.start()
 
 
+
 	def keyPressEvent(self, a0: QtGui.QKeyEvent) -> None:
 		super(MW, self).keyPressEvent(a0)
-		print(a0.key())
+		print("key:",a0.key())
 		if a0.key() == 32:
 			if self.timer.isActive():
 				self.timer.stop()
@@ -253,6 +256,24 @@ class MW(QtWidgets.QWidget):
 			self.name_widget = QtWidgets.QWidget()
 			self.name_widget.setLayout(self.name_hbox)
 			self.lo.addWidget(self.name_widget)
+		if a0.key() == 70:
+			if not self.isFullScreen():
+				self.showFullScreen()
+			else:
+				self.showNormal()
+		if a0.key() == 81:
+			inter = self.timer.interval()
+			inter = max(inter-1, 20)
+			self.timer.setInterval(inter)
+		if a0.key() == 65:
+			inter = self.timer.interval()
+			inter = min(inter+1, 500)
+			self.timer.setInterval(inter)
+
+	def store_data(self, name, val):
+		if not name in self.data_vectors:
+			self.data_vectors[name] = list()
+		self.data_vectors[name].append(val)
 
 
 	def _add_loop(self):
