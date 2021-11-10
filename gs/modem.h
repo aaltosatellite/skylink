@@ -17,6 +17,7 @@ int modem_tx(SkyRadioFrame* frame, timestamp_t t);
  */
 int modem_rx(SkyRadioFrame* frame, int flags);
 
+int modem_tx_active();
 int tick();
 
 #endif /* __MODEM_H__ */

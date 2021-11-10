@@ -5,8 +5,8 @@
 #include <stdlib.h>
 
 
-#include "../skylink/skylink.h"
-#include "../skylink/utilities.h"
+#include "skylink/skylink.h"
+#include "skylink/utilities.h"
 
 
 /*
@@ -164,11 +164,11 @@ void vc_check() {
 		uint8_t data[PACKET_TX_MAXLEN];
 		ret = zmq_recv(z_ps_tx[vc], data, PACKET_TX_MAXLEN, ZMQ_DONTWAIT);
 		if (ret < 0){
-            if(errno == EAGAIN){
-                continue;
-            }
-            fprintf(stderr, "VC: zmq_recv() error %d %s\n", errno, zmq_strerror(errno));
-        }
+			if(errno == EAGAIN)
+				continue;
+
+			fprintf(stderr, "VC: zmq_recv() error %d %s\n", errno, zmq_strerror(errno));
+		}
 
 		if (ret >= 0) {
 
@@ -179,8 +179,8 @@ void vc_check() {
 			// Send response
 			if (ret2 > 0)
 				ret2 = zmq_send(z_ps_tx[vc], data, ret2, 0);
-            if (ret2 < 0)
-                fprintf(stderr, "VC: zmq_send() error %s\n", zmq_strerror(errno));
+			if (ret2 < 0)
+				fprintf(stderr, "VC: zmq_send() error %s\n", zmq_strerror(errno));
 
 #if 0
 			int ret2;
