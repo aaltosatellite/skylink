@@ -44,6 +44,7 @@ MACSystem* new_mac_system(SkyMACConfig* config){
 	macSystem->peer_window_length = config->default_window_length;
 	macSystem->gap_constant = config->default_gap_length;
 	macSystem->tail_constant = config->default_tail_length;
+	macSystem->last_belief_update = -1;
 	return macSystem;
 }
 
@@ -98,6 +99,19 @@ int32_t mac_peer_window_remaining(MACSystem* macSystem, int32_t now_ms){
 }
 
 
+void mac_silence_shift_check(MACSystem* macSystem, SkyMACConfig* config, int32_t now_ms){
+	if(((now_ms - macSystem->last_belief_update) & 0xFFFFFFF) > config->shift_threshold_ms){
+		macSystem->T0_ms = rand() & 0xFFF;
+		macSystem->last_belief_update = now_ms;
+		printf("===============================================================================\n");
+		printf("now: %d \n", now_ms);
+		printf("last: %d \n", macSystem->last_belief_update);
+		printf("MAC RESET! %d  %d\n", ((now_ms - macSystem->last_belief_update) & 0xFFFFFFF) , config->shift_threshold_ms);
+		printf("===============================================================================\n");
+	}
+}
+
+
 int mac_can_send(MACSystem* macSystem, int32_t now_ms){
 	return mac_own_window_remaining(macSystem, now_ms) > 0;
 }
@@ -112,6 +126,7 @@ int mac_update_belief(MACSystem* macSystem, SkyMACConfig* config, int32_t now_ms
 	}
 	int32_t implied_t0_for_me = wrap_ms(now_ms + peer_mac_remaining + macSystem->tail_constant, macSystem);
 	macSystem->T0_ms = implied_t0_for_me;
+	macSystem->last_belief_update = now_ms;
 	return 0;
 }
 

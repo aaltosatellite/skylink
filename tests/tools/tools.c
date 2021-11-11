@@ -175,7 +175,7 @@ double randomd(double a, double b){
 }
 
 
-uint64_t fillrand(uint8_t* tgt, uint64_t leng){
+uint64_t fillrand(void* tgt, uint64_t leng){
 	FILE* f = fopen("/dev/urandom", "r\0");
 	uint64_t rd = fread(tgt, 1, leng, f);
 	fclose(f);

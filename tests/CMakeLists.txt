@@ -63,5 +63,4 @@ add_executable(zmq_peer
     ../src/skylink_rx.c
     ../src/skylink_tx.c
     ../src/utilities.c
-
 )

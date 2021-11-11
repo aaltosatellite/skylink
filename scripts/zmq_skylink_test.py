@@ -118,6 +118,8 @@ class EtherSend:
 
 
 
+
+
 def ether_process(tgt:int, pl:bytes, ts:float, sendque:Queue):
 	if rng() < TOTAL_LOSS_CHANCE:
 		print("[Total loss.]")
@@ -129,19 +131,18 @@ def ether_process(tgt:int, pl:bytes, ts:float, sendque:Queue):
 	sendque.put( (tgt, pl, ts) )
 
 
-
-
 def pl_generator(queue:Queue, tgt:int, rate:float):
 	print("+G", threading.current_thread().getName())
 	self = threading.current_thread()
 	self.is_on = True
-	time.sleep(5)
+	time.sleep(7)
 	while self.is_on:
 		sleep = random.expovariate(rate)
 		xsleep(sleep)
 		pl = os.urandom(rint(8,120))
 		queue.put(  (tgt, pl)  )
 	print("-G", threading.current_thread().getName())
+
 
 
 

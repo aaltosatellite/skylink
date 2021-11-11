@@ -49,16 +49,17 @@ SkyConfig* new_vanilla_config(){
 	config->hmac.maximum_jump 		= 24;
 	memcpy(config->hmac.key, arr_, config->hmac.key_length);
 
-	config->mac.maximum_gap_length 		= 1000;
-	config->mac.minimum_gap_length 		= 50;
-	config->mac.default_gap_length 		= 600;
+	config->mac.maximum_gap_length 			= 1000;
+	config->mac.minimum_gap_length 			= 50;
+	config->mac.default_gap_length 			= 600;
 
-	config->mac.maximum_window_length 	= 350;
-	config->mac.minimum_window_length 	= 25;
-	config->mac.default_window_length 	= 220;
+	config->mac.maximum_window_length 		= 350;
+	config->mac.minimum_window_length 		= 25;
+	config->mac.default_window_length 		= 220;
 
-	config->mac.default_tail_length 	= 86;
+	config->mac.default_tail_length 		= 86;
 	config->mac.unauthenticated_mac_updates = 0;
+	config->mac.shift_threshold_ms 			= 4000;
 
 	config->identity[0] = 'O';
 	config->identity[1] = 'H';

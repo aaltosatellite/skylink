@@ -48,6 +48,11 @@ int32_t mac_own_window_remaining(MACSystem* macSystem, int32_t now_ms);
 int32_t mac_peer_window_remaining(MACSystem* macSystem, int32_t now_ms);
 
 
+// Checks if time elapsed since last mac belief update exceeds a configured value.
+// If so, shifts the windowing by random step. This is used to break out of equal sync situation.
+void mac_silence_shift_check(MACSystem* macSystem, SkyMACConfig* config, int32_t now_ms);
+
+
 // Returns boolean (1/0) wether MAC thinks it is our time to speak at now_ms.
 int mac_can_send(MACSystem* macSystem, int32_t now_ms);
 

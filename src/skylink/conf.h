@@ -55,6 +55,8 @@ typedef struct {
 	 * a so called 'shut-up-attack' */
 	uint8_t unauthenticated_mac_updates;
 
+	int32_t shift_threshold_ms;
+
 } SkyMACConfig;
 
 

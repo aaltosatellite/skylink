@@ -4,74 +4,15 @@ import numpy as np
 
 
 
-def unite_scopes(scope1, scope2):
+def unite_partscopes(scope1, scope2):
+	if scope1 is None:
+		return scope2
+	if scope2 is None:
+		return scope1
 	return min(scope1[0], scope2[0]), max(scope1[1], scope2[1])
 
-
-
-class PlotLine:
-	def __init__(self, n_retain, x_interval=1.0, logs=(False,False)):
-		self.xlog = logs[0]
-		self.ylog = logs[1]
-		self.ydata = np.linspace(0,1,n_retain) * 0.0
-		self.xdata = np.linspace(0, x_interval*n_retain, n_retain)
-
-	def add_y(self, y):
-		self.ydata = np.roll(self.ydata, -1)
-		self.ydata[-1] = y
-
-	def add_xy(self, x, y):
-		self.ydata = np.roll(self.ydata, -1)
-		self.ydata[-1] = y
-		self.xdata = np.roll(self.xdata, -1)
-		self.xdata[-1] = x
-
-	def cast_y_to_coordinates(self, origin_y, pix_per_y, origin_pix_y):
-		y = self.ydata.copy()
-		if self.ylog:
-			y = np.log10(y)
-		y = y - origin_y
-		return y * pix_per_y + origin_pix_y
-
-	def cast_x_to_coordinates(self, origin_x, pix_per_x, origin_pix_x):
-		x = self.xdata.copy()
-		if self.xlog:
-			x = np.log10(x)
-		x = x - origin_x
-		return x * pix_per_x + origin_pix_x
-
-	def get_scope(self, prior_scope=(None,None), top_margin=0.0):
-		xscope = self.get_x_scope(prior_scope[0])
-		yscope = self.get_y_scope(prior_scope[1], top_margin)
-		return xscope, yscope
-
-	def get_y_scope(self, prior_scope=None, top_margin=0.0):
-		y = self.ydata.copy()
-		if self.ylog:
-			y = np.log10(y)
-		scope = np.min(y), np.max(y)
-
-		#(y1-y0) / (1-top)  + y0 = y2
-
-		d = scope[1] - scope[0]
-		y2 = d/(1-top_margin) + scope[0]
-		scope = scope[0], y2
-		if prior_scope:
-			scope = unite_scopes(scope, prior_scope)
-		if scope[0] == scope[1]:
-			return (0,1)
-		return scope
-
-	def get_x_scope(self, prior_scope=None):
-		x = self.xdata.copy()
-		if self.xlog:
-			x = np.log10(x)
-		scope = np.min(x), np.max(x)
-		if prior_scope:
-			scope = unite_scopes(scope, prior_scope)
-		if scope[0] == scope[1]:
-			return (0,1)
-		return scope
+def unite_scopes(scope1, scope2):
+	return unite_partscopes(scope1[0], scope2[0]), unite_partscopes(scope1[1], scope2[1])
 
 
 
@@ -90,8 +31,8 @@ def get_gridlines(n_pref, scope):
 			if error < smallest_error:
 				smallest_error = error
 				divisor = divisor_candidate
-				#base_divisor = base_divisor_candidate
-				#exponent = exponent_candidate
+			#base_divisor = base_divisor_candidate
+			#exponent = exponent_candidate
 	values = []
 	i0 = int(np.floor(scope[0] / divisor))
 	i1 = int(np.ceil(scope[1] / divisor))
@@ -99,6 +40,101 @@ def get_gridlines(n_pref, scope):
 		values.append(i*divisor)
 
 	return np.array(values, dtype=np.float64)
+
+
+
+
+
+class YVector:
+	def __init__(self, n_retain, log=False):
+		self.ylog = log
+		self.ydata = np.linspace(0,1,n_retain) * 0.0
+
+	def add_y(self, y):
+		self.ydata = np.roll(self.ydata, -1)
+		self.ydata[-1] = y
+
+	def cast_y_to_coordinates(self, origin_y, pix_per_y):
+		y = self.ydata.copy()
+		if self.ylog:
+			y = np.log10(y)
+		y = y - origin_y
+		return y * pix_per_y
+
+	def get_y_partscope(self, prior_yscope=None, top_margin=0.0):
+		y = self.ydata.copy()
+		if self.ylog:
+			y = np.log10(y)
+		partscope = np.min(y), np.max(y)
+		d = partscope[1] - partscope[0]
+		y2 = d/(1-top_margin) + partscope[0]
+		partscope = partscope[0], y2
+		if prior_yscope:
+			partscope = unite_partscopes(partscope, prior_yscope)
+		return partscope
+
+
+
+
+
+
+
+class XYVector:
+	def __init__(self, n_retain, logs=(False,False)):
+		self.n_retain = n_retain
+		self.xlog = logs[0]
+		self.ylog = logs[1]
+		self.ydata = np.array([], dtype=np.float64)
+		self.xdata = np.array([], dtype=np.float64)
+
+	def add_xy(self, x, y):
+		self.xdata = np.append(self.xdata, x)[-self.n_retain:]
+		self.ydata = np.append(self.ydata, y)[-self.n_retain:]
+
+	def cast_to_coordinates(self, xfrom, xto, origin_x, pix_per_x,  origin_y, pix_per_y):
+		indexes = (self.xdata >= xfrom) * (self.xdata <= xto)
+		X = self.xdata[indexes]
+		if self.xlog:
+			X = np.log10(X)
+		Y = self.ydata[indexes]
+		if self.ylog:
+			Y = np.log10(Y)
+		X = X - origin_x
+		Y = Y - origin_y
+		return X*pix_per_x, Y*pix_per_y
+
+	def get_scope(self, prior_scope=(None,None), top_margin=0.0):
+		xscope = self.get_x_partscope(prior_scope[0])
+		yscope = self.get_y_partscope(xscope, prior_scope[1], top_margin)
+		return xscope, yscope
+
+	def get_y_partscope(self, xscope, prior_partscope=None, top_margin=0.0):
+		y = self.ydata.copy()
+		y = y[(self.xdata>=xscope[0]) * (self.xdata<=xscope[1])]
+		if len(y) == 0:
+			return prior_partscope
+		if self.ylog:
+			y = np.log10(y)
+		partscope = np.min(y), np.max(y)
+		d = partscope[1] - partscope[0]
+		y2 = d/(1-top_margin) + partscope[0]
+		partscope = partscope[0], y2
+		if prior_partscope:
+			partscope = unite_partscopes(partscope, prior_partscope)
+		return partscope
+
+	def get_x_partscope(self, prior_partscope=None):
+		x = self.xdata.copy()
+		if len(x) == 0:
+			return prior_partscope
+		if self.xlog:
+			x = np.log10(x)
+		partscope = np.min(x), np.max(x)
+		if prior_partscope:
+			partscope = unite_partscopes(partscope, prior_partscope)
+		return partscope
+
+
 
 
 

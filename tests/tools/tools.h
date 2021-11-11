@@ -50,7 +50,7 @@ uint32_t randint_u64(uint64_t a, uint64_t b);
 uint64_t rand64();
 int32_t* get_n_unique_random_integers(uint32_t N, int32_t from, int32_t to);
 double randomd(double a, double b);
-uint64_t fillrand(uint8_t* tgt, uint64_t leng);
+uint64_t fillrand(void* tgt, uint64_t leng);
 int32_t* shuffled_order(int32_t n);
 // ===========================================================================================================
 

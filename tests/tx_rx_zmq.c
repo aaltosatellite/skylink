@@ -99,7 +99,9 @@ SkylinkPeer* new_peer(int ID, int tx_port, int rx_port, int pl_write_port, int p
 	peer->pl_write_socket = zmq_socket(peer->zmq_context, ZMQ_SUB);
 	peer->pl_read_socket = zmq_socket(peer->zmq_context, ZMQ_PUB);
 
-	mac_shift_windowing(peer->self->mac, randint_i32(100, 10000) );
+	//mac_shift_windowing(peer->self->mac, randint_i32(100, 10000) );
+	peer->self->mac->last_belief_update = rget_time_ms();
+
 
 	sprintf(url, "tcp://127.0.0.1:%d", pl_write_port);
 	zmq_connect(peer->pl_write_socket, url);
@@ -216,6 +218,7 @@ _Noreturn void* tx_cycle(void* arg){
 		}
 
 		int32_t now_ms = rget_time_ms();
+		mac_silence_shift_check(peer->self->mac, &peer->self->conf->mac, now_ms);
 		int can_send = mac_can_send(peer->self->mac, now_ms);
 		if(can_send){
 			turn_to_tx(peer->self->phy);
@@ -330,7 +333,7 @@ void tx_rx_zmq_test(int argc, char *argv[]){
 	}
 	int ID = argv[1][0] - 48;
 	PRINTFF(0, "Starting peer cycle with ID=%d \n",ID);
-	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 1*1200, 0.0 );
+	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 3*1200, 0.0 );
 	relative_time_speed = peer->physicalParams.relative_speed;
 
 	pthread_create(&peer->thread1, NULL, tx_cycle, peer);

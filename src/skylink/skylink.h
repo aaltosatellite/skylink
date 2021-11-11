@@ -173,6 +173,7 @@ struct sky_mac_s {
 	int32_t peer_window_length;
 	int32_t gap_constant;
 	int32_t tail_constant;
+	int32_t last_belief_update;
 };
 typedef struct sky_mac_s MACSystem;
 
