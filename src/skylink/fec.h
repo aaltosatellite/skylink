@@ -6,7 +6,7 @@
  */
 
 #include "skylink.h"
-#include "diag.h"
+#include "skylink/diag.h"
 #include <string.h>
 
 /*
@@ -28,9 +28,9 @@
 
 
 
-int sky_fec_decode(RadioFrame *frame, SkyDiagnostics *diag);
+int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag);
 
-int sky_fec_encode(RadioFrame *frame);
+int sky_fec_encode(SkyRadioFrame *frame);
 
 
 /*

@@ -1,9 +1,5 @@
-//
-// Created by elmore on 18.10.2021.
-//
-
-#ifndef SKYLINK_SKYLINK_NEW_H
-#define SKYLINK_SKYLINK_NEW_H
+#ifndef __SKYLINK_H__
+#define __SKYLINK_H__
 
 
 #include "diag.h"
@@ -63,105 +59,42 @@
 #define SKY_RET_MALLOC_FAILED      			(-70)
 
 
-#define MODE_RX		11
-#define MODE_TX		22
-
 
 
 
 //================================================================================================================================
 //============ STRUCTS ===========================================================================================================
 //================================================================================================================================
-/* extensions ====================================================================================== */
-struct __attribute__((__packed__)) extension_typemask {
-	uint8_t type	:4;
-	uint8_t length	:4;
-};
-typedef struct extension_typemask ExtensionTypemask;
-
-
-struct __attribute__((__packed__)) extension_arq_req  {
-	uint8_t type	:4;
-	uint8_t length	:4;
-	uint8_t sequence;
-	uint8_t mask1;
-	uint8_t mask2;
-};
-typedef struct extension_arq_req ExtArqReq;
-
-
-struct __attribute__((__packed__)) extension_arq_setup {
-	uint8_t type	:4;
-	uint8_t length	:4;
-	uint8_t toggle;
-	uint8_t enforced_sequence;
-};
-typedef struct extension_arq_setup ExtArqSeqReset;
-
-
-struct __attribute__((__packed__)) extension_mac_spec {
-	uint8_t type	:4;
-	uint8_t length	:4;
-	uint16_t window_size;
-	uint16_t gap_size;
-};
-typedef struct extension_mac_spec ExtMACSpec;
-
-
-struct __attribute__((__packed__)) extension_hmac_tx_reset {
-	uint8_t type	:4;
-	uint8_t length	:4;
-	uint16_t correct_tx_sequence;
-};
-typedef struct extension_hmac_tx_reset ExtHMACTxReset;
-
-
-union extension_union {
-	ExtArqReq  ArqReq;
-	ExtArqSeqReset  ArqSeqReset;
-	ExtMACSpec MACSpec;
-	ExtHMACTxReset HMACTxReset;
-};
-typedef union extension_union unifExt;
-
-
-struct skylink_packet_extension_s {
-	int type;
-	unifExt ext_union;
-};
-typedef struct skylink_packet_extension_s SkyPacketExtension;
-/* extensions ====================================================================================== */
 
 
 
 /* frames ========================================================================================== */
-typedef union {
-	struct __attribute__((__packed__)) {
+typedef struct {
+
+	timestamp_t rx_time_ms;
+
+	//uint8_t auth_verified;
+
+	unsigned int length;
+
+	union {
+
 		uint8_t raw[SKY_FRAME_MAX_LEN + 6];
-		int32_t length;
-	};
-	struct __attribute__((__packed__)) {
-		uint8_t start_byte;
-		uint8_t identity[SKY_IDENTITY_LEN];
-		uint8_t vc 		: 3;
-		uint8_t flags 	: 5;
-		uint8_t ext_length;
-		uint16_t auth_sequence;
-		uint16_t mac_window;
-		uint16_t mac_remaining;
-		uint8_t arq_sequence;
-	};
-} RadioFrame;
 
-typedef struct {
-	int32_t rx_time_ms;
-	uint8_t auth_verified;
-	RadioFrame radioFrame;
-} RCVFrame;
+		struct __attribute__((__packed__)) {
+			uint8_t start_byte;
+			uint8_t identity[SKY_IDENTITY_LEN];
+			uint8_t vc 		: 3;
+			uint8_t flags 	: 5;
+			uint8_t ext_length;
+			uint16_t auth_sequence;
+			uint16_t mac_window;
+			uint16_t mac_remaining;
+			uint8_t arq_sequence;
+		};
+	};
+} SkyRadioFrame;
 
-typedef struct {
-	RadioFrame radioFrame;
-} SendFrame;
 /* frames ========================================================================================== */
 
 
@@ -243,11 +176,11 @@ typedef struct sky_all* SkyHandle;
 //============ STRUCTS ===========================================================================================================
 //================================================================================================================================
 
-int sky_tx(SkyHandle self, SendFrame* frame, int insert_golay, int32_t now_ms);
+int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_ms);
 
-int sky_rx(SkyHandle self, RCVFrame* frame, int contains_golay);
-
-
+int sky_rx(SkyHandle self, SkyRadioFrame* frame, int contains_golay);
 
 
-#endif //SKYLINK_SKYLINK_NEW_H
+
+
+#endif // __SKYLINK_H__

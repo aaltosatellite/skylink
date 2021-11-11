@@ -143,8 +143,8 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 	SkyHandle handle1 = job.handle1;
 	SkyHandle handle2 = job.handle2;
 	uint8_t* tgt = malloc(1000);
-	SendFrame *sendFrame = new_send_frame();
-	RCVFrame *rcvFrame = new_receive_frame();
+	SkyRadioFrame *sendFrame = new_send_frame();
+	SkyRadioFrame *rcvFrame = new_receive_frame();
 
 	String* sent_payloads[800];
 	String* received_payloads[800];
@@ -185,7 +185,7 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 		}
 
 		sky_tx(handle1, sendFrame, golay_on, 12); //This does NOT test MAC functionality
-		memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame));
+		memcpy(rcvFrame, sendFrame, sizeof(SkyRadioFrame));
 		sky_rx(handle2, rcvFrame, golay_on);
 		while (skyArray_count_readable_rcv_packets(ring2)){
 			int seq = -1;
@@ -196,7 +196,7 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 		}
 		//PRINTFF(0, "n_received: %d \n\n", n_received);
 		sky_tx(handle2, sendFrame, golay_on, 12);//This does NOT test MAC functionality
-		memcpy(&rcvFrame->radioFrame, &sendFrame->radioFrame, sizeof(RadioFrame));
+		memcpy(rcvFrame, sendFrame, sizeof(SkyRadioFrame));
 		sky_rx(handle1, rcvFrame, golay_on);
 
 	}
@@ -263,14 +263,3 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 	destroy_handle(handle1);
 	destroy_handle(handle2);
 }
-
-
-
-
-
-
-
-
-
-
-

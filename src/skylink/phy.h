@@ -7,6 +7,11 @@
 
 #include "skylink.h"
 
+
+#define MODE_RX		11
+#define MODE_TX		22
+
+
 SkyPhysical* new_physical();
 
 void destroy_physical(SkyPhysical* phy);

@@ -8,17 +8,24 @@
 #include <stdlib.h>
 
 #include "suo.h"
+
+#include "frame-io/zmq_interface.h"
 #include "modem.h"
 
+
+static timestamp_t last_received_time;
+
 int tick_received = 0;
+int tx_active = 0;
 void *suo_rx, *suo_tx;
 
 extern void *zmq;
+struct frame* suo_frame;
 
-#define ZMQ_URI_LEN 64
 
 void modem_init(int modem_base) {
 
+#define ZMQ_URI_LEN 64
 	suo_rx = zmq_socket(zmq, ZMQ_SUB);
 	suo_tx = zmq_socket(zmq, ZMQ_PUB);
 
@@ -39,86 +46,61 @@ void modem_init(int modem_base) {
 	zmq_connect(suo_tx, uri);
 	SKY_PRINTF(SKY_DIAG_INFO, "Modem TX connecting to %s\n", uri);
 
+	// Set 1 seconds receiving timeout. If timeout occurs the modem is not running!
+	int64_t rx_timeout = 1000;
+	zmq_setsockopt(suo_rx, ZMQ_RCVTIMEO, &rx_timeout, sizeof(rx_timeout));
+
+
+	suo_frame = suo_frame_new(256);
 
 	/* Clear/flush any old frames from ZeroMQ buffers */
-	char temp[RADIOFRAME_MAXLEN];
-	while (zmq_recv(suo_rx, temp, RADIOFRAME_MAXLEN, ZMQ_DONTWAIT) >= 0);
-
+	char temp[1024];
+	while (zmq_recv(suo_rx, temp, 1024, ZMQ_DONTWAIT) >= 0);
 }
 
 
 void modem_wait_for_sync() {
 
-	SKY_PRINTF(SKY_DIAG_INFO, "Waiting for timing information...\n");
+	SKY_PRINTF(SKY_DIAG_INFO, "Waiting for timing information");
+	int len = suo_zmq_recv_frame(suo_rx, suo_frame);
 
 	for (;;) {
-		struct suoframe fr;
-		int ret;
-		ret = zmq_recv(suo_rx, &fr, 64, 0);
-		if (ret == sizeof(struct suotiming)) {
-			//params.initial_time = fr.time / 1000;
+		int ret = suo_zmq_recv_frame(suo_rx, suo_frame);
+		if (errno != EAGAIN) {
+			SKY_PRINTF(SKY_DIAG_BUG, "Modem zmq_recv() error %d\n", zmq_strerror(errno));
+			abort();
+		}
+		if (ret == 0) {
+			last_received_time = suo_frame.timestamp / 1e6;
 			break;
 		}
+		SKY_PRINTF(SKY_DIAG_INFO, ".");
 	}
 
-}
-
-static timestamp_t last_received_time;
-
-timestamp_t get_timestamp() {
-	return last_received_time / 1000;
+	SKY_PRINTF(SKY_DIAG_INFO, "\n");
 }
 
 
-int modem_tx(SkyRadioFrame* frame, timestamp_t t) {
-	//assert(frame);
-
-	struct suoframe fr;
-	memset(&fr, 0, sizeof(struct suoframe));
-
-	fr.id = SUO_FRAME_TRANSMIT;
-	fr.flags |= 2 | 4; // SUO_FLAG_
-	fr.time = t * 1000;
-	fr.len = frame->length;
-	memcpy(fr.data, frame->raw, frame->length);
-
-	SKY_PRINTF(SKY_DIAG_FRAMES, "%q20lu: Suo transmit %d bytes\n", t, frame->length);
-
-	int ret = zmq_send(suo_tx, &fr, sizeof(struct suoframe) + frame->length, ZMQ_DONTWAIT);
-	if (ret < 0)
-		SKY_PRINTF(SKY_DIAG_BUG, "Modem zmq_send() error %s\n", zmq_strerror(errno));
-
+int modem_tx(SkyRadioFrame* frame, timestamp_t t)
+	struct frame* suo_frame = suo_frame_new(frame->length);
+	tx_active = 1;
+	int ret = suo_zmq_send_frame(suo_tx, suo_frame);
 	return ret;
 }
 
 
-int modem_rx(SkyRadioFrame* frame, int flags) {
-	struct suoframe suo_frame;
-	int len = zmq_recv(suo_rx, &suo_frame, 64+RADIOFRAME_MAXLEN, 0);
+int modem_rx(SkyRadioFrame* sky_frame, int flags) {
 
-	int rcv_returns[3] = {0,0,0};
-	struct zmq_msg_t rcv_msgs[3];
-	int n_rcv = 0;
-	while (1){
-		zmq_msg_init(&rcv_msgs[n_rcv]);
-		int r = zmq_msg_recv(&rcv_msgs[n_rcv], suo_rx, ZMQ_DONTWAIT);
-		if(r < 0){
-			break;
-		}
-		rcv_returns[n_rcv] = r;
-		n_rcv++;
-
-		int more = 0;
-		size_t optlen = 0;
-		zmq_getsockopt(suo_rx, ZMQ_RCVMORE, &more, &optlen);
-		if(!more){
-			break;
-		}
-	}
-
-
+	/*
+	 * Wait for new message from the modem
+	 */
+	suo_frame_clear(suo_frame);
+	int len = suo_zmq_recv_frame(suo_rx, suo_frame);
 	if (len < 0) {
-		SKY_PRINTF(SKY_DIAG_BUG, "Modem zmq_recv() error %d\n", zmq_strerror(errno));
+		if (errno == EAGAIN)
+			SKY_PRINTF(SKY_DIAG_INFO, "Ticks lost!\n");
+		else
+			SKY_PRINTF(SKY_DIAG_BUG, "Modem zmq_recv() error %d\n", zmq_strerror(errno));
 		return -1;
 	}
 	if (len == 0){
@@ -127,51 +109,50 @@ int modem_rx(SkyRadioFrame* frame, int flags) {
 	}
 
 
-	if (suo_frame.id == SUO_FRAME_TIMING) {
+	if (suo_frame->data_len == 0) {
 		/*
-		 * Parse timing frame
+		 * Modem control frame (tick frame)
 		 */
-		if (len != sizeof(struct suotiming))
-			return -2;
+		SKY_PRINTF(SKY_DIAG_FRAMES, "%20lu: Tick\n", suo_frame->timestamp);
 
-		last_received_time = suo_frame.time;
+		last_received_time = suo_frame->timestamp / 1e6; // ns to ms
 		tick_received = 1;
 
-		SKY_PRINTF(SKY_DIAG_FRAMES, "%20lu: Tick\n", suo_frame.time);
+		if ((suo_frame->flags & SUO_FLAGS_TX_ACTIVE) != 0)
+			tx_active = 1;
 
 		return 0;
 	}
-	else if (suo_frame.id == SUO_FRAME_RECEIVE) {
+	else {
 		/*
 		 * New frame received
 		 */
-		if (len <= 64)
- 			return -2;
-
-		SKY_PRINTF(SKY_DIAG_FRAMES, "%20lu: Suo receive %d bytes\n", suo_frame.time, suo_frame.len);
-		SKY_ASSERT(len == 64 + suo_frame.len);
+		SKY_PRINTF(SKY_DIAG_FRAMES, "%20lu: Suo receive %d bytes\n", suo_frame->timestamp, suo_frame->data_len);
 
 		// Copy data from Suo frame to Skylink frame
-		frame->length = suo_frame.len;
-		frame->timestamp = suo_frame.time / 1000;
+		sky_frame->length = suo_frame->len;
+		sky_frame->timestamp = suo_frame->timestamp / 1000;
 		//frame->meta.rssi = suo_frame.metadata[0];
-		memcpy(frame->raw, suo_frame.data, suo_frame.len);
+		memcpy(sky_frame->raw, suo_frame->data, suo_frame->data_len);
 
 		return 1;
 	}
-	else {
-		/*
-		 * Unknown frame type
-		 */
-		SKY_PRINTF(SKY_DIAG_FRAMES, "modem_rx: unknown frame %d\n", suo_frame.id);
-		return -999;
-	}
+
 	return 0;
 }
 
+
+int modem_tx_active() {
+	return tx_active;
+}
 
 int tick() {
 	int ret = tick_received;
 	tick_received = 0;
 	return ret;
+}
+
+
+timestamp_t get_timestamp() {
+	return last_received_time;
 }

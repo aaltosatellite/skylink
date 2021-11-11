@@ -7,9 +7,9 @@
 
 
 #include "suo.h"
-#include "../skylink/skylink.h"
-#include "../skylink/platform.h"
-#include "../skylink/hmac.h"
+#include "skylink/skylink.h"
+#include "skylink/platform.h"
+#include "skylink/hmac.h"
 #include "vcs.h"
 #include "modem.h"
 
@@ -19,11 +19,11 @@
 
 
 
-void *zmq = NULL;
+const uint8_t hmac_key[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
 
-struct sky_all sky_;
-SkyHandle sky = &sky_;
-SkyConfig_t sky_config;
+
+
+void *zmq = NULL;
 
 int main(int argc, char* argv[]) __attribute__((noreturn));
 
@@ -66,33 +66,102 @@ int main(int argc, char *argv[])
 	/*
 	* PHY configurations
 	*/
-	sky_config.phy.enable_rs = 1;
-	sky_config.phy.enable_scrambler = 1;
+	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));;
+	config->identity[0] = 'O';
+	config->identity[1] = 'H';
+	config->identity[2] = 'F';
+	config->identity[3] = 'S';
+	config->identity[4] = '1';
 
-	/*xbuf[vc] = sky_buf_init(0x4000);
-	* MAC configurations
-	*/
-	sky_config.mac.min_slots = 4;
-	sky_config.mac.max_slots = 16;
-	sky_config.mac.switching_delay = 3; // [ms]
-	sky_config.mac.windows_adjust_interval = 2000; // [ms]
+	config->vc_priority[0] = 0;
+	config->vc_priority[1] = 1;
+	config->vc_priority[2] = 2;
+	config->vc_priority[3] = 3;
 
+	/*
+	 * MAC configurations
+	 */
+	config->mac.maximum_gap_length           = 1000;
+	config->mac.minimum_gap_length           = 50;
+	config->mac.default_gap_length           = 600;
 
-	const uint8_t hmac_key[] = "PASSWORD123";
+	config->mac.maximum_window_length        = 350;
+	config->mac.minimum_window_length        = 25;
+	config->mac.default_window_length        = 220;
 
+	config->mac.default_tail_length          = 86;
+	config->mac.unauthenticated_mac_updates  = 0;
 
-	// Reserve buffers
-	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
-		//sky->arrayBuffers =
-		//sky->txbuf[vc] = sky_buf_init(0x4000);
-	}
+	/*
+	 * ARQ configurations
+	 */
+	config->vc[0].arq_on = 1;
+	config->vc[0].require_authentication     = 0;
+	config->vc[1].arq_on = 1;
+	config->vc[1].require_authentication     = 0;
+	config->vc[2].arq_on = 0;
+	config->vc[2].require_authentication     = 0;
+	config->vc[3].arq_on = 0;
+	config->vc[3].require_authentication     = 0;
+
+	config->array[0].n_recall                = 16;
+	config->array[0].horizon_width           = 16;
+	config->array[0].send_ring_len           = 24;
+	config->array[0].rcv_ring_len            = 24;
+	config->array[0].element_count           = 3600;
+	config->array[0].element_size            = 36;
+	config->array[0].initial_send_sequence   = 0;
+	config->array[0].initial_rcv_sequence    = 0;
+
+	config->array[1].n_recall                = 16;
+	config->array[1].horizon_width           = 16;
+	config->array[1].send_ring_len           = 24;
+	config->array[1].rcv_ring_len            = 24;
+	config->array[1].element_count           = 3600;
+	config->array[1].element_size            = 36;
+	config->array[1].initial_send_sequence   = 0;
+	config->array[1].initial_rcv_sequence    = 0;
+
+	config->array[2].n_recall                = 0;
+	config->array[2].horizon_width           = 0;
+	config->array[2].send_ring_len           = 8;
+	config->array[2].rcv_ring_len            = 8;
+	config->array[2].element_count           = 800;
+	config->array[2].element_size            = 36;
+	config->array[2].initial_send_sequence   = 0;
+	config->array[2].initial_rcv_sequence    = 0;
+
+	config->array[3].n_recall                = 0;
+	config->array[3].horizon_width           = 0;
+	config->array[3].send_ring_len           = 8;
+	config->array[3].rcv_ring_len            = 8;
+	config->array[3].element_count           = 800;
+	config->array[3].element_size            = 36;
+	config->array[3].initial_send_sequence   = 0;
+	config->array[3].initial_rcv_sequence    = 0;
+
+	/*
+	 * HMAC configuration
+	 */
+	config->hmac.key_length                 = sizeof(hmac_key);
+	config->hmac.maximum_jump               = 24;
+	memcpy(config->hmac.key, hmac_key, config->hmac.key_length);
+
 
 	// Kick the actual protocol implementation running
-	sky = sky_init(sky, &sky_config);
-	sky_hmac_init(sky, hmac_key, sizeof(hmac_key));
+	SkyHandle handle = SKY_MALLOC(sizeof(struct sky_all));
+	handle->conf = config;
+	handle->mac = new_mac_system(&config->mac);
+	handle->hmac = new_hmac_instance(&config->hmac);
+	handle->diag = new_diagnostics();
+	handle->phy = new_physical();
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
+		handle->arrayBuffers[i] = new_arq_ring(&config->array[i]);
+	}
+
 
 	/* Wait for the first timing message */
-	// modem_wait_for_sync();
+	modem_wait_for_sync();
 
 	int ret;
 	SkyRadioFrame frame;
@@ -103,21 +172,14 @@ int main(int argc, char *argv[])
 	/* ----------------
 	 * Run the protocol
 	 * ---------------- */
-	int loopcount = 0;
-
 	for (;;) {
-		loopcount++;
-		if((loopcount % 256) == 0){
-			printf("[loop: %d]\n", loopcount);
-			fflush(stdout);
-		}
 		/*
 		 * Receive frames from the modem interface
 		 */
 		if (modem_rx(&frame, 0) > 0) {
 
 			//sky_mac_carrier_sensed(frame.timestamp);
-			sky_rx_raw(sky, &frame);
+			sky_rx_raw(handle, &frame);
 
 		}
 
@@ -130,9 +192,8 @@ int main(int argc, char *argv[])
 		 * If we have received tick message run the Skylink TX routine
 		 */
 		if (tick()) {
-
 			uint64_t t = get_timestamp() + tx_ahead_time;
-			if (sky__tx(sky, &frame, t) >= 0) {
+			if (modem_tx_active() == 0 && sky_tx(handle, &frame, 0, t) >= 0) {
 				modem_tx(&frame, t);
 
 				// Clear the frame and re-use the memory
