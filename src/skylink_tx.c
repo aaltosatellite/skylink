@@ -94,12 +94,14 @@ static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 
 
 
-
+/* Returns boolean value 0/1 as to if there is need to actually send something. */
 int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_ms){
 	turn_to_tx(self->phy);
 	int vc = sky_tx_pick_vc(self, now_ms);
-	if (vc < 0)
-		return vc;
+	if (vc < 0){
+		return 0;  //This is supposed to return 0, NOT "-1"!!! : sky_tx returns a boolean value as to if there is need to send somethign.
+	}
+
 
 	/* identity gets copied to the raw-array from frame's own identity field */
 	frame->start_byte = SKYLINK_START_BYTE;
@@ -177,5 +179,5 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 	++self->phy->frames_sent_in_current_window_per_vc[vc];
 	++self->phy->total_frames_sent_in_current_window;
 	++self->diag->tx_frames;
-	return 1;
+	return 1; //Returns 1, not 0.  1 is a boolean TRUE value.
 }

@@ -99,7 +99,7 @@ SkylinkPeer* new_peer(int ID, int tx_port, int rx_port, int pl_write_port, int p
 	peer->pl_write_socket = zmq_socket(peer->zmq_context, ZMQ_SUB);
 	peer->pl_read_socket = zmq_socket(peer->zmq_context, ZMQ_PUB);
 
-	//mac_shift_windowing(peer->self->mac, randint_i32(100, 10000) );
+	mac_shift_windowing(peer->self->mac, randint_i32(100, 10000) );
 	peer->self->mac->last_belief_update = rget_time_ms();
 
 
@@ -197,7 +197,7 @@ int peer_tx_round(SkylinkPeer* peer){
 	memcpy(tgt, &peer->ID, 4);
 	int32_t now_ms = rget_time_ms();
 	int send = sky_tx(peer->self, peer->sendFrame, 1, now_ms);
-	if(!send){
+	if(send == 0){
 		return 0;
 	}
 	memcpy(tgt+4, peer->sendFrame->raw, peer->sendFrame->length);
@@ -308,7 +308,7 @@ void* ether_cycle(void* arg){
 			int64_t us2 = real_microseconds();
 			PRINTFF(0,"#3   %d bytes rx'ed.  (locked in %ld us)\n", r, us2-us1);
 			if(peer->self->phy->radio_mode == MODE_RX){
-				memcpy(peer->rcvFrame, &tgt[4], r-4);
+				memcpy(peer->rcvFrame->raw, &tgt[4], r-4);
 				peer->rcvFrame->length = r-4;
 				peer->rcvFrame->rx_time_ms = rget_time_ms();
 				int rxr = sky_rx(peer->self, peer->rcvFrame, 1);
