@@ -77,18 +77,17 @@ static void test1_round(){
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_arq_settings = 1;
-		sky_packet_add_extension_arq_enforce(sframe, toggle, new_sequence0);
+		sky_packet_add_extension_arq_reset(sframe, toggle, new_sequence0);
 	}
 
 
 	int extension_arq_rrequest = 0;
 	int rr_sequence = randint_i32(0,190);
-	uint8_t mask1 = randint_i32(0,255);
-	uint8_t mask2 = randint_i32(0,255);
+	uint8_t mask = randint_i32(0,0xFFFF);
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_arq_rrequest = 1;
-		sky_packet_add_extension_arq_rr(sframe, rr_sequence, mask1, mask2);
+		sky_packet_add_extension_arq_request(sframe, rr_sequence, mask);
 	}
 
 
@@ -98,7 +97,7 @@ static void test1_round(){
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_hmac_enforcement = 1;
-		sky_packet_add_extension_hmac_enforce(sframe, hmac_enforcement);
+		sky_packet_add_extension_hmac_sequence_reset(sframe, hmac_enforcement);
 	}
 
 
@@ -155,22 +154,21 @@ static void test1_round(){
 			assert(ext->TDDParams.window_size == new_window);
 			extension_mac_params--;
 		}
-		else if(ext->type == EXTENSION_ARQ_SEQ_RESET){
+		else if(ext->type == EXTENSION_ARQ_RESET){
 			assert(extension_arq_settings == 1);
-			assert(ext->ArqSeqReset.toggle == toggle);
-			assert(ext->ArqSeqReset.enforced_sequence == new_sequence0);
+			assert(ext->ARQReset.toggle == toggle);
+			assert(ext->ARQReset.enforced_sequence == new_sequence0);
 			extension_arq_settings--;
 		}
-		else if(ext->type == EXTENSION_ARQ_RESEND_REQ){
+		else if(ext->type == EXTENSION_ARQ_REQUEST){
 			assert(extension_arq_rrequest == 1);
-			assert(ext->ArqReq.sequence == rr_sequence);
-			assert(ext->ArqReq.mask1 == mask1);
-			assert(ext->ArqReq.mask2 == mask2);
+			assert(ext->ARQReq.sequence == rr_sequence);
+			assert(ext->ARQReq.mask == sky_hton16(mask));
 			extension_arq_rrequest--;
 		}
-		else if(ext->type == EXTENSION_HMAC_ENFORCEMENT){
+		else if(ext->type == EXTENSION_HMAC_SEQUENCE_RESET){
 			assert(extension_hmac_enforcement == 1);
-			assert(ext->HMACTxReset.correct_tx_sequence == hmac_enforcement);
+			assert(ext->HMACSequenceReset.sequence == hmac_enforcement);
 			extension_hmac_enforcement--;
 		}
 	}
