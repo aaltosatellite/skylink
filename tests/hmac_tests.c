@@ -56,47 +56,46 @@ static void test1_round(){
 	self1->hmac->sequence_tx[vc] = wrap_hmac_sequence(self2->hmac->sequence_rx[vc] + shift_tx);
 
 
-	SendFrame* sframe = new_send_frame();
-	RCVFrame* rframe = new_receive_frame();
-	RadioFrame* frame = &sframe->radioFrame;
-	fillrand(frame->raw, 255);
+	SkyRadioFrame* sframe = new_send_frame();
+	SkyRadioFrame* rframe = new_receive_frame();
+	//RadioFrame* frame = &sframe->radioFrame;
+	fillrand(sframe->raw, 255);
 	int length = randint_i32(EXTENSION_START_IDX, SKY_FRAME_MAX_LEN - (SKY_HMAC_LENGTH + 1));
-	frame->length = length;
-	frame->vc = vc;
+	sframe->length = length;
+	sframe->vc = vc;
 
 
 	int hmac_seq = sky_hmac_get_next_hmac_tx_sequence_and_advance(self1, vc);
 	assert(hmac_seq == wrap_hmac_sequence(self1->hmac->sequence_tx[vc]-1));
-	frame->auth_sequence = hmac_seq;
+	sframe->auth_sequence = hmac_seq;
 
 
 	sky_hmac_extend_with_authentication(self1, sframe);
-	assert(frame->length == length + SKY_HMAC_LENGTH);
+	assert(sframe->length == length + SKY_HMAC_LENGTH);
 
 
 	int corrupt_pl = (randint_i32(0, 2) == 0);
 	if(corrupt_pl){
 		int i = randint_i32(0, length+SKY_HMAC_LENGTH-1);
-		uint8_t old = frame->raw[i];
-		while (frame->raw[i] == old){
-			frame->raw[i] = (uint8_t) randint_i32(0,255);
+		uint8_t old = sframe->raw[i];
+		while (sframe->raw[i] == old){
+			sframe->raw[i] = (uint8_t) randint_i32(0,255);
 		}
 	}
 
 
-	memcpy(&rframe->radioFrame, &sframe->radioFrame, sizeof(RadioFrame));
+	memcpy(rframe, sframe, sizeof(SkyRadioFrame));
 	int r1 = sky_hmac_check_authentication(self2, rframe);
-	RadioFrame* frame2 = &rframe->radioFrame;
 
 
 	if((shift_tx <= config1->hmac.maximum_jump) && (!corrupt_pl) && (!corrupt_key)){
 		assert(r1 == 0);
-		assert(frame2->length == length);
-		assert(rframe->auth_verified == 1);
+		assert(rframe->length == length);
+		//assert(rframe->auth_verified == 1);
 	} else {
 		assert(r1 < 0);
-		assert(frame2->length == length + SKY_HMAC_LENGTH);
-		assert(rframe->auth_verified == 0);
+		assert(rframe->length == length + SKY_HMAC_LENGTH);
+		//assert(rframe->auth_verified == 0);
 	}
 
 
@@ -107,12 +106,3 @@ static void test1_round(){
 	destroy_send_frame(sframe);
 	destroy_receive_frame(rframe);
 }
-
-
-
-
-
-
-
-
-

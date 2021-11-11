@@ -24,14 +24,14 @@ static int sky_tx_extension_needed_arq_rr(SkyHandle self, uint8_t vc){
 	}
 	return 1;
 }
-static int sky_tx_extension_eval_arq_rr(SkyHandle self, SendFrame* frame, uint8_t vc){
+static int sky_tx_extension_eval_arq_rr(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	if( !sky_tx_extension_needed_arq_rr(self, vc) ){
 		return 0;
 	}
 	uint16_t resend_map = skyArray_get_horizon_bitmap(self->arrayBuffers[vc]);
 	self->arrayBuffers[vc]->resend_request_need = 0;
-	sky_packet_add_extension_arq_rr(frame, self->arrayBuffers[vc]->primaryRcvRing->head_sequence, resend_map & 0xFF, ((resend_map & 0xFF00) >> 8));
-	//printf("\tARQ resend request.\n");
+	sky_packet_add_extension_arq_request(frame, self->arrayBuffers[vc]->primaryRcvRing->head_sequence, resend_map);
+	//SKY_PRINTF(SKY_DIAG_DEBUG, "\tARQ resend request.\n");
 	return 1;
 }
 
@@ -40,14 +40,14 @@ static int sky_tx_extension_eval_arq_rr(SkyHandle self, SendFrame* frame, uint8_
 static int sky_tx_extension_needed_arq_enforce(SkyHandle self, uint8_t vc){
 	return self->arrayBuffers[vc]->state_enforcement_need != 0;
 }
-static int sky_tx_extension_eval_arq_enforce(SkyHandle self, SendFrame* frame, uint8_t vc){
+static int sky_tx_extension_eval_arq_enforce(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	if(!sky_tx_extension_needed_arq_enforce(self, vc)){
 		return 0;
 	}
 	self->arrayBuffers[vc]->state_enforcement_need = 0;
 	uint8_t sequence = skyArray_get_next_transmitted_sequence(self->arrayBuffers[vc]);
-	sky_packet_add_extension_arq_enforce(frame, self->conf->vc->arq_on, sequence);
-	//printf("\tEnforcing ARQ.\n");
+	sky_packet_add_extension_arq_reset(frame, self->conf->vc->arq_on, sequence);
+	//SKY_PRINTF(SKY_DIAG_DEBUG, "\tEnforcing ARQ.\n");
 	return 1;
 }
 
@@ -56,14 +56,14 @@ static int sky_tx_extension_eval_arq_enforce(SkyHandle self, SendFrame* frame, u
 static int sky_tx_extension_needed_hmac_enforce(SkyHandle self, uint8_t vc){
 	return self->hmac->vc_enfocement_need[vc] != 0;
 }
-static int sky_tx_extension_eval_hmac_enforce(SkyHandle self, SendFrame* frame, uint8_t vc){
+static int sky_tx_extension_eval_hmac_enforce(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	if(!sky_tx_extension_needed_hmac_enforce(self, vc)){
 		return 0;
 	}
 	self->hmac->vc_enfocement_need[vc] = 0;
 	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 3); //+3 so that immediate sends don't invalidate what we give here. Jump constant must be bigger.
-	sky_packet_add_extension_hmac_enforce(frame, sequence);
-	//printf("\tEnforcing AUTH sequence.\n");
+	sky_packet_add_extension_hmac_sequence_reset(frame, sequence);
+	//SKY_PRINTF(SKY_DIAG_DEBUG, "\tEnforcing AUTH sequence.\n");
 	return 1;
 }
 
@@ -95,32 +95,31 @@ static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 
 
 
-int sky_tx(SkyHandle self, SendFrame* frame, int insert_golay, int32_t now_ms){
+int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_ms){
 	turn_to_tx(self->phy);
-	int ivc = sky_tx_pick_vc(self, now_ms);
-	if(ivc < 0){
-		return 0;
-	}
-	uint8_t vc = (uint8_t)ivc;
-	/* identity gets copied to the raw-array from frame's own identity field */
-	frame->radioFrame.start_byte = SKYLINK_START_BYTE;
-	memcpy(frame->radioFrame.identity, self->conf->identity, SKY_IDENTITY_LEN);
-	frame->radioFrame.vc = vc;
-	frame->radioFrame.flags = 0;
+	int vc = sky_tx_pick_vc(self, now_ms);
+	if (vc < 0)
+		return vc;
 
+	/* identity gets copied to the raw-array from frame's own identity field */
+	frame->start_byte = SKYLINK_START_BYTE;
+	memcpy(frame->identity, self->conf->identity, SKY_IDENTITY_LEN);
+	frame->vc = (uint8_t)vc;
+	frame->flags = 0;
+
+	const SkyVCConfig* vc_conf = &self->conf->vc[vc];
 
 	/* ARQ status. The purpose of arq_sequence number on frames without payload is to provide
 	 * the peer with information where the sequencing goes. This permits asking resend for payloads
 	 * that were the last in a series of transmissions. */
-	frame->radioFrame.arq_sequence = self->arrayBuffers[vc]->primarySendRing->tx_sequence;
-	if(self->conf->vc[vc].arq_on){
-		frame->radioFrame.flags |= SKY_FLAG_ARQ_ON;
-	}
+	frame->arq_sequence = self->arrayBuffers[vc]->primarySendRing->tx_sequence;
+	if (vc_conf->arq_on)
+		frame->flags |= SKY_FLAG_ARQ_ON;
 
 
 	/* Add extension to the packet. ARQ */
-	frame->radioFrame.length = EXTENSION_START_IDX;
-	frame->radioFrame.ext_length = 0;
+	frame->length = EXTENSION_START_IDX;
+	frame->ext_length = 0;
 	sky_tx_extension_eval_arq_rr(self, frame, vc);
 	sky_tx_extension_eval_arq_enforce(self, frame, vc);
 	sky_tx_extension_eval_hmac_enforce(self, frame, vc);
@@ -128,49 +127,50 @@ int sky_tx(SkyHandle self, SendFrame* frame, int insert_golay, int32_t now_ms){
 
 	/* If there is enough space in frame, copy a payload to the end. Then add ARQ the sequence number obtained from ArqRing. */
 	int next_pl_size = skyArray_peek_next_tx_size(self->arrayBuffers[vc], 1);
-	if((next_pl_size >= 0) && (available_payload_space(&frame->radioFrame) >= next_pl_size)){
+	if((next_pl_size >= 0) && (available_payload_space(frame) >= next_pl_size)){
 		int arq_sequence = -1;
-		int read = skyArray_read_packet_for_tx(self->arrayBuffers[vc], frame->radioFrame.raw + frame->radioFrame.length, &arq_sequence, 1);
-		frame->radioFrame.arq_sequence = (uint8_t)arq_sequence;
-		frame->radioFrame.flags |= SKY_FLAG_HAS_PAYLOAD;
-		frame->radioFrame.length += read;
+		int read = skyArray_read_packet_for_tx(self->arrayBuffers[vc], frame->raw + frame->length, &arq_sequence, 1);
+		frame->arq_sequence = (uint8_t)arq_sequence;
+		frame->flags |= SKY_FLAG_HAS_PAYLOAD;
+		frame->length += read;
 	}
 
 
 	/* Set MAC data fields. */
-	mac_set_frame_fields(self->mac, &frame->radioFrame, now_ms);
+	mac_set_frame_fields(self->mac, frame, now_ms);
 
 	/* Set HMAC state and sequence */
-	frame->radioFrame.auth_sequence = 0;
-	if(self->conf->vc[vc].require_authentication){
-		frame->radioFrame.flags |= SKY_FLAG_AUTHENTICATED;
-		frame->radioFrame.auth_sequence = sky_hmac_get_next_hmac_tx_sequence_and_advance(self, vc);
+	frame->auth_sequence = 0;
+	if(vc_conf->require_authentication){
+		frame->flags |= SKY_FLAG_AUTHENTICATED;
+		frame->auth_sequence = sky_hmac_get_next_hmac_tx_sequence_and_advance(self, vc);
 	}
+	frame->auth_sequence = sky_hton16(frame->auth_sequence);
 
 
 	/* Authenticate the frame */
-	if(self->conf->vc[vc].require_authentication){
+	if (vc_conf->require_authentication){
 		sky_hmac_extend_with_authentication(self, frame);
 	}
 
 
 	/* Apply Forward Error Correction (FEC) coding */
-	sky_fec_encode(&frame->radioFrame);
+	sky_fec_encode(frame);
 
 
 	/* Encode length field. */
 	if(insert_golay){
 		/* Move the data by 3 bytes to make room for the PHY header */
-		for (unsigned int i = frame->radioFrame.length; i != 0; i--){
-			frame->radioFrame.raw[i + 3] = frame->radioFrame.raw[i];
+		for (unsigned int i = frame->length; i != 0; i--){
+			frame->raw[i + 3] = frame->raw[i];
 		}
 
-		uint32_t phy_header = frame->radioFrame.length | SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED;
+		uint32_t phy_header = frame->length | SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED;
 		encode_golay24(&phy_header);
-		frame->radioFrame.raw[0] = 0xff & (phy_header >> 16);
-		frame->radioFrame.raw[1] = 0xff & (phy_header >> 8);
-		frame->radioFrame.raw[2] = 0xff & (phy_header >> 0);
-		frame->radioFrame.length += 3;
+		frame->raw[0] = 0xff & (phy_header >> 16);
+		frame->raw[1] = 0xff & (phy_header >> 8);
+		frame->raw[2] = 0xff & (phy_header >> 0);
+		frame->length += 3;
 	}
 
 
@@ -179,12 +179,3 @@ int sky_tx(SkyHandle self, SendFrame* frame, int insert_golay, int32_t now_ms){
 	++self->diag->tx_frames;
 	return 1;
 }
-
-
-
-
-
-
-
-
-

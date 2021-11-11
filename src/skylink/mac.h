@@ -66,6 +66,6 @@ int mac_carrier_sensed(MACSystem* macSystem, SkyMACConfig* config, int32_t now_m
 
 
 // Writes out the two uint16 values to the provided spot in buffer.
-int mac_set_frame_fields(MACSystem* macSystem, RadioFrame* frame, int32_t now_ms);
+int mac_set_frame_fields(MACSystem* macSystem, SkyRadioFrame* frame, int32_t now_ms);
 
 #endif //SKYLINK_CMAKE_MAC_H

@@ -7,7 +7,6 @@
 #include "../src/skylink/fec.h"
 
 static void test1();
-
 static void test1_round();
 
 
@@ -17,7 +16,7 @@ void packet_tests(){
 
 
 
-void test1(){
+static void test1(){
 	PRINTFF(0,"[Packet Test 1: ENCODE-DECODE]\n");
 	for (int i = 0; i < 4500; ++i) {
 		test1_round();
@@ -26,40 +25,38 @@ void test1(){
 }
 
 
-void test1_round(){
+static void test1_round(){
 	SkyConfig* config = new_vanilla_config();
-	SendFrame* sframe = new_send_frame();
-	RCVFrame* rframe = new_receive_frame();
-	fillrand((uint8_t*)sframe, sizeof(SendFrame));
-	fillrand((uint8_t*)rframe, sizeof(RCVFrame));
-	RadioFrame* radioFrame_s = &sframe->radioFrame;
-	RadioFrame* radioFrame_r = &rframe->radioFrame;
+	SkyRadioFrame* sframe = new_send_frame();
+	SkyRadioFrame* rframe = new_receive_frame();
+	fillrand((uint8_t*)sframe, sizeof(SkyRadioFrame));
+	fillrand((uint8_t*)rframe, sizeof(SkyRadioFrame));
 
 	uint8_t identity[SKY_IDENTITY_LEN];
 	fillrand(identity, SKY_IDENTITY_LEN);
 	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
 	int mac_length = randint_i32(0, config->mac.maximum_window_length);
-	int mac_left = randint_i32(0, radioFrame_s->mac_window);
+	int mac_left = randint_i32(0, sframe->mac_window);
 	int arq_on = randint_i32(0,1);
 	int arq_sequence = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
 	int hmac_on = randint_i32(0,1);
 	int hmac_sequence = randint_i32(0, HMAC_CYCLE_LENGTH-1);
 
-	radioFrame_s->length = EXTENSION_START_IDX;
-	radioFrame_s->start_byte = SKYLINK_START_BYTE;
-	memcpy(radioFrame_s->identity, identity, SKY_IDENTITY_LEN);
-	radioFrame_s->vc = vc;
-	radioFrame_s->auth_sequence = hmac_sequence;
-	radioFrame_s->mac_window = mac_length;
-	radioFrame_s->mac_remaining = mac_left;
-	radioFrame_s->arq_sequence = arq_sequence;
-	radioFrame_s->ext_length = 0;
-	radioFrame_s->flags = 0;
+	sframe->length = EXTENSION_START_IDX;
+	sframe->start_byte = SKYLINK_START_BYTE;
+	memcpy(sframe->identity, identity, SKY_IDENTITY_LEN);
+	sframe->vc = vc;
+	sframe->auth_sequence = hmac_sequence;
+	sframe->mac_window = mac_length;
+	sframe->mac_remaining = mac_left;
+	sframe->arq_sequence = arq_sequence;
+	sframe->ext_length = 0;
+	sframe->flags = 0;
 	if(hmac_on){
-		radioFrame_s->flags |= SKY_FLAG_AUTHENTICATED;
+		sframe->flags |= SKY_FLAG_AUTHENTICATED;
 	}
 	if(arq_on){
-		radioFrame_s->flags |= SKY_FLAG_ARQ_ON;
+		sframe->flags |= SKY_FLAG_ARQ_ON;
 	}
 
 	int n_extensions = 0;
@@ -106,10 +103,10 @@ void test1_round(){
 
 
 	if(n_extensions == 4){
-		assert(available_payload_space(&sframe->radioFrame) == 185);
+		assert(available_payload_space(sframe) == 185);
 	}
 	if(n_extensions == 0){
-		assert(available_payload_space(&sframe->radioFrame) == (RS_MSGLEN - (SKY_HMAC_LENGTH + EXTENSION_START_IDX)) );
+		assert(available_payload_space(sframe) == (RS_MSGLEN - (SKY_HMAC_LENGTH + EXTENSION_START_IDX)) );
 	}
 
 
@@ -118,71 +115,71 @@ void test1_round(){
 	fillrand(pl, payload_len);
 	int r = sky_packet_extend_with_payload(sframe, pl, payload_len);
 	assert(r == 0);
-	assert(sframe->radioFrame.length == (payload_len + EXTENSION_START_IDX + sframe->radioFrame.ext_length));
+	assert(sframe->length == (payload_len + EXTENSION_START_IDX + sframe->ext_length));
 
 	if(n_extensions == 4){
-		assert(available_payload_space(&sframe->radioFrame) <= 185);
+		assert(available_payload_space(sframe) <= 185);
 	}
 	if(n_extensions == 0){
-		assert(available_payload_space(&sframe->radioFrame) <= (RS_MSGLEN - (SKY_HMAC_LENGTH + EXTENSION_START_IDX)) );
+		assert(available_payload_space(sframe) <= (RS_MSGLEN - (SKY_HMAC_LENGTH + EXTENSION_START_IDX)) );
 	}
 
-	memcpy(rframe->radioFrame.raw ,sframe->radioFrame.raw, sframe->radioFrame.length);
-	rframe->radioFrame.length = sframe->radioFrame.length;
+	memcpy(rframe->raw ,sframe->raw, sframe->length);
+	rframe->length = sframe->length;
 
 
-	assert(radioFrame_r->vc == vc);
-	assert(radioFrame_r->mac_window == mac_length);
-	assert(radioFrame_r->mac_remaining == mac_left);
-	assert(((radioFrame_r->flags & SKY_FLAG_AUTHENTICATED) > 0) == (hmac_on > 0));
-	assert(((radioFrame_r->flags & SKY_FLAG_ARQ_ON) > 0) == (arq_on > 0));
+	assert(rframe->vc == vc);
+	assert(rframe->mac_window == mac_length);
+	assert(rframe->mac_remaining == mac_left);
+	assert(((rframe->flags & SKY_FLAG_AUTHENTICATED) > 0) == (hmac_on > 0));
+	assert(((rframe->flags & SKY_FLAG_ARQ_ON) > 0) == (arq_on > 0));
 	if(hmac_on){
-		assert(radioFrame_r->auth_sequence == hmac_sequence);
+		assert(rframe->auth_sequence == hmac_sequence);
 	}
 	if(arq_on){
-		assert(radioFrame_r->arq_sequence == arq_sequence);
+		assert(rframe->arq_sequence == arq_sequence);
 	}
-	assert(radioFrame_r->ext_length == radioFrame_s->ext_length);
+	assert(rframe->ext_length == sframe->ext_length);
 
-	int ext_remaining = radioFrame_r->ext_length;
+	int ext_remaining = rframe->ext_length;
 	int ext_cursor = EXTENSION_START_IDX;
 	while (ext_remaining) {
-		SkyPacketExtension ext;
-		int r2 = interpret_extension(radioFrame_r->raw + ext_cursor, ext_remaining, &ext);
+		SkyPacketExtension* ext = (SkyPacketExtension*)(rframe->raw + ext_cursor);
+		int r2 = ext->length; // TODO: interpret_extension(rframe->raw + ext_cursor, ext_remaining, &ext);
 		assert(r2 > 0);
 		ext_cursor += r2;
 		ext_remaining -= r2;
-		if(ext.type == EXTENSION_MAC_PARAMETERS){
+		if(ext->type == EXTENSION_MAC_PARAMETERS){
 			assert(extension_mac_params == 1);
-			assert(ext.ext_union.MACSpec.gap_size == new_gap);
-			assert(ext.ext_union.MACSpec.window_size == new_window);
+			assert(ext->TDDParams.gap_size == new_gap);
+			assert(ext->TDDParams.window_size == new_window);
 			extension_mac_params--;
 		}
-		if(ext.type == EXTENSION_ARQ_SEQ_RESET){
+		else if(ext->type == EXTENSION_ARQ_SEQ_RESET){
 			assert(extension_arq_settings == 1);
-			assert(ext.ext_union.ArqSeqReset.toggle == toggle);
-			assert(ext.ext_union.ArqSeqReset.enforced_sequence == new_sequence0);
+			assert(ext->ArqSeqReset.toggle == toggle);
+			assert(ext->ArqSeqReset.enforced_sequence == new_sequence0);
 			extension_arq_settings--;
 		}
-		if(ext.type == EXTENSION_ARQ_RESEND_REQ){
+		else if(ext->type == EXTENSION_ARQ_RESEND_REQ){
 			assert(extension_arq_rrequest == 1);
-			assert(ext.ext_union.ArqReq.sequence == rr_sequence);
-			assert(ext.ext_union.ArqReq.mask1 == mask1);
-			assert(ext.ext_union.ArqReq.mask2 == mask2);
+			assert(ext->ArqReq.sequence == rr_sequence);
+			assert(ext->ArqReq.mask1 == mask1);
+			assert(ext->ArqReq.mask2 == mask2);
 			extension_arq_rrequest--;
 		}
-		if(ext.type == EXTENSION_HMAC_ENFORCEMENT){
+		else if(ext->type == EXTENSION_HMAC_ENFORCEMENT){
 			assert(extension_hmac_enforcement == 1);
-			assert(ext.ext_union.HMACTxReset.correct_tx_sequence == hmac_enforcement);
+			assert(ext->HMACTxReset.correct_tx_sequence == hmac_enforcement);
 			extension_hmac_enforcement--;
 		}
 	}
 	assert(ext_remaining == 0);
 
 
-	int rcvd_pl_len = rframe->radioFrame.length - (rframe->radioFrame.ext_length + EXTENSION_START_IDX);
+	int rcvd_pl_len = rframe->length - (rframe->ext_length + EXTENSION_START_IDX);
 	assert(rcvd_pl_len == payload_len);
-	assert(memcmp(rframe->radioFrame.raw + radioFrame_r->ext_length + EXTENSION_START_IDX, pl, rcvd_pl_len) == 0);
+	assert(memcmp(rframe->raw + rframe->ext_length + EXTENSION_START_IDX, pl, rcvd_pl_len) == 0);
 
 
 	destroy_config(config);
@@ -190,16 +187,3 @@ void test1_round(){
 	destroy_receive_frame(rframe);
 	free(pl);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

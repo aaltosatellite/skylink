@@ -126,7 +126,7 @@ int mac_carrier_sensed(MACSystem* macSystem, SkyMACConfig* config, int32_t now_m
 }
 
 
-int mac_set_frame_fields(MACSystem* macSystem, RadioFrame* frame, int32_t now_ms){
+int mac_set_frame_fields(MACSystem* macSystem, SkyRadioFrame* frame, int32_t now_ms){
 	uint16_t w = (uint16_t)macSystem->my_window_length;
 	int32_t R = mac_own_window_remaining(macSystem, now_ms);
 	R = (R < 1) ? 1 : R;
@@ -135,4 +135,3 @@ int mac_set_frame_fields(MACSystem* macSystem, RadioFrame* frame, int32_t now_ms
 	frame->mac_remaining = r;
 	return 0;
 }
-

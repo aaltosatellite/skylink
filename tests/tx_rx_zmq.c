@@ -38,8 +38,8 @@ typedef struct skylink_peer {
 	int ID;
 	PhysicalParams physicalParams;
 	SkyHandle self;
-	SendFrame* sendFrame;
-	RCVFrame* rcvFrame;
+	SkyRadioFrame* sendFrame;
+	SkyRadioFrame* rcvFrame;
 	void* zmq_context;
 	void* rx_socket;
 	void* tx_socket;
@@ -198,10 +198,10 @@ int peer_tx_round(SkylinkPeer* peer){
 	if(!send){
 		return 0;
 	}
-	memcpy(tgt+4, peer->sendFrame->radioFrame.raw, peer->sendFrame->radioFrame.length);
-	zmq_send(peer->tx_socket, tgt, 4+peer->sendFrame->radioFrame.length, 0); //todo: DONTWAIT?
+	memcpy(tgt+4, peer->sendFrame->raw, peer->sendFrame->length);
+	zmq_send(peer->tx_socket, tgt, 4+peer->sendFrame->length, 0); //todo: DONTWAIT?
 	PRINTFF(0,"#2 Transmitted. %dth in this window.\n", peer->self->phy->total_frames_sent_in_current_window);
-	return peer->sendFrame->radioFrame.length;
+	return peer->sendFrame->length;
 }
 
 
@@ -305,8 +305,8 @@ void* ether_cycle(void* arg){
 			int64_t us2 = real_microseconds();
 			PRINTFF(0,"#3   %d bytes rx'ed.  (locked in %ld us)\n", r, us2-us1);
 			if(peer->self->phy->radio_mode == MODE_RX){
-				memcpy(&peer->rcvFrame->radioFrame, &tgt[4], r-4);
-				peer->rcvFrame->radioFrame.length = r-4;
+				memcpy(peer->rcvFrame, &tgt[4], r-4);
+				peer->rcvFrame->length = r-4;
 				peer->rcvFrame->rx_time_ms = rget_time_ms();
 				int rxr = sky_rx(peer->self, peer->rcvFrame, 1);
 				PRINTFF(0,"#3.5 bytes successfully rx'ed. rx ret: %d\n", rxr);
@@ -342,11 +342,3 @@ void tx_rx_zmq_test(int argc, char *argv[]){
 	}
 
 }
-
-
-
-
-
-
-
-
