@@ -35,7 +35,7 @@ void destroy_send_frame(SkyRadioFrame* frame){
 int sky_packet_add_extension_arq_sequence(SkyRadioFrame* frame, uint8_t sequence) {
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
 	extension->type = EXTENSION_ARQ_SEQUENCE;
-	extension->length = sizeof(ExtARQSeq);
+	extension->length = sizeof(ExtARQSeq) +1;
 	extension->ARQSeq.sequence = sequence;
 
 	frame->ext_length += extension->length;
@@ -46,7 +46,7 @@ int sky_packet_add_extension_arq_sequence(SkyRadioFrame* frame, uint8_t sequence
 int sky_packet_add_extension_arq_request(SkyRadioFrame* frame, uint8_t sequence, uint16_t mask) {
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
 	extension->type = EXTENSION_ARQ_REQUEST;
-	extension->length = sizeof(ExtARQReq);
+	extension->length = sizeof(ExtARQReq) +1;
 	extension->ARQReq.sequence = sequence;
 	extension->ARQReq.mask = sky_hton16(mask);
 
@@ -59,7 +59,7 @@ int sky_packet_add_extension_arq_request(SkyRadioFrame* frame, uint8_t sequence,
 int sky_packet_add_extension_arq_reset(SkyRadioFrame* frame, uint8_t toggle, uint8_t sequence) {
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
 	extension->type = EXTENSION_ARQ_RESET;
-	extension->length = sizeof(ExtARQReset);
+	extension->length = sizeof(ExtARQReset) +1;
 	extension->ARQReset.toggle = toggle;
 	extension->ARQReset.enforced_sequence = sequence;
 
@@ -72,7 +72,7 @@ int sky_packet_add_extension_arq_reset(SkyRadioFrame* frame, uint8_t toggle, uin
 int sky_packet_add_extension_mac_params(SkyRadioFrame* frame, uint16_t gap_size, uint16_t window_size) {
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
 	extension->type = EXTENSION_MAC_PARAMETERS;
-	extension->length = sizeof(ExtTDDParams);
+	extension->length = sizeof(ExtTDDParams) +1;
 	extension->TDDParams.gap_size = sky_hton16(gap_size);
 	extension->TDDParams.window_size = sky_hton16(window_size);
 
@@ -85,7 +85,7 @@ int sky_packet_add_extension_mac_params(SkyRadioFrame* frame, uint16_t gap_size,
 int sky_packet_add_extension_mac_tdd_control(SkyRadioFrame* frame, uint16_t window, uint16_t remaining) {
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
 	extension->type = EXTENSION_MAC_TDD_CONTROL;
-	extension->length = sizeof(ExtTDDControl);
+	extension->length = sizeof(ExtTDDControl) +1;
 	extension->TDDControl.window = sky_hton16(window);
 	extension->TDDControl.remaining = sky_hton16(remaining);
 
@@ -98,7 +98,7 @@ int sky_packet_add_extension_mac_tdd_control(SkyRadioFrame* frame, uint16_t wind
 int sky_packet_add_extension_hmac_sequence_reset(SkyRadioFrame* frame, uint16_t sequence) {
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
 	extension->type = EXTENSION_HMAC_SEQUENCE_RESET;
-	extension->length = sizeof(ExtHMACSequenceReset);
+	extension->length = sizeof(ExtHMACSequenceReset) +1;
 	extension->HMACSequenceReset.sequence = sky_hton16(sequence);
 
 	frame->ext_length += extension->length;

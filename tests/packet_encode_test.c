@@ -5,6 +5,7 @@
 #include "packet_encode_test.h"
 #include "tst_utilities.h"
 #include "../src/skylink/fec.h"
+#include "skylink/utilities.h"
 
 static void test1();
 static void test1_round();
@@ -64,7 +65,7 @@ static void test1_round(){
 	int extension_mac_params = 0;
 	int new_window = randint_i32(config->mac.minimum_window_length, config->mac.maximum_window_length);
 	int new_gap = randint_i32(config->mac.minimum_gap_length, config->mac.maximum_gap_length);
-	if(randint_i32(0,1) == 1){
+	if( 1){
 		n_extensions++;
 		extension_mac_params = 1;
 		sky_packet_add_extension_mac_params(sframe, new_gap, new_window);
@@ -126,7 +127,8 @@ static void test1_round(){
 	memcpy(rframe->raw ,sframe->raw, sframe->length);
 	rframe->length = sframe->length;
 
-
+	assert(rframe->start_byte == SKYLINK_START_BYTE);
+	assert(memcmp(rframe->identity, identity, SKY_IDENTITY_LEN) ==0);
 	assert(rframe->vc == vc);
 	assert(rframe->mac_window == mac_length);
 	assert(rframe->mac_remaining == mac_left);
@@ -140,6 +142,9 @@ static void test1_round(){
 	}
 	assert(rframe->ext_length == sframe->ext_length);
 
+
+
+
 	int ext_remaining = rframe->ext_length;
 	int ext_cursor = EXTENSION_START_IDX;
 	while (ext_remaining) {
@@ -150,25 +155,29 @@ static void test1_round(){
 		ext_remaining -= r2;
 		if(ext->type == EXTENSION_MAC_PARAMETERS){
 			assert(extension_mac_params == 1);
-			assert(ext->TDDParams.gap_size == new_gap);
-			assert(ext->TDDParams.window_size == new_window);
+			assert(ext->length == sizeof(ExtTDDParams)+1);
+			assert(ext->TDDParams.gap_size == sky_hton16(new_gap));
+			assert(ext->TDDParams.window_size == sky_hton16(new_window));
 			extension_mac_params--;
 		}
 		else if(ext->type == EXTENSION_ARQ_RESET){
 			assert(extension_arq_settings == 1);
+			assert(ext->length == sizeof(ExtARQReset)+1);
 			assert(ext->ARQReset.toggle == toggle);
 			assert(ext->ARQReset.enforced_sequence == new_sequence0);
 			extension_arq_settings--;
 		}
 		else if(ext->type == EXTENSION_ARQ_REQUEST){
 			assert(extension_arq_rrequest == 1);
+			assert(ext->length == sizeof(ExtARQReq)+1);
 			assert(ext->ARQReq.sequence == rr_sequence);
 			assert(ext->ARQReq.mask == sky_hton16(mask));
 			extension_arq_rrequest--;
 		}
 		else if(ext->type == EXTENSION_HMAC_SEQUENCE_RESET){
+			assert(ext->length == sizeof(ExtHMACSequenceReset)+1);
 			assert(extension_hmac_enforcement == 1);
-			assert(ext->HMACSequenceReset.sequence == hmac_enforcement);
+			assert(ext->HMACSequenceReset.sequence == sky_hton16(hmac_enforcement));
 			extension_hmac_enforcement--;
 		}
 	}

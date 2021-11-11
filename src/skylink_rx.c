@@ -179,9 +179,12 @@ static void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint
 	unsigned int cursor = 0;
 	while (cursor < frame->ext_length) {
 
-		SkyPacketExtension* ext = (SkyPacketExtension*)&frame->raw[EXTENSION_START_IDX + cursor];
+		SkyPacketExtension* ext = (SkyPacketExtension*)&frame->raw[EXTENSION_START_IDX + cursor]; //Magic happens here.
 		if (cursor + ext->length >= frame->length)
 			return;
+		if(ext->length == 0){
+			return;
+		}
 		cursor += ext->length;
 
 
@@ -216,9 +219,9 @@ static void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint
 
 
 static void sky_rx_process_ext_mac_reset(SkyHandle self, const SkyPacketExtension* ext) {
-
-	if (ext->length != sizeof(ExtTDDParams))
+	if (ext->length != (sizeof(ExtTDDParams)+1)){
 		return;
+	}
 
 	if(!mac_valid_window_length(&self->conf->mac, ext->TDDParams.window_size)) {
 		return;
@@ -231,10 +234,12 @@ static void sky_rx_process_ext_mac_reset(SkyHandle self, const SkyPacketExtensio
 	mac_set_peer_window_length(self->mac, ext->TDDParams.window_size);
 }
 
-static void sky_rx_process_ext_arq_request(SkyHandle self, const SkyPacketExtension* ext, int vc) {
 
-	if (ext->length != sizeof(ExtARQReq))
+
+static void sky_rx_process_ext_arq_request(SkyHandle self, const SkyPacketExtension* ext, int vc) {
+	if (ext->length != (sizeof(ExtARQReq)+1)){
 		return;
+	}
 
 	uint16_t mask = sky_ntoh16(ext->ARQReq.mask);
 	int r = skyArray_schedule_resend(self->arrayBuffers[vc], ext->ARQReq.sequence);
@@ -263,10 +268,11 @@ static void sky_rx_process_ext_arq_request(SkyHandle self, const SkyPacketExtens
 }
 
 
-static void sky_rx_process_ext_arq_reset(SkyHandle self, const SkyPacketExtension* ext, int vc) {
 
-	if (ext->length != sizeof(ExtARQReset))
+static void sky_rx_process_ext_arq_reset(SkyHandle self, const SkyPacketExtension* ext, int vc) {
+	if (ext->length != (sizeof(ExtARQReset)+1)){
 		return;
+	}
 
 	self->conf->vc[vc].arq_on = (ext->ARQReset.toggle > 0);
 	/* This extension only toggles ARQ on or off. The ONLY way misaligned sequences realign,
@@ -279,9 +285,9 @@ static void sky_rx_process_ext_arq_reset(SkyHandle self, const SkyPacketExtensio
 
 
 static void sky_rx_process_ext_hmac_sequence_reset(SkyHandle self, const SkyPacketExtension* ext, int vc) {
-
-	if (ext->length != sizeof(ExtHMACSequenceReset))
+	if (ext->length !=(sizeof(ExtHMACSequenceReset) +1)){
 		return;
+	}
 
 	//todo: should include toggle!
 	//self->conf->vc->require_authentication = 1;

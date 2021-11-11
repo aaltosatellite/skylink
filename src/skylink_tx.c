@@ -47,7 +47,7 @@ static int sky_tx_extension_eval_arq_enforce(SkyHandle self, SkyRadioFrame* fram
 	self->arrayBuffers[vc]->state_enforcement_need = 0;
 	uint8_t sequence = skyArray_get_next_transmitted_sequence(self->arrayBuffers[vc]);
 	sky_packet_add_extension_arq_reset(frame, self->conf->vc->arq_on, sequence);
-	//SKY_PRINTF(SKY_DIAG_DEBUG, "\tEnforcing ARQ.\n");
+	//printf( "\tEnforcing ARQ.\n");
 	return 1;
 }
 

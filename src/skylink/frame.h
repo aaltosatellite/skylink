@@ -11,10 +11,10 @@
 #define SKYLINK_START_BYTE              's' 	//all packets start with this
 #define EXTENSION_ARQ_SEQUENCE          1
 #define EXTENSION_ARQ_REQUEST           2
-#define EXTENSION_ARQ_RESET             4
-#define EXTENSION_MAC_PARAMETERS        5
-#define EXTENSION_MAC_TDD_CONTROL       7
-#define EXTENSION_HMAC_SEQUENCE_RESET   8
+#define EXTENSION_ARQ_RESET             3
+#define EXTENSION_MAC_PARAMETERS        4
+#define EXTENSION_MAC_TDD_CONTROL       5
+#define EXTENSION_HMAC_SEQUENCE_RESET   6
 
 
 /* ARQ Sequence */
