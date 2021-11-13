@@ -88,8 +88,6 @@ typedef struct {
 			uint8_t flags 	: 5;
 			uint8_t ext_length;
 			uint16_t auth_sequence;
-			uint16_t mac_window;
-			uint16_t mac_remaining;
 			uint8_t arq_sequence;
 		};
 	};
@@ -97,18 +95,7 @@ typedef struct {
 
 /* frames ========================================================================================== */
 
-
-
-/* MAC-system */
-struct sky_mac_s {
-	int32_t T0_ms;
-	int32_t my_window_length;
-	int32_t peer_window_length;
-	int32_t gap_constant;
-	int32_t tail_constant;
-	int32_t last_belief_update;
-};
-typedef struct sky_mac_s MACSystem;
+typedef struct sky_mac_s SkyMAC;
 
 
 
@@ -125,12 +112,6 @@ struct sky_hmac {
 typedef struct sky_hmac SkyHMAC;
 
 
-
-typedef struct sky_physical {
-	uint8_t radio_mode;
-	uint16_t frames_sent_in_current_window_per_vc[SKY_NUM_VIRTUAL_CHANNELS];
-	uint16_t total_frames_sent_in_current_window;
-} SkyPhysical;
 
 
 
@@ -164,11 +145,10 @@ typedef struct sky_conf {
  * since it ties several different blocks togehter.
  */
 struct sky_all {
-	SkyPhysical*	phy;
 	SkyConfig*		conf;                 					// Configuration
 	SkyDiagnostics*	diag;                 					// Diagnostics
 	SkyArqRing* 	arrayBuffers[SKY_NUM_VIRTUAL_CHANNELS]; //ARQ capable buffers.
-	MACSystem* 		mac;                    				// MAC state
+	SkyMAC* 		mac;                    				// MAC state
 	SkyHMAC* 		hmac;
 };
 typedef struct sky_all* SkyHandle;

@@ -10,12 +10,11 @@
 #include "skylink/mac.h"
 #include "skylink/hmac.h"
 #include "skylink/utilities.h"
-#include "skylink/phy.h"
 
 #define UTILITY_FRAMES_PER_WINDOW	2
 
 static int sky_tx_extension_needed_arq_rr(SkyHandle self, uint8_t vc){
-	if(self->phy->frames_sent_in_current_window_per_vc[vc] >= UTILITY_FRAMES_PER_WINDOW){
+	if(self->mac->frames_sent_in_current_window_per_vc[vc] >= UTILITY_FRAMES_PER_WINDOW){
 		return 0;
 	}
 	uint16_t resend_map = skyArray_get_horizon_bitmap(self->arrayBuffers[vc]);
@@ -24,6 +23,7 @@ static int sky_tx_extension_needed_arq_rr(SkyHandle self, uint8_t vc){
 	}
 	return 1;
 }
+
 static int sky_tx_extension_eval_arq_rr(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	if( !sky_tx_extension_needed_arq_rr(self, vc) ){
 		return 0;
@@ -86,7 +86,7 @@ static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 			return vc;
 		}
 	}
-	if(self->phy->total_frames_sent_in_current_window < UTILITY_FRAMES_PER_WINDOW){
+	if(self->mac->total_frames_sent_in_current_window < UTILITY_FRAMES_PER_WINDOW){
 		return (now_ms & 0xFF) % SKY_NUM_VIRTUAL_CHANNELS;
 	}
 	return -1;
@@ -96,7 +96,7 @@ static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 
 /* Returns boolean value 0/1 as to if there is need to actually send something. */
 int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_ms){
-	turn_to_tx(self->phy);
+	//turn_to_tx(self->phy);
 	int vc = sky_tx_pick_vc(self, now_ms);
 	if (vc < 0){
 		return 0;  //This is supposed to return 0, NOT "-1"!!! : sky_tx returns a boolean value as to if there is need to send somethign.
@@ -122,6 +122,10 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 	/* Add extension to the packet. ARQ */
 	frame->length = EXTENSION_START_IDX;
 	frame->ext_length = 0;
+
+	/* Set MAC data fields. */
+	mac_set_frame_fields(self->mac, frame, now_ms);
+
 	sky_tx_extension_eval_arq_rr(self, frame, vc);
 	sky_tx_extension_eval_arq_enforce(self, frame, vc);
 	sky_tx_extension_eval_hmac_enforce(self, frame, vc);
@@ -137,9 +141,6 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 		frame->length += read;
 	}
 
-
-	/* Set MAC data fields. */
-	mac_set_frame_fields(self->mac, frame, now_ms);
 
 	/* Set HMAC state and sequence */
 	frame->auth_sequence = 0;
@@ -176,8 +177,8 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 	}
 
 
-	++self->phy->frames_sent_in_current_window_per_vc[vc];
-	++self->phy->total_frames_sent_in_current_window;
+	++self->mac->frames_sent_in_current_window_per_vc[vc];
+	++self->mac->total_frames_sent_in_current_window;
 	++self->diag->tx_frames;
 	return 1; //Returns 1, not 0.  1 is a boolean TRUE value.
 }

@@ -92,10 +92,10 @@ void destroy_config(SkyConfig* config){
 SkyHandle new_handle(SkyConfig* config){
 	SkyHandle handle = SKY_MALLOC(sizeof(struct sky_all));
 	handle->conf = config;
-	handle->mac = new_mac_system(&config->mac);
+	handle->mac = sky_mac_create(&config->mac);
 	handle->hmac = new_hmac_instance(&config->hmac);
 	handle->diag = new_diagnostics();
-	handle->phy = new_physical();
+
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		handle->arrayBuffers[i] = new_arq_ring(&config->array[i]);
 	}
@@ -104,10 +104,9 @@ SkyHandle new_handle(SkyConfig* config){
 
 
 void destroy_handle(SkyHandle self){
-	destroy_mac_system(self->mac);
+	sky_mac_destroy(self->mac);
 	destroy_hmac(self->hmac);
 	destroy_diagnostics(self->diag);
-	destroy_physical(self->phy);
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		destroy_arq_ring(self->arrayBuffers[i]);
 	}
@@ -148,14 +147,25 @@ uint16_t spin_to_seq(SkyArqRing* ring1, SkyArqRing* ring2, int target_sequence){
 
 
 
+SkyPacketExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_type) {
+	if((frame->ext_length + EXTENSION_START_IDX) > frame->length)
+		return NULL; // Too short packet.
 
+	if(frame->ext_length <= 1)
+		return NULL; // No extensions.
 
+	unsigned int cursor = 0;
+	while (cursor < frame->ext_length) {
 
+		SkyPacketExtension* ext = (SkyPacketExtension*)&frame->raw[EXTENSION_START_IDX + cursor];
+		if (cursor + ext->length >= frame->length)
+			return NULL;
+		if(ext->length == 0)
+			return NULL;
 
+		if (extension_type == ext->type)
+			return ext;
 
-
-
-
-
-
-
+		cursor += ext->length;
+	}
+}

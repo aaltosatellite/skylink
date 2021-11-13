@@ -85,13 +85,16 @@ void destroy_send_frame(SkyRadioFrame* frame);
 
 
 // encoding ============================================================================================================
+
+int sky_packet_add_extension_mac_params(SkyRadioFrame* frame, uint16_t gap_size, uint16_t window_size);
+
+int sky_packet_add_extension_mac_tdd_control(SkyRadioFrame* frame, uint16_t window, uint16_t remaining);
+
 int sky_packet_add_extension_arq_sequence(SkyRadioFrame* frame, uint8_t sequence);
 
 int sky_packet_add_extension_arq_request(SkyRadioFrame* frame, uint8_t sequence, uint16_t mask);
 
 int sky_packet_add_extension_arq_reset(SkyRadioFrame* frame, uint8_t toggle, uint8_t sequence);
-
-int sky_packet_add_extension_mac_params(SkyRadioFrame* frame, uint16_t gap_size, uint16_t window_size);
 
 int sky_packet_add_extension_hmac_sequence_reset(SkyRadioFrame* frame, uint16_t sequence);
 

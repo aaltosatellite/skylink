@@ -1,10 +1,8 @@
-//
-// Created by elmore on 28.10.2021.
-//
-#include "skylink/diag.h"
+
 #include "skylink/skylink.h"
+#include "skylink/diag.h"
 
-
+unsigned int sky_diag_mask;
 
 SkyDiagnostics* new_diagnostics(){
 	SkyDiagnostics* diag = SKY_MALLOC(sizeof(SkyDiagnostics));
@@ -15,5 +13,3 @@ SkyDiagnostics* new_diagnostics(){
 void destroy_diagnostics(SkyDiagnostics* diag){
 	free(diag);
 }
-
-

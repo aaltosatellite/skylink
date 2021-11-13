@@ -55,7 +55,7 @@ extern unsigned int sky_diag_mask;
 
 #else
 /* No debug prints in release build */
-#define SKY_PRINTF(...)  //do { } while(0)
+#define SKY_PRINTF(...) do { } while(0)
 #endif //DEBUG
 
 

@@ -5,11 +5,12 @@
 #ifndef SKYLINK_CMAKE_TST_UTILITIES_H
 #define SKYLINK_CMAKE_TST_UTILITIES_H
 
-#include "../src/skylink/skylink.h"
-#include "../src/skylink/conf.h"
-#include "../src/skylink/mac.h"
-#include "../src/skylink/hmac.h"
-#include "../src/skylink/phy.h"
+#include "skylink/skylink.h"
+#include "skylink/conf.h"
+#include "skylink/mac.h"
+#include "skylink/hmac.h"
+#include "skylink/frame.h"
+
 #include "tools/tools.h"
 
 
@@ -52,5 +53,7 @@ void destroy_config(SkyConfig* config);
 void destroy_handle(SkyHandle self);
 
 uint16_t spin_to_seq(SkyArqRing* ring1, SkyArqRing* ring2, int target_sequence);
+
+SkyPacketExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_type);
 
 #endif //SKYLINK_CMAKE_TST_UTILITIES_H

@@ -9,13 +9,13 @@
 #include "skylink/frame.h"
 #include "skylink/mac.h"
 #include "skylink/hmac.h"
-#include "skylink/phy.h"
 #include "skylink/utilities.h"
 
-static void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type);
+static void sky_rx_process_extensions(SkyHandle self, const SkyRadioFrame* frame, uint8_t this_type);
+static void sky_rx_process_ext_mac_reset(SkyHandle self, const SkyPacketExtension* ext);
+static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* frame, const SkyPacketExtension* ext);
 static void sky_rx_process_ext_arq_request(SkyHandle self, const SkyPacketExtension* ext, int vc);
 static void sky_rx_process_ext_arq_reset(SkyHandle self, const SkyPacketExtension* ext, int vc);
-static void sky_rx_process_ext_mac_reset(SkyHandle self, const SkyPacketExtension* ext);
 static void sky_rx_process_ext_hmac_sequence_reset(SkyHandle self, const SkyPacketExtension* ext, int vc);
 static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame);
 
@@ -25,8 +25,7 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame);
 
 
 
-int sky_rx(SkyHandle self, SkyRadioFrame* frame, int contains_golay){
-	turn_to_rx(self->phy);
+int sky_rx(SkyHandle self, SkyRadioFrame* frame, int contains_golay) {
 	int ret = 0;
 	if(frame->length < SKY_ENCODED_FRAME_MIN_LENGTH)
 		return SKY_RET_INVALID_ENCODED_LENGTH;
@@ -103,12 +102,8 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 			sky_hmac_remove_hash(frame);
 	}
 
-	// Update MAC status
-	if ((frame->flags & SKY_FLAG_AUTHENTICATED) != 0 || self->conf->mac.unauthenticated_mac_updates) {
-		mac_update_belief(self->mac, &self->conf->mac, frame->rx_time_ms, frame->mac_window, frame->mac_remaining);
-	}
-
 	// Check the rest of extension types.
+	sky_rx_process_extensions(self, frame, EXTENSION_MAC_TDD_CONTROL);
 	sky_rx_process_extensions(self, frame, EXTENSION_MAC_PARAMETERS);
 	sky_rx_process_extensions(self, frame, EXTENSION_ARQ_REQUEST);
 	sky_rx_process_extensions(self, frame, EXTENSION_ARQ_RESET);
@@ -168,7 +163,7 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 
 
 
-static void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint8_t this_type){
+static void sky_rx_process_extensions(SkyHandle self, const SkyRadioFrame* frame, uint8_t this_type){
 	if((frame->ext_length + EXTENSION_START_IDX) > frame->length) {
 		return; //todo error: too short packet.
 	}
@@ -194,6 +189,10 @@ static void sky_rx_process_extensions(SkyHandle self, SkyRadioFrame* frame, uint
 		switch(ext->type) {
 		case EXTENSION_MAC_PARAMETERS:
 			sky_rx_process_ext_mac_reset(self, ext);
+			break;
+
+		case EXTENSION_MAC_TDD_CONTROL:
+			sky_rx_process_ext_mac_control(self, frame, ext);
 			break;
 
  		case EXTENSION_ARQ_RESET:
@@ -234,6 +233,21 @@ static void sky_rx_process_ext_mac_reset(SkyHandle self, const SkyPacketExtensio
 	mac_set_peer_window_length(self->mac, ext->TDDParams.window_size);
 }
 
+
+static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* frame, const SkyPacketExtension* ext) {
+	if (ext->length != (sizeof(ExtTDDControl)+1)){
+		return;
+	}
+
+	// Update MAC status
+	if ((frame->flags & SKY_FLAG_AUTHENTICATED) == 0)
+		return;
+
+	if (self->conf->mac.unauthenticated_mac_updates) {
+		mac_update_belief(self->mac, &self->conf->mac, frame->rx_time_ms, ext->TDDControl.window, ext->TDDControl.remaining);
+	}
+
+}
 
 
 static void sky_rx_process_ext_arq_request(SkyHandle self, const SkyPacketExtension* ext, int vc) {

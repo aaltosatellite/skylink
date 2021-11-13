@@ -7,11 +7,12 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
-#include "../src/skylink/arq_ring.h"
-#include "../src/skylink/skylink.h"
-#include "../src/skylink/frame.h"
-#include "../src/skylink/utilities.h"
-#include "../src/skylink/phy.h"
+
+#include "skylink/arq_ring.h"
+#include "skylink/skylink.h"
+#include "skylink/frame.h"
+#include "skylink/utilities.h"
+
 #include "tst_utilities.h"
 #include "tools/tools.h"
 
@@ -202,7 +203,7 @@ int peer_tx_round(SkylinkPeer* peer){
 	}
 	memcpy(tgt+4, peer->sendFrame->raw, peer->sendFrame->length);
 	zmq_send(peer->tx_socket, tgt, 4+peer->sendFrame->length, 0); //todo: DONTWAIT?
-	PRINTFF(0,"#2 Transmitted. %dth in this window.\n", peer->self->phy->total_frames_sent_in_current_window);
+	PRINTFF(0,"#2 Transmitted. %dth in this window.\n", peer->self->mac->total_frames_sent_in_current_window);
 	return peer->sendFrame->length;
 }
 
@@ -221,7 +222,7 @@ _Noreturn void* tx_cycle(void* arg){
 		mac_silence_shift_check(peer->self->mac, &peer->self->conf->mac, now_ms);
 		int can_send = mac_can_send(peer->self->mac, now_ms);
 		if(can_send){
-			turn_to_tx(peer->self->phy);
+			//turn_to_tx(peer->self->phy);
 			say_tx(peer);
 
 			int bytes_transmitted = peer_tx_round(peer);
@@ -239,7 +240,7 @@ _Noreturn void* tx_cycle(void* arg){
 		}
 
 		if(!can_send){
-			turn_to_rx(peer->self->phy);
+			//turn_to_rx(peer->self->phy);
 			say_rx(peer);
 
 			int32_t sleep_ms = mac_time_to_own_window(peer->self->mac, now_ms);
@@ -307,7 +308,7 @@ void* ether_cycle(void* arg){
 			pthread_mutex_lock(&peer->mutex); 	//lock
 			int64_t us2 = real_microseconds();
 			PRINTFF(0,"#3   %d bytes rx'ed.  (locked in %ld us)\n", r, us2-us1);
-			if(peer->self->phy->radio_mode == MODE_RX){
+			if(peer->self->mac->radio_mode == MODE_RX){
 				memcpy(peer->rcvFrame->raw, &tgt[4], r-4);
 				peer->rcvFrame->length = r-4;
 				peer->rcvFrame->rx_time_ms = rget_time_ms();

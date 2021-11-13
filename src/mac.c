@@ -6,8 +6,8 @@
 #include "skylink/conf.h"
 
 
-static int32_t wrap_ms(int32_t time_ms, MACSystem* macSystem){ //This mess is a conversion from C-modulo, to always-positive-modulo.
-	int32_t mod = macSystem->my_window_length + macSystem->gap_constant + macSystem->peer_window_length + macSystem->tail_constant;
+static int32_t wrap_ms(int32_t time_ms, SkyMAC* mac){ //This mess is a conversion from C-modulo, to always-positive-modulo.
+	int32_t mod = mac->my_window_length + mac->gap_constant + mac->peer_window_length + mac->tail_constant;
 	return ((time_ms % mod) + mod) % mod;
 }
 
@@ -37,49 +37,51 @@ int mac_valid_gap_length(SkyMACConfig* config, int32_t length){
 
 
 // === PUBLIC FUNCTIONS ================================================================================================
-MACSystem* new_mac_system(SkyMACConfig* config){
-	MACSystem* macSystem = SKY_MALLOC(sizeof(MACSystem));
-	macSystem->T0_ms = 0;
-	macSystem->my_window_length = config->default_window_length;
-	macSystem->peer_window_length = config->default_window_length;
-	macSystem->gap_constant = config->default_gap_length;
-	macSystem->tail_constant = config->default_tail_length;
-	macSystem->last_belief_update = -1;
-	return macSystem;
+SkyMAC* sky_mac_create(SkyMACConfig* config){
+	SkyMAC* mac = SKY_MALLOC(sizeof(SkyMAC));
+	mac->T0_ms = 0;
+	mac->my_window_length = config->default_window_length;
+	mac->peer_window_length = config->default_window_length;
+	mac->gap_constant = config->default_gap_length;
+	mac->tail_constant = config->default_tail_length;
+	mac->last_belief_update = -1;
+	mac->radio_mode = MODE_RX;
+	mac->total_frames_sent_in_current_window = 0;
+	return mac;
 }
 
 
-void destroy_mac_system(MACSystem* macSystem){
-	free(macSystem);
+void sky_mac_destroy(SkyMAC* mac){
+	free(mac);
 }
 
 
-void mac_shift_windowing(MACSystem* macSystem, int32_t t_shift){
-	macSystem->T0_ms = wrap_ms(macSystem->T0_ms + t_shift, macSystem);
+void mac_shift_windowing(SkyMAC* mac, int32_t t_shift){
+	mac->T0_ms = wrap_ms(mac->T0_ms + t_shift, mac);
 }
 
 
-int32_t mac_set_my_window_length(MACSystem* macSystem, int32_t new_length){
-	macSystem->my_window_length = new_length;
+int32_t mac_set_my_window_length(SkyMAC* mac, int32_t new_length){
+	mac->my_window_length = new_length;
 	return 0;
 }
 
 
-int32_t mac_set_peer_window_length(MACSystem* macSystem, int32_t new_length){
-	macSystem->peer_window_length = new_length;
+int32_t mac_set_peer_window_length(SkyMAC* mac, int32_t new_length){
+	mac->peer_window_length = new_length;
 	return 0;
 }
 
 
-int32_t mac_set_gap_constant(MACSystem* macSystem, int32_t new_gap_constant){
-	macSystem->gap_constant = new_gap_constant;
+int32_t mac_set_gap_constant(SkyMAC* mac, int32_t new_gap_constant){
+	mac->gap_constant = new_gap_constant;
 	return 0;
 }
 
 
-int32_t mac_time_to_own_window(MACSystem* macSystem, int32_t now_ms){
-	int32_t dt = wrap_ms(macSystem->T0_ms - now_ms, macSystem);
-	int32_t length_of_rest = macSystem->gap_constant + macSystem->peer_window_length + macSystem->tail_constant;
+int32_t mac_time_to_own_window(SkyMAC* mac, int32_t now_ms){
+	int32_t dt = wrap_ms(mac->T0_ms - now_ms, mac);
+	int32_t length_of_rest = mac->gap_constant + mac->peer_window_length + mac->tail_constant;
 	if(dt > length_of_rest){
 		return 0;
 	}
@@ -87,66 +89,65 @@ int32_t mac_time_to_own_window(MACSystem* macSystem, int32_t now_ms){
 }
 
 
-int32_t mac_own_window_remaining(MACSystem* macSystem, int32_t now_ms){
-	int32_t dt = wrap_ms(now_ms - macSystem->T0_ms, macSystem);
-	return macSystem->my_window_length - dt;
+int32_t mac_own_window_remaining(SkyMAC* mac, int32_t now_ms){
+	int32_t dt = wrap_ms(now_ms - mac->T0_ms, mac);
+	return mac->my_window_length - dt;
 }
 
 
-int32_t mac_peer_window_remaining(MACSystem* macSystem, int32_t now_ms){
-	int32_t dt = wrap_ms(now_ms - (macSystem->T0_ms + macSystem->my_window_length + macSystem->gap_constant), macSystem);
-	return macSystem->peer_window_length - dt;
+int32_t mac_peer_window_remaining(SkyMAC* mac, int32_t now_ms){
+	int32_t dt = wrap_ms(now_ms - (mac->T0_ms + mac->my_window_length + mac->gap_constant), mac);
+	return mac->peer_window_length - dt;
 }
 
 
-void mac_silence_shift_check(MACSystem* macSystem, SkyMACConfig* config, int32_t now_ms){
-	if(((now_ms - macSystem->last_belief_update) & 0xFFFFFFF) > config->shift_threshold_ms){
-		macSystem->T0_ms = rand() & 0xFFF;
-		macSystem->last_belief_update = now_ms;
+void mac_silence_shift_check(SkyMAC* mac, SkyMACConfig* config, int32_t now_ms){
+	if(((now_ms - mac->last_belief_update) & 0xFFFFFFF) > config->shift_threshold_ms){
+		mac->T0_ms = rand() & 0xFFF;
+		mac->last_belief_update = now_ms;
 		printf("===============================================================================\n");
 		printf("now: %d \n", now_ms);
-		printf("last: %d \n", macSystem->last_belief_update);
-		printf("MAC RESET! %d  %d\n", ((now_ms - macSystem->last_belief_update) & 0xFFFFFFF) , config->shift_threshold_ms);
+		printf("last: %d \n", mac->last_belief_update);
+		printf("MAC RESET! %d  %d\n", ((now_ms - mac->last_belief_update) & 0xFFFFFFF) , config->shift_threshold_ms);
 		printf("===============================================================================\n");
 	}
 }
 
 
-int mac_can_send(MACSystem* macSystem, int32_t now_ms){
-	return mac_own_window_remaining(macSystem, now_ms) > 0;
+int mac_can_send(SkyMAC* mac, int32_t now_ms){
+	return mac_own_window_remaining(mac, now_ms) > 0;
 }
 
 
-int mac_update_belief(MACSystem* macSystem, SkyMACConfig* config, int32_t now_ms, int32_t peer_mac_length, int32_t peer_mac_remaining){
+int mac_update_belief(SkyMAC* mac, SkyMACConfig* config, int32_t now_ms, int32_t peer_mac_length, int32_t peer_mac_remaining){
 	if(!mac_valid_window_length(config, peer_mac_length)){
 		return SKY_RET_INVALID_MAC_WINDOW_SIZE;
 	}
-	if(peer_mac_length != macSystem->peer_window_length){
-		mac_set_peer_window_length(macSystem, peer_mac_length);
+	if(peer_mac_length != mac->peer_window_length){
+		mac_set_peer_window_length(mac, peer_mac_length);
 	}
-	int32_t implied_t0_for_me = wrap_ms(now_ms + peer_mac_remaining + macSystem->tail_constant, macSystem);
-	macSystem->T0_ms = implied_t0_for_me;
-	macSystem->last_belief_update = now_ms;
+	int32_t implied_t0_for_me = wrap_ms(now_ms + peer_mac_remaining + mac->tail_constant, mac);
+	mac->T0_ms = implied_t0_for_me;
+	mac->last_belief_update = now_ms;
 	return 0;
 }
 
 
-int mac_carrier_sensed(MACSystem* macSystem, SkyMACConfig* config, int32_t now_ms){
-	int32_t peer_remaining_priori = mac_peer_window_remaining(macSystem, now_ms);
+int sky_mac_carrier_sensed(SkyMAC* mac, SkyMACConfig* config, int32_t now_ms){
+	int32_t peer_remaining_priori = mac_peer_window_remaining(mac, now_ms);
 	if(peer_remaining_priori > 0){
 		return 0;
 	}
-	mac_update_belief(macSystem, config, now_ms, macSystem->peer_window_length, 1);
+	mac_update_belief(mac, config, now_ms, mac->peer_window_length, 1);
 	return 1;
 }
 
 
-int mac_set_frame_fields(MACSystem* macSystem, SkyRadioFrame* frame, int32_t now_ms){
-	uint16_t w = (uint16_t)macSystem->my_window_length;
-	int32_t R = mac_own_window_remaining(macSystem, now_ms);
+int mac_set_frame_fields(SkyMAC* mac, SkyRadioFrame* frame, int32_t now_ms){
+	uint16_t w = (uint16_t)mac->my_window_length;
+	int32_t R = mac_own_window_remaining(mac, now_ms);
 	R = (R < 1) ? 1 : R;
 	uint16_t r = (uint16_t)R;
-	frame->mac_window = w;
-	frame->mac_remaining = r;
+	sky_packet_add_extension_mac_tdd_control(frame, w, r);
 	return 0;
 }

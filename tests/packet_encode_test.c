@@ -4,7 +4,7 @@
 
 #include "packet_encode_test.h"
 #include "tst_utilities.h"
-#include "../src/skylink/fec.h"
+#include "skylink/fec.h"
 #include "skylink/utilities.h"
 
 static void test1();
@@ -26,6 +26,7 @@ static void test1(){
 }
 
 
+
 static void test1_round(){
 	SkyConfig* config = new_vanilla_config();
 	SkyRadioFrame* sframe = new_send_frame();
@@ -37,7 +38,7 @@ static void test1_round(){
 	fillrand(identity, SKY_IDENTITY_LEN);
 	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
 	int mac_length = randint_i32(0, config->mac.maximum_window_length);
-	int mac_left = randint_i32(0, sframe->mac_window);
+	int mac_left = randint_i32(0, config->mac.maximum_window_length); // TODO sframe->mac_window);
 	int arq_on = randint_i32(0,1);
 	int arq_sequence = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
 	int hmac_on = randint_i32(0,1);
@@ -48,8 +49,7 @@ static void test1_round(){
 	memcpy(sframe->identity, identity, SKY_IDENTITY_LEN);
 	sframe->vc = vc;
 	sframe->auth_sequence = hmac_sequence;
-	sframe->mac_window = mac_length;
-	sframe->mac_remaining = mac_left;
+	sky_packet_add_extension_mac_tdd_control(sframe, mac_length, mac_left);
 	sframe->arq_sequence = arq_sequence;
 	sframe->ext_length = 0;
 	sframe->flags = 0;
@@ -130,8 +130,6 @@ static void test1_round(){
 	assert(rframe->start_byte == SKYLINK_START_BYTE);
 	assert(memcmp(rframe->identity, identity, SKY_IDENTITY_LEN) ==0);
 	assert(rframe->vc == vc);
-	assert(rframe->mac_window == mac_length);
-	assert(rframe->mac_remaining == mac_left);
 	assert(((rframe->flags & SKY_FLAG_AUTHENTICATED) > 0) == (hmac_on > 0));
 	assert(((rframe->flags & SKY_FLAG_ARQ_ON) > 0) == (arq_on > 0));
 	if(hmac_on){
@@ -141,7 +139,6 @@ static void test1_round(){
 		assert(rframe->arq_sequence == arq_sequence);
 	}
 	assert(rframe->ext_length == sframe->ext_length);
-
 
 
 
@@ -159,6 +156,12 @@ static void test1_round(){
 			assert(ext->TDDParams.gap_size == sky_hton16(new_gap));
 			assert(ext->TDDParams.window_size == sky_hton16(new_window));
 			extension_mac_params--;
+		}
+		else if (ext->type == EXTENSION_MAC_TDD_CONTROL) {
+			assert(ext != NULL);
+			assert(ext->length == sizeof(ExtTDDControl)+1);
+			assert(ext->TDDControl.window == mac_length);
+			assert(ext->TDDControl.remaining == mac_left);
 		}
 		else if(ext->type == EXTENSION_ARQ_RESET){
 			assert(extension_arq_settings == 1);
