@@ -6,6 +6,7 @@
 
 
 #include "skylink/skylink.h"
+#include "skylink/diag.h"
 #include "skylink/utilities.h"
 
 
@@ -43,7 +44,7 @@ struct zmq_vc {
 
 struct zmq_vc vcs[SKY_NUM_VIRTUAL_CHANNELS];
 
-extern SkyHandle sky;
+extern SkyHandle handle;
 extern void *zmq;
 
 #define PACKET_RX_MAXLEN  0x1000
@@ -99,6 +100,7 @@ int vc_init(int vc_base) {
 	return 0;
 }
 
+
 int vc_tx(void *arg, uint8_t *data, int maxlen)
 {
 	struct zmq_vc *vc = arg;
@@ -138,13 +140,12 @@ void vc_check() {
 
 		uint8_t data[PACKET_RX_MAXLEN];
 		unsigned flags = 0;
-		ret = 0; //sky_buf_read(sky->rxbuf[vc], data, PACKET_RX_MAXLEN, &flags);
-		if (ret >= 0) {
+		ret = 0; //sky_buf_read(handle->rxbuf[vc], data, PACKET_RX_MAXLEN, &flags);
+		if (ret > 0) {
 			fprintf(stderr, " %d bytes to  VC%d", ret, vc);
 
-			if (zmq_send(z_ps_rx[vc], data, ret, 0) < 0)
+			if (zmq_send(z_ps_rx[vc], data, ret, ZMQ_DONTWAIT) < 0)
 				SKY_PRINTF(SKY_DIAG_BUG, "zmq_send() failed: %s", zmq_strerror(errno));
-
 
 			//if ((flags & (BUF_FIRST_SEG|BUF_LAST_SEG)) != (BUF_FIRST_SEG|BUF_LAST_SEG)) {
 			//	SKY_PRINTF(SKY_DIAG_DEBUG, "RX %d len %5d flags %u: Buffer read fragmented a packet. This shouldn't really happen here.\n",
@@ -184,7 +185,7 @@ void vc_check() {
 
 #if 0
 			int ret2;
-			ret2 = sky_buf_write(sky->txbuf[vc], data, ret, BUF_FIRST_SEG|BUF_LAST_SEG);
+			ret2 = sky_buf_write(handle->txbuf[vc], data, ret, BUF_FIRST_SEG|BUF_LAST_SEG);
 			if (ret2 < 0) {
 				// buffer overrun
 				SKY_PRINTF(SKY_DIAG_DEBUG, "TX %d len %5d: error %5d\n",
@@ -211,45 +212,49 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * Write data to buffer
 		 */
-		//sky_buf_write(sky->txbuf[vc], msg, msg_len, BUF_FIRST_SEG | BUF_LAST_SEG);
+		//sky_buf_write(handle->txbuf[vc], msg, msg_len, BUF_FIRST_SEG | BUF_LAST_SEG);
 		break; // No response
 	}
 	case VC_CTRL_GET_BUFFER: {
 		/*
 		 * Get virtual channel buffer status
 		 */
-		sky_get_buffer_status(sky, (SkyBufferState_t*)rsp);
+#if 0
+		sky_get_buffer_status(handle, (SkyBufferState_t*)rsp);
 		uint16_t* vals = (uint16_t*)rsp;
 		for (int i = 2; i < sizeof(SkyBufferState_t)/2; i++)
 			vals[i] = sky_hton16(vals[i]);
 		rsp_len = sizeof(SkyBufferState_t);
 		rsp_code = VC_CTRL_BUFFER_RSP;
+#endif
 		break;
 	}
  	case VC_CTRL_FLUSH_BUFFERS: {
 		/*
 		 * Flush virtual channel buffers
 		 */
- 		sky_flush_buffers(sky);
+ 		//sky_flush_buffers(handle);
 		break; // No response
 	}
 	case VC_CTRL_GET_STATS: {
 		/*
 		 * Get statistics
 		 */
+#if 0
 		memcpy(rsp, sky->diag, sizeof(SkyDiagnostics_t));
 		uint16_t* vals = (uint16_t*)rsp;
 		for (int i = 0; i < sizeof(SkyDiagnostics_t)/2; i++)
 			vals[i] = sky_hton16(vals[i]);
 		rsp_len = sizeof(SkyDiagnostics_t);
 		rsp_code = VC_CTRL_STATS_RSP;
+#endif
 		break;
 	}
 	case VC_CTRL_CLEAR_STATS: {
 		/*
 		 * Reset statistics
 		 */
-		sky_clear_stats(sky);
+		//sky_clear_stats(handle);
 		break; // No response
 	}
 	case VC_CTRL_SET_CONFIG: {
@@ -258,7 +263,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		 */
 		unsigned int cfg = msg[0]; // TODO: Correct byte-lengths
 		unsigned int val = msg[1];
-		sky_set_config(sky, cfg, val);
+		//sky_set_config(handle, cfg, val);
 		break; // No response
 	}
 	case VC_CTRL_GET_CONFIG: {
@@ -268,9 +273,9 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		unsigned int cfg = msg[0]; // TODO: Correct byte-lengths
 		unsigned int val;
 
-		if (sky_get_config(sky, cfg, &val) < 0) {
-			break; // TODO
-		}
+		//if (handle_get_config(handle, cfg, &val) < 0) {
+		//	break; // TODO
+		//}
 
 		rsp[0] = val;
 		rsp_len = 1;
@@ -281,14 +286,14 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * ARQ
 		 */
-		//sky_arq_connect(sky, vc);
+		//sky_arq_connect(handle, vc);
 		break; // No response
 	}
 	case VC_CTRL_ARQ_RESET: {
 		/*
 		 * ARQ
 		 */
-		//sky_arq_reset(sky, vc);
+		//sky_arq_reset(handle, vc);
 		break; // No response
 	}
 	default:

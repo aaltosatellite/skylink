@@ -21,8 +21,9 @@ include_directories( gs
 )
 
 target_link_libraries( gs
-    ${skylink_LIBRARY}
-    ${ZMQ_LIBRARY}
+    skylink ${skylink_LIBRARIES}
+    ${SUO_LIBRARIES}
+    ${ZMQ_LIBRARIES}
     pthread
     m
 )

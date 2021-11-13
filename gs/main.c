@@ -8,8 +8,10 @@
 
 #include "suo.h"
 #include "skylink/skylink.h"
+#include "skylink/diag.h"
 #include "skylink/platform.h"
 #include "skylink/hmac.h"
+#include "skylink/mac.h"
 #include "vcs.h"
 #include "modem.h"
 
@@ -21,7 +23,7 @@
 
 const uint8_t hmac_key[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
 
-
+SkyHandle handle;
 
 void *zmq = NULL;
 
@@ -36,7 +38,7 @@ int main(int argc, char *argv[])
 	/* ------------------
 	 * Read args
 	 * ------------------ */
-	int modem_base = 43700, vc_base = 52000;
+	int modem_base = 43300, vc_base = 52000;
 	if (argc >= 4) {
 		modem_base = atoi(argv[2]);
 		vc_base = atoi(argv[3]);
@@ -149,12 +151,11 @@ int main(int argc, char *argv[])
 
 
 	// Kick the actual protocol implementation running
-	SkyHandle handle = SKY_MALLOC(sizeof(struct sky_all));
+	handle = SKY_MALLOC(sizeof(struct sky_all));
 	handle->conf = config;
-	handle->mac = new_mac_system(&config->mac);
+	handle->mac = sky_mac_create(&config->mac);
 	handle->hmac = new_hmac_instance(&config->hmac);
 	handle->diag = new_diagnostics();
-	handle->phy = new_physical();
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		handle->arrayBuffers[i] = new_arq_ring(&config->array[i]);
 	}
@@ -163,10 +164,7 @@ int main(int argc, char *argv[])
 	/* Wait for the first timing message */
 	modem_wait_for_sync();
 
-	int ret;
 	SkyRadioFrame frame;
-
-
 	SKY_PRINTF(SKY_DIAG_DEBUG, "Running...\n");
 
 	/* ----------------
@@ -177,10 +175,10 @@ int main(int argc, char *argv[])
 		 * Receive frames from the modem interface
 		 */
 		if (modem_rx(&frame, 0) > 0) {
-
 			//sky_mac_carrier_sensed(frame.timestamp);
-			sky_rx_raw(handle, &frame);
-
+			int ret = sky_rx(handle, &frame, 0);
+			if (ret < 0)
+				SKY_PRINTF(SKY_DIAG_BUG, "sky_rx() error %d\n", ret);
 		}
 
 		/*
@@ -191,16 +189,23 @@ int main(int argc, char *argv[])
 		/*
 		 * If we have received tick message run the Skylink TX routine
 		 */
-		if (tick()) {
+		if (tick() && modem_tx_active() == 0) {
 			uint64_t t = get_timestamp() + tx_ahead_time;
-			if (modem_tx_active() == 0 && sky_tx(handle, &frame, 0, t)) {
-				modem_tx(&frame, t);
 
-				// Clear the frame and re-use the memory
+			int ret = sky_tx(handle, &frame, 0, t);
+			if (ret < 0)
+				SKY_PRINTF(SKY_DIAG_BUG, "sky_tx() error %d\n", ret);
+			if (ret == 1) {
+				modem_tx(&frame, t);
 				memset(&frame, 0, sizeof(frame));
 			}
 
-			//sky_print_diag(sky);
+			// Print diagnostics
+			static int d = 0;
+			if (d++ > 100) {
+				//sky_print_diag(handle);
+				d = 1;
+			}
 		}
 
 	}
