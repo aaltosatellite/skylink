@@ -115,7 +115,7 @@ static void test1_round(){
 	fillrand(pl, payload_len);
 	int r = sky_packet_extend_with_payload(sframe, pl, payload_len);
 	assert(r == 0);
-	assert(sframe->length == (payload_len + EXTENSION_START_IDX + sframe->ext_length));
+	assert((int)sframe->length == (payload_len + EXTENSION_START_IDX + sframe->ext_length));
 
 	if(n_extensions == 4){
 		assert(available_payload_space(sframe) <= 185);

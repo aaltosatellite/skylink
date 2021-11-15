@@ -397,6 +397,7 @@ def _mw_start(que, retention, interval_ms):
 	mw = MW(que, retention, interval_ms)
 	mw.show()
 	mw.resize(900,600)
+	mw.resize(900,600)
 	app.exec_()
 
 

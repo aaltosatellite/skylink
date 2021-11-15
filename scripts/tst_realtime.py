@@ -2,8 +2,11 @@ from realtime_plot.drawer import create_realplot
 import random
 import numpy as np
 import time
+import os
+import sys
 
-
+os.startfile("/home/elmore/media/audio/Into the West.mp3")
+sys.exit(1)
 
 
 

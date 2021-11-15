@@ -148,7 +148,7 @@ uint16_t spin_to_seq(SkyArqRing* ring1, SkyArqRing* ring2, int target_sequence){
 
 
 SkyPacketExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_type) {
-	if((frame->ext_length + EXTENSION_START_IDX) > frame->length)
+	if((int)(frame->ext_length + EXTENSION_START_IDX) > (int)frame->length)
 		return NULL; // Too short packet.
 
 	if(frame->ext_length <= 1)
@@ -168,4 +168,5 @@ SkyPacketExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_t
 
 		cursor += ext->length;
 	}
+	return NULL;
 }

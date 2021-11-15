@@ -189,7 +189,7 @@ class SkylinkManager:
 			try:
 				rcv = self.read_sock.recv()
 				pl = rcv[5:]
-				self.book.mark_received(pl)
+				self.book.mark_received(pl) #todo: check that we do not get any payload twice. Only once.
 				SPEAKER_DETECTION_QUE.put(("unconfirmed", len(self.book.sent) ))
 			except:
 				pass

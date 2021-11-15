@@ -164,7 +164,7 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 
 
 static void sky_rx_process_extensions(SkyHandle self, const SkyRadioFrame* frame, uint8_t this_type){
-	if((frame->ext_length + EXTENSION_START_IDX) > frame->length) {
+	if((int)(frame->ext_length + EXTENSION_START_IDX) > (int)frame->length) {
 		return; //todo error: too short packet.
 	}
 	if(frame->ext_length <= 1){

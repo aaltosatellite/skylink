@@ -102,7 +102,7 @@ static int test1_round(){
 	}
 	if(r == 0){
 		assert(memcmp(ref, frame->raw, length) == 0);
-		assert(frame->length == length);
+		assert((int)frame->length == length);
 	}
 	if(r != 0){
 		assert(memcmp(ref, frame->raw, length) != 0);

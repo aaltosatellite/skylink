@@ -4,6 +4,7 @@
 
 #include "skylink/mac.h"
 #include "skylink/conf.h"
+#include "skylink/frame.h"
 
 
 static int32_t wrap_ms(int32_t time_ms, SkyMAC* mac){ //This mess is a conversion from C-modulo, to always-positive-modulo.

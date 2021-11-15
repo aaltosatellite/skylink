@@ -16,6 +16,17 @@
 #define EXTENSION_MAC_TDD_CONTROL       5
 #define EXTENSION_HMAC_SEQUENCE_RESET   6
 
+/* ARQ2 control sequence */
+typedef struct __attribute__((__packed__)) {
+	uint16_t tx_sequence;
+	uint16_t rx_sequence;
+} ExtARQCtrl;
+
+/* ARQ2 state initializer */
+typedef struct __attribute__((__packed__)) {
+	uint8_t state;
+	uint16_t identifier;
+} ExtARQInitialize;
 
 /* ARQ Sequence */
 typedef struct __attribute__((__packed__)) {

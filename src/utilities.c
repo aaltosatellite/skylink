@@ -46,6 +46,19 @@ int x_in_u8_array(uint8_t x, uint8_t* array, int length){
 }
 
 
+int x_in_u16_array(uint16_t x, uint16_t* array, int length){
+	for (int i = 0; i < length; ++i) {
+		if(array[i] == x){
+			return i;
+		}
+	}
+	return -1;
+}
+
+
+int32_t wrap_time_ms(int32_t time_ms){
+	return ((time_ms % MOD_TIME_MS) + MOD_TIME_MS) % MOD_TIME_MS;
+}
 
 
 // UNIX ================================================================================================================
@@ -60,9 +73,9 @@ int32_t get_time_ms(){
 	clock_gettime(CLOCK_REALTIME, &t);
 	uint64_t ts = t.tv_sec*1000;
 	ts += t.tv_nsec/1000000;
-	return (int32_t) (ts & 0x7FFFFFFF);
+	ts = ts % MOD_TIME_MS;
+	return (int32_t) ts;
 }
-
 
 
 // UNIX ================================================================================================================

@@ -71,7 +71,7 @@ static void test1_round(){
 
 
 	sky_hmac_extend_with_authentication(self1, sframe);
-	assert(sframe->length == length + SKY_HMAC_LENGTH);
+	assert((int)sframe->length == length + SKY_HMAC_LENGTH);
 
 
 	int corrupt_pl = (randint_i32(0, 2) == 0);
@@ -90,11 +90,11 @@ static void test1_round(){
 
 	if((shift_tx <= config1->hmac.maximum_jump) && (!corrupt_pl) && (!corrupt_key)){
 		assert(r1 == 0);
-		assert(rframe->length == length);
+		assert((int)rframe->length == length);
 		//assert(rframe->auth_verified == 1);
 	} else {
 		assert(r1 < 0);
-		assert(rframe->length == length + SKY_HMAC_LENGTH);
+		assert((int)rframe->length == length + SKY_HMAC_LENGTH);
 		//assert(rframe->auth_verified == 0);
 	}
 
