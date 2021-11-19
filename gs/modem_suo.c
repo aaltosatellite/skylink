@@ -17,8 +17,9 @@
 
 static timestamp_t last_received_time;
 
-int tick_received = 0;
-int tx_active = 0;
+static int tick_received = 0;
+static int carrier_sensed = 0;
+static int tx_active = 0;
 void *suo_rx, *suo_tx;
 
 extern void *zmq;
@@ -52,7 +53,6 @@ void modem_init(int modem_base) {
 	int rx_timeout = 500; // [ms]
 	zmq_setsockopt(suo_rx, ZMQ_RCVTIMEO, &rx_timeout, sizeof(rx_timeout));
 
-
 	suo_frame = suo_frame_new(256);
 
 	/* Clear/flush any old frames from ZeroMQ buffers */
@@ -84,11 +84,14 @@ void modem_wait_for_sync() {
 int modem_tx(SkyRadioFrame* sky_frame, timestamp_t t) {
 	(void)t;
 
-	SKY_PRINTF(SKY_DIAG_FRAMES, "%20lu: Suo transmit %d bytes\n", get_timestamp(), sky_frame->length);
+	SKY_PRINTF(SKY_DIAG_FRAMES, "\x1B[34m" "Suo transmit %d bytes" "\x1B[0m\n", sky_frame->length);
 
 	suo_frame_clear(suo_frame);
-	suo_frame->data_len = sky_frame->length;
+	suo_frame->hdr.id = SUO_MSG_TRANSMIT;
+	suo_frame->hdr.flags = 0;
 	//suo_frame->hdr.timestamp = sky_frame->timestamp * 1000;
+
+	suo_frame->data_len = sky_frame->length;
 	memcpy(suo_frame->data, sky_frame->raw, sky_frame->length);
 
 	tx_active = 1;
@@ -129,19 +132,24 @@ int modem_rx(SkyRadioFrame* sky_frame, int flags) {
 
 		tx_active = ((suo_frame->hdr.flags & SUO_FLAGS_TX_ACTIVE) != 0);
 
+		if ((suo_frame->hdr.flags & SUO_FLAGS_RX_LOCKED) != 0 && carrier_sensed == 0)
+			carrier_sensed = 1;
+		if ((suo_frame->hdr.flags & SUO_FLAGS_RX_LOCKED) == 0 && carrier_sensed != 0)
+			carrier_sensed = 0;
 		return 0;
 	}
 	else {
 		/*
 		 * New frame received
 		 */
-		SKY_PRINTF(SKY_DIAG_FRAMES, "%20lu: Suo receive %d bytes\n", suo_frame->hdr.timestamp, suo_frame->data_len);
 
 		// Copy data from Suo frame to Skylink frame
 		sky_frame->length = suo_frame->data_len;
 		sky_frame->rx_time_ms = suo_frame->hdr.timestamp / 1000;
 		//frame->meta.rssi = suo_frame.metadata[0];
 		memcpy(sky_frame->raw, suo_frame->data, suo_frame->data_len);
+
+		SKY_PRINTF(SKY_DIAG_FRAMES, "\x1B[36m" "Suo receive %d bytes" "\x1B[0m\n", sky_frame->length);
 
 		suo_frame_clear(suo_frame);
 		return 1;
@@ -161,6 +169,13 @@ int tick() {
 	return ret;
 }
 
+int modem_carrier_sensed() {
+	if (carrier_sensed == 1) {
+		carrier_sensed = 2;
+		return 1;
+	}
+	return 0;
+}
 
 timestamp_t get_timestamp() {
 	return last_received_time;

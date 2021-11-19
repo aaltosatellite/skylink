@@ -9,6 +9,7 @@
 #include "skylink/diag.h"
 #include "skylink/utilities.h"
 
+#include "vcs.h"
 
 /*
  * List of control message command/response types
@@ -34,7 +35,7 @@
 
 int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len);
 
-const int PP = 1; // use push/pull instead of pub/sub for VC interfaces?
+const int PP = 0; // use push/pull instead of pub/sub for VC interfaces?
 
 
 struct zmq_vc {
@@ -56,9 +57,8 @@ void* z_ps_tx[SKY_NUM_VIRTUAL_CHANNELS];
 
 
 
-int vc_init(int vc_base) {
+int vc_init(unsigned int vc_base, bool use_push_pull) {
 
-	int ret;
 	int vc;
 
 	#define ZMQ_URI_LEN 64
@@ -68,7 +68,7 @@ int vc_init(int vc_base) {
 	 * Create ZMQ sockets for the virtual channel interfaces
 	 */
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
-		void *sock = zmq_socket(zmq, PP ? ZMQ_PUSH : ZMQ_PUB);
+		void *sock = zmq_socket(zmq, use_push_pull ? ZMQ_PUSH : ZMQ_PUB);
 		if (sock == NULL)
 				SKY_PRINTF(SKY_DIAG_BUG, "zmq_socket() failed: %s", zmq_strerror(errno));
 
@@ -82,7 +82,7 @@ int vc_init(int vc_base) {
 	}
 
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
-		void *sock = zmq_socket(zmq, PP ? ZMQ_PULL : ZMQ_SUB);
+		void *sock = zmq_socket(zmq, use_push_pull ? ZMQ_PULL : ZMQ_SUB);
 		if (sock == NULL)
 			SKY_PRINTF(SKY_DIAG_BUG, "zmq_socket() failed: %s", zmq_strerror(errno));
 
@@ -139,18 +139,19 @@ void vc_check() {
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 
 		uint8_t data[PACKET_RX_MAXLEN];
-		unsigned flags = 0;
-		ret = 0; //sky_buf_read(handle->rxbuf[vc], data, PACKET_RX_MAXLEN, &flags);
-		if (ret > 0) {
-			fprintf(stderr, " %d bytes to  VC%d", ret, vc);
 
-			if (zmq_send(z_ps_rx[vc], data, ret, ZMQ_DONTWAIT) < 0)
+		//if (skyArray_count_readable_rcv_packets(handle->arrayBuffers[vc]) == 0)
+		//	continue;
+
+		int sequence;
+		ret = skyArray_read_next_received(handle->arrayBuffers[vc], data + 1, &sequence);
+		if (ret > 0) {
+			SKY_PRINTF(SKY_DIAG_DEBUG, "VC%d: Received %d bytes\n", vc, ret);
+
+			data[0] = VC_CTRL_PULL;
+			if (zmq_send(z_ps_rx[vc], data, ret + 1, ZMQ_DONTWAIT) < 0)
 				SKY_PRINTF(SKY_DIAG_BUG, "zmq_send() failed: %s", zmq_strerror(errno));
 
-			//if ((flags & (BUF_FIRST_SEG|BUF_LAST_SEG)) != (BUF_FIRST_SEG|BUF_LAST_SEG)) {
-			//	SKY_PRINTF(SKY_DIAG_DEBUG, "RX %d len %5d flags %u: Buffer read fragmented a packet. This shouldn't really happen here.\n",
-			//		vc, ret, flags);
-			//}
 		}
 
 
@@ -164,34 +165,22 @@ void vc_check() {
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		uint8_t data[PACKET_TX_MAXLEN];
 		ret = zmq_recv(z_ps_tx[vc], data, PACKET_TX_MAXLEN, ZMQ_DONTWAIT);
-		if (ret < 0){
+		if (ret < 0) {
 			if(errno == EAGAIN)
 				continue;
-
-			fprintf(stderr, "VC: zmq_recv() error %d %s\n", errno, zmq_strerror(errno));
+			SKY_PRINTF(SKY_DIAG_BUG, "VC%d: zmq_recv() error %d %s\n", vc, errno, zmq_strerror(errno));
 		}
 
 		if (ret >= 0) {
-
-			fprintf(stderr, "handle %d  %d\n", ret, data[0]);
 			/* Handle control messages */
 			int ret2 = handle_control_message(vc, data[0], &data[1], ret-1);
 
 			// Send response
 			if (ret2 > 0)
-				ret2 = zmq_send(z_ps_tx[vc], data, ret2, 0);
+				ret2 = zmq_send(z_ps_rx[vc], data, ret2, ZMQ_DONTWAIT);
 			if (ret2 < 0)
-				fprintf(stderr, "VC: zmq_send() error %s\n", zmq_strerror(errno));
+				SKY_PRINTF(SKY_DIAG_FRAMES, "VC%d: zmq_send() error %s\n", vc, zmq_strerror(errno));
 
-#if 0
-			int ret2;
-			ret2 = sky_buf_write(handle->txbuf[vc], data, ret, BUF_FIRST_SEG|BUF_LAST_SEG);
-			if (ret2 < 0) {
-				// buffer overrun
-				SKY_PRINTF(SKY_DIAG_DEBUG, "TX %d len %5d: error %5d\n",
-					vc, ret, ret2);
-			}
-#endif
 		}
 
 	}
@@ -212,8 +201,21 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * Write data to buffer
 		 */
-		//sky_buf_write(handle->txbuf[vc], msg, msg_len, BUF_FIRST_SEG | BUF_LAST_SEG);
+		SKY_PRINTF(SKY_DIAG_FRAMES, "VC%d: Sending %d bytes\n", vc, msg_len);
+		skyArray_push_packet_to_send(handle->arrayBuffers[vc], msg, msg_len);
 		break; // No response
+	}
+	case VC_CTRL_PULL: {
+		/*
+		 * Read data from buffer.
+		 */
+		skyArray_count_readable_rcv_packets(handle->arrayBuffers[vc]);
+
+		int sequence;
+		uint8_t* tgt = malloc(1000);
+		int read = skyArray_read_next_received(handle->arrayBuffers[vc], tgt, &sequence);
+		printf("Read %d\n", read);
+		break;
 	}
 	case VC_CTRL_GET_BUFFER: {
 		/*
@@ -240,14 +242,12 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * Get statistics
 		 */
-#if 0
-		memcpy(rsp, sky->diag, sizeof(SkyDiagnostics_t));
+		memcpy(rsp, handle->diag, sizeof(SkyDiagnostics));
 		uint16_t* vals = (uint16_t*)rsp;
-		for (int i = 0; i < sizeof(SkyDiagnostics_t)/2; i++)
+		for (unsigned int i = 0; i < sizeof(SkyDiagnostics)/2; i++)
 			vals[i] = sky_hton16(vals[i]);
-		rsp_len = sizeof(SkyDiagnostics_t);
+		rsp_len = sizeof(SkyDiagnostics);
 		rsp_code = VC_CTRL_STATS_RSP;
-#endif
 		break;
 	}
 	case VC_CTRL_CLEAR_STATS: {

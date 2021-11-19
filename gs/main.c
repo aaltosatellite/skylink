@@ -16,10 +16,6 @@
 #include "modem.h"
 
 
-#define debugprintf(...) do { } while(0)
-#define diagprintf(...) printf(__VA_ARGS__)
-
-
 
 const uint8_t hmac_key[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
 
@@ -38,11 +34,12 @@ int main(int argc, char *argv[])
 	/* ------------------
 	 * Read args
 	 * ------------------ */
-	int modem_base = 43300, vc_base = 52000;
-	if (argc >= 4) {
-		modem_base = atoi(argv[2]);
-		vc_base = atoi(argv[3]);
+	int modem_base = 4000, vc_base = 5000;
+	if (argc >= 3) {
+		modem_base = atoi(argv[1]);
+		vc_base = atoi(argv[2]);
 	}
+	fprintf(stderr, "modem_base: %d vc_base %d\n", modem_base, vc_base);
 
 
 	/*
@@ -50,7 +47,7 @@ int main(int argc, char *argv[])
 	 */
 	zmq = zmq_ctx_new();
 	modem_init(modem_base);
-	vc_init(vc_base);
+	vc_init(vc_base, false);
 
 
 	/* -------------------------
@@ -83,16 +80,16 @@ int main(int argc, char *argv[])
 	/*
 	 * MAC configurations
 	 */
-	config->mac.maximum_gap_length           = 1000;
-	config->mac.minimum_gap_length           = 50;
-	config->mac.default_gap_length           = 600;
+	config->mac.maximum_gap_length           = 1000; // [ms]
+	config->mac.minimum_gap_length           = 50;  // [ms]
+	config->mac.default_gap_length           = 600; // [ms]
 
-	config->mac.maximum_window_length        = 350;
-	config->mac.minimum_window_length        = 25;
-	config->mac.default_window_length        = 220;
+	config->mac.maximum_window_length        = 350; // [ms]
+	config->mac.minimum_window_length        = 25;  // [ms]
+	config->mac.default_window_length        = 220; // [ms]
 
-	config->mac.default_tail_length          = 86;
-	config->mac.unauthenticated_mac_updates  = 0;
+	config->mac.default_tail_length          = 86;  // [ms]
+	config->mac.unauthenticated_mac_updates  = 0;   // [ms]
 
 	/*
 	 * ARQ configurations
@@ -172,41 +169,50 @@ int main(int argc, char *argv[])
 	 * ---------------- */
 	for (;;) {
 		/*
-		 * Receive frames from the modem interface
+		 * Receive frames from the modem interface (blocking)
 		 */
 		if (modem_rx(&frame, 0) > 0) {
-			//sky_mac_carrier_sensed(frame.timestamp);
 			int ret = sky_rx(handle, &frame, 0);
-			if (ret < 0)
-				SKY_PRINTF(SKY_DIAG_BUG, "sky_rx() error %d\n", ret);
+			//if (ret < 0)
+			//	SKY_PRINTF(SKY_DIAG_BUG, "sky_rx() error %d\n", ret);
+			//sky_frame_clear(frame);
 		}
 
 		/*
-		 * Check VC sockets
+		 * Check VC sockets (non-blocking)
 		 */
 		vc_check();
 
 		/*
 		 * If we have received tick message run the Skylink TX routine
 		 */
-		if (tick() && modem_tx_active() == 0) {
-			uint64_t t = get_timestamp() + tx_ahead_time;
+		if (tick()) {
 
-			int ret = sky_tx(handle, &frame, 0, t);
-			if (ret < 0)
-				SKY_PRINTF(SKY_DIAG_BUG, "sky_tx() error %d\n", ret);
-			if (ret == 1) {
-				modem_tx(&frame, t);
-				memset(&frame, 0, sizeof(frame));
+			if (modem_carrier_sensed())
+				sky_mac_carrier_sensed(handle->mac, &handle->conf->mac, get_timestamp());
+
+		 	if (modem_tx_active() == 0) {
+				uint64_t t = get_timestamp() + tx_ahead_time;
+
+				int ret = sky_tx(handle, &frame, 0, t);
+				if (ret < 0)
+					SKY_PRINTF(SKY_DIAG_BUG, "sky_tx() error %d\n", ret);
+				if (ret == 1) {
+					modem_tx(&frame, t);
+					memset(&frame, 0, sizeof(frame));
+				}
+
+				// Print diagnostics
+				static int d = 0;
+				if (d++ > 100) {
+					//sky_print_diag(handle);
+					d = 1;
+				}
 			}
 
-			// Print diagnostics
-			static int d = 0;
-			if (d++ > 100) {
-				//sky_print_diag(handle);
-				d = 1;
-			}
 		}
 
 	}
+
+	return 0;
 }
