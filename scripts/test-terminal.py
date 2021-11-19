@@ -12,7 +12,7 @@ from vc_connector import connect_to_vc
 
 parser = argparse.ArgumentParser(description='Skylink test terminal')
 parser.add_argument('--host', '-H', type=str, default="127.0.0.1")
-parser.add_argument('--port', '-p', type=int, default=52000)
+parser.add_argument('--port', '-p', type=int, default=5000)
 parser.add_argument('--vc', '-V', type=int, default=0)
 parser.add_argument('--binary', '-B', action='store_true')
 parser.add_argument('--pp', action='store_false')

@@ -1,6 +1,8 @@
 """
     Virtual channel connector
 """
+from __future__ import annotations
+
 import struct
 import asyncio
 from typing import Union, Any, Optional
@@ -55,9 +57,13 @@ class VCCommands:
     General definitons of the control messages
     """
 
+    frame_queue: asyncio.Queue[bytes]
+    control_queue: asyncio.Queue[bytes]
+
     async def get_status(self) -> SkyStatus:
         """
         Request virtual buffer status.
+
         Returns:
             SkyStatus object containting the buffer statuses
         Raises:
@@ -215,14 +221,12 @@ class RTTChannel(VCCommands):
         Args:
             frame: Frame to be send. `str`, `bytes` or `SkyFrame`
         """
-        if isinstance(frame, SkyFrame):
-            frame = frame.data
         if isinstance(frame, str):
             frame = frame.encode('utf-8', 'ignore')
         await self._send_command(VC_CTRL_PUSH, frame)
 
 
-    async def receive(self, timeout: Optional[float]=None) -> SkyFrame:
+    async def receive(self, timeout: Optional[float]=None) -> bytes:
         """
         Receive a frame from VC.
 
@@ -267,6 +271,9 @@ class ZMQChannel(VCCommands):
 
         print(f"Connected to VC {vc} via ZMQ {host}:{port+vc}")
 
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.receiver_task())
+
 
     async def receiver_task(self) -> None:
         """
@@ -283,7 +290,7 @@ class ZMQChannel(VCCommands):
 
 
 
-    async def _send_command(self, cmd: int, data: bytes = b""):
+    async def _send_command(self, cmd: int, data: bytes = b"") -> None:
         """
         Send general command to ZMQ VC buffer.
         Args:
@@ -311,7 +318,7 @@ class ZMQChannel(VCCommands):
         while True:
             ctrl = await asyncio.wait_for(self.control_queue.get(), timeout=0.5)
             if ctrl[0] == cmd:
-                return ctrl[1]
+                return ctrl[1:]
 
 
     async def transmit(self, frame: Union[SkyFrame, bytes, str]) -> None:
@@ -320,7 +327,7 @@ class ZMQChannel(VCCommands):
             frame = frame.data
         if isinstance(frame, str):
             frame = frame.encode('ascii')
-        await self.ul.send(frame)
+        await self._send_command(VC_CTRL_PUSH, frame)
 
 
     async def receive(self, timeout: Optional[int] = None) -> SkyFrame:
@@ -333,7 +340,7 @@ class ZMQChannel(VCCommands):
 
 
 
-def connect_to_vc(host: str="127.0.0.1", port: int=52000, rtt: bool=False, vc: int=0, **kwargs):
+def connect_to_vc(host: str="127.0.0.1", port: int=5000, rtt: bool=False, vc: int=0, **kwargs):
     """
     Connect to Skylink implementation over ZMQ or RTT
     """
@@ -346,13 +353,14 @@ def connect_to_vc(host: str="127.0.0.1", port: int=52000, rtt: bool=False, vc: i
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
-    vc = RTTChannel(vc=0)
-    #vc = ZMQChannel(vc=0)
+    #vc = RTTChannel(vc=0)
+    vc = ZMQChannel("127.0.0.1", 5000, vc=0)
 
     async def testing():
-        #await vc.transmit(b"Hello world")
-        print(await vc.get_status())
-        print(await vc.get_stats())
-        await asyncio.sleep(0.1)
+        while True:
+            await vc.transmit(b"Hello world")
+            #print(await vc.get_status())
+            #print(await vc.get_stats())
+            await asyncio.sleep(1.1)
 
     loop.run_until_complete(testing())
