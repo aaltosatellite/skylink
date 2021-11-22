@@ -28,7 +28,7 @@ int sky_packet_add_extension_arq_sequence(SkyRadioFrame* frame, arq_seq_t sequen
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
 	extension->type = EXTENSION_ARQ_SEQUENCE;
 	extension->length = sizeof(ExtARQSeq) +1;
-	extension->ARQSeq.sequence = sequence;
+	extension->ARQSeq.sequence = sky_hton16(sequence);
 
 	frame->ext_length += extension->length;
 	frame->length = EXTENSION_START_IDX + frame->ext_length;
@@ -40,7 +40,7 @@ int sky_packet_add_extension_arq_request(SkyRadioFrame* frame, arq_seq_t sequenc
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
 	extension->type = EXTENSION_ARQ_REQUEST;
 	extension->length = sizeof(ExtARQReq) +1;
-	extension->ARQReq.sequence = sequence;
+	extension->ARQReq.sequence = sky_hton16(sequence);
 	extension->ARQReq.mask = sky_hton16(mask);
 
 	frame->ext_length += extension->length;
@@ -53,8 +53,8 @@ int sky_packet_add_extension_arq_ctrl(SkyRadioFrame* frame, arq_seq_t tx_head_se
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
 	extension->type = EXTENSION_ARQ_CTRL;
 	extension->length = sizeof(ExtARQCtrl) +1;
-	extension->ARQCtrl.tx_sequence = tx_head_sequence;
-	extension->ARQCtrl.rx_sequence = rx_head_sequence;
+	extension->ARQCtrl.tx_sequence = sky_hton16(tx_head_sequence);
+	extension->ARQCtrl.rx_sequence = sky_hton16(rx_head_sequence);
 
 	frame->ext_length += extension->length;
 	frame->length = EXTENSION_START_IDX + frame->ext_length;
@@ -67,7 +67,7 @@ int sky_packet_add_extension_arq_handshake(SkyRadioFrame* frame, uint8_t state_f
 	extension->type = EXTENSION_ARQ_HANDSHAKE;
 	extension->length = sizeof(ExtARQHandshake) +1;
 	extension->ARQHandshake.peer_state = state_flag;
-	extension->ARQHandshake.identifier = identifier;
+	extension->ARQHandshake.identifier = sky_ntoh32(identifier);
 
 	frame->ext_length += extension->length;
 	frame->length = EXTENSION_START_IDX + frame->ext_length;

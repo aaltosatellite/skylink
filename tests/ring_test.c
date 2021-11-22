@@ -15,7 +15,7 @@ static void test3_send(int count);
 
 void ring_tests(){
 	test1(100);
-	//test15(1200);
+	test15(1200);
 	test2_rcv(26);
 	test3_send(26);
 }
@@ -64,7 +64,7 @@ static void test1_round(){
 	ExtARQHandshake handshake;
 	handshake.identifier = array->arq_session_identifier;
 	handshake.peer_state = ARQ_STATE_ON;
-	skyArray_handle_handshake(array, handshake, 12);
+	skyArray_handle_handshake(array, handshake.peer_state, handshake.identifier, 12);
 
 
 	//check the msg counts are 0.

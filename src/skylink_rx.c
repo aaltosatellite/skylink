@@ -171,7 +171,9 @@ static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* 
 	if ((!self->conf->mac.unauthenticated_mac_updates) && (!(frame->flags & SKY_FLAG_AUTHENTICATED)) ) {
 		return;
 	}
-	mac_update_belief(self->mac, &self->conf->mac, frame->rx_time_ms, ext->TDDControl.window, ext->TDDControl.remaining);
+	uint16_t w = sky_ntoh16(ext->TDDControl.window);
+	uint16_t r = sky_ntoh16(ext->TDDControl.remaining);
+	mac_update_belief(self->mac, &self->conf->mac, frame->rx_time_ms, w, r);
 }
 
 

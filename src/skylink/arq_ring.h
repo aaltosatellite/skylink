@@ -59,7 +59,7 @@ int skyArray_wipe_to_arq_init_state(SkyArqRing* array, int32_t now_ms);
 void skyArray_wipe_to_arq_on_state(SkyArqRing* array, int32_t identifier, int32_t now_ms);
 
 // asd
-void skyArray_handle_handshake(SkyArqRing* array, ExtARQHandshake handshake_extension, int32_t now_ms);
+void skyArray_handle_handshake(SkyArqRing* array, uint8_t peer_state, int32_t identifier, int32_t now_ms);
 
 // asd
 void skyArray_poll_arq_state_timeout(SkyArqRing* array, int32_t now_ms);

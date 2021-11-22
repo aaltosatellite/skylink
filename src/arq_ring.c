@@ -74,19 +74,19 @@ void skyArray_wipe_to_arq_on_state(SkyArqRing* array, int32_t identifier, int32_
 }
 
 
-void skyArray_handle_handshake(SkyArqRing* array, ExtARQHandshake handshake_extension, int32_t now_ms){
-	int match = (handshake_extension.identifier == array->arq_session_identifier);
+void skyArray_handle_handshake(SkyArqRing* array, uint8_t peer_state, int32_t identifier, int32_t now_ms){
+	int match = (identifier == array->arq_session_identifier);
 
 	if( (array->arq_state_flag == ARQ_STATE_ON) && match ){
 		array->handshake_send = 0;
-		if(handshake_extension.peer_state == ARQ_STATE_IN_INIT){
+		if(peer_state == ARQ_STATE_IN_INIT){
 			array->handshake_send = 1;
 		}
 		return;
 	}
 
 	if( (array->arq_state_flag == ARQ_STATE_ON) && !match ){
-		skyArray_wipe_to_arq_on_state(array, handshake_extension.identifier, now_ms);
+		skyArray_wipe_to_arq_on_state(array, identifier, now_ms);
 		array->handshake_send = 1;
 		return;
 	}
@@ -98,15 +98,15 @@ void skyArray_handle_handshake(SkyArqRing* array, ExtARQHandshake handshake_exte
 	}
 
 	if( (array->arq_state_flag == ARQ_STATE_IN_INIT) && !match ){
-		if(handshake_extension.identifier > array->arq_session_identifier){
-			skyArray_wipe_to_arq_on_state(array, handshake_extension.identifier, now_ms);
+		if(identifier > array->arq_session_identifier){
+			skyArray_wipe_to_arq_on_state(array, identifier, now_ms);
 			array->handshake_send = 1;
 		}
 		return;
 	}
 
 	if(array->arq_state_flag == ARQ_STATE_OFF){
-		skyArray_wipe_to_arq_on_state(array, handshake_extension.identifier, now_ms);
+		skyArray_wipe_to_arq_on_state(array, identifier, now_ms);
 		array->handshake_send = 1;
 		return;
 	}
@@ -371,7 +371,9 @@ void skyArray_process_content(SkyArqRing* array,
 	uint8_t state0 = array->arq_state_flag;
 	if(state0 == ARQ_STATE_OFF){
 		if (ext_handshake){
-			skyArray_handle_handshake(array, ext_handshake->ARQHandshake, now_ms);
+			uint8_t peer_state = ext_handshake->ARQHandshake.peer_state;
+			uint16_t identifier = sky_ntoh16(ext_handshake->ARQHandshake.identifier);
+			skyArray_handle_handshake(array, peer_state, identifier, now_ms);
 			return;
 		}
 		if (len_pl > 0){
@@ -381,30 +383,34 @@ void skyArray_process_content(SkyArqRing* array,
 	}
 	if(state0 == ARQ_STATE_IN_INIT){
 		if (ext_handshake){
-			skyArray_handle_handshake(array, ext_handshake->ARQHandshake, now_ms);
+			uint8_t peer_state = ext_handshake->ARQHandshake.peer_state;
+			uint16_t identifier = sky_ntoh16(ext_handshake->ARQHandshake.identifier);
+			skyArray_handle_handshake(array, peer_state, identifier, now_ms);
 			return;
 		}
 	}
 	if(state0 == ARQ_STATE_ON){
 		int seq = -1;
 		if (ext_seq){
-			seq = ext_seq->ARQSeq.sequence;
+			seq = sky_hton16(ext_seq->ARQSeq.sequence);
 		}
 
 		if (ext_handshake){
-			skyArray_handle_handshake(array, ext_handshake->ARQHandshake, now_ms);
+			uint8_t peer_state = ext_handshake->ARQHandshake.peer_state;
+			uint16_t identifier = sky_ntoh16(ext_handshake->ARQHandshake.identifier);
+			skyArray_handle_handshake(array, peer_state, identifier, now_ms);
 			if(array->arq_state_flag != ARQ_STATE_ON){
 				return;
 			}
 		}
 
 		if (ext_ctrl){
-			skyArray_update_tx_sync(array, ext_ctrl->ARQCtrl.rx_sequence, now_ms);
-			skyArray_update_rx_sync(array, ext_ctrl->ARQCtrl.tx_sequence, now_ms);
+			skyArray_update_tx_sync(array, sky_hton16(ext_ctrl->ARQCtrl.rx_sequence), now_ms);
+			skyArray_update_rx_sync(array, sky_hton16(ext_ctrl->ARQCtrl.tx_sequence), now_ms);
 		}
 
 		if ( (seq > -1) && (len_pl > 0) ){
-			int r = skyArray_push_rx_packet(array, pl, len_pl, seq, now_ms);
+			skyArray_push_rx_packet(array, pl, len_pl, seq, now_ms);
 		}
 		if ( (seq == -1) && (len_pl > 0) ){
 			//break arq?
@@ -412,7 +418,7 @@ void skyArray_process_content(SkyArqRing* array,
 
 		if (ext_rrequest){
 			uint16_t mask = sky_ntoh16(ext_rrequest->ARQReq.mask);
-			sendRing_schedule_resends_by_mask(array->sendRing, ext_rrequest->ARQReq.sequence, mask);
+			sendRing_schedule_resends_by_mask(array->sendRing, sky_ntoh16(ext_rrequest->ARQReq.sequence), mask);
 			/* †
 			 * No. When unable to resend sequence requested, we send nothing. Was sich überhaupt sagen lässt, lässt
 			 * sich klar sagen; und wovon man nicht reden kann, darüber muss man schweigen.
