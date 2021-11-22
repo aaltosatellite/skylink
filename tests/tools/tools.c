@@ -176,10 +176,11 @@ double randomd(double a, double b){
 
 
 uint64_t fillrand(void* tgt, uint64_t leng){
-	FILE* f = fopen("/dev/urandom", "r\0");
-	uint64_t rd = fread(tgt, 1, leng, f);
-	fclose(f);
-	return rd;
+	uint8_t* tgt2 = (uint8_t*)tgt;
+	for (uint64_t i = 0; i < leng; ++i) {
+		tgt2[i] = rand() % 255;
+	}
+	return leng;
 }
 
 

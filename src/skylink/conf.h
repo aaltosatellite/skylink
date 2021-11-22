@@ -14,8 +14,8 @@
 
 //Physical layer radio frame structure.
 #define SKY_NUM_VIRTUAL_CHANNELS  		4
-#define SKY_FRAME_MAX_LEN       		0x100
-#define SKY_IDENTITY_LEN				5
+
+
 
 
 
@@ -35,20 +35,14 @@ typedef struct {
 typedef struct {
 	/* Default send window size for both me and peer. */
 	int32_t default_window_length;
+	int32_t maximum_window_length;
+	int32_t minimum_window_length;
 
 	/* Default time gap size between windows. */
 	int32_t default_gap_length;
 
 	/* Default tail end time of the cycle. */
 	int32_t default_tail_length;
-
-	int32_t maximum_window_length;
-
-	int32_t minimum_window_length;
-
-	int32_t maximum_gap_length;
-
-	int32_t minimum_gap_length;
 
 	/* Boolean toggle for wether an unauthenticated frame can update MAC state belief.
 	 * Enabling this will allow a continuous stream of unauthenticated frames to essentially block transmission:
@@ -66,12 +60,9 @@ typedef struct {
 	int element_count;
 
 	int rcv_ring_len;
-	int initial_rcv_sequence;
 	int horizon_width;
 
 	int send_ring_len;
-	int initial_send_sequence;
-	int n_recall;
 
 } SkyArrayConfig;
 
@@ -95,8 +86,6 @@ typedef struct {
 typedef struct {
 	/* Is authentication required for the channel */
 	uint8_t require_authentication;
-
-	uint8_t arq_on;
 
 } SkyVCConfig;
 

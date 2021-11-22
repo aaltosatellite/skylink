@@ -6,6 +6,7 @@
 #include "platform.h"
 #include "arq_ring.h"
 #include "conf.h"
+#include "frame.h"
 
 
 
@@ -21,6 +22,7 @@
 #define SKY_RET_INVALID_PLAIN_LENGTH     	(-3)
 #define SKY_RET_INVALID_VC      			(-5)
 #define SKY_RET_INVALID_EXT_LENGTH  		(-6)
+#define SKY_RET_OWN_TRANSMISSION  			(-7)
 
 // FEC
 #define SKY_RET_GOLAY_FAILED       			(-10)
@@ -72,32 +74,7 @@
 
 
 
-/* frames ========================================================================================== */
-typedef struct {
 
-	timestamp_t rx_time_ms;
-
-	//uint8_t auth_verified;
-
-	unsigned int length;
-
-	union {
-
-		uint8_t raw[SKY_FRAME_MAX_LEN + 6];
-
-		struct __attribute__((__packed__)) {
-			uint8_t start_byte;
-			uint8_t identity[SKY_IDENTITY_LEN];
-			uint8_t vc 		: 3;
-			uint8_t flags 	: 5;
-			uint8_t ext_length;
-			uint16_t auth_sequence;
-			uint8_t arq_sequence;
-		};
-	};
-} SkyRadioFrame;
-
-/* frames ========================================================================================== */
 
 typedef struct sky_mac_s SkyMAC;
 
@@ -132,7 +109,6 @@ typedef struct sky_conf {
 	HMACConfig	hmac;
 	SkyArrayConfig array[SKY_NUM_VIRTUAL_CHANNELS];
 	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
-	uint8_t vc_priority[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t identity[SKY_IDENTITY_LEN];
 } SkyConfig;
 

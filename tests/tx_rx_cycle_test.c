@@ -81,14 +81,6 @@ void instantiate_testjob(TestJob* job){
 		TestJobVC *vcjob = &job->vcjobs[vc];
 		config1->vc[vc].require_authentication = vcjob->hmac_on1;
 		config2->vc[vc].require_authentication = vcjob->hmac_on2;
-		config1->vc[vc].arq_on = vcjob->arq_on1;
-		config2->vc[vc].arq_on = vcjob->arq_on2;
-		config1->array[vc].initial_send_sequence = vcjob->arq_seq_1to2;
-		config1->array[vc].initial_rcv_sequence = vcjob->arq_seq_2to1;
-		config2->array[vc].initial_send_sequence = vcjob->arq_seq_2to1;
-		config2->array[vc].initial_rcv_sequence = vcjob->arq_seq_1to2;
-		config1->array[vc].n_recall = vcjob->recall1;
-		config2->array[vc].n_recall = vcjob->recall2;
 		config1->array[vc].horizon_width = vcjob->horizon1;
 		config2->array[vc].horizon_width = vcjob->horizon2;
 		config1->array[vc].rcv_ring_len = vcjob->ring_len;
@@ -105,7 +97,7 @@ void instantiate_testjob(TestJob* job){
 		handle2->hmac->sequence_rx[vc] = job->vcjobs[vc].auth_seq_1to2;
 		SkyArqRing* ring1 = handle1->arrayBuffers[vc];
 		SkyArqRing* ring2 = handle2->arrayBuffers[vc];
-		spin_to_seq(ring1, ring2, job->vcjobs[vc].arq_seq_1to2);
+		spin_to_seq(ring1, ring2, job->vcjobs[vc].arq_seq_1to2, 0);
 	}
 	job->handle1 = handle1;
 	job->handle2 = handle2;
@@ -143,8 +135,8 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 	SkyHandle handle1 = job.handle1;
 	SkyHandle handle2 = job.handle2;
 	uint8_t* tgt = malloc(1000);
-	SkyRadioFrame *sendFrame = new_send_frame();
-	SkyRadioFrame *rcvFrame = new_receive_frame();
+	SkyRadioFrame *sendFrame = new_frame();
+	SkyRadioFrame *rcvFrame = new_frame();
 
 	String* sent_payloads[800];
 	String* received_payloads[800];
@@ -256,8 +248,8 @@ void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, i
 
 
 	free(tgt);
-	destroy_receive_frame(rcvFrame);
-	destroy_send_frame(sendFrame);
+	destroy_frame(rcvFrame);
+	destroy_frame(sendFrame);
 	destroy_config(handle1->conf);
 	destroy_config(handle2->conf);
 	destroy_handle(handle1);

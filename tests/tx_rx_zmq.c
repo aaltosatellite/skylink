@@ -6,12 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <math.h>
 
 #include "skylink/arq_ring.h"
 #include "skylink/skylink.h"
 #include "skylink/frame.h"
-#include "skylink/utilities.h"
 
 #include "tst_utilities.h"
 #include "tools/tools.h"
@@ -26,7 +24,6 @@
 typedef struct physical_params {
 	double relative_speed;
 	double send_speed_bps;
-	double switch_delay_ms;
 	uint8_t RADIO_MODE;
 } PhysicalParams;
 
@@ -63,13 +60,6 @@ int32_t rget_time_ms(){
 	return rms;
 }
 
-void rsleep_ms(int64_t ms){
-	double ft = (double)ms;
-	ft = ft / relative_time_speed;
-	double ft_us = round(ft*1000);
-	int64_t us = (int64_t)ft_us;
-	sleepus(us);
-}
 
 void rsleep_us(int64_t us){
 	double ft_us = (double)us;
@@ -80,20 +70,20 @@ void rsleep_us(int64_t us){
 
 
 
-SkylinkPeer* new_peer(int ID, int tx_port, int rx_port, int pl_write_port, int pl_read_port, double relative_speed, double send_speed_bps, double switch_delay_ms){
+SkylinkPeer* new_peer(int ID, int tx_port, int rx_port, int pl_write_port, int pl_read_port, double relative_speed, double send_speed_bps){
 	char url[64];
 	SkylinkPeer* peer = malloc(sizeof(SkylinkPeer));
 	pthread_mutex_init(&peer->mutex, NULL);
 	peer->ID = ID;
 	peer->physicalParams.relative_speed = relative_speed;
 	peer->physicalParams.send_speed_bps = send_speed_bps;
-	peer->physicalParams.switch_delay_ms = switch_delay_ms;
 
 
-	peer->rcvFrame = new_receive_frame();
-	peer->sendFrame = new_send_frame();
+	peer->rcvFrame = new_frame();
+	peer->sendFrame = new_frame();
 	peer->zmq_context = zmq_ctx_new();
 	SkyConfig* config = new_vanilla_config();
+	memcpy(config->identity, &ID, 4);
 	peer->self = new_handle(config);
 	peer->tx_socket = zmq_socket(peer->zmq_context, ZMQ_PUB);
 	peer->rx_socket = zmq_socket(peer->zmq_context, ZMQ_SUB);
@@ -193,72 +183,40 @@ void* write_to_send_cycle(void* arg){
 
 // == CYCLE 2: TRANSMIT & MOVE BETWEEN STATES ==========================================================================
 // =====================================================================================================================
-int peer_tx_round(SkylinkPeer* peer){
-	uint8_t tgt[500];
-	memcpy(tgt, &peer->ID, 4);
-	int32_t now_ms = rget_time_ms();
-	int send = sky_tx(peer->self, peer->sendFrame, 1, now_ms);
-	if(send == 0){
-		return 0;
-	}
-	memcpy(tgt+4, peer->sendFrame->raw, peer->sendFrame->length);
-	zmq_send(peer->tx_socket, tgt, 4+peer->sendFrame->length, 0); //todo: DONTWAIT?
-	PRINTFF(0,"#2 Transmitted. %dth in this window.\n", peer->self->mac->total_frames_sent_in_current_window);
-	return peer->sendFrame->length;
-}
-
-
 _Noreturn void* tx_cycle(void* arg){
 	SkylinkPeer* peer = arg;
 	int64_t cycle = -1;
+	uint8_t tx_tgt[500];
+	memcpy(tx_tgt, &peer->ID, 4);
 	pthread_mutex_lock(&peer->mutex); 	//lock
 	while (1){
 		cycle++;
-		if(cycle % 50 == 0){
+		if(cycle % 100 == 0){
 			PRINTFF(0, "s Cycle %ld.\n", cycle);
 		}
 
+
 		int32_t now_ms = rget_time_ms();
-		mac_silence_shift_check(peer->self->mac, &peer->self->conf->mac, now_ms);
-		int can_send = mac_can_send(peer->self->mac, now_ms);
-		if(can_send){
-			//turn_to_tx(peer->self->phy);
+		int send = sky_tx(peer->self, peer->sendFrame, 1, now_ms);
+		if(send){
 			say_tx(peer);
-
-			int bytes_transmitted = peer_tx_round(peer);
-			if(bytes_transmitted){
-				double sleep_time_s = (double)bytes_transmitted / peer->physicalParams.send_speed_bps;
-				double sleep_time_us = sleep_time_s * 1000000.0;
-				pthread_mutex_unlock(&peer->mutex); //unlock
-				rsleep_us((uint32_t) sleep_time_us);
-				pthread_mutex_lock(&peer->mutex); 	//lock
-			} else {
-				pthread_mutex_unlock(&peer->mutex); //unlock
-				rsleep_us((uint32_t) 700);
-				pthread_mutex_lock(&peer->mutex); 	//lock
-			}
-		}
-
-		if(!can_send){
-			//turn_to_rx(peer->self->phy);
-			say_rx(peer);
-
-			int32_t sleep_ms = mac_time_to_own_window(peer->self->mac, now_ms);
+			memcpy(tx_tgt+4, peer->sendFrame->raw, peer->sendFrame->length);
+			zmq_send(peer->tx_socket, tx_tgt, 4+peer->sendFrame->length, 0); //todo: DONTWAIT?
+			PRINTFF(0,"#2 Transmitted. %dth in this window.\n", peer->self->mac->total_frames_sent_in_current_window);
+			int bytes_transmitted = peer->sendFrame->length;
+			double sleep_time_s = (double)bytes_transmitted / peer->physicalParams.send_speed_bps;
+			double sleep_time_us = sleep_time_s * 1000000.0;
 			pthread_mutex_unlock(&peer->mutex); //unlock
-			if(sleep_ms > 0){
-				assert(mac_own_window_remaining(peer->self->mac, now_ms) <= 0);
-				int32_t a = mac_time_to_own_window(peer->self->mac, now_ms);
-				int32_t b = mac_own_window_remaining(peer->self->mac, now_ms);
-				int32_t c = peer->self->mac->gap_constant + peer->self->mac->peer_window_length + peer->self->mac->tail_constant;
-				assert(c == (a-b));
-				int64_t slepe_us = 2000;
-				if(sleep_ms < 2){
-					slepe_us = 400;
-				}
-				rsleep_us(slepe_us);
-			}
+			rsleep_us((uint32_t) sleep_time_us);
+			pthread_mutex_lock(&peer->mutex); 	//lock
+		} else {
+			say_rx(peer);
+			pthread_mutex_unlock(&peer->mutex); //unlock
+			rsleep_us((uint32_t) 1000);
 			pthread_mutex_lock(&peer->mutex); 	//lock
 		}
+
+
 	}
 }
 // =====================================================================================================================
@@ -308,7 +266,7 @@ void* ether_cycle(void* arg){
 			pthread_mutex_lock(&peer->mutex); 	//lock
 			int64_t us2 = real_microseconds();
 			PRINTFF(0,"#3   %d bytes rx'ed.  (locked in %ld us)\n", r, us2-us1);
-			if(peer->self->mac->radio_mode == MODE_RX){
+			if(peer->physicalParams.RADIO_MODE == MODE_RX){
 				memcpy(peer->rcvFrame->raw, &tgt[4], r-4);
 				peer->rcvFrame->length = r-4;
 				peer->rcvFrame->rx_time_ms = rget_time_ms();
@@ -334,7 +292,11 @@ void tx_rx_zmq_test(int argc, char *argv[]){
 	}
 	int ID = argv[1][0] - 48;
 	PRINTFF(0, "Starting peer cycle with ID=%d \n",ID);
-	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 3*1200, 0.0 );
+	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 4*1200);
+	if(ID == 5){
+		int32_t now_ms = rget_time_ms();
+		skyArray_wipe_to_arq_init_state(peer->self->arrayBuffers[0], now_ms);
+	}
 	relative_time_speed = peer->physicalParams.relative_speed;
 
 	pthread_create(&peer->thread1, NULL, tx_cycle, peer);

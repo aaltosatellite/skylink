@@ -20,7 +20,7 @@ void hmac_tests(){
 
 static void test1(){
 	PRINTFF(0,"[HMAC TEST 1]\n");
-	for (int i = 0; i < 5500; ++i) {
+	for (int i = 0; i < 9500; ++i) {
 		test1_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
@@ -56,8 +56,8 @@ static void test1_round(){
 	self1->hmac->sequence_tx[vc] = wrap_hmac_sequence(self2->hmac->sequence_rx[vc] + shift_tx);
 
 
-	SkyRadioFrame* sframe = new_send_frame();
-	SkyRadioFrame* rframe = new_receive_frame();
+	SkyRadioFrame* sframe = new_frame();
+	SkyRadioFrame* rframe = new_frame();
 	//RadioFrame* frame = &sframe->radioFrame;
 	fillrand(sframe->raw, 255);
 	int length = randint_i32(EXTENSION_START_IDX, SKY_FRAME_MAX_LEN - (SKY_HMAC_LENGTH + 1));
@@ -103,6 +103,6 @@ static void test1_round(){
 	destroy_handle(self2);
 	destroy_config(config1);
 	destroy_config(config2);
-	destroy_send_frame(sframe);
-	destroy_receive_frame(rframe);
+	destroy_frame(sframe);
+	destroy_frame(rframe);
 }

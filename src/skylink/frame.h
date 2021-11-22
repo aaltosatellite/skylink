@@ -2,55 +2,82 @@
 #define __SKYLINK_FRAME_H__
 
 #include <string.h>
-#include "skylink.h"
+#include <stdint.h>
+#include "platform.h"
 
 
 
-/* extensions ====================================================================================== */
 
 #define SKYLINK_START_BYTE              's' 	//all packets start with this
-#define EXTENSION_ARQ_SEQUENCE          1
-#define EXTENSION_ARQ_REQUEST           2
-#define EXTENSION_ARQ_RESET             3
-#define EXTENSION_MAC_PARAMETERS        4
-#define EXTENSION_MAC_TDD_CONTROL       5
-#define EXTENSION_HMAC_SEQUENCE_RESET   6
+#define EXTENSION_ARQ_SEQUENCE			0
+#define EXTENSION_ARQ_REQUEST			1
+#define EXTENSION_ARQ_CTRL				2
+#define EXTENSION_ARQ_HANDSHAKE			3
+#define EXTENSION_MAC_TDD_CONTROL       4
+#define EXTENSION_HMAC_SEQUENCE_RESET   5
 
-/* ARQ2 control sequence */
-typedef struct __attribute__((__packed__)) {
-	uint16_t tx_sequence;
-	uint16_t rx_sequence;
-} ExtARQCtrl;
+//extensions start at this byte index. At the same time the minimum length of a healthy frame.
+#define EXTENSION_START_IDX				10
+#define SKY_PLAIN_FRAME_MIN_LENGTH		EXTENSION_START_IDX
+#define SKY_ENCODED_FRAME_MIN_LENGTH	(EXTENSION_START_IDX + RS_PARITYS)
+#define SKY_FRAME_MAX_LEN       		0x100
+#define SKY_IDENTITY_LEN				5
 
-/* ARQ2 state initializer */
-typedef struct __attribute__((__packed__)) {
-	uint8_t state;
-	uint16_t identifier;
-} ExtARQInitialize;
+typedef uint16_t arq_seq_t;
+
+
+/* frames ========================================================================================== */
+typedef struct {
+
+	timestamp_t rx_time_ms;
+
+	//uint8_t auth_verified;
+
+	unsigned int length;
+
+	union {
+
+		uint8_t raw[SKY_FRAME_MAX_LEN + 6];
+
+		struct __attribute__((__packed__)) {
+			uint8_t start_byte;
+			uint8_t identity[SKY_IDENTITY_LEN];
+			uint8_t vc 		: 3;
+			uint8_t flags 	: 5;
+			uint8_t ext_length;
+			uint16_t auth_sequence;
+		};
+	};
+} SkyRadioFrame;
+/* frames ========================================================================================== */
+
+
+
 
 /* ARQ Sequence */
 typedef struct __attribute__((__packed__)) {
-	uint8_t sequence;
+	arq_seq_t sequence;
 } ExtARQSeq;
 
 /* ARQ Retransmit Request */
 typedef struct __attribute__((__packed__)) {
-	uint8_t sequence;
+	arq_seq_t sequence;
 	uint16_t mask;
 } ExtARQReq;
 
-/* ARQ Reset */
+/* ARQ control sequence */
 typedef struct __attribute__((__packed__)) {
-	uint8_t toggle;
-	uint8_t enforced_sequence;
-} ExtARQReset;
+	arq_seq_t tx_sequence;
+	arq_seq_t rx_sequence;
+} ExtARQCtrl;
+
+/* ARQ state initializer */
+typedef struct __attribute__((__packed__)) {
+	int8_t  peer_state;
+	int32_t identifier;
+} ExtARQHandshake;
 
 /* TDD MAC Control  */
-typedef struct __attribute__((__packed__)) {
-	uint16_t window_size;
-	uint16_t gap_size;
-} ExtTDDParams;
-
 typedef struct __attribute__((__packed__)) {
 	uint16_t window;
 	uint16_t remaining;
@@ -69,8 +96,9 @@ typedef struct __attribute__((__packed__)) {
 	union {
 		ExtARQSeq ARQSeq;
 		ExtARQReq ARQReq;
-		ExtARQReset ARQReset;
-		ExtTDDParams TDDParams;
+		ExtARQCtrl ARQCtrl;
+		ExtARQHandshake ARQHandshake;
+		//ExtTDDParams TDDParams;
 		ExtTDDControl TDDControl;
 		ExtHMACSequenceReset HMACSequenceReset;
 	};
@@ -80,32 +108,27 @@ typedef struct __attribute__((__packed__)) {
 
 
 
-//extensions start at this byte index. At the same time the minimum length of a healthy frame.
-#define EXTENSION_START_IDX				15
-#define SKY_PLAIN_FRAME_MIN_LENGTH		EXTENSION_START_IDX
-#define SKY_ENCODED_FRAME_MIN_LENGTH	(EXTENSION_START_IDX + RS_PARITYS)
 
 
 
 
-SkyRadioFrame* new_send_frame();
-SkyRadioFrame* new_receive_frame();
-void destroy_receive_frame(SkyRadioFrame* frame);
-void destroy_send_frame(SkyRadioFrame* frame);
+
+
+SkyRadioFrame* new_frame();
+void destroy_frame(SkyRadioFrame* frame);
 
 
 
 // encoding ============================================================================================================
+int sky_packet_add_extension_arq_sequence(SkyRadioFrame* frame, arq_seq_t sequence);
 
-int sky_packet_add_extension_mac_params(SkyRadioFrame* frame, uint16_t gap_size, uint16_t window_size);
+int sky_packet_add_extension_arq_request(SkyRadioFrame* frame, arq_seq_t sequence, uint16_t mask);
+
+int sky_packet_add_extension_arq_ctrl(SkyRadioFrame* frame, arq_seq_t tx_head_sequence, arq_seq_t rx_head_sequence);
+
+int sky_packet_add_extension_arq_handshake(SkyRadioFrame* frame, uint8_t state_flag, uint32_t identifier);
 
 int sky_packet_add_extension_mac_tdd_control(SkyRadioFrame* frame, uint16_t window, uint16_t remaining);
-
-int sky_packet_add_extension_arq_sequence(SkyRadioFrame* frame, uint8_t sequence);
-
-int sky_packet_add_extension_arq_request(SkyRadioFrame* frame, uint8_t sequence, uint16_t mask);
-
-int sky_packet_add_extension_arq_reset(SkyRadioFrame* frame, uint8_t toggle, uint8_t sequence);
 
 int sky_packet_add_extension_hmac_sequence_reset(SkyRadioFrame* frame, uint16_t sequence);
 
@@ -114,11 +137,8 @@ int available_payload_space(SkyRadioFrame* radioFrame);
 int sky_packet_extend_with_payload(SkyRadioFrame* frame, void* pl, int32_t length);
 // encoding ============================================================================================================
 
+SkyPacketExtension* sky_rx_get_extension(const SkyRadioFrame* frame, uint8_t this_type);
 
-
-// decoding ============================================================================================================
-//int interpret_extension(void* ptr, int max_length, SkyPacketExtension* extension);
-// decoding ============================================================================================================
 
 
 

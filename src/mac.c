@@ -5,6 +5,7 @@
 #include "skylink/mac.h"
 #include "skylink/conf.h"
 #include "skylink/frame.h"
+#include "skylink/utilities.h"
 
 
 static int32_t wrap_ms(int32_t time_ms, SkyMAC* mac){ //This mess is a conversion from C-modulo, to always-positive-modulo.
@@ -23,15 +24,6 @@ int mac_valid_window_length(SkyMACConfig* config, int32_t length){
 	return 1;
 }
 
-int mac_valid_gap_length(SkyMACConfig* config, int32_t length){
-	if(length < config->minimum_gap_length){
-		return 0;
-	}
-	if(length > config->maximum_gap_length){
-		return 0;
-	}
-	return 1;
-}
 
 
 
@@ -46,8 +38,11 @@ SkyMAC* sky_mac_create(SkyMACConfig* config){
 	mac->gap_constant = config->default_gap_length;
 	mac->tail_constant = config->default_tail_length;
 	mac->last_belief_update = -1;
-	mac->radio_mode = MODE_RX;
 	mac->total_frames_sent_in_current_window = 0;
+	mac->vc_round_robin_start = 0;
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
+		mac->frames_sent_in_current_window_per_vc[i] = 0;
+	}
 	return mac;
 }
 
@@ -103,14 +98,9 @@ int32_t mac_peer_window_remaining(SkyMAC* mac, int32_t now_ms){
 
 
 void mac_silence_shift_check(SkyMAC* mac, SkyMACConfig* config, int32_t now_ms){
-	if(((now_ms - mac->last_belief_update) & 0xFFFFFFF) > config->shift_threshold_ms){
+	if(wrap_time_ms(now_ms - mac->last_belief_update) > config->shift_threshold_ms){
 		mac->T0_ms = rand() & 0xFFF;
 		mac->last_belief_update = now_ms;
-		printf("===============================================================================\n");
-		printf("now: %d \n", now_ms);
-		printf("last: %d \n", mac->last_belief_update);
-		printf("MAC RESET! %d  %d\n", ((now_ms - mac->last_belief_update) & 0xFFFFFFF) , config->shift_threshold_ms);
-		printf("===============================================================================\n");
 	}
 }
 
@@ -130,6 +120,10 @@ int mac_update_belief(SkyMAC* mac, SkyMACConfig* config, int32_t now_ms, int32_t
 	int32_t implied_t0_for_me = wrap_ms(now_ms + peer_mac_remaining + mac->tail_constant, mac);
 	mac->T0_ms = implied_t0_for_me;
 	mac->last_belief_update = now_ms;
+	mac->total_frames_sent_in_current_window = 0;
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
+		mac->frames_sent_in_current_window_per_vc[i] = 0;
+	}
 	return 0;
 }
 

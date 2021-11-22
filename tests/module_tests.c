@@ -9,18 +9,18 @@
 #include "fec_test.h"
 #include "tx_rx_cycle_test.h"
 #include "tools/tools.h"
-
+#include "arq_tests.h"
 
 int main() {
 	reseed_random();
 
-
 	elebuffer_tests();
-	ring_tests();
 	packet_tests();
 	fec_test();
 	hmac_tests();
-	txrx_tests();
+	ring_tests();
+	arq_tests();
+	//txrx_tests();
 }
 
 

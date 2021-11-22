@@ -35,7 +35,7 @@ add_executable(module_test
         ../src/utilities.c
         #../src/arq_ring2.c
         #../src/skylink/arq_ring2.h
-        )
+        ../src/packet_ring.c ../src/skylink/packet_ring.h arq_tests.c arq_tests.h)
 
 
 add_compile_options(-O2 -Wall)
@@ -67,4 +67,4 @@ add_executable(zmq_peer
         ../src/utilities.c
         #../src/arq_ring2.c
         #../src/skylink/arq_ring2.h
-        )
+        ../src/packet_ring.c ../src/skylink/packet_ring.h)

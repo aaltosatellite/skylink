@@ -52,8 +52,14 @@ void destroy_config(SkyConfig* config);
 
 void destroy_handle(SkyHandle self);
 
-uint16_t spin_to_seq(SkyArqRing* ring1, SkyArqRing* ring2, int target_sequence);
+uint16_t spin_to_seq(SkyArqRing* sring, SkyArqRing* rring, int target_sequence, int32_t now_ms);
+
+void populate_horizon(SkyArqRing* sring, SkyArqRing* rring, int final_tx_head_seq, int final_rx_head_seq, uint16_t target_mask, int32_t now_ms, String** payloads);
 
 SkyPacketExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_type);
+
+uint8_t get_other_byte(uint8_t c);
+
+void corrupt_bytearray(uint8_t* arr, int length, double ratio);
 
 #endif //SKYLINK_CMAKE_TST_UTILITIES_H

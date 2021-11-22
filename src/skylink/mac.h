@@ -18,8 +18,7 @@ struct sky_mac_s {
 	int32_t gap_constant;
 	int32_t tail_constant;
 	int32_t last_belief_update;
-
-	uint8_t radio_mode;
+	uint8_t vc_round_robin_start;
 	uint16_t frames_sent_in_current_window_per_vc[SKY_NUM_VIRTUAL_CHANNELS];
 	uint16_t total_frames_sent_in_current_window;
 };
@@ -27,14 +26,11 @@ struct sky_mac_s {
 
 int mac_valid_window_length(SkyMACConfig* config, int32_t length);
 
-int mac_valid_gap_length(SkyMACConfig* config, int32_t length);
-
 int32_t mac_set_my_window_length(SkyMAC* mac, int32_t new_length);
 
 int32_t mac_set_peer_window_length(SkyMAC* mac, int32_t new_length);
 
 int32_t mac_set_gap_constant(SkyMAC* mac, int32_t new_gap_constant);
-
 
 
 // The obvious...

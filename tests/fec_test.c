@@ -10,7 +10,7 @@ static int test1_round();
 
 
 void fec_test(){
-	test1(100);
+	test1(1000);
 }
 
 
@@ -41,7 +41,7 @@ void test1(){
 
 
 static int test1_round(){
-	SkyRadioFrame* frame = new_send_frame();
+	SkyRadioFrame* frame = new_frame();
 	SkyDiagnostics* diag = new_diagnostics();
 
 	int length = randint_i32(16+8, RS_MSGLEN);
@@ -109,7 +109,7 @@ static int test1_round(){
 	}
 
 
-	destroy_send_frame(frame);
+	destroy_frame(frame);
 	destroy_diagnostics(diag);
 	free(corrupt_indexes);
 	free(encoded_ref);

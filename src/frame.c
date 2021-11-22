@@ -7,22 +7,14 @@
 #include "skylink/utilities.h"
 
 
-SkyRadioFrame* new_send_frame(){
+
+SkyRadioFrame* new_frame(){
 	SkyRadioFrame* frame = SKY_MALLOC(sizeof(SkyRadioFrame));
 	memset(frame, 0, sizeof(SkyRadioFrame));
 	return frame;
 }
 
-SkyRadioFrame* new_receive_frame(){
-	SkyRadioFrame* frame = SKY_MALLOC(sizeof(SkyRadioFrame));
-	memset(frame, 0, sizeof(SkyRadioFrame));
-	return frame;
-}
-
-void destroy_receive_frame(SkyRadioFrame* frame){
-	SKY_FREE(frame);
-}
-void destroy_send_frame(SkyRadioFrame* frame){
+void destroy_frame(SkyRadioFrame* frame){
 	SKY_FREE(frame);
 }
 
@@ -32,7 +24,7 @@ void destroy_send_frame(SkyRadioFrame* frame){
 
 //=== ENCODING =========================================================================================================
 //======================================================================================================================
-int sky_packet_add_extension_arq_sequence(SkyRadioFrame* frame, uint8_t sequence) {
+int sky_packet_add_extension_arq_sequence(SkyRadioFrame* frame, arq_seq_t sequence) {
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
 	extension->type = EXTENSION_ARQ_SEQUENCE;
 	extension->length = sizeof(ExtARQSeq) +1;
@@ -43,7 +35,8 @@ int sky_packet_add_extension_arq_sequence(SkyRadioFrame* frame, uint8_t sequence
 	return SKY_RET_OK;
 }
 
-int sky_packet_add_extension_arq_request(SkyRadioFrame* frame, uint8_t sequence, uint16_t mask) {
+
+int sky_packet_add_extension_arq_request(SkyRadioFrame* frame, arq_seq_t sequence, uint16_t mask) {
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
 	extension->type = EXTENSION_ARQ_REQUEST;
 	extension->length = sizeof(ExtARQReq) +1;
@@ -56,12 +49,12 @@ int sky_packet_add_extension_arq_request(SkyRadioFrame* frame, uint8_t sequence,
 }
 
 
-int sky_packet_add_extension_arq_reset(SkyRadioFrame* frame, uint8_t toggle, uint8_t sequence) {
+int sky_packet_add_extension_arq_ctrl(SkyRadioFrame* frame, arq_seq_t tx_head_sequence, arq_seq_t rx_head_sequence){
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
-	extension->type = EXTENSION_ARQ_RESET;
-	extension->length = sizeof(ExtARQReset) +1;
-	extension->ARQReset.toggle = toggle;
-	extension->ARQReset.enforced_sequence = sequence;
+	extension->type = EXTENSION_ARQ_CTRL;
+	extension->length = sizeof(ExtARQCtrl) +1;
+	extension->ARQCtrl.tx_sequence = tx_head_sequence;
+	extension->ARQCtrl.rx_sequence = rx_head_sequence;
 
 	frame->ext_length += extension->length;
 	frame->length = EXTENSION_START_IDX + frame->ext_length;
@@ -69,12 +62,12 @@ int sky_packet_add_extension_arq_reset(SkyRadioFrame* frame, uint8_t toggle, uin
 }
 
 
-int sky_packet_add_extension_mac_params(SkyRadioFrame* frame, uint16_t gap_size, uint16_t window_size) {
+int sky_packet_add_extension_arq_handshake(SkyRadioFrame* frame, uint8_t state_flag, uint32_t identifier){
 	SkyPacketExtension* extension = (SkyPacketExtension*)(frame->raw + EXTENSION_START_IDX + frame->ext_length);
-	extension->type = EXTENSION_MAC_PARAMETERS;
-	extension->length = sizeof(ExtTDDParams) +1;
-	extension->TDDParams.gap_size = sky_hton16(gap_size);
-	extension->TDDParams.window_size = sky_hton16(window_size);
+	extension->type = EXTENSION_ARQ_HANDSHAKE;
+	extension->length = sizeof(ExtARQHandshake) +1;
+	extension->ARQHandshake.peer_state = state_flag;
+	extension->ARQHandshake.identifier = identifier;
 
 	frame->ext_length += extension->length;
 	frame->length = EXTENSION_START_IDX + frame->ext_length;
@@ -107,7 +100,6 @@ int sky_packet_add_extension_hmac_sequence_reset(SkyRadioFrame* frame, uint16_t 
 }
 
 
-
 int available_payload_space(SkyRadioFrame* radioFrame) {
 	return RS_MSGLEN - (radioFrame->length + SKY_HMAC_LENGTH);
 }
@@ -123,3 +115,32 @@ int sky_packet_extend_with_payload(SkyRadioFrame* frame, void* pl, int32_t lengt
 }
 //=== ENCODING =========================================================================================================
 //======================================================================================================================
+
+
+
+SkyPacketExtension* sky_rx_get_extension(const SkyRadioFrame* frame, uint8_t this_type){
+	if((int)(frame->ext_length + EXTENSION_START_IDX) > (int)frame->length) {
+		return NULL; //todo error: too short packet.
+	}
+	if(frame->ext_length <= 1){
+		return NULL; //no extensions.
+	}
+
+	unsigned int cursor = 0;
+	while (cursor < frame->ext_length) {
+		SkyPacketExtension* ext = (SkyPacketExtension*)&frame->raw[EXTENSION_START_IDX + cursor]; //Magic happens here.
+		if (cursor + ext->length >= frame->length)
+			return NULL;
+		if(ext->length == 0){
+			return NULL;
+		}
+		cursor += ext->length;
+
+		if(this_type == ext->type){
+			return ext;
+		}
+
+	}
+	return NULL;
+}
+
