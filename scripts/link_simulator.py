@@ -52,6 +52,13 @@ def get_timestamp() -> int:
     global epoch
     return int((time.time() - epoch) * 1e9)
 
+def corrupt(raw: bytes, n: int) -> bytes:
+    """ Flip N bits in the frame """
+    raw = bytearray(raw)
+    for _ in range(n):
+        raw[random.randint(0, len(raw) - 1)] ^= (1 << random.randint(0, 7))
+    return bytes(raw)
+
 
 cs = False # Global flag to indice is the radio medium busy
 
@@ -114,6 +121,9 @@ async def link(tx, rx, ticks, name: str, frame_loss: float) -> None:
                     text = "\u001b[33mLost"
 
                 else:
+
+                    data = corrupt(data, random.randint(0, 8))
+
                     # Send the frame to socket only if link heurestic was successful
                     hdr = struct.pack("@IIQ", 1, 0, get_timestamp())
                     rx.send_multipart((hdr, b"", data))
