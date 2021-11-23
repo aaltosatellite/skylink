@@ -108,8 +108,8 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 	}
 
 
-	int content = sky_tx_extension_eval_hmac_reset(self, frame, vc);
-	content |= skyArray_fill_frame(self->arrayBuffers[vc], frame, now_ms, self->mac->frames_sent_in_current_window_per_vc[vc]);
+	sky_tx_extension_eval_hmac_reset(self, frame, vc);
+	skyArray_fill_frame(self->arrayBuffers[vc], frame, now_ms, self->mac->frames_sent_in_current_window_per_vc[vc]);
 
 
 	/* Set HMAC state and sequence */

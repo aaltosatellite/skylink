@@ -21,7 +21,7 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame);
 
 
 int sky_rx(SkyHandle self, SkyRadioFrame* frame, int contains_golay) {
-	int ret = 0;
+	int ret;
 	if(frame->length < SKY_ENCODED_FRAME_MIN_LENGTH)
 		return SKY_RET_INVALID_ENCODED_LENGTH;
 
@@ -110,9 +110,9 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 	SkyPacketExtension* ext_ctrl = sky_rx_get_extension(frame, EXTENSION_ARQ_CTRL);
 	SkyPacketExtension* ext_handshake = sky_rx_get_extension(frame, EXTENSION_ARQ_HANDSHAKE);
 	void* pl = frame->raw + EXTENSION_START_IDX + frame->ext_length;
-	int len_pl = frame->length - (EXTENSION_START_IDX + frame->ext_length);
+	int len_pl = (int) frame->length - (EXTENSION_START_IDX + frame->ext_length);
 	if(!(frame->flags & SKY_FLAG_HAS_PAYLOAD)){
-		len_pl = 0;
+		len_pl = -1;
 	}
 	skyArray_process_content(self->arrayBuffers[frame->vc], pl, len_pl, ext_seq, ext_ctrl, ext_handshake, ext_rrequest, frame->rx_time_ms);
 

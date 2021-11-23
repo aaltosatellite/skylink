@@ -268,7 +268,7 @@ int sendRing_schedule_resend(SkySendRing* sendRing, int sequence){
 int sendRing_schedule_resends_by_mask(SkySendRing* sendRing, int sequence, uint16_t mask){
 	int r = sendRing_schedule_resend(sendRing, sequence);
 	for (int i = 0; i < 16; ++i) {
-		if ( mask & (1<<i) ){
+		if ( !(mask & (1<<i)) ){
 			int s = sequence_wrap(sequence + i + 1);
 			r |= sendRing_schedule_resend(sendRing, s);
 		}

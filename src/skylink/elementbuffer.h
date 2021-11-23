@@ -38,7 +38,7 @@ struct buffer_element_s {
 	idx_t* previous;
 	idx_t* next;
 	void* data;
-};
+} __attribute__((__packed__));
 typedef struct buffer_element_s BufferElement;
 
 

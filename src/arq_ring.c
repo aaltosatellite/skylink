@@ -61,7 +61,7 @@ int skyArray_wipe_to_arq_init_state(SkyArqRing* array, int32_t now_ms){
 }
 
 
-void skyArray_wipe_to_arq_on_state(SkyArqRing* array, int32_t identifier, int32_t now_ms){
+void skyArray_wipe_to_arq_on_state(SkyArqRing* array, uint32_t identifier, int32_t now_ms){
 	wipe_rcv_ring(array->rcvRing, array->elementBuffer, 0);
 	wipe_send_ring(array->sendRing, array->elementBuffer, 0);
 	array->need_recall = 0;
@@ -74,7 +74,7 @@ void skyArray_wipe_to_arq_on_state(SkyArqRing* array, int32_t identifier, int32_
 }
 
 
-void skyArray_handle_handshake(SkyArqRing* array, uint8_t peer_state, int32_t identifier, int32_t now_ms){
+int skyArray_handle_handshake(SkyArqRing* array, uint8_t peer_state, uint32_t identifier, int32_t now_ms){
 	int match = (identifier == array->arq_session_identifier);
 
 	if( (array->arq_state_flag == ARQ_STATE_ON) && match ){
@@ -82,34 +82,36 @@ void skyArray_handle_handshake(SkyArqRing* array, uint8_t peer_state, int32_t id
 		if(peer_state == ARQ_STATE_IN_INIT){
 			array->handshake_send = 1;
 		}
-		return;
+		return 0;
 	}
 
 	if( (array->arq_state_flag == ARQ_STATE_ON) && !match ){
 		skyArray_wipe_to_arq_on_state(array, identifier, now_ms);
 		array->handshake_send = 1;
-		return;
+		return 1;
 	}
 
 	if( (array->arq_state_flag == ARQ_STATE_IN_INIT) && match ){
 		array->arq_state_flag = ARQ_STATE_ON;
 		array->handshake_send = 0;
-		return;
+		return 1;
 	}
 
 	if( (array->arq_state_flag == ARQ_STATE_IN_INIT) && !match ){
 		if(identifier > array->arq_session_identifier){
 			skyArray_wipe_to_arq_on_state(array, identifier, now_ms);
 			array->handshake_send = 1;
+			return 1;
 		}
-		return;
+		return 0;
 	}
 
 	if(array->arq_state_flag == ARQ_STATE_OFF){
 		skyArray_wipe_to_arq_on_state(array, identifier, now_ms);
 		array->handshake_send = 1;
-		return;
+		return 1;
 	}
+	return 0;
 }
 
 
@@ -167,7 +169,7 @@ void skyArray_update_tx_sync(SkyArqRing* array, int peer_rx_head_sequence_by_ctr
 	if(n_cleared > 0){
 		array->last_tx_ms = now_ms;
 	}
-	if(array->sendRing->head_sequence == peer_rx_head_sequence_by_ctrl){
+	if(array->sendRing->tx_sequence == peer_rx_head_sequence_by_ctrl){
 		array->last_tx_ms = now_ms;
 	}
 }
@@ -338,10 +340,10 @@ int skyArray_fill_frame(SkyArqRing* array, SkyRadioFrame* frame, int32_t now_ms,
 
 		if(sendRing_count_packets_to_send(array->sendRing, 1) > 0){
 			int sequence = -1;
-			int length = -1;
+			int length = 0;
 			int r = sendRing_peek_next_tx_size_and_sequence(array->sendRing, array->elementBuffer, 1, &length, &sequence);
-			int length_requirement = length + sizeof(ExtARQSeq) + 1;
-			if ((r == 0) && (length_requirement <= available_payload_space(frame))){
+			int length_requirement = length + (int)sizeof(ExtARQSeq) + 1;
+			if ((r == 0) && (length_requirement <= available_payload_space(frame)) && (sequence > -1)){
 				sky_packet_add_extension_arq_sequence(frame, sequence);
 				int read = sendRing_read_to_tx(array->sendRing, array->elementBuffer, frame->raw + frame->length, &sequence, 1);
 				assert(read >= 0);
@@ -357,9 +359,9 @@ int skyArray_fill_frame(SkyArqRing* array, SkyRadioFrame* frame, int32_t now_ms,
 }
 
 
-
-
-
+static void skyArray_process_content_arq_off(SkyArqRing* array, void* pl, int len_pl);
+//static void skyArray_process_content_arq_init(SkyArqRing* array, void* pl, int len_pl, SkyPacketExtension** exts, int32_t now_ms);
+static void skyArray_process_content_arq_on(SkyArqRing* array, void* pl, int len_pl, SkyPacketExtension** exts, int32_t now_ms);
 void skyArray_process_content(SkyArqRing* array,
 							  void* pl,
 							  int len_pl,
@@ -367,67 +369,73 @@ void skyArray_process_content(SkyArqRing* array,
 							  SkyPacketExtension* ext_ctrl,
 							  SkyPacketExtension* ext_handshake,
 							  SkyPacketExtension* ext_rrequest,
-							  int32_t now_ms){
+							  timestamp_t now_ms){
+	if (ext_handshake){
+		uint8_t peer_state = ext_handshake->ARQHandshake.peer_state;
+		uint32_t identifier = sky_ntoh32(ext_handshake->ARQHandshake.identifier);
+		skyArray_handle_handshake(array, peer_state, identifier, now_ms);
+	}
+
+	SkyPacketExtension* exts[3] = {ext_seq, ext_ctrl, ext_rrequest};
 	uint8_t state0 = array->arq_state_flag;
 	if(state0 == ARQ_STATE_OFF){
-		if (ext_handshake){
-			uint8_t peer_state = ext_handshake->ARQHandshake.peer_state;
-			uint16_t identifier = sky_ntoh16(ext_handshake->ARQHandshake.identifier);
-			skyArray_handle_handshake(array, peer_state, identifier, now_ms);
-			return;
-		}
-		if (len_pl > 0){
-			skyArray_push_rx_packet_monotonic(array, pl, len_pl);
-			return;
-		}
+		skyArray_process_content_arq_off(array, pl, len_pl);
 	}
-	if(state0 == ARQ_STATE_IN_INIT){
-		if (ext_handshake){
-			uint8_t peer_state = ext_handshake->ARQHandshake.peer_state;
-			uint16_t identifier = sky_ntoh16(ext_handshake->ARQHandshake.identifier);
-			skyArray_handle_handshake(array, peer_state, identifier, now_ms);
-			return;
-		}
-	}
+	//if(state0 == ARQ_STATE_IN_INIT){
+	//	skyArray_process_content_arq_init(array, pl, len_pl, exts, now_ms);
+	//}
 	if(state0 == ARQ_STATE_ON){
-		int seq = -1;
-		if (ext_seq){
-			seq = sky_hton16(ext_seq->ARQSeq.sequence);
-		}
-
-		if (ext_handshake){
-			uint8_t peer_state = ext_handshake->ARQHandshake.peer_state;
-			uint16_t identifier = sky_ntoh16(ext_handshake->ARQHandshake.identifier);
-			skyArray_handle_handshake(array, peer_state, identifier, now_ms);
-			if(array->arq_state_flag != ARQ_STATE_ON){
-				return;
-			}
-		}
-
-		if (ext_ctrl){
-			skyArray_update_tx_sync(array, sky_hton16(ext_ctrl->ARQCtrl.rx_sequence), now_ms);
-			skyArray_update_rx_sync(array, sky_hton16(ext_ctrl->ARQCtrl.tx_sequence), now_ms);
-		}
-
-		if ( (seq > -1) && (len_pl > 0) ){
-			skyArray_push_rx_packet(array, pl, len_pl, seq, now_ms);
-		}
-		if ( (seq == -1) && (len_pl > 0) ){
-			//break arq?
-		}
-
-		if (ext_rrequest){
-			uint16_t mask = sky_ntoh16(ext_rrequest->ARQReq.mask);
-			sendRing_schedule_resends_by_mask(array->sendRing, sky_ntoh16(ext_rrequest->ARQReq.sequence), mask);
-			/* †
-			 * No. When unable to resend sequence requested, we send nothing. Was sich überhaupt sagen lässt, lässt
-			 * sich klar sagen; und wovon man nicht reden kann, darüber muss man schweigen.
-			 */
-		}
+		skyArray_process_content_arq_on(array, pl, len_pl, exts, now_ms);
 	}
+
 }
 
+static void skyArray_process_content_arq_off(SkyArqRing* array, void* pl, int len_pl){
+	//SkyPacketExtension* ext_seq = exts[0];
+	//SkyPacketExtension* ext_ctrl = exts[1];
+	//SkyPacketExtension* ext_rrequest = exts[2];
+	if (len_pl >= 0){
+		skyArray_push_rx_packet_monotonic(array, pl, len_pl);
+		return;
+	}
+}
+/*
+static void skyArray_process_content_arq_init(SkyArqRing* array, void* pl, int len_pl, SkyPacketExtension** exts, int32_t now_ms){
+	//SkyPacketExtension* ext_seq = exts[0];
+	//SkyPacketExtension* ext_ctrl = exts[1];
+	//SkyPacketExtension* ext_rrequest = exts[3];
+}
+*/
 
+static void skyArray_process_content_arq_on(SkyArqRing* array, void* pl, int len_pl, SkyPacketExtension** exts, int32_t now_ms){
+	SkyPacketExtension* ext_seq = exts[0];
+	SkyPacketExtension* ext_ctrl = exts[1];
+	SkyPacketExtension* ext_rrequest = exts[2];
+	int seq = -1;
+	if (ext_seq){
+		seq = sky_hton16(ext_seq->ARQSeq.sequence);
+	}
 
+	if (ext_ctrl){
+		skyArray_update_tx_sync(array, sky_hton16(ext_ctrl->ARQCtrl.rx_sequence), now_ms);
+		skyArray_update_rx_sync(array, sky_hton16(ext_ctrl->ARQCtrl.tx_sequence), now_ms);
+	}
+
+	if ( (seq > -1) && (len_pl >= 0) ){
+		skyArray_push_rx_packet(array, pl, len_pl, seq, now_ms);
+	}
+	if ( (seq == -1) && (len_pl >= 0) ){
+		//break arq?
+	}
+
+	if (ext_rrequest){
+		uint16_t mask = sky_ntoh16(ext_rrequest->ARQReq.mask);
+		sendRing_schedule_resends_by_mask(array->sendRing, sky_ntoh16(ext_rrequest->ARQReq.sequence), mask);
+		/* †
+		 * No. When unable to resend sequence requested, we send nothing. Was sich überhaupt sagen lässt, lässt
+		 * sich klar sagen; und wovon man nicht reden kann, darüber muss man schweigen.
+		 */
+	}
+}
 
 

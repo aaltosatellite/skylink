@@ -19,7 +19,7 @@
 struct sky_ring_item_s {
 	idx_t idx;
 	arq_seq_t sequence;
-};
+}__attribute__((__packed__));
 typedef struct sky_ring_item_s RingItem;
 
 

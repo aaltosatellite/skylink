@@ -10,6 +10,7 @@
 #include "tx_rx_cycle_test.h"
 #include "tools/tools.h"
 #include "arq_tests.h"
+#include "arq_tests2.h"
 
 int main() {
 	reseed_random();
@@ -18,8 +19,9 @@ int main() {
 	packet_tests();
 	fec_test();
 	hmac_tests();
-	ring_tests();
-	arq_tests();
+	ring_tests(12);
+	arq_tests(12);
+	arq_tests2(12);
 	//txrx_tests();
 }
 

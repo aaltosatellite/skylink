@@ -11,7 +11,7 @@
 #include "crc/crc_algos.h"
 
 
-void ring_tests();
+void ring_tests(int load);
 
 
 #endif //SKYLINK_RING_TEST_H

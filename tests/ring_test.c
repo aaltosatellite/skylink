@@ -4,7 +4,6 @@
 
 #include "ring_test.h"
 #include "tst_utilities.h"
-#include "../src/skylink/skylink.h"
 #include <assert.h>
 #include <math.h>
 
@@ -13,11 +12,11 @@ static void test15(int count);
 static void test2_rcv(int count);
 static void test3_send(int count);
 
-void ring_tests(){
-	test1(100);
-	test15(1200);
-	test2_rcv(26);
-	test3_send(26);
+void ring_tests(int load){
+	test1(1000*load +1);
+	test15(500*load +1);
+	test2_rcv(load);
+	test3_send(load);
 }
 
 static int positive_mod(int x, int m){
@@ -34,8 +33,11 @@ static int wrap_seq(int x){
 //======================================================================================================================
 static void test1_round();
 static void test1(int count){
-	PRINTFF(0,"[ARQ ARRAY TEST 1: a known case]\n");
+	PRINTFF(0,"[ARQ RING TEST 1: a known case]\n");
 	for (int i = 0; i < count; ++i) {
+		if(i % 2000 == 0){
+			PRINTFF(0,"\ti=%d\n", i);
+		}
 		test1_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
@@ -232,14 +234,19 @@ static void test1_round(){
 //======================================================================================================================
 //======================================================================================================================
 
+
+
+
+//======================================================================================================================
+//======================================================================================================================
 static void test15_round();
 static void test15(int count){
-	PRINTFF(0,"[ARQ ARRAY TEST 1.5: a known case]\n");
+	PRINTFF(0,"[ARQ RING TEST 1.5: spin and recall]\n");
 	for (int i = 0; i < count; ++i) {
-		test15_round();
-		if (i % 200 == 0){
-			PRINTFF(0,"\ti = %d\n",i);
+		if(i % 1000 == 0){
+			PRINTFF(0,"\ti=%d\n", i);
 		}
+		test15_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
@@ -282,6 +289,10 @@ static void test15_round(){
 	destroy_arq_ring(array_r);
 	destroy_arq_ring(array_s);
 }
+//======================================================================================================================
+//======================================================================================================================
+
+
 
 
 
@@ -292,7 +303,7 @@ static void test15_round(){
 static void test2_round();
 
 static void test2_rcv(int count){
-	PRINTFF(0,"[ARQ ARRAY TEST 2: receive side]\n");
+	PRINTFF(0,"[ARQ RING TEST 2: receive side]\n");
 	for (int i = 0; i < count; ++i) {
 		test2_round();
 	}
@@ -434,7 +445,7 @@ static void test2_round(){
 static void test3_round();
 
 static void test3_send(int count){
-	PRINTFF(0,"[ARQ ARRAY TEST 3: send side]\n");
+	PRINTFF(0,"[ARQ RING TEST 3: send side]\n");
 	for (int i = 0; i < count; ++i) {
 		test3_round();
 	}

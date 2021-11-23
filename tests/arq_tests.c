@@ -4,28 +4,27 @@
 
 #include "arq_tests.h"
 #include "../src/skylink/skylink.h"
-#include "../src/skylink/frame.h"
-#include "../src/skylink/elementbuffer.h"
-#include "../src/skylink/arq_ring.h"
 #include "../src/skylink/utilities.h"
 #include "tst_utilities.h"
-#include <math.h>
 
 
-void arq_test1();
+void arq_test1(int load);
 void arq_test1_cycle();
 
-void arq_test2();
+void arq_test2(int load);
 void arq_test2_cycle();
 
-void arq_tests(){
-	arq_test1();
-	arq_test2();
+void arq_tests(int load){
+	arq_test1(load);
+	arq_test2(load);
 }
 
-void arq_test1(){
-	PRINTFF(0, "[ARQ system test 1]\n");
-	for (int i = 0; i < 3000; ++i) {
+void arq_test1(int load){
+	PRINTFF(0, "[ARQ system test 1: ring mechanics.]\n");
+	for (int i = 0; i < (1000*load +1); ++i) {
+		if(i % 2000 == 0){
+			PRINTFF(0,"\ti=%d\n", i);
+		}
 		arq_test1_cycle();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
@@ -86,18 +85,21 @@ void arq_test1_cycle(){
 
 
 
-void arq_test2(){
-	PRINTFF(0, "[ARQ system test 2]\n");
-	for (int i = 0; i < 10000; ++i) {
-		arq_test2_cycle();
-		if(i%1000 == 0){
+void arq_test2(int load){
+	PRINTFF(0, "[ARQ system test 2: packet generation]\n");
+	for (int i = 0; i < (1000*load + 1); ++i) {
+		if(i%2000 == 0){
 			PRINTFF(0,"\ti=%d\n", i);
 		}
+		arq_test2_cycle();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
-
+/*
+ * This test puts an ARQ ring into a randomized configuration, and tests packet generation.
+ * Most aspects of packet formulation are tested.
+ */
 void arq_test2_cycle(){
 	String* msgs[ARQ_MAXIMUM_HORIZON+10];
 	for (int i = 0; i < ARQ_MAXIMUM_HORIZON+10; ++i) {
@@ -107,33 +109,34 @@ void arq_test2_cycle(){
 	SkyArrayConfig config;
 	config.send_ring_len = randint_i32(22,35);
 	config.rcv_ring_len = randint_i32(20,35);
-	config.element_size = randint_i32(30,85);
-	config.element_count = randint_i32(9000,12000);
+	config.element_size = randint_i32(30,80);
+	config.element_count = randint_i32(4000,5500);
 	config.horizon_width = 16;
 	SkyArqRing* array = new_arq_ring(&config);
 	SkyArqRing* array_r = new_arq_ring(&config);
 
-	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
-	int32_t ts_base = randint_i32(0,100000);
-	int32_t ts_last_ctrl = ts_base + randint_i32(0,5000);
+	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);			//virtual channel randomized
+	int32_t ts_base = randint_i32(0,100000);						//coarse timestamp
+	int32_t ts_last_ctrl = ts_base + randint_i32(0,5000);			//random times for all timestamps
 	int32_t ts_send = ts_base + randint_i32(0,5000);
 	int32_t ts_recv = ts_base + randint_i32(0,5000);
 	array->last_ctrl_send = ts_last_ctrl;
-	int seq0 = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
-	int seq_rcv = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
-	array->arq_state_flag = ARQ_STATE_OFF;
+	int seq0 = randint_i32(0, ARQ_SEQUENCE_MODULO-1);				//sequence number for send dierction
+	int seq_rcv = randint_i32(0, ARQ_SEQUENCE_MODULO-1);			//sequence number for receive direction
+	array->arq_state_flag = ARQ_STATE_OFF;								//random state.
 	if(randint_i32(0,100) < 90){
 		array->arq_state_flag = ARQ_STATE_ON;
 		if(randint_i32(0,10)==0){
 			array->arq_state_flag = ARQ_STATE_IN_INIT;
 		}
 	}
-	spin_to_seq(array, array_r, seq0, ts_send);
+	spin_to_seq(array, array_r, seq0, ts_send);							//spin the arrays into the sequences we want.
 	spin_to_seq(array_r, array, seq_rcv, ts_recv);
-	array->last_tx_ms = ts_send;
+	array->last_tx_ms = ts_send;										//spin function sets receive timestamp, but not tx
 	assert(array->last_tx_ms == ts_send);
 	assert(array->last_rx_ms == ts_recv);
 
+	//n_in_tail is how much send side tail lags tx_head. These are sent but unacked packets. (packets that can be recalled)
 	int n_in_tail = randint_i32(0, ARQ_MAXIMUM_HORIZON-1);
 	for (int i = 0; i < n_in_tail; ++i) {
 		int _seq;
@@ -144,6 +147,7 @@ void arq_test2_cycle(){
 	}
 	int seq1 = sequence_wrap(seq0 + n_in_tail);
 
+	//wether there is a fresh payload to be sent.
 	int new_pl = randint_i32(0, 10) < 8;
 	int new_pl_seq = -1;
 	if(new_pl){
@@ -154,6 +158,7 @@ void arq_test2_cycle(){
 		assert(new_pl_seq == seq1);
 	}
 
+	//randomly request resend of already sent packet (and assert that the returs is appropriate)
 	int recalled = randint_i32(0,10) < 2;
 	int recall_seq = -1;
 	if(recalled){
@@ -170,13 +175,15 @@ void arq_test2_cycle(){
 		}
 	}
 
-	int identifier = randint_i32(0, 900000);
+	//arq handshake
+	uint32_t identifier = randint_i32(0, 900000);
 	array->arq_session_identifier = identifier;
 	int handshake_on = randint_i32(0,10) < 5;
 	if(handshake_on){
 		array->handshake_send = 1;
 	}
 
+	//arq handshake
 	int frames_sent_in_vc = randint_i32(0,4);
 	int now_ms = ts_base + randint_i32(5001, ARQ_TIMEOUT_MS+500);
 

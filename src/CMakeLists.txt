@@ -15,6 +15,7 @@ add_library(skylink SHARED
         frame.c
         hmac.c
         mac.c
+        packet_ring.c
         skylink_rx.c
         skylink_tx.c
         utilities.c
@@ -25,8 +26,6 @@ add_library(skylink SHARED
         ext/libfec/ccsds_tab.c
         ext/libfec/decode_rs_8.c
         ext/libfec/encode_rs_8.c
-        #arq_ring2.c
-        #skylink/arq_ring2.h
-        packet_ring.c skylink/packet_ring.h)
+        )
 
 target_include_directories( skylink PUBLIC ${PROJECT_SOURCE_DIR} )

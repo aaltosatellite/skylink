@@ -7,7 +7,7 @@
 
 
 
-void arq_tests();
+void arq_tests(int load);
 
 
 

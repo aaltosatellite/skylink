@@ -31,7 +31,7 @@ typedef struct {
 
 	uint8_t arq_state_flag;
 	uint8_t handshake_send;
-	int32_t arq_session_identifier;
+	uint32_t arq_session_identifier;
 	uint8_t need_recall;
 	int32_t last_tx_ms;
 	int32_t last_rx_ms;
@@ -56,10 +56,10 @@ void skyArray_wipe_to_arq_off_state(SkyArqRing* array);
 int skyArray_wipe_to_arq_init_state(SkyArqRing* array, int32_t now_ms);
 
 // ---
-void skyArray_wipe_to_arq_on_state(SkyArqRing* array, int32_t identifier, int32_t now_ms);
+void skyArray_wipe_to_arq_on_state(SkyArqRing* array, uint32_t identifier, int32_t now_ms);
 
 // asd
-void skyArray_handle_handshake(SkyArqRing* array, uint8_t peer_state, int32_t identifier, int32_t now_ms);
+int skyArray_handle_handshake(SkyArqRing* array, uint8_t peer_state, uint32_t identifier, int32_t now_ms);
 
 // asd
 void skyArray_poll_arq_state_timeout(SkyArqRing* array, int32_t now_ms);
@@ -125,7 +125,7 @@ void skyArray_process_content(SkyArqRing* array,
 							  SkyPacketExtension* ext_ctrl,
 							  SkyPacketExtension* ext_handshake,
 							  SkyPacketExtension* ext_rrequest,
-							  int32_t now_ms);
+							  timestamp_t now_ms);
 //======================================================================================================================
 //======================================================================================================================
 

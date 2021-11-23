@@ -73,8 +73,8 @@ typedef struct __attribute__((__packed__)) {
 
 /* ARQ state initializer */
 typedef struct __attribute__((__packed__)) {
-	int8_t  peer_state;
-	int32_t identifier;
+	uint8_t  peer_state;
+	uint32_t identifier;
 } ExtARQHandshake;
 
 /* TDD MAC Control  */
@@ -91,8 +91,8 @@ typedef struct __attribute__((__packed__)) {
 
 /* General Extension Header struct */
 typedef struct __attribute__((__packed__)) {
-	unsigned int type    : 4;
-	unsigned int length  : 4;
+	uint8_t type    : 4;
+	uint8_t length  : 4;
 	union {
 		ExtARQSeq ARQSeq;
 		ExtARQReq ARQReq;

@@ -82,7 +82,7 @@ static void test1_round(){
 	}
 
 	int extension_arq_setup = 0;
-	int setup_identifier = randint_i32(0, 102040);
+	uint32_t setup_identifier = randint_u32(0, 0xFFFFFFFF);
 	int setup_flag = randint_i32(0, 4);
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
@@ -208,7 +208,7 @@ static void test1_round(){
 	assert(ext_remaining == 0);
 
 
-	int rcvd_pl_len = rframe->length - (rframe->ext_length + EXTENSION_START_IDX);
+	int rcvd_pl_len = (int)rframe->length - (rframe->ext_length + EXTENSION_START_IDX);
 	assert(rcvd_pl_len == payload_len);
 	assert(memcmp(rframe->raw + rframe->ext_length + EXTENSION_START_IDX, pl, rcvd_pl_len) == 0);
 
