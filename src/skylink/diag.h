@@ -1,6 +1,7 @@
 #ifndef __SKYLINK_DIAG_H__
 #define __SKYLINK_DIAG_H__
 
+#include <stdint.h>
 
 /*
  * Diagnostics and debug tools
@@ -12,9 +13,11 @@
 #define SKY_DIAG_DEBUG      0x0002
 #define SKY_DIAG_BUG        0x0004
 #define SKY_DIAG_LINK_STATE 0x0008
+#define SKY_DIAG_FEC        0x0008
+#define SKY_DIAG_MAC        0x0010
+#define SKY_DIAG_ARQ        0x0020
 #define SKY_DIAG_FRAMES     0x0100
 #define SKY_DIAG_BUFFER     0x0200
-
 
 
 #define DEBUG
