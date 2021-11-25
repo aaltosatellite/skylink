@@ -29,7 +29,7 @@ void destroy_arq_ring(SkyArqRing* array){
 	destroy_send_ring(array->sendRing);
 	destroy_rcv_ring(array->rcvRing);
 	destroy_element_buffer(array->elementBuffer);
-	free(array);
+	SKY_FREE(array);
 }
 
 
@@ -424,5 +424,3 @@ static void skyArray_process_content_arq_on(SkyArqRing* array, void* pl, int len
 		 */
 	}
 }
-
-

@@ -48,7 +48,7 @@ SkyMAC* sky_mac_create(SkyMACConfig* config){
 
 
 void sky_mac_destroy(SkyMAC* mac){
-	free(mac);
+	SKY_FREE(mac);
 }
 
 

@@ -11,5 +11,5 @@ SkyDiagnostics* new_diagnostics(){
 }
 
 void destroy_diagnostics(SkyDiagnostics* diag){
-	free(diag);
+	SKY_FREE(diag);
 }

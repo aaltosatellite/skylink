@@ -61,8 +61,8 @@ SkyRcvRing* new_rcv_ring(int length, int horizon_width, int initial_sequence){
 
 
 void destroy_rcv_ring(SkyRcvRing* rcvRing){
-	free(rcvRing->buff);
-	free(rcvRing);
+	SKY_FREE(rcvRing->buff);
+	SKY_FREE(rcvRing);
 }
 
 
@@ -203,8 +203,8 @@ SkySendRing* new_send_ring(int length, int initial_sequence){
 
 
 void destroy_send_ring(SkySendRing* sendRing){
-	free(sendRing->buff);
-	free(sendRing);
+	SKY_FREE(sendRing->buff);
+	SKY_FREE(sendRing);
 }
 
 
@@ -403,5 +403,3 @@ int sendRing_clean_tail_up_to(SkySendRing* sendRing, ElementBuffer* elementBuffe
 	return n_cleared; //the number of payloads cleared.
 }
 //===== SEND RING ======================================================================================================
-
-
