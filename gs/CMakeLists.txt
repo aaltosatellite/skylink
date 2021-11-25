@@ -3,10 +3,7 @@ project(gs C)
 set(CMAKE_C_STANDARD 11)
 add_compile_options(-g -Wall -Wextra)
 
-SET(SUO_INCLUDE_DIRS ../../suo.git/libsuo)
-
-find_package(Suo REQUIRED)
-
+find_package(SUO REQUIRED)
 
 add_executable(gs
     main.c
@@ -14,14 +11,17 @@ add_executable(gs
     modem_suo.c
 )
 
-include_directories( gs
-    ${skylink_SOURCE_DIR}
+
+target_include_directories( gs PUBLIC
+#    ${skylink_SOURCE_DIRS}
     ${SUO_INCLUDE_DIRS}
     ${ZMQ_INCLUDE_DIRS}
 )
 
-target_link_libraries( gs
-    skylink ${skylink_LIBRARIES}
+message(${SUO_LIBRARIES})
+
+target_link_libraries( gs LINK_PUBLIC
+    skylink
     ${SUO_LIBRARIES}
     ${ZMQ_LIBRARIES}
     pthread
