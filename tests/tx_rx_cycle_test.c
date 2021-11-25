@@ -10,8 +10,77 @@
 #include "tst_utilities.h"
 #include "tools/tools.h"
 
+#define STATE_RX		0
+#define STATE_TX		1
+
+
+
+
+
+
+typedef struct {
+	String* msg ;
+	int target_peer;
+	uint64_t idd;
+	uint64_t ts_push;
+	uint64_t ts_rcv;
+	int push_retcode;
+} Payload;
+
+
+typedef struct {
+	SkyRadioFrame frame;
+	int target_peer;
+	uint64_t tx_start;
+	uint64_t tx_end;
+	int rx_ok;
+} EtherFrame;
+
+typedef struct {
+	EtherFrame* in_transit[1000];
+	int n_in;
+} Ether;
+
+typedef struct {
+	SkyHandle handle;
+	uint8_t radio_state;
+	uint64_t tx_end;
+	String* under_send;
+	double pl_rate;
+} JobPeer;
+
+
+typedef struct {
+	EtherFrame** array;
+	int n;
+} EtherFrameList;
+
+typedef struct {
+	Payload** array;
+	int n;
+} PayloadList;
+
+typedef struct {
+	JobPeer peer1;
+	JobPeer peer2;
+	SkyRadioFrame frame;
+	uint64_t now_ms;
+	double byterate;
+	double corrupt_rate;
+	double loss_rate;
+	int lag_ms;
+	PayloadList* payloadList;
+	EtherFrameList* lostFrames;
+	EtherFrameList* missedFrames;
+	EtherFrameList* receivedFrames;
+	EtherFrameList* inEther;
+
+} TXRXJob;
+
 static void test1();
-static void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, int golay_on);
+static void test1_round();
+static void step_forward(int which, TXRXJob* job);
+static void print_job_status(TXRXJob* job);
 
 
 
@@ -19,30 +88,123 @@ void txrx_tests(){
 	test1();
 }
 
-int32_t i32min(int32_t a, int32_t b){
-	if(a < b){
-		return a;
-	}
-	return b;
-}
 
-int32_t i32max(int32_t a, int32_t b){
-	if(a > b){
-		return a;
+
+static int string_same(String* s1, String* s2){
+	if(s1->length != s2->length){
+		return 0;
 	}
-	return b;
+	return memcmp(s1->data, s2->data, s1->length) == 0;
 }
 
 
-int string_same_comparison(String** arr1, String** arr2, int n){
+Payload* new_payload(int target, String* msg, uint64_t ts_push){
+	Payload* payload = malloc(sizeof(Payload));
+	payload->target_peer = target;
+	payload->msg = msg;
+	payload->idd = rand64();
+	payload->ts_push = ts_push;
+	payload->ts_rcv = 0;
+	payload->push_retcode = -100;
+	return payload;
+}
+
+Payload* new_random_payload(int target, uint64_t ts_push){
+	String* msg = get_random_string(randint_u32(0, 172));
+	return new_payload(target, msg, ts_push);
+}
+
+void destroy_payload(Payload* payload){
+	destroy_string(payload->msg);
+	free(payload);
+}
+
+EtherFrame* new_eframe(SkyRadioFrame frame, uint64_t tx_start, uint64_t tx_end, int target){
+	EtherFrame* eframe = malloc(sizeof(EtherFrame));
+	eframe->frame = frame;
+	eframe->tx_start = tx_start;
+	eframe->tx_end = tx_end;
+	eframe->rx_ok = 1;
+	eframe->target_peer = target;
+	return eframe;
+}
+
+EtherFrameList* new_eframe_list(){
+	EtherFrameList* elist = malloc(sizeof(EtherFrameList));
+	elist->array = malloc(sizeof(EtherFrame*) * 4);
+	elist->n = 0;
+	return elist;
+}
+
+int eframe_list_append(EtherFrameList* elist, EtherFrame* etherFrame){
+	elist->array[elist->n] = etherFrame;
+	elist->n++;
+	elist->array = realloc(elist->array, sizeof(EtherFrame*) * (elist->n + 2));
+	return elist->n -1;
+}
+
+void eframe_list_pop(EtherFrameList* elist, int idx){
+	if(idx >= elist->n){
+		return;
+	}
+	elist->array[idx] = elist->array[elist->n];
+	elist->n--;
+	elist->array = realloc(elist->array, sizeof(EtherFrame*) * (elist->n + 2));
+}
+
+
+PayloadList* new_payload_list(){
+	PayloadList* plist = malloc(sizeof(PayloadList));
+	plist->array = malloc(sizeof(Payload*) * 4);
+	plist->n = 0;
+	return plist;
+}
+
+int payload_list_append(PayloadList* payloadList, Payload* payload){
+	payloadList->array[payloadList->n] = payload;
+	payloadList->n++;
+	payloadList->array = realloc(payloadList->array, sizeof(Payload*) * (payloadList->n + 2));
+	return payloadList->n -1;
+}
+
+void payload_list_mark_as_received(PayloadList* payloadList, void* msg, int msg_len, int target, uint64_t ts_now){
+	assert(msg_len >= 0);
+	String* ref_string = new_string(msg ,msg_len);
+	for (int i = 0; i < payloadList->n; ++i) {
+		Payload* pl = payloadList->array[i];
+		if(pl->ts_rcv > 0){
+			continue;
+		}
+		if(target != pl->target_peer){
+			continue;
+		}
+		if(string_same(ref_string, pl->msg)){
+			pl->ts_rcv = ts_now;
+			break;
+		}
+	}
+	destroy_string(ref_string);
+}
+
+int payload_list_count_unreceived(PayloadList* payloadList){
+	int unreceived = 0;
+	for (int i = 0; i < payloadList->n; ++i) {
+		Payload* pl = payloadList->array[i];
+		assert(pl->ts_push > pl->ts_rcv);
+		if(pl->ts_rcv == 0){
+			unreceived++;
+		}
+	}
+	return unreceived;
+}
+
+
+static int strings_same_comparison(String** arr1, String** arr2, int n){
 	for (int i = 0; i < n; ++i) {
 		String* s1 = arr1[i];
 		String* s2 = arr2[i];
-		if(s1->length != s2->length){
-			return 0;
-		}
-		int same = memcmp(s1->data, s2->data, s1->length);
-		if(same != 0){
+		int same = string_same(s1,s2);
+		if(!same){
 			return 0;
 		}
 	}
@@ -50,20 +212,23 @@ int string_same_comparison(String** arr1, String** arr2, int n){
 }
 
 
+static int roll_chance(double const chance){
+	int r = rand(); // NOLINT(cert-msc50-cpp)
+	double rd = (double)r;
+	double rM = (double)RAND_MAX;
+	double rr = rd/rM;
+	return rr < chance;
+}
+
+
+
 
 void test1(){
 	PRINTFF(0,"[TX-RX Test 1: basic case]\n");
 	int N = 200;
 	for (int i = 0; i < N; ++i) {
-		int a1 = randint_i32(0,1);
-		int a2 = randint_i32(0,1);
-		int a3 = randint_i32(0,1);
-		int a4 = randint_i32(0,1);
-		int a5 = randint_i32(0,1);
-		if(i % 1 == 0){
-			PRINTFF(0, "%d / %d \t\t(%d %d %d %d %d)\t",i,N,  a1,a2,a3,a4,a5);
-		}
-		test1_round(a1,a2,a3,a4, a5);
+
+		test1_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
@@ -72,186 +237,158 @@ void test1(){
 
 
 
-void instantiate_testjob(TestJob* job){
+
+void test1_round(){
 	SkyConfig* config1 = new_vanilla_config();
 	SkyConfig* config2 = new_vanilla_config();
-	config1->hmac.maximum_jump = job->max_jump;
-	config2->hmac.maximum_jump = job->max_jump;
-	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
-		TestJobVC *vcjob = &job->vcjobs[vc];
-		config1->vc[vc].require_authentication = vcjob->hmac_on1;
-		config2->vc[vc].require_authentication = vcjob->hmac_on2;
-		config1->array[vc].horizon_width = vcjob->horizon1;
-		config2->array[vc].horizon_width = vcjob->horizon2;
-		config1->array[vc].rcv_ring_len = vcjob->ring_len;
-		config1->array[vc].send_ring_len = vcjob->ring_len;
-		config2->array[vc].rcv_ring_len = vcjob->ring_len;
-		config2->array[vc].send_ring_len = vcjob->ring_len;
-	}
+	config1->identity[0] = 1;
+	config2->identity[0] = 2;
+
 	SkyHandle handle1 = new_handle(config1);
 	SkyHandle handle2 = new_handle(config2);
-	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc){
-		handle1->hmac->sequence_tx[vc] = wrap_hmac_sequence( job->vcjobs[vc].auth_seq_1to2 + job->vcjobs[vc].auth1_tx_shift);
-		handle1->hmac->sequence_rx[vc] = job->vcjobs[vc].auth_seq_2to1;
-		handle2->hmac->sequence_tx[vc] = wrap_hmac_sequence( job->vcjobs[vc].auth_seq_2to1 + job->vcjobs[vc].auth2_tx_shift);
-		handle2->hmac->sequence_rx[vc] = job->vcjobs[vc].auth_seq_1to2;
-		SkyArqRing* ring1 = handle1->arrayBuffers[vc];
-		SkyArqRing* ring2 = handle2->arrayBuffers[vc];
-		spin_to_seq(ring1, ring2, job->vcjobs[vc].arq_seq_1to2, 0);
-	}
-	job->handle1 = handle1;
-	job->handle2 = handle2;
-}
 
+	SkyRadioFrame* sendFrame = new_frame();
+	SkyRadioFrame* recvFrame = new_frame();
 
+	mac_shift_windowing(handle1->mac, rand()%12000);
+	mac_shift_windowing(handle2->mac, rand()%12000);
 
-void test1_round(int auth_on, int auth_misalign, int arq_on, int arq_misalign, int golay_on){
-	TestJob job;
-	job.max_jump = 35;
-	int64_t us1 = real_microseconds();
-	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
-	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		TestJobVC* vcjob = &job.vcjobs[i];
-		vcjob->ring_len 		= 28;
-		vcjob->arq_seq_1to2 	= randint_i32(0, ARQ_SEQUENCE_MODULO-1);
-		vcjob->arq_seq_2to1 	= randint_i32(0, ARQ_SEQUENCE_MODULO-1);
-		vcjob->horizon1 		= randint_i32(3, 16);
-		vcjob->horizon2 		= randint_i32(3, 16);
-		vcjob->recall1 			= randint_i32(3, 16);
-		vcjob->recall2 			= randint_i32(3, 16);
-		vcjob->auth_seq_1to2 	= randint_i32(0, HMAC_CYCLE_LENGTH-1);
-		vcjob->auth_seq_2to1 	= randint_i32(0, HMAC_CYCLE_LENGTH-1);
-		vcjob->arq_on1 			= arq_on > 0; //randint_i32(0, 3) > 0;
-		vcjob->arq_on2 			= arq_on > 0;
-		vcjob->hmac_on1 		= auth_on > 0; //randint_i32(0, 3) > 0;
-		vcjob->hmac_on2 		= auth_on > 0; //randint_i32(0, 3) > 0;
-		vcjob->auth1_tx_shift 	= (auth_misalign && (i==vc)) ? randint_i32(job.max_jump+1, job.max_jump*12) : randint_i32(0, job.max_jump);
-		vcjob->auth2_tx_shift 	= (auth_misalign && (i==vc)) ? randint_i32(job.max_jump+1, job.max_jump*12) : randint_i32(0, job.max_jump);
-		vcjob->tx_ahead1 		= 0;
-	}
-	instantiate_testjob(&job);
-	int64_t us2 = real_microseconds();
+	TXRXJob job;
+	job.peer1.handle = handle1;
+	job.peer2.handle = handle1;
+	job.peer1.radio_state = STATE_RX;
+	job.peer2.radio_state = STATE_RX;
+	job.peer1.under_send = NULL;
+	job.peer2.under_send = NULL;
+	job.peer1.tx_end = 0;
+	job.peer2.tx_end = 0;
+	job.peer1.pl_rate 	= 1.0; //param
+	job.peer2.pl_rate 	= 1.0; //param
+	job.now_ms = 0;
+	job.corrupt_rate	= 0.00; //param
+	job.loss_rate 		= 0.00; //param
+	job.lag_ms 			= 3; //param
+	job.byterate 		= 2100.0; //param
+	job.payloadList 	= new_payload_list();
+	job.inEther 		= new_eframe_list();
+	job.lostFrames 		= new_eframe_list();
+	job.receivedFrames 	= new_eframe_list();
 
-	SkyHandle handle1 = job.handle1;
-	SkyHandle handle2 = job.handle2;
-	uint8_t* tgt = malloc(1000);
-	SkyRadioFrame *sendFrame = new_frame();
-	SkyRadioFrame *rcvFrame = new_frame();
+	uint64_t N_RUN = 1000 * 60 * 5;
+	N_RUN = 2;
 
-	String* sent_payloads[800];
-	String* received_payloads[800];
-	//int received_sequences[800];
-	int n_sent = 0;
-	int n_received = 0;
-
-	int ama = 0;
-	if(auth_on && auth_misalign){
-		ama = 1;
-	}
-	int ahead_limit = i32min(job.vcjobs[vc].horizon2 -ama, job.vcjobs[vc].recall1 -(1 + ama));
-	int tx_ahead = randint_i32(0, ahead_limit);
-	if (arq_misalign){
-		int x = job.vcjobs[vc].horizon2;
-		tx_ahead = randint_i32(x+1, x + 19);
-	}
-	int64_t us3 = real_microseconds();
-	for (int i = 0; i < tx_ahead; ++i) {
-		String* s = get_random_string(randint_i32(0,150) );
-		sent_payloads[n_sent] = s;
-		int seq;
-		skyArray_push_packet_to_send(job.handle1->arrayBuffers[vc], s->data, s->length);
-		skyArray_read_packet_for_tx(job.handle1->arrayBuffers[vc], tgt, &seq, 1);
-		n_sent++;
-	}
-	int64_t us4 = real_microseconds();
-	SkyArqRing* ring1 = job.handle1->arrayBuffers[vc];
-	SkyArqRing* ring2 = job.handle2->arrayBuffers[vc];
-
-	int N_SEND = 100;
-	for (int i = 0; i < N_SEND; ++i) {
-		if(skyArray_count_packets_to_tx(ring1, 1) == 0){
-			String* s = get_random_string(randint_i32(0, 150));
-			sent_payloads[n_sent] = s;
-			n_sent++;
-			skyArray_push_packet_to_send(ring1, s->data, s->length);
+	for (uint64_t i = 0; i < N_RUN; ++i) {
+		step_forward(1, &job);
+		step_forward(2, &job);
+		if( i % 1000 == 0){
+			print_job_status(&job);
 		}
 
-		sky_tx(handle1, sendFrame, golay_on, 12); //This does NOT test MAC functionality
-		memcpy(rcvFrame, sendFrame, sizeof(SkyRadioFrame));
-		sky_rx(handle2, rcvFrame, golay_on);
-		while (skyArray_count_readable_rcv_packets(ring2)){
-			int seq = -1;
-			int read = skyArray_read_next_received(ring2, tgt, &seq);
-			//received_sequences[n_received] = seq;
-			received_payloads[n_received] = new_string(tgt, read);
-			n_received++;
-		}
-		//PRINTFF(0, "n_received: %d \n\n", n_received);
-		sky_tx(handle2, sendFrame, golay_on, 12);//This does NOT test MAC functionality
-		memcpy(rcvFrame, sendFrame, sizeof(SkyRadioFrame));
-		sky_rx(handle1, rcvFrame, golay_on);
-
-	}
-	int64_t us5 = real_microseconds();
-	//PRINTFF(0, "tx_ahead:  %d\n", tx_ahead);
-	//PRINTFF(0, "recall 1:  %d\n", job.vcjobs[vc].recall1);
-	//PRINTFF(0, "horizon 2: %d\n", job.vcjobs[vc].horizon2);
-	//PRINTFF(0, "auth1 shift: %d\n", job.vcjobs[vc].auth1_tx_shift);
-
-	for (int i = 0; i < 15; ++i) {
-		//PRINTFF(0, " %d", sent_payloads[i]->length);
-	}
-	//PRINTFF(0,"\n");
-	for (int i = 0; i < 15; ++i) {
-		//PRINTFF(0, " %d", received_payloads[i]->length);
-	}
-	//PRINTFF(0,"\n");
-
-
-
-	if(!arq_on){
-		int same = string_same_comparison(&sent_payloads[tx_ahead+ama], &received_payloads[0], 25);
-		//PRINTFF(0,"\t+%d    %d     %d\n",n_received, (N_SEND-ama), vc);
-		assert(n_received == N_SEND-ama);
-		assert(same);
-	}
-	if(arq_on && (!arq_misalign)){
-		int same = string_same_comparison(&sent_payloads[0], &received_payloads[0], 25);
-		//PRINTFF(0,"\t-%d    %d    %d\n",n_received, (N_SEND-ama), vc);
-		assert(n_received == N_SEND-ama);
-		assert(same);
-	}
-	if(arq_on && arq_misalign){
-		int same = string_same_comparison(&sent_payloads[tx_ahead+ama], &received_payloads[0], 25);
-		//PRINTFF(0,"\t=%d    %d     %d\n",n_received, (N_SEND-ama), vc);
-		assert(n_received == (N_SEND-ama));
-		assert(same);
+		job.now_ms++;
 	}
 
-
-	for (int i = 0; i < n_sent; ++i) {
-		destroy_string(sent_payloads[i]);
-	}
-	for (int i = 0; i < n_received; ++i) {
-		destroy_string(received_payloads[i]);
-	}
-	int64_t us6 = real_microseconds();
-
-	int64_t dt1 = us2-us1;
-	int64_t dt2 = us3-us2;
-	int64_t dt3 = us4-us3;
-	int64_t dt4 = us5-us4;
-	int64_t dt5 = us6-us5;
-	PRINTFF(0, "\t %ld  %ld  %ld  %ld  %ld\n", dt1, dt2, dt3, dt4, dt5);
-
-
-
-
-	free(tgt);
-	destroy_frame(rcvFrame);
+	destroy_config(config1);
+	destroy_config(config2);
+	destroy_frame(recvFrame);
 	destroy_frame(sendFrame);
-	destroy_config(handle1->conf);
-	destroy_config(handle2->conf);
 	destroy_handle(handle1);
 	destroy_handle(handle2);
 }
+
+static void step_forward(int which, TXRXJob* job){
+	uint8_t tgt[1000];
+	int target	  = (which == 1) ? 2 : 1;
+	JobPeer* peer = (which == 1) ? &job->peer1 : &job->peer2;
+
+
+	//generate new pl to send queue
+	if(roll_chance(peer->pl_rate/1000.0)){
+		Payload* pl = new_random_payload(target, job->now_ms);
+		int push_ret = skyArray_push_packet_to_send(peer->handle->arrayBuffers[0], pl->msg->data, pl->msg->length);
+		pl->push_retcode = push_ret;
+		payload_list_append(job->payloadList, pl);
+	}
+
+
+	//receive (or miss) transmissions from ether, and collect payloads.
+	for (int i = 0; i < job->inEther->n; ++i) {
+		EtherFrame* eframe = job->inEther->array[i];
+		//targeted to this peer?
+		if(eframe->target_peer != which){
+			continue;
+		}
+		assert(job->inEther->n < 50);
+		assert(eframe->tx_start <= job->now_ms);
+		assert((eframe->tx_end + job->lag_ms) >= job->now_ms);
+		//even if not yet ready, check if device will miss this by speaking over the packet.
+		int in_reception = ((eframe->tx_start + job->lag_ms) <= job->now_ms) && ((eframe->tx_end + job->lag_ms) >= job->now_ms);
+		if(in_reception && (peer->radio_state == STATE_TX)){
+			eframe->rx_ok = 0;
+		}
+		//at end just now?
+		int arrives_now = (eframe->tx_end + job->lag_ms) == job->now_ms;
+		if(!arrives_now){
+			continue;
+		}
+		if(eframe->rx_ok){
+			eframe->frame.rx_time_ms = job->now_ms;
+			sky_rx(peer->handle, &eframe->frame, 1);
+			if(skyArray_count_readable_rcv_packets(peer->handle->arrayBuffers[0])){
+				int seq = -1;
+				int red = skyArray_read_next_received(peer->handle->arrayBuffers[0], tgt, &seq);
+				payload_list_mark_as_received(job->payloadList, tgt, red, which, job->now_ms);
+			}
+			eframe_list_append(job->receivedFrames, eframe);
+			eframe_list_pop(job->inEther, i);
+		}
+		else {
+			eframe_list_append(job->missedFrames, eframe);
+			eframe_list_pop(job->inEther, i);
+		}
+	}
+
+
+	//transmit new packet if sky_tx says so. Also corrup and maybe lose entirely.
+	int r_tx = sky_tx(peer->handle, &job->frame, 1, job->now_ms);
+	if(r_tx){
+		uint64_t tx_end = job->now_ms + ((job->frame.length * 1000) / job->byterate) + 1;
+		EtherFrame* eframe = new_eframe(job->frame, job->now_ms, tx_end, target);
+		corrupt_bytearray(eframe->frame.raw, eframe->frame.length, job->corrupt_rate);
+		int lost = roll_chance(job->loss_rate);
+		if(lost){
+			eframe_list_append(job->inEther, eframe);
+		} else{
+			eframe_list_append(job->lostFrames, eframe);
+		}
+		peer->radio_state = STATE_TX;
+		peer->tx_end = tx_end;
+	}
+
+	if(peer->radio_state == STATE_TX){
+		assert(peer->tx_end >= job->now_ms);
+	}
+	if((peer->radio_state == STATE_TX) && (peer->tx_end == job->now_ms)){
+		peer->radio_state = STATE_RX;
+	}
+}
+
+
+
+static void print_job_status(TXRXJob* job){
+	PRINTFF(0, "\n=====================================\n");
+	PRINTFF(0,"Frames created: %d\n", job->inEther->n + job->lostFrames->n + job->receivedFrames->n);
+	PRINTFF(0,"Frames lost: %d\n", job->lostFrames->n);
+	PRINTFF(0,"Frames in ether: %d\n", job->inEther->n);
+	PRINTFF(0,"Frames received: %d\n", job->receivedFrames->n);
+	PRINTFF(0,"Payloads created: %d\n", job->payloadList->n);
+	int unchecked = payload_list_count_unreceived(job->payloadList);
+	PRINTFF(0,"Payloads acked: %d\n", job->payloadList->n - unchecked);
+	PRINTFF(0,"Payloads not acked: %d\n", unchecked);
+	PRINTFF(0, "=====================================\n");
+}
+
+
+
+
+
+

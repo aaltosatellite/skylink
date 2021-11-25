@@ -11,7 +11,6 @@
 #include "skylink/hmac.h"
 #include "skylink/utilities.h"
 
-#define UTILITY_FRAMES_PER_WINDOW	2
 
 
 void sky_tx_track_tdd_state(SkyHandle self, int can_send){

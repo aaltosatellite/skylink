@@ -14,10 +14,10 @@
 
 
 
-#define ARQ_TIMEOUT_MS					10000 //todo: this should be in config struct?
-#define ARQ_STATE_OFF		0
-#define ARQ_STATE_IN_INIT	1
-#define ARQ_STATE_ON		2
+#define ARQ_TIMEOUT_MS			10000 //todo: this should be in config struct?
+#define ARQ_STATE_OFF			0
+#define ARQ_STATE_IN_INIT		1
+#define ARQ_STATE_ON			2
 
 
 

@@ -19,9 +19,9 @@ int main() {
 	packet_tests();
 	fec_test();
 	hmac_tests();
-	ring_tests(12);
-	arq_tests(12);
-	arq_tests2(12);
+	ring_tests(15);
+	arq_tests(15);
+	arq_tests2(15);
 	//txrx_tests();
 }
 

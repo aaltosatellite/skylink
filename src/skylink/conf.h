@@ -15,7 +15,8 @@
 //Physical layer radio frame structure.
 #define SKY_NUM_VIRTUAL_CHANNELS  		4
 
-
+//Number of frames justified to send only due to protocol control reasons (in absence of payloads).
+#define UTILITY_FRAMES_PER_WINDOW		2
 
 
 

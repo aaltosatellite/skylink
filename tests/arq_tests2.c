@@ -28,6 +28,9 @@ void atest1(int load){
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
+/*
+ * This is a rather excellent battery of tests. If this passes reliably, not too many things can be wrong.
+ */
 void atest1_cycle(){
 	uint8_t tgt[1000];
 	String* msgs[ARQ_MAXIMUM_HORIZON+10];
@@ -339,6 +342,7 @@ void atest1_cycle(){
 				if( (sequence_wrap(recall_seq - new_seq_send0) < new_n_in_tail) && (new_n_in_tail != 0) ){
 					//PRINTFF(0,"I1 ");
 					assert(array->sendRing->resend_count > 0);
+					assert(x_in_u16_array(recall_seq, array->sendRing->resend_list, array->sendRing->resend_count) > -1);
 					ok_recall_s++;
 				}
 
@@ -351,6 +355,7 @@ void atest1_cycle(){
 					if( (sequence_wrap(s - new_seq_send0) < new_n_in_tail) && (new_n_in_tail != 0) ){
 						//PRINTFF(0,"I2 ");
 						assert(array->sendRing->resend_count > 0);
+						assert(x_in_u16_array(s, array->sendRing->resend_list, array->sendRing->resend_count) > -1);
 						ok_recall_s++;
 					}
 				}
