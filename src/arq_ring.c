@@ -205,7 +205,6 @@ int skyArray_push_rx_packet(SkyArqRing* array, void* src, int length, int sequen
 	int r = rcvRing_push_rx_packet(array->rcvRing, array->elementBuffer, src, length, sequence);
 	if(r > 0){ //head advanced at least by 1
 		array->last_rx_ms = now_ms;
-		return r;
 	}
 	return r;
 }
@@ -242,7 +241,7 @@ int skyArray_content_to_send(SkyArqRing* array, int32_t now_ms, uint16_t frames_
 
 	// ARQ IN INIT -----------------------------------------------------------------------------------------------------
 	if(state0 == ARQ_STATE_IN_INIT){
-		if (frames_sent_in_this_vc_window < 2) { //todo: parametrize
+		if (frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW) {
 			return 1;
 		}
 	}
@@ -254,7 +253,7 @@ int skyArray_content_to_send(SkyArqRing* array, int32_t now_ms, uint16_t frames_
 			return 1;
 		}
 
-		if((frames_sent_in_this_vc_window < 2) && (rcvRing_get_horizon_bitmap(array->rcvRing) || array->need_recall)){
+		if((frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW) && (rcvRing_get_horizon_bitmap(array->rcvRing) || array->need_recall)){
 			return 1;
 		}
 
@@ -262,7 +261,7 @@ int skyArray_content_to_send(SkyArqRing* array, int32_t now_ms, uint16_t frames_
 			return 1;
 		}
 
-		int b0 = frames_sent_in_this_vc_window < 2; //todo: paramterize me!
+		int b0 = frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW;
 		int b1 = wrap_time_ms(now_ms - array->last_ctrl_send) > (ARQ_TIMEOUT_MS/4);
 		int b2 = wrap_time_ms(now_ms - array->last_tx_ms) > (ARQ_TIMEOUT_MS/4);
 		int b3 = wrap_time_ms(now_ms - array->last_rx_ms) > (ARQ_TIMEOUT_MS/4);
@@ -305,7 +304,7 @@ int skyArray_fill_frame(SkyArqRing* array, SkyRadioFrame* frame, int32_t now_ms,
 
 	// ARQ IN INIT -----------------------------------------------------------------------------------------------------
 	if(state0 == ARQ_STATE_IN_INIT){
-		if(frames_sent_in_this_vc_window < 2){ //todo: paramterize me!
+		if(frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW){
 			sky_packet_add_extension_arq_handshake(frame, ARQ_STATE_IN_INIT, array->arq_session_identifier);
 			return 1;
 		}
@@ -322,13 +321,13 @@ int skyArray_fill_frame(SkyArqRing* array, SkyRadioFrame* frame, int32_t now_ms,
 			ret = 1;
 		}
 		uint16_t mask = rcvRing_get_horizon_bitmap(array->rcvRing);
-		if((frames_sent_in_this_vc_window < 2) && (mask || array->need_recall)){
+		if((frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW) && (mask || array->need_recall)){
 			sky_packet_add_extension_arq_request(frame, array->rcvRing->head_sequence, mask);
 			array->need_recall = 0;
 			ret = 1;
 		}
 
-		int b0 = frames_sent_in_this_vc_window < 2; //todo: paramterize me!
+		int b0 = frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW;
 		int b1 = wrap_time_ms(now_ms - array->last_ctrl_send) > (ARQ_TIMEOUT_MS/4);
 		int b2 = wrap_time_ms(now_ms - array->last_tx_ms) > (ARQ_TIMEOUT_MS/4);
 		int b3 = wrap_time_ms(now_ms - array->last_rx_ms) > (ARQ_TIMEOUT_MS/4);
@@ -381,9 +380,6 @@ void skyArray_process_content(SkyArqRing* array,
 	if(state0 == ARQ_STATE_OFF){
 		skyArray_process_content_arq_off(array, pl, len_pl);
 	}
-	//if(state0 == ARQ_STATE_IN_INIT){
-	//	skyArray_process_content_arq_init(array, pl, len_pl, exts, now_ms);
-	//}
 	if(state0 == ARQ_STATE_ON){
 		skyArray_process_content_arq_on(array, pl, len_pl, exts, now_ms);
 	}
@@ -391,21 +387,12 @@ void skyArray_process_content(SkyArqRing* array,
 }
 
 static void skyArray_process_content_arq_off(SkyArqRing* array, void* pl, int len_pl){
-	//SkyPacketExtension* ext_seq = exts[0];
-	//SkyPacketExtension* ext_ctrl = exts[1];
-	//SkyPacketExtension* ext_rrequest = exts[2];
 	if (len_pl >= 0){
 		skyArray_push_rx_packet_monotonic(array, pl, len_pl);
 		return;
 	}
 }
-/*
-static void skyArray_process_content_arq_init(SkyArqRing* array, void* pl, int len_pl, SkyPacketExtension** exts, int32_t now_ms){
-	//SkyPacketExtension* ext_seq = exts[0];
-	//SkyPacketExtension* ext_ctrl = exts[1];
-	//SkyPacketExtension* ext_rrequest = exts[3];
-}
-*/
+
 
 static void skyArray_process_content_arq_on(SkyArqRing* array, void* pl, int len_pl, SkyPacketExtension** exts, int32_t now_ms){
 	SkyPacketExtension* ext_seq = exts[0];

@@ -57,7 +57,6 @@ add_executable(zmq_peer
         crc/crc_algos.c
         tools/tools.c
         tst_utilities.c
-        tx_rx_cycle_test.c
         tx_rx_zmq.c
         )
 
@@ -81,6 +80,4 @@ add_executable(alloc_test
         crc/crc_algos.c
         tools/tools.c
         tst_utilities.c
-        tx_rx_cycle_test.c
-        tx_rx_zmq.c
         )

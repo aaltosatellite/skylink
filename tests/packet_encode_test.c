@@ -100,8 +100,8 @@ static void test1_round(){
 
 
 	int extension_arq_rrequest = 0;
-	int rr_sequence = randint_i32(0,190);
-	uint8_t mask = randint_i32(0,0xFFFF);
+	int rr_sequence = randint_i32(0,65000);
+	uint16_t mask = randint_i32(0,0xFFFF);
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_arq_rrequest = 1;
@@ -120,13 +120,13 @@ static void test1_round(){
 
 	assert(n_extensions <= 7);
 	if(n_extensions == 7){
-		assert(available_payload_space(sframe) == 173);
+		assert(available_payload_space(sframe) == SKY_MAX_PAYLOAD_LEN);
 	}
 	if(n_extensions == 0){
 		assert(available_payload_space(sframe) == (RS_MSGLEN - (SKY_HMAC_LENGTH + EXTENSION_START_IDX)) );
 	}
 
-	int payload_len = randint_i32(0,173); //175 seems to be the max with this setup...
+	int payload_len = randint_i32(0, SKY_MAX_PAYLOAD_LEN); //173 seems to be the max with this setup...
 	uint8_t* pl = x_alloc(payload_len);
 	fillrand(pl, payload_len);
 	int r = sky_packet_extend_with_payload(sframe, pl, payload_len);

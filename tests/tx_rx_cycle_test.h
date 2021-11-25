@@ -6,8 +6,6 @@
 #define SKYLINK_CMAKE_TX_RX_CYCLE_TEST_H
 
 
-
-
 void txrx_tests();
 
 

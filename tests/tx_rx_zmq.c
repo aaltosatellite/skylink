@@ -43,6 +43,8 @@ typedef struct skylink_peer {
 	void* tx_socket;
 	void* pl_write_socket;
 	void* pl_read_socket;
+
+	int failed_send_pushes;
 } SkylinkPeer;
 
 
@@ -74,6 +76,7 @@ SkylinkPeer* new_peer(int ID, int tx_port, int rx_port, int pl_write_port, int p
 	char url[64];
 	SkylinkPeer* peer = malloc(sizeof(SkylinkPeer));
 	pthread_mutex_init(&peer->mutex, NULL);
+	peer->failed_send_pushes = 0;
 	peer->ID = ID;
 	peer->physicalParams.relative_speed = relative_speed;
 	peer->physicalParams.send_speed_bps = send_speed_bps;
@@ -169,7 +172,10 @@ void* write_to_send_cycle(void* arg){
 				quick_exit(2);
 			}
 			pthread_mutex_lock(&peer->mutex);    //lock
-			skyArray_push_packet_to_send(peer->self->arrayBuffers[vc], &tgt[5], r - 5);
+			int ret = skyArray_push_packet_to_send(peer->self->arrayBuffers[vc], &tgt[5], r - 5);
+			if(ret < 0){
+				peer->failed_send_pushes++;
+			}
 			PRINTFF(0, "#1 payload written.\n");
 			pthread_mutex_unlock(&peer->mutex);    //unlock
 		}
@@ -191,8 +197,12 @@ _Noreturn void* tx_cycle(void* arg){
 	pthread_mutex_lock(&peer->mutex); 	//lock
 	while (1){
 		cycle++;
-		if(cycle % 100 == 0){
-			PRINTFF(0, "s Cycle %ld.\n", cycle);
+		if(cycle % 1000 == 0){
+			PRINTFF(0,"==========================\n");
+			PRINTFF(0,"Identifier: %d\n", peer->self->arrayBuffers[0]->arq_session_identifier);
+			PRINTFF(0,"Failed send pushed: %d \n", peer->failed_send_pushes);
+			PRINTFF(0,"==========================\n");
+			//PRINTFF(0, "s Cycle %ld.\n", cycle);
 		}
 
 
@@ -252,7 +262,7 @@ void* ether_cycle(void* arg){
 	while (1){
 		cycle++;
 		if(cycle % 50 == 0){
-			PRINTFF(0, "e Cycle %ld.\n", cycle);
+			//PRINTFF(0, "e Cycle %ld.\n", cycle);
 		}
 
 		int r = zmq_recv(peer->rx_socket, tgt, 1000, 0);
@@ -262,19 +272,19 @@ void* ether_cycle(void* arg){
 				PRINTFF(0,"\n=== ERROR! TOO ONG RX-PACKET! (%d) ===\n",r);
 				quick_exit(3);
 			}
-			int64_t us1 = real_microseconds();
+			//int64_t us1 = real_microseconds();
 			pthread_mutex_lock(&peer->mutex); 	//lock
-			int64_t us2 = real_microseconds();
-			PRINTFF(0,"#3   %d bytes rx'ed.  (locked in %ld us)\n", r, us2-us1);
+			//int64_t us2 = real_microseconds();
+			//PRINTFF(0,"#3   %d bytes rx'ed.  (locked in %ld us)\n", r, us2-us1);
 			if(peer->physicalParams.RADIO_MODE == MODE_RX){
 				memcpy(peer->rcvFrame->raw, &tgt[4], r-4);
 				peer->rcvFrame->length = r-4;
 				peer->rcvFrame->rx_time_ms = rget_time_ms();
 				int rxr = sky_rx(peer->self, peer->rcvFrame, 1);
-				PRINTFF(0,"#3.5 bytes successfully rx'ed. rx ret: %d\n", rxr);
+				PRINTFF(0,"#3 %d bytes successfully rx'ed. rx ret: %d\n", r, rxr);
 				peer_packets_from_ring_to_zmq(peer);
 			} else {
-				PRINTFF(0,"#3.6 >>>>>>>>>>>>>>>>>> !MISSED RX PACKET! <<<<<<<<<<<<<<<<<<<<<<<\n");
+				PRINTFF(0,"#3.2 >>>>>>>>>>>>>>>>>> !MISSED RX PACKET! <<<<<<<<<<<<<<<<<<<<<<<\n");
 			}
 			pthread_mutex_unlock(&peer->mutex); //unlock
 		}

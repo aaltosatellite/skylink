@@ -5,7 +5,7 @@
 #include "tst_utilities.h"
 
 
-uint8_t arr_[16] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+uint8_t arr_[16] = {83, 101, 105, 122, 101, 32, 84, 104, 101, 32, 78, 105, 103, 104, 116, 33};
 
 SkyConfig* new_vanilla_config(){
 	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
@@ -33,7 +33,7 @@ SkyConfig* new_vanilla_config(){
 	config->array[3].element_count 		= 800;
 	config->array[3].element_size  		= 36;
 
-	config->hmac.key_length 			= 8;
+	config->hmac.key_length 			= 16;
 	config->hmac.maximum_jump 			= 24;
 	memcpy(config->hmac.key, arr_, config->hmac.key_length);
 

@@ -18,6 +18,8 @@
 
 //extensions start at this byte index. At the same time the minimum length of a healthy frame.
 #define EXTENSION_START_IDX				10
+// The maximum payload size that fits a worst case frame with all extensions.
+#define SKY_MAX_PAYLOAD_LEN				173
 #define SKY_PLAIN_FRAME_MIN_LENGTH		EXTENSION_START_IDX
 #define SKY_ENCODED_FRAME_MIN_LENGTH	(EXTENSION_START_IDX + RS_PARITYS)
 #define SKY_FRAME_MAX_LEN       		0x100
