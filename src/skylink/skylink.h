@@ -41,6 +41,7 @@
 #define SKY_RET_EXCESSIVE_HMAC_JUMP 		(-33)
 #define SKY_RET_FRAME_TOO_LONG_FOR_HMAC 	(-34)
 #define SKY_RET_FRAME_TOO_SHORT_FOR_HMAC 	(-35)
+#define SKY_RET_HMAC_BENIGN_OFFSET 			30
 
 // PACKET
 #define SKY_RET_NO_SPACE_FOR_PAYLOAD   		(-40)
@@ -93,6 +94,20 @@ struct sky_hmac {
 typedef struct sky_hmac SkyHMAC;
 
 
+
+
+
+typedef struct {
+
+
+} SkylinkChannelState;
+
+/* A state information struct provided for higher level software stack. */
+typedef struct {
+	SkylinkChannelState v_channels[SKY_NUM_VIRTUAL_CHANNELS];
+
+
+} SkylinkState;
 
 
 

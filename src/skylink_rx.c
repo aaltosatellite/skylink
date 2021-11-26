@@ -85,10 +85,10 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 			return SKY_RET_AUTH_MISSING;
 		}
 		int ret = sky_hmac_check_authentication(self, frame);
+		if (ret != 0){ //this may be a failure, OR a "SKY_RET_HMAC_BENIGN_OFFSET"
+			self->hmac->vc_enfocement_need[frame->vc] = 1;
+		}
 		if (ret < 0){
-			if(ret == SKY_RET_EXCESSIVE_HMAC_JUMP){
-				self->hmac->vc_enfocement_need[frame->vc] = 1;
-			}
 			return ret;
 		}
 	}

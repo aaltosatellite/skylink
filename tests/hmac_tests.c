@@ -88,11 +88,17 @@ static void test1_round(){
 	int r1 = sky_hmac_check_authentication(self2, rframe);
 
 
-	if((shift_tx <= config1->hmac.maximum_jump) && (!corrupt_pl) && (!corrupt_key)){
+	if((shift_tx <= config1->hmac.maximum_jump / 2) && (!corrupt_pl) && (!corrupt_key)){
 		assert(r1 == 0);
 		assert((int)rframe->length == length);
 		//assert(rframe->auth_verified == 1);
-	} else {
+	}
+	if((shift_tx > config1->hmac.maximum_jump / 2) && (shift_tx <= config1->hmac.maximum_jump) && (!corrupt_pl) && (!corrupt_key)){
+		assert(r1 == SKY_RET_HMAC_BENIGN_OFFSET);
+		assert((int)rframe->length == length);
+		//assert(rframe->auth_verified == 1);
+	}
+	if((shift_tx > config1->hmac.maximum_jump) || corrupt_pl || corrupt_key) {
 		assert(r1 < 0);
 		assert((int)rframe->length == length + SKY_HMAC_LENGTH);
 		//assert(rframe->auth_verified == 0);

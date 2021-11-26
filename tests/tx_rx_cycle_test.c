@@ -265,7 +265,10 @@ void test1_round(){
 	mac_shift_windowing(handle1->mac, rand()%3200);
 	mac_shift_windowing(handle2->mac, rand()%3200);
 
-
+	handle1->hmac->sequence_tx[0] = randint_i32(0, HMAC_CYCLE_LENGTH-1);
+	handle1->hmac->sequence_rx[0] = randint_i32(0, HMAC_CYCLE_LENGTH-1);
+	handle2->hmac->sequence_tx[0] = randint_i32(0, HMAC_CYCLE_LENGTH-1);
+	handle2->hmac->sequence_rx[0] = randint_i32(0, HMAC_CYCLE_LENGTH-1);
 
 	TXRXJob job;
 	job.peer1.handle = handle1;
@@ -282,7 +285,7 @@ void test1_round(){
 	job.corrupt_rate	= 0.05; 	//param
 	job.loss_rate 		= 0.05; 	//param
 	job.lag_ms 			= 4; 		//param
-	job.byterate 		= 4100.0; 	//param
+	job.byterate 		= 3100.0; 	//param
 	job.payloadList1 	= new_payload_list();
 	job.payloadList2 	= new_payload_list();
 	job.inEther 		= new_eframe_list();
@@ -324,6 +327,18 @@ void test1_round(){
 	destroy_handle(handle2);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
 static void step_forward(int which, TXRXJob* job){
 	uint8_t tgt[1000];
 	int target	  = (which == 1) ? 2 : 1;
@@ -332,9 +347,8 @@ static void step_forward(int which, TXRXJob* job){
 	PayloadList* peers_plList = (which == 1) ? job->payloadList2 : job->payloadList1;
 
 
-
 	//generate new pl to send queue
-	if(roll_chance(peer->pl_rate/1000.0) && !skyArray_send_buffer_is_full(peer->handle->arrayBuffers[0])){
+	if((job->now_ms > 4000) && roll_chance(peer->pl_rate/1000.0) && !skyArray_send_buffer_is_full(peer->handle->arrayBuffers[0])){
 		Payload* pl = new_random_payload(target, job->now_ms);
 		int push_ret = skyArray_push_packet_to_send(peer->handle->arrayBuffers[0], pl->msg->data, pl->msg->length);
 		assert(push_ret != RING_RET_RING_FULL);
@@ -343,6 +357,19 @@ static void step_forward(int which, TXRXJob* job){
 		payload_list_append(plList, pl);
 	}
 
+	if(job->now_ms > 4500){
+		assert(job->peer1.handle->arrayBuffers[0]->arq_state_flag == ARQ_STATE_ON);
+		assert(job->peer2.handle->arrayBuffers[0]->arq_state_flag == ARQ_STATE_ON);
+		int hmac_diff1 = job->peer2.handle->hmac->sequence_tx[0] - job->peer1.handle->hmac->sequence_rx[0];
+		int hmac_diff2 = job->peer2.handle->hmac->sequence_rx[0] - job->peer1.handle->hmac->sequence_tx[0];
+		hmac_diff1 = hmac_diff1 * hmac_diff1;
+		hmac_diff2 = hmac_diff2 * hmac_diff2;
+		if((hmac_diff1 > 50) || (hmac_diff2 > 50)){
+			PRINTFF(0,"HMAC DIFFS : %d  %d !\n", hmac_diff1, hmac_diff2);
+		}
+		assert(hmac_diff1 < 52);
+		assert(hmac_diff2 < 52);
+	}
 
 	//receive (or miss) transmissions from ether, and collect payloads.
 	int i = -1;
@@ -354,7 +381,7 @@ static void step_forward(int which, TXRXJob* job){
 			continue;
 		}
 
-		assert(job->inEther->n < 50);
+		assert(job->inEther->n < 60);
 		assert(eframe->tx_start <= job->now_ms);
 		assert((eframe->tx_end + job->lag_ms) >= job->now_ms);
 		//even if not yet ready, check if device will miss this by speaking over the packet.
@@ -415,6 +442,8 @@ static void step_forward(int which, TXRXJob* job){
 		peer->radio_state = STATE_RX;
 	}
 }
+
+
 
 
 
