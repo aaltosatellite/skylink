@@ -7,7 +7,6 @@
 #include "packet_encode_test.h"
 #include "hmac_tests.h"
 #include "fec_test.h"
-#include "tx_rx_cycle_test.h"
 #include "tools/tools.h"
 #include "arq_tests.h"
 #include "arq_tests2.h"
@@ -20,9 +19,8 @@ int main() {
 	fec_test();
 	hmac_tests();
 	ring_tests(15);
-	arq_tests(15);
-	arq_tests2(15);
-	//txrx_tests();
+	arq_tests(21);
+	arq_tests2(21);
 }
 
 

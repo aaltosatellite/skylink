@@ -295,10 +295,10 @@ void* ether_cycle(void* arg){
 
 
 
-void tx_rx_zmq_test(int argc, char *argv[]){
+int main(int argc, char *argv[]){
 	if(argc != 2){
 		PRINTFF(0,"INVALID ARGUMENTS (%d)!\n", argc);
-		return;
+		return -1;
 	}
 	int ID = argv[1][0] - 48;
 	PRINTFF(0, "Starting peer cycle with ID=%d \n",ID);
@@ -316,5 +316,5 @@ void tx_rx_zmq_test(int argc, char *argv[]){
 	for (int i = 0; i < 10000; ++i) {
 		sleepms(1000);
 	}
-
+	return 0;
 }

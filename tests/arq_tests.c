@@ -263,7 +263,7 @@ void arq_test2_cycle(){
 		int b1 = wrap_time_ms(now_ms - ts_send) > ARQ_TIMEOUT_MS/4;
 		int b2 = wrap_time_ms(now_ms - ts_recv) > ARQ_TIMEOUT_MS/4;
 		int b3 = wrap_time_ms(now_ms - ts_last_ctrl) > ARQ_TIMEOUT_MS/4;
-		if(b0 && (b1 || b2 || b3)){
+		if((b0 && (b1 || b2 || b3)) || (frame->flags & SKY_FLAG_HAS_PAYLOAD)){
 			assert(extArqCtrl != NULL);
 			assert(extArqCtrl->ARQCtrl.tx_sequence == seq1);
 			if(new_pl && (!recalled)){

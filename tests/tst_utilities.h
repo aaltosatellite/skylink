@@ -58,8 +58,12 @@ void populate_horizon(SkyArqRing* sring, SkyArqRing* rring, int final_tx_head_se
 
 SkyPacketExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_type);
 
+int roll_chance(double const chance);
+
 uint8_t get_other_byte(uint8_t c);
 
 void corrupt_bytearray(uint8_t* arr, int length, double ratio);
+
+void tst_randoms(double chance1, double chance2, int NN);
 
 #endif //SKYLINK_CMAKE_TST_UTILITIES_H

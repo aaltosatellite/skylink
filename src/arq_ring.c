@@ -140,6 +140,10 @@ int skyArray_push_packet_to_send(SkyArqRing* array, void* payload, int length){
 	return sendRing_push_packet_to_send(array->sendRing, array->elementBuffer, payload, length);
 }
 
+int skyArray_send_buffer_is_full(SkyArqRing* array){
+	return sendRing_is_full(array->sendRing);
+}
+
 int skyArray_schedule_resend(SkyArqRing* arqRing, int sequence){
 	return sendRing_schedule_resend(arqRing->sendRing, sequence);
 }
@@ -327,11 +331,12 @@ int skyArray_fill_frame(SkyArqRing* array, SkyRadioFrame* frame, int32_t now_ms,
 			ret = 1;
 		}
 
+		int payload_to_send = sendRing_count_packets_to_send(array->sendRing, 1) > 0;
 		int b0 = frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW;
 		int b1 = wrap_time_ms(now_ms - array->last_ctrl_send) > (ARQ_TIMEOUT_MS/4);
 		int b2 = wrap_time_ms(now_ms - array->last_tx_ms) > (ARQ_TIMEOUT_MS/4);
 		int b3 = wrap_time_ms(now_ms - array->last_rx_ms) > (ARQ_TIMEOUT_MS/4);
-		if(b0 && (b1 || b2 || b3)){
+		if((b0 && (b1 || b2 || b3)) || payload_to_send){
 			sky_packet_add_extension_arq_ctrl(frame, array->sendRing->tx_sequence, array->rcvRing->head_sequence);
 			array->last_ctrl_send = now_ms;
 			ret = 1;

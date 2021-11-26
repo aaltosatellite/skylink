@@ -18,5 +18,5 @@ add_compile_options(-g -Wall -Wextra)
 
 
 add_subdirectory(src)
-add_subdirectory(gs)
+#add_subdirectory(gs)
 add_subdirectory(tests)

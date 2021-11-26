@@ -216,6 +216,13 @@ void populate_horizon(SkyArqRing* sring, SkyArqRing* rring, int final_tx_head_se
 
 
 
+int roll_chance(double const chance){
+	int r = rand(); // NOLINT(cert-msc50-cpp)
+	double rd = (double)r;
+	double rM = (double)RAND_MAX;
+	double rr = rd/rM;
+	return rr < chance;
+}
 
 
 uint8_t get_other_byte(uint8_t c){
@@ -228,15 +235,38 @@ uint8_t get_other_byte(uint8_t c){
 
 void corrupt_bytearray(uint8_t* arr, int length, double ratio){
 	for (int i = 0; i < length; ++i) {
-		double x = ((double) randint_u64(0,1000000)) / (double)1000000;
-		if(x < ratio){
+		int roll = roll_chance(ratio);
+		if(roll){
 			arr[i] = get_other_byte(arr[i]);
 		}
 	}
 }
 
 
+void tst_randoms(double chance1, double chance2, int NN){
+	uint64_t count = 0;
+	for (int i = 0; i < NN; ++i) {
+		count += roll_chance(chance1);
+	}
+	double rate = (double) count / (double) NN;
+	PRINTFF(0,"Roll chance %lf: %d out of %d.  (~%lf)\n", chance1, count, NN, rate);
 
+	uint8_t* arr1 = malloc(NN);
+	uint8_t* arr2 = malloc(NN);
+	fillrand(arr1, NN);
+	memcpy(arr2, arr1, NN);
+	corrupt_bytearray(arr2, NN, chance2);
+	count = 0;
+	for (int i = 0; i < NN; ++i) {
+		if(arr1[i] != arr2[i]){
+			count++;
+		}
+	}
+	rate = (double) count / (double) NN;
+	PRINTFF(0,"Corrupt chance %lf: %d out of %d.  (~%lf)\n", chance2, count, NN, rate);
+	free(arr1);
+	free(arr2);
+}
 
 
 

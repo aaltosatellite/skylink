@@ -14,9 +14,7 @@ static int ring_wrap(int idx, int len){
 	return ((idx % len) + len) % len;
 }
 
-static int sendRingFull(SkySendRing* sendRing){
-	return ring_wrap(sendRing->head+1, sendRing->length) == ring_wrap(sendRing->tail, sendRing->length);
-}
+
 
 int sequence_wrap(int sequence){
 	return ring_wrap(sequence, ARQ_SEQUENCE_MODULO);
@@ -208,6 +206,11 @@ void destroy_send_ring(SkySendRing* sendRing){
 }
 
 
+int sendRing_is_full(SkySendRing* sendRing){
+	return ring_wrap(sendRing->head+1, sendRing->length) == ring_wrap(sendRing->tail, sendRing->length);
+}
+
+
 //This function employs two ring inexings with different modulos. If you are not the original author (Markus), get some coffee.
 int sendRing_can_recall(SkySendRing* sendRing, int sequence){
 	int tx_head_ahead_of_tail = ring_wrap(sendRing->tx_head - sendRing->tail, sendRing->length);
@@ -231,7 +234,7 @@ int sendRing_get_recall_ring_index(SkySendRing* sendRing, int recall_sequence){
 
 
 int sendRing_push_packet_to_send(SkySendRing* sendRing, ElementBuffer* elementBuffer, void* payload, int length){
-	if(sendRingFull(sendRing)){
+	if(sendRing_is_full(sendRing)){
 		return RING_RET_RING_FULL;
 	}
 	int idx = element_buffer_store(elementBuffer, payload, length);

@@ -72,6 +72,9 @@ void skyArray_poll_arq_state_timeout(SkyArqRing* array, int32_t now_ms);
 // Push packet to buffer. Return the save address index, or -1.
 int skyArray_push_packet_to_send(SkyArqRing* array, void* payload, int length);
 
+// Returns boolean 1/0 wether the send ring is full.
+int skyArray_send_buffer_is_full(SkyArqRing* array);
+
 // Reads next message to be sent.
 int skyArray_read_packet_for_tx(SkyArqRing* array, void* tgt, int* sequence, int include_resend);
 
