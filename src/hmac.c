@@ -105,19 +105,10 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 		return SKY_RET_EXCESSIVE_HMAC_JUMP;
 	}
 
-	/* If the sequence is off a noticable but acceptable amount, return a positive nonzero value.
-	 * This situation happens often in real world where packets are lost due to imperfect transmission.
-	 * In these cases the state gradually creeps over the edge to failure, and suffers a packet rejection,
-	 * which then results in hmac-sequence reset. This wastes several transmission windows. */
-	int ret = SKY_RET_OK;
-	if (jump > (self->conf->hmac.maximum_jump / 2)) {
-		ret = SKY_RET_HMAC_BENIGN_OFFSET;
-	}
-
 	//The hmac sequence on our side jumps to the immediate next sequence number.
 	self->hmac->sequence_rx[frame->vc] = wrap_hmac_sequence((int32_t)(frame->auth_sequence + 1));
 	frame->length -= SKY_HMAC_LENGTH;
-	return ret;
+	return SKY_RET_OK;
 }
 
 
