@@ -31,13 +31,11 @@
 #define SKY_RET_RS_INVALID_LENGTH  			(-13)
 
 // MAC
-#define SKY_RET_MAC                			(-20)
 #define SKY_RET_INVALID_MAC_WINDOW_SIZE		(-21)
 
 // AUTH
 #define SKY_RET_AUTH_FAILED        			(-30)
 #define SKY_RET_AUTH_MISSING       			(-31)
-#define SKY_RET_NO_MAC_SEQUENCE     		(-32)
 #define SKY_RET_EXCESSIVE_HMAC_JUMP 		(-33)
 #define SKY_RET_FRAME_TOO_LONG_FOR_HMAC 	(-34)
 #define SKY_RET_FRAME_TOO_SHORT_FOR_HMAC 	(-35)
@@ -108,23 +106,6 @@ typedef struct {
 
 } SkylinkState;
 
-
-
-/*
- * Protocol configuration struct.
- *
- * Some of the parameters can be changed while the link is running.
- * Where feasible, sublayer implementations should read their parameters
- * directly from here, allowing configuration changes.
- */
-typedef struct sky_conf {
-	SkyPHYConfig phy;
-	SkyMACConfig mac;
-	HMACConfig	hmac;
-	SkyArrayConfig array[SKY_NUM_VIRTUAL_CHANNELS];
-	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
-	uint8_t identity[SKY_IDENTITY_LEN];
-} SkyConfig;
 
 
 

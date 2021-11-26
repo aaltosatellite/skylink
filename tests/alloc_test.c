@@ -13,7 +13,7 @@ int main() {
 	PRINTFF(0,"-- x --\n");
 	SkyConfig* config = new_vanilla_config();
 	PRINTFF(0,"-- x --\n");
-	SkyHandle self = new_handle(config);
+	new_handle(config);
 	PRINTFF(0,"-- x --\n");
 	report_allocation();
 }

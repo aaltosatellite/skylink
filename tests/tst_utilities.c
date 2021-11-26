@@ -34,10 +34,10 @@ SkyConfig* new_vanilla_config(){
 	config->array[3].element_size  		= 36;
 
 	config->hmac.key_length 			= 16;
-	config->hmac.maximum_jump 			= 24;
+	config->hmac.maximum_jump 			= 30;
 	memcpy(config->hmac.key, arr_, config->hmac.key_length);
 
-	config->mac.default_gap_length 			= 700;
+	config->mac.default_gap_length 			= 600;
 	config->mac.default_tail_length 		= 86;
 
 	config->mac.maximum_window_length 		= 450;
@@ -46,6 +46,8 @@ SkyConfig* new_vanilla_config(){
 
 	config->mac.unauthenticated_mac_updates = 0;
 	config->mac.shift_threshold_ms 			= 4000;
+
+	config->arq_timeout_ms 					= 26000;
 
 	config->identity[0] = 'O';
 	config->identity[1] = 'H';

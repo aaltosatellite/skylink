@@ -14,7 +14,6 @@
 
 
 
-#define ARQ_TIMEOUT_MS			10000 //todo: this should be in config struct?
 #define ARQ_STATE_OFF			0
 #define ARQ_STATE_IN_INIT		1
 #define ARQ_STATE_ON			2
@@ -62,7 +61,7 @@ void skyArray_wipe_to_arq_on_state(SkyArqRing* array, uint32_t identifier, int32
 int skyArray_handle_handshake(SkyArqRing* array, uint8_t peer_state, uint32_t identifier, int32_t now_ms);
 
 // asd
-void skyArray_poll_arq_state_timeout(SkyArqRing* array, int32_t now_ms);
+void skyArray_poll_arq_state_timeout(SkyArqRing* array, int32_t now_ms, int32_t timeout_ms);
 
 
 
@@ -94,10 +93,10 @@ void skyArray_update_tx_sync(SkyArqRing* array, int peer_rx_head_sequence_by_ctr
 int skyArray_peek_next_tx_size_and_sequence(SkyArqRing* array, int include_resend, int* length, int* sequence);
 
 //-----
-int skyArray_content_to_send(SkyArqRing* array, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
+int skyArray_content_to_send(SkyArqRing* array, SkyConfig* config, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
 
 //-----
-int skyArray_fill_frame(SkyArqRing* array, SkyRadioFrame* frame, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
+int skyArray_fill_frame(SkyArqRing* array, SkyConfig* config, SkyRadioFrame* frame, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
 //======================================================================================================================
 //======================================================================================================================
 

@@ -48,7 +48,7 @@ static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 		if(sky_tx_extension_needed_hmac_reset(self, vc)){
 			return vc;
 		}
-		if(skyArray_content_to_send(self->arrayBuffers[vc], now_ms, self->mac->frames_sent_in_current_window_per_vc[vc]) > 0){
+		if(skyArray_content_to_send(self->arrayBuffers[vc], self->conf, now_ms, self->mac->frames_sent_in_current_window_per_vc[vc]) > 0){
 			return vc;
 		}
 	}
@@ -59,9 +59,9 @@ static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 }
 
 
-void sky_tx_poll_arq_timeouts(SkyHandle self, int32_t now_ms){
+void sky_tx_poll_arq_timeouts(SkyHandle self, int32_t now_ms, int32_t timeout_ms){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		skyArray_poll_arq_state_timeout(self->arrayBuffers[i], now_ms);
+		skyArray_poll_arq_state_timeout(self->arrayBuffers[i], now_ms, timeout_ms);
 	}
 }
 
@@ -72,43 +72,43 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 	mac_silence_shift_check(self->mac, &self->conf->mac, now_ms);
 	int can_send = mac_can_send(self->mac, now_ms);
 	sky_tx_track_tdd_state(self, can_send);
-	sky_tx_poll_arq_timeouts(self, now_ms);
+	sky_tx_poll_arq_timeouts(self, now_ms, self->conf->arq_timeout_ms);
 	if(!can_send){
 		return 0;
 	}
 
 	int vc = sky_tx_pick_vc(self, now_ms);
 	if (vc < 0){
-		return 0;  //This is supposed to return 0, NOT "-1"!!! : sky_tx returns a boolean value as to if there is need to send somethign.
+		return 0;  //This is supposed to return 0, Not "-1": sky_tx returns a boolean value as to if there is need to send somethign.
 	}
 	const SkyVCConfig* vc_conf = &self->conf->vc[vc];
 
 
-	/* identity gets copied to the raw-array from conf */
+	/* Identity gets copied to the raw-array from conf, and initialize other fields. */
 	frame->start_byte = SKYLINK_START_BYTE;
 	memcpy(frame->identity, self->conf->identity, SKY_IDENTITY_LEN);
 	frame->vc = (uint8_t)vc;
 	frame->flags = 0;
-
-	/* Add extension to the packet. ARQ */
 	frame->length = EXTENSION_START_IDX;
 	frame->ext_length = 0;
 
 
-	/* Set MAC data fields. */
+	/* Add TDD extension. */
 	mac_set_frame_fields(self->mac, frame, now_ms);
 
 
-	/* ARQ status. The purpose of arq_sequence number on frames without payload is to provide
-	 * the peer with information where the sequencing goes. This permits asking resend for payloads
-	 * that were the last in a series of transmissions. */
+	/* ARQ status. */
 	if (self->arrayBuffers[vc]->arq_state_flag == ARQ_STATE_ON){
 		frame->flags |= SKY_FLAG_ARQ_ON;
 	}
 
 
+	/* HMAC/AUTH extension addition is evaluated separately from payload mechanics. */
 	sky_tx_extension_eval_hmac_reset(self, frame, vc);
-	skyArray_fill_frame(self->arrayBuffers[vc], frame, now_ms, self->mac->frames_sent_in_current_window_per_vc[vc]);
+
+
+	/* Add necessary extensions and a payload if one is in the ring buffer. This is a rather involved function. */
+	skyArray_fill_frame(self->arrayBuffers[vc], self->conf, frame, now_ms, self->mac->frames_sent_in_current_window_per_vc[vc]);
 
 
 	/* Set HMAC state and sequence */
@@ -120,7 +120,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 	frame->auth_sequence = sky_hton16(frame->auth_sequence);
 
 
-	/* Authenticate the frame */
+	/* Authenticate the frame. Ie. appends a hash digest to the end of the frame. */
 	if (vc_conf->require_authentication){
 		sky_hmac_extend_with_authentication(self, frame);
 	}

@@ -115,14 +115,14 @@ int skyArray_handle_handshake(SkyArqRing* array, uint8_t peer_state, uint32_t id
 }
 
 
-void skyArray_poll_arq_state_timeout(SkyArqRing* array, int32_t now_ms){
+void skyArray_poll_arq_state_timeout(SkyArqRing* array, int32_t now_ms, int32_t timeout_ms){
 	if(array->arq_state_flag == ARQ_STATE_OFF){
 		return;
 	}
-	if( wrap_time_ms(now_ms - array->last_tx_ms) > ARQ_TIMEOUT_MS ){
+	if( wrap_time_ms(now_ms - array->last_tx_ms) > timeout_ms ){
 		skyArray_wipe_to_arq_off_state(array); //todo: notify up in stack?
 	}
-	if( wrap_time_ms(now_ms - array->last_rx_ms) > ARQ_TIMEOUT_MS ){
+	if( wrap_time_ms(now_ms - array->last_rx_ms) > timeout_ms ){
 		skyArray_wipe_to_arq_off_state(array); //todo: notify up in stack?
 	}
 }
@@ -232,7 +232,7 @@ void skyArray_update_rx_sync(SkyArqRing* array, int peer_tx_head_sequence_by_ctr
 
 
 
-int skyArray_content_to_send(SkyArqRing* array, int32_t now_ms, uint16_t frames_sent_in_this_vc_window){
+int skyArray_content_to_send(SkyArqRing* array, SkyConfig* config, int32_t now_ms, uint16_t frames_sent_in_this_vc_window){
 	uint8_t state0 = array->arq_state_flag;
 
 	// ARQ OFF ---------------------------------------------------------------------------------------------------------
@@ -266,9 +266,9 @@ int skyArray_content_to_send(SkyArqRing* array, int32_t now_ms, uint16_t frames_
 		}
 
 		int b0 = frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW;
-		int b1 = wrap_time_ms(now_ms - array->last_ctrl_send) > (ARQ_TIMEOUT_MS/4);
-		int b2 = wrap_time_ms(now_ms - array->last_tx_ms) > (ARQ_TIMEOUT_MS/4);
-		int b3 = wrap_time_ms(now_ms - array->last_rx_ms) > (ARQ_TIMEOUT_MS/4);
+		int b1 = wrap_time_ms(now_ms - array->last_ctrl_send) > (config->arq_timeout_ms/4);
+		int b2 = wrap_time_ms(now_ms - array->last_tx_ms) > (config->arq_timeout_ms/4);
+		int b3 = wrap_time_ms(now_ms - array->last_rx_ms) > (config->arq_timeout_ms/4);
 		if(b0 && (b1 || b2 || b3)){
 			return 1;
 		}
@@ -281,7 +281,7 @@ int skyArray_content_to_send(SkyArqRing* array, int32_t now_ms, uint16_t frames_
 
 
 
-int skyArray_fill_frame(SkyArqRing* array, SkyRadioFrame* frame, int32_t now_ms, uint16_t frames_sent_in_this_vc_window){
+int skyArray_fill_frame(SkyArqRing* array, SkyConfig* config, SkyRadioFrame* frame, int32_t now_ms, uint16_t frames_sent_in_this_vc_window){
 
 	uint8_t state0 = array->arq_state_flag;
 
@@ -333,9 +333,9 @@ int skyArray_fill_frame(SkyArqRing* array, SkyRadioFrame* frame, int32_t now_ms,
 
 		int payload_to_send = sendRing_count_packets_to_send(array->sendRing, 1) > 0;
 		int b0 = frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW;
-		int b1 = wrap_time_ms(now_ms - array->last_ctrl_send) > (ARQ_TIMEOUT_MS/4);
-		int b2 = wrap_time_ms(now_ms - array->last_tx_ms) > (ARQ_TIMEOUT_MS/4);
-		int b3 = wrap_time_ms(now_ms - array->last_rx_ms) > (ARQ_TIMEOUT_MS/4);
+		int b1 = wrap_time_ms(now_ms - array->last_ctrl_send) > (config->arq_timeout_ms/4);
+		int b2 = wrap_time_ms(now_ms - array->last_tx_ms) > (config->arq_timeout_ms/4);
+		int b3 = wrap_time_ms(now_ms - array->last_rx_ms) > (config->arq_timeout_ms/4);
 		if((b0 && (b1 || b2 || b3)) || payload_to_send){
 			sky_packet_add_extension_arq_ctrl(frame, array->sendRing->tx_sequence, array->rcvRing->head_sequence);
 			array->last_ctrl_send = now_ms;

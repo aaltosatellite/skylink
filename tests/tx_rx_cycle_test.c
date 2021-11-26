@@ -8,6 +8,7 @@
 #include "../src/skylink/skylink.h"
 #include "tst_utilities.h"
 #include "tools/tools.h"
+#include <math.h>
 
 #define STATE_RX		0
 #define STATE_TX		1
@@ -62,8 +63,11 @@ typedef struct {
 	uint64_t now_ms;
 	double byterate;
 	double corrupt_rate;
-	double loss_rate;
 	int lag_ms;
+	double loss_rate0;
+	double spin_rate_rpm;
+	double silent_section;
+	int spin_on;
 	PayloadList* payloadList1;
 	PayloadList* payloadList2;
 	EtherFrameList* inEther;
@@ -74,7 +78,7 @@ typedef struct {
 
 
 static void test1();
-static void test1_round();
+static void test1_round(uint64_t NN, int print_on);
 static void step_forward(int which, TXRXJob* job);
 static void print_job_status(TXRXJob* job);
 
@@ -82,10 +86,8 @@ static void print_job_status(TXRXJob* job);
 
 
 
-int main(){
-	//tst_randoms(0.02, 0.16, 2000000);
-	//tst_randoms(0.92, 0.0, 2000000);
-	//tst_randoms(0.0, 0.77, 2000000);
+int main(int argc, char* argv[]){
+	reseed_random();
 	test1();
 }
 
@@ -93,10 +95,31 @@ void test1(){
 	PRINTFF(0,"[TX-RX Test 1]\n");
 	int N = 1;
 	for (int i = 0; i < N; ++i) {
-		test1_round();
+		test1_round(3600*1000, 1);
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
+
+
+
+double get_loss_chance(uint64_t now_ms, double rate0, double spin_rpm, double silent_section, int spin_on){
+	if(!spin_on){
+		return rate0;
+	}
+	double ms_per_r = 60.0 * 1000.0 / spin_rpm;
+	int l_silence = round(ms_per_r * silent_section);
+	int mspr = round(ms_per_r);
+	if( ((int64_t)now_ms % mspr) < l_silence){
+		return 1.0;
+	}
+	//double s = cos(spin_rpm * (double)now_ms * 2.0 * 3.1415 / (60.0 * 1000.0));
+	//double abs_s = fabs(s);
+	//if(abs_s > 0.95){
+	//	return 1.0;
+	//}
+	return rate0;
+}
+
 
 
 static int string_same(String* s1, String* s2){
@@ -105,6 +128,7 @@ static int string_same(String* s1, String* s2){
 	}
 	return memcmp(s1->data, s2->data, s1->length) == 0;
 }
+
 
 
 Payload* new_payload(int target, String* msg, uint64_t ts_push){
@@ -253,7 +277,7 @@ int payload_list_count_unreceived(PayloadList* payloadList){
 
 
 
-void test1_round(){
+void test1_round(uint64_t NN, int print_on){
 	SkyConfig* config1 = new_vanilla_config();
 	SkyConfig* config2 = new_vanilla_config();
 	config1->identity[0] = 1;
@@ -280,12 +304,15 @@ void test1_round(){
 	job.peer1.tx_end = 0;
 	job.peer2.tx_end = 0;
 	job.now_ms = 9;
-	job.peer1.pl_rate 	= 4.0; 		//param
-	job.peer2.pl_rate 	= 4.0; 		//param
-	job.corrupt_rate	= 0.05; 	//param
-	job.loss_rate 		= 0.05; 	//param
+	job.byterate 		= 2*1200.0; //param
 	job.lag_ms 			= 4; 		//param
-	job.byterate 		= 3100.0; 	//param
+	job.peer1.pl_rate 	= 4.0; 		//param
+	job.peer2.pl_rate 	= 2.0; 		//param
+	job.corrupt_rate	= 0.05; 	//param
+	job.loss_rate0 		= 0.12; 	//param (12)
+	job.spin_rate_rpm	= 6;
+	job.silent_section	= 0.20;
+	job.spin_on			= 1;
 	job.payloadList1 	= new_payload_list();
 	job.payloadList2 	= new_payload_list();
 	job.inEther 		= new_eframe_list();
@@ -295,24 +322,18 @@ void test1_round(){
 
 	skyArray_wipe_to_arq_init_state(handle1->arrayBuffers[0], job.now_ms);
 
-	uint64_t N_RUN = 1000 * 3600;
-
-	for (uint64_t i = 0; i < N_RUN; ++i) {
+	for (uint64_t i = 0; i < NN; ++i) {
 		step_forward(1, &job);
 		step_forward(2, &job);
-		if(i % 1500 == 0){
-			PRINTFF(0,"i:%d \n",i);
+		if((i % 60000 == 0) && print_on){
+			PRINTFF(0,"\ni:%d \n",i);
+			PRINTFF(0,"%dh %dmin %ds \n",i/(3600*1000),  (i%(3600*1000))/60000,  (i%60000)/1000);
 			print_job_status(&job);
-		}
-		if(i % 400 == 0){
-			int off1 = job.peer1.handle->arrayBuffers[0]->arq_state_flag == ARQ_STATE_OFF;
-			int off2 = job.peer2.handle->arrayBuffers[0]->arq_state_flag == ARQ_STATE_OFF;
-			PRINTFF(0, "OFF:  %d   %d\n", off1, off2);
 		}
 		job.now_ms++;
 	}
 
-	sleepms(2000);
+	//sleepms(2000);
 
 	destroy_payload_list(job.payloadList1);
 	destroy_payload_list(job.payloadList2);
@@ -348,7 +369,7 @@ static void step_forward(int which, TXRXJob* job){
 
 
 	//generate new pl to send queue
-	if((job->now_ms > 4000) && roll_chance(peer->pl_rate/1000.0) && !skyArray_send_buffer_is_full(peer->handle->arrayBuffers[0])){
+	if((job->now_ms > 10000) && roll_chance(peer->pl_rate/1000.0) && !skyArray_send_buffer_is_full(peer->handle->arrayBuffers[0])){
 		Payload* pl = new_random_payload(target, job->now_ms);
 		int push_ret = skyArray_push_packet_to_send(peer->handle->arrayBuffers[0], pl->msg->data, pl->msg->length);
 		assert(push_ret != RING_RET_RING_FULL);
@@ -357,18 +378,23 @@ static void step_forward(int which, TXRXJob* job){
 		payload_list_append(plList, pl);
 	}
 
-	if(job->now_ms > 4500){
-		assert(job->peer1.handle->arrayBuffers[0]->arq_state_flag == ARQ_STATE_ON);
-		assert(job->peer2.handle->arrayBuffers[0]->arq_state_flag == ARQ_STATE_ON);
+	if(job->now_ms > 15500){
+		int state_on1 = job->peer1.handle->arrayBuffers[0]->arq_state_flag == ARQ_STATE_ON;
+		int state_on2 = job->peer2.handle->arrayBuffers[0]->arq_state_flag == ARQ_STATE_ON;
+		if(!state_on1 || !state_on2){
+			PRINTFF(0,"now:%ld   states_on:%d %d\n", job->now_ms, state_on1, state_on2);
+		}
+		assert(state_on1);
+		assert(state_on2);
 		int hmac_diff1 = job->peer2.handle->hmac->sequence_tx[0] - job->peer1.handle->hmac->sequence_rx[0];
 		int hmac_diff2 = job->peer2.handle->hmac->sequence_rx[0] - job->peer1.handle->hmac->sequence_tx[0];
 		hmac_diff1 = hmac_diff1 * hmac_diff1;
 		hmac_diff2 = hmac_diff2 * hmac_diff2;
-		if((hmac_diff1 > 50) || (hmac_diff2 > 50)){
-			PRINTFF(0,"HMAC DIFFS : %d  %d !\n", hmac_diff1, hmac_diff2);
-		}
-		assert(hmac_diff1 < 52);
-		assert(hmac_diff2 < 52);
+		//if((hmac_diff1 > 150) || (hmac_diff2 > 150)){
+		//	PRINTFF(0,"HMAC DIFFS : %d  %d !\n", hmac_diff1, hmac_diff2);
+		//}
+		//assert(hmac_diff1 < 150);
+		//assert(hmac_diff2 < 150);
 	}
 
 	//receive (or miss) transmissions from ether, and collect payloads.
@@ -423,7 +449,8 @@ static void step_forward(int which, TXRXJob* job){
 			uint64_t tx_end = job->now_ms + ((job->frame.length * 1000) / job->byterate) + 1;
 			EtherFrame* eframe = new_eframe(job->frame, job->now_ms, tx_end, target);
 			corrupt_bytearray(eframe->frame.raw, eframe->frame.length, job->corrupt_rate);
-			int lost = roll_chance(job->loss_rate);
+			double loss_chance = get_loss_chance(job->now_ms, job->loss_rate0, job->spin_rate_rpm, job->silent_section, job->spin_on);
+			int lost = roll_chance(loss_chance);
 			if(lost){
 				eframe_list_append(job->lostFrames, eframe);
 			} else{

@@ -114,6 +114,7 @@ void arq_test2_cycle(){
 	config.horizon_width = 16;
 	SkyArqRing* array = new_arq_ring(&config);
 	SkyArqRing* array_r = new_arq_ring(&config);
+	SkyConfig* sky_conf = new_vanilla_config();
 
 	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);			//virtual channel randomized
 	int32_t ts_base = randint_i32(0,100000);						//coarse timestamp
@@ -185,7 +186,7 @@ void arq_test2_cycle(){
 
 	//arq handshake
 	int frames_sent_in_vc = randint_i32(0,UTILITY_FRAMES_PER_WINDOW +2);
-	int now_ms = ts_base + randint_i32(5001, ARQ_TIMEOUT_MS+500);
+	int now_ms = ts_base + randint_i32(5001, sky_conf->arq_timeout_ms+500);
 
 	int own_recall = randint_i32(0, 10) < 4;
 	int own_recall_mask_i = randint_i32(0, 13);
@@ -206,8 +207,8 @@ void arq_test2_cycle(){
 	frame->length = EXTENSION_START_IDX;
 	frame->auth_sequence = 7777;
 
-	int content0 = skyArray_content_to_send(array, now_ms, frames_sent_in_vc);
-	int content = skyArray_fill_frame(array, frame, now_ms, frames_sent_in_vc);
+	int content0 = skyArray_content_to_send(array, sky_conf, now_ms, frames_sent_in_vc);
+	int content = skyArray_fill_frame(array, sky_conf, frame, now_ms, frames_sent_in_vc);
 	SkyPacketExtension* extArqCtrl = get_extension(frame, EXTENSION_ARQ_CTRL);
 	SkyPacketExtension* extArqSeq = get_extension(frame, EXTENSION_ARQ_SEQUENCE);
 	SkyPacketExtension* extArqRr = get_extension(frame, EXTENSION_ARQ_REQUEST);
@@ -260,9 +261,9 @@ void arq_test2_cycle(){
 		}
 
 		int b0 = (frames_sent_in_vc < UTILITY_FRAMES_PER_WINDOW);
-		int b1 = wrap_time_ms(now_ms - ts_send) > ARQ_TIMEOUT_MS/4;
-		int b2 = wrap_time_ms(now_ms - ts_recv) > ARQ_TIMEOUT_MS/4;
-		int b3 = wrap_time_ms(now_ms - ts_last_ctrl) > ARQ_TIMEOUT_MS/4;
+		int b1 = wrap_time_ms(now_ms - ts_send) > sky_conf->arq_timeout_ms /4;
+		int b2 = wrap_time_ms(now_ms - ts_recv) > sky_conf->arq_timeout_ms/4;
+		int b3 = wrap_time_ms(now_ms - ts_last_ctrl) > sky_conf->arq_timeout_ms/4;
 		if((b0 && (b1 || b2 || b3)) || (frame->flags & SKY_FLAG_HAS_PAYLOAD)){
 			assert(extArqCtrl != NULL);
 			assert(extArqCtrl->ARQCtrl.tx_sequence == seq1);
@@ -338,6 +339,7 @@ void arq_test2_cycle(){
 	destroy_frame(frame);
 	destroy_arq_ring(array);
 	destroy_arq_ring(array_r);
+	destroy_config(sky_conf);
 	free(tgt);
 }
 

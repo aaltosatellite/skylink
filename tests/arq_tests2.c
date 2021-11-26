@@ -38,6 +38,8 @@ void atest1_cycle(){
 		msgs[i] = get_random_string(randint_i32(0, 173));
 	}
 
+	SkyConfig* sky_config = new_vanilla_config();
+
 	SkyArrayConfig config;
 	config.send_ring_len = randint_i32(22,35);
 	config.rcv_ring_len = randint_i32(20,35);
@@ -68,7 +70,7 @@ void atest1_cycle(){
 	assert(array->rcvRing->head_sequence == seq_recv0);
 	assert(array->rcvRing->head_sequence == array->rcvRing->tail_sequence);
 
-	int now_ms = ts_base + randint_i32(2001, ARQ_TIMEOUT_MS+2000);
+	int now_ms = ts_base + randint_i32(2001, sky_config->arq_timeout_ms + 2000);
 
 	//ARQ state
 	array->arq_state_flag = ARQ_STATE_OFF;
@@ -394,6 +396,7 @@ void atest1_cycle(){
 	}
 	destroy_arq_ring(array);
 	destroy_arq_ring(array_r);
+	destroy_config(sky_config);
 }
 
 

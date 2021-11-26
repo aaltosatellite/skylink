@@ -16,9 +16,9 @@
 #define SKY_NUM_VIRTUAL_CHANNELS  		4
 
 //Number of frames justified to send only due to protocol control reasons (in absence of payloads).
-#define UTILITY_FRAMES_PER_WINDOW		2
+#define UTILITY_FRAMES_PER_WINDOW		3
 
-
+#define SKY_IDENTITY_LEN				5
 
 typedef struct {
 	/* Enable CCSDS randomizer/scrambler */
@@ -39,7 +39,11 @@ typedef struct {
 	int32_t maximum_window_length;
 	int32_t minimum_window_length;
 
-	/* Default time gap size between windows. */
+	/* Default time gap size between windows.
+	 * Gap is fully utilized when two peers cannot hear each other.
+	 * Too small gap value will make it difficult for the peers to avoid speaking over each other by chance.
+	 * Too large value will decrease error and packet loss resistance of ARQ: In cases of packet loss,
+	 * the peers will take long time to send anything, and will ARQ timeout happens too easily.*/
 	int32_t default_gap_length;
 
 	/* Default tail end time of the cycle. */
@@ -91,5 +95,21 @@ typedef struct {
 } SkyVCConfig;
 
 
+/*
+ * Protocol configuration struct.
+ *
+ * Some of the parameters can be changed while the link is running.
+ * Where feasible, sublayer implementations should read their parameters
+ * directly from here, allowing configuration changes.
+ */
+typedef struct sky_conf {
+	SkyPHYConfig phy;
+	SkyMACConfig mac;
+	HMACConfig	hmac;
+	SkyArrayConfig array[SKY_NUM_VIRTUAL_CHANNELS];
+	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
+	uint8_t identity[SKY_IDENTITY_LEN];
+	int32_t arq_timeout_ms;
+} SkyConfig;
 
 #endif /* __SKYLINK_CONF_H__ */
