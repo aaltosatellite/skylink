@@ -9,6 +9,7 @@
 
 #include "skylink/arq_ring.h"
 #include "skylink/skylink.h"
+#include "skylink/utilities.h"
 #include "skylink/frame.h"
 
 #include "tst_utilities.h"
@@ -59,6 +60,7 @@ int32_t rget_time_ms(){
 	X = (int64_t) ms;
 	X = X % 60000000;
 	int32_t rms = (int32_t) X;
+	rms = rms % MOD_TIME_MS;
 	return rms;
 }
 

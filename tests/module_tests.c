@@ -17,10 +17,10 @@ void mac_test(int load);
 int main() {
 	reseed_random();
 
-	//elebuffer_tests();
-	//packet_tests();
-	//fec_test();
-	//hmac_tests();
+	elebuffer_tests();
+	packet_tests();
+	fec_test();
+	hmac_tests();
 	mac_test(10);
 	ring_tests(15);
 	arq_system_test1(21);

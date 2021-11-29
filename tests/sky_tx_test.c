@@ -297,7 +297,6 @@ void sky_tx_test_cycle(){
 	int rr_ext = 0;
 	int pl = 0;
 	int recall = 0;
-	int content_per_vc[SKY_NUM_VIRTUAL_CHANNELS] = {0,0,0,0};
 	int deduced_vc = -1;
 
 	/*
@@ -322,7 +321,6 @@ void sky_tx_test_cycle(){
 
 		if(hmac_reset_need[i] && auth_required[i]){
 			content = 1;
-			content_per_vc[i] = 1;
 			assert(ret == 1);
 			assert(get_extension(frame, EXTENSION_HMAC_SEQUENCE_RESET) != NULL);
 		}
@@ -330,7 +328,6 @@ void sky_tx_test_cycle(){
 		if(!arq_on[i]){
 			if(n_new_pl[i] > 0){
 				content = 1;
-				content_per_vc[i] = 1;
 				assert(ret == 1);
 				pl = 1;
 				assert(frame->flags & SKY_FLAG_HAS_PAYLOAD);
@@ -343,21 +340,18 @@ void sky_tx_test_cycle(){
 			//assert(frame->flags & SKY_FLAG_ARQ_ON);
 			if(util_frame && (wrap_time_ms(now_ms - arq_tx_ts[i]) > (arq_timeout / 4)) ){
 				content = 1;
-				content_per_vc[i] = 1;
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
 				assert(ret == 1);
 			}
 			if(util_frame && (wrap_time_ms(now_ms - arq_rx_ts[i]) > (arq_timeout / 4)) ){
 				content = 1;
-				content_per_vc[i] = 1;
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
 				assert(ret == 1);
 			}
 			if(util_frame && (wrap_time_ms(now_ms - last_ctrl[i]) > (arq_timeout / 4)) ){
 				content = 1;
-				content_per_vc[i] = 1;
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
 				assert(ret == 1);
@@ -365,14 +359,12 @@ void sky_tx_test_cycle(){
 
 			if(util_frame && (rr_need_on[i] || stuff_in_horizon[i]) ){
 				content = 1;
-				content_per_vc[i] = 1;
 				assert(ret == 1);
 				rr_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_REQUEST) != NULL);
 			}
 			if(n_new_pl[i] > 0){
 				content = 1;
-				content_per_vc[i] = 1;
 				assert(ret == 1);
 				pl = 1;
 				ctrl_ext = 1;
@@ -382,7 +374,6 @@ void sky_tx_test_cycle(){
 			}
 			if(n_recalled_pl[i] > 0){
 				content = 1;
-				content_per_vc[i] = 1;
 				assert(ret == 1);
 				pl = 1;
 				recall = 1;

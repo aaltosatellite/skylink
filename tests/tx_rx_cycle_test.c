@@ -331,10 +331,10 @@ void test1_round(uint64_t NN, int print_on){
 	job.peer1.pl_rate 	= 4.0; 		//param
 	job.peer2.pl_rate 	= 2.0; 		//param
 	job.corrupt_rate	= 0.05; 	//param
-	job.loss_rate0 		= 0.11; 	//param (12)
-	job.spin_rate_rpm	= 6;
-	job.silent_section	= 0.24;
-	job.spin_on			= 1;
+	job.loss_rate0 		= 0.11; 	//param (0.12)
+	job.spin_rate_rpm	= 6;		//param
+	job.silent_section	= 0.24;		//param
+	job.spin_on			= 1;		//param
 	job.payloadList1 	= new_payload_list();
 	job.payloadList2 	= new_payload_list();
 	job.inEther 		= new_eframe_list();

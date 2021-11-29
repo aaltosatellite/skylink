@@ -57,8 +57,8 @@ void sky_mac_destroy(SkyMAC* mac){
 
 
 void mac_shift_windowing(SkyMAC* mac, int32_t t_shift){
-	//->T0_ms = wrap_ms(wrap_time_ms(mac->T0_ms + t_shift), mac);
-	mac->T0_ms = wrap_time_ms(mac->T0_ms + t_shift);
+	t_shift = (t_shift > 0) ? t_shift : -t_shift; //T0 should always stay behind current time. Otherwise time-deltas wrap around the wrong way.
+	mac->T0_ms = wrap_time_ms(mac->T0_ms - t_shift);
 }
 
 
@@ -103,7 +103,7 @@ int32_t mac_peer_window_remaining(SkyMAC* mac, int32_t now_ms){
 
 void mac_silence_shift_check(SkyMAC* mac, SkyMACConfig* config, int32_t now_ms){
 	if(wrap_time_ms(now_ms - mac->last_belief_update) > config->shift_threshold_ms){
-		int shift = rand() & 0xFFF;
+		int shift = now_ms & 0xFFF;
 		mac_shift_windowing(mac, shift);
 		mac->last_belief_update = now_ms;
 	}

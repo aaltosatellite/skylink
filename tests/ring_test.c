@@ -485,25 +485,20 @@ static void test4_round(){
 	int tail_seq = s_seq0;
 	int in_buffer = 0;
 	while (next_idx_to_tx < NMSG) {
-		//PRINTFF(0,"\n");
 		int send_buffer = positive_mod(array->sendRing->tx_head - array->sendRing->tail, array->sendRing->length);
-		//if(skyArray_count_packets_to_tx(array, 0) != (next_idx_to_push - next_idx_to_tx)){
-			//PRINTFF(0, "%d %d %d \n",array->sendRing->tx_head , array->sendRing->tail, array->sendRing->length);
-			//PRINTFF(0, "%d %d\n",skyArray_count_packets_to_tx(array, 0) , (next_idx_to_push - next_idx_to_tx) );
-		//}
+
+
 		if(send_buffer <= ARQ_MAXIMUM_HORIZON){
 			assert(skyArray_count_packets_to_tx(array, 0) == (next_idx_to_push - next_idx_to_tx));
 		} else{
-			//PRINTFF(0,"! %d\n", skyArray_count_packets_to_tx(array, 0));
 			assert(skyArray_count_packets_to_tx(array, 0) == 0);
 		}
 
-		//PRINTFF(0, "tails: %d %d\n",tail_seq, array->sendRing->tail_sequence);
-		//PRINTFF(0, "txs: %d %d\n",next_idx_to_tx, array->sendRing->tx_sequence);
+
 		assert(tail_seq == array->sendRing->tail_sequence);
 		assert(wrap_seq(s_seq0+next_idx_to_push) == array->sendRing->head_sequence);
 
-		if ((randint_i32(0, 10000) % 7) == 0) { //push
+		if ((randint_i32(0, 10000) % 7) == 0) { //PUSH
 			if(next_idx_to_push == NMSG){
 				continue;
 			}
@@ -522,7 +517,7 @@ static void test4_round(){
 		}
 
 		//PRINTFF(0,"2");
-		if ((randint_i32(0, 10000) % 7) == 0) { //pull
+		if ((randint_i32(0, 10000) % 7) == 0) { //PULL
 			int sq_tx = -1;
 			int peeked_seq0 = -1;
 			int peeked_leng0 = -1;
@@ -558,7 +553,7 @@ static void test4_round(){
 			}
 		}
 
-		if ((randint_i32(0, 10000) % 7) == 0) { //recall
+		if ((randint_i32(0, 10000) % 7) == 0) { //RECALL
 			for (int i = 0; i < 10; ++i) {
 				int next_seq_to_tx = wrap_seq(s_seq0 + next_idx_to_tx);
 				int tail_idx = next_idx_to_tx - wrap_seq(next_seq_to_tx - tail_seq);

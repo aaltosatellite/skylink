@@ -42,9 +42,6 @@ void sky_rx_test_cycle(){
 
 
 
-
-
-
 	sky_rx(self, frame, golay_on);
 
 
