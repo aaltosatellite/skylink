@@ -8,19 +8,15 @@
 #include "tst_utilities.h"
 
 
-void atest1(int load);
-void atest1_cycle();
+
+void arq_system_test3_cycle();
 
 
 
-void arq_tests2(int load) {
-	atest1(load);
-}
-
-void atest1(int load){
+void arq_system_test3(int load){
 	PRINTFF(0, "[ARQ system test 3: process received pl and extensions]\n");
 	for (int i = 0; i < (load*1000 +1); ++i) {
-		atest1_cycle();
+		arq_system_test3_cycle();
 		if(i % 2000 == 0){
 			PRINTFF(0,"\ti=%d\n", i);
 		}
@@ -31,7 +27,7 @@ void atest1(int load){
 /*
  * This is a rather excellent battery of tests. If this passes reliably, not too many things can be wrong.
  */
-void atest1_cycle(){
+void arq_system_test3_cycle(){
 	uint8_t tgt[1000];
 	String* msgs[ARQ_MAXIMUM_HORIZON+10];
 	for (int i = 0; i < ARQ_MAXIMUM_HORIZON+10; ++i) {

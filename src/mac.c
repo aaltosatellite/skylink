@@ -8,8 +8,12 @@
 #include "skylink/utilities.h"
 
 
+static int32_t get_mac_cycle(SkyMAC* mac){
+	return mac->my_window_length + mac->gap_constant + mac->peer_window_length + mac->tail_constant;
+}
+
 static int32_t wrap_ms(int32_t time_ms, SkyMAC* mac){ //This mess is a conversion from C-modulo, to always-positive-modulo.
-	int32_t mod = mac->my_window_length + mac->gap_constant + mac->peer_window_length + mac->tail_constant;
+	int32_t mod = get_mac_cycle(mac);
 	return ((time_ms % mod) + mod) % mod;
 }
 
@@ -53,7 +57,8 @@ void sky_mac_destroy(SkyMAC* mac){
 
 
 void mac_shift_windowing(SkyMAC* mac, int32_t t_shift){
-	mac->T0_ms = wrap_ms(mac->T0_ms + t_shift, mac);
+	//->T0_ms = wrap_ms(wrap_time_ms(mac->T0_ms + t_shift), mac);
+	mac->T0_ms = wrap_time_ms(mac->T0_ms + t_shift);
 }
 
 
@@ -76,30 +81,30 @@ int32_t mac_set_gap_constant(SkyMAC* mac, int32_t new_gap_constant){
 
 
 int32_t mac_time_to_own_window(SkyMAC* mac, int32_t now_ms){
-	int32_t dt = wrap_ms(mac->T0_ms - now_ms, mac);
-	int32_t length_of_rest = mac->gap_constant + mac->peer_window_length + mac->tail_constant;
-	if(dt > length_of_rest){
+	int32_t dt = wrap_ms(wrap_time_ms(now_ms - mac->T0_ms), mac);
+	if(dt < mac->my_window_length){
 		return 0;
 	}
-	return dt;
+	return get_mac_cycle(mac) - dt;
 }
 
 
 int32_t mac_own_window_remaining(SkyMAC* mac, int32_t now_ms){
-	int32_t dt = wrap_ms(now_ms - mac->T0_ms, mac);
+	int32_t dt = wrap_ms(wrap_time_ms(now_ms - mac->T0_ms), mac);
 	return mac->my_window_length - dt;
 }
 
 
 int32_t mac_peer_window_remaining(SkyMAC* mac, int32_t now_ms){
-	int32_t dt = wrap_ms(now_ms - (mac->T0_ms + mac->my_window_length + mac->gap_constant), mac);
+	int32_t dt = wrap_ms(wrap_time_ms(now_ms - (mac->T0_ms + mac->my_window_length + mac->gap_constant)), mac);
 	return mac->peer_window_length - dt;
 }
 
 
 void mac_silence_shift_check(SkyMAC* mac, SkyMACConfig* config, int32_t now_ms){
 	if(wrap_time_ms(now_ms - mac->last_belief_update) > config->shift_threshold_ms){
-		mac->T0_ms = rand() & 0xFFF;
+		int shift = rand() & 0xFFF;
+		mac_shift_windowing(mac, shift);
 		mac->last_belief_update = now_ms;
 	}
 }
@@ -117,7 +122,8 @@ int mac_update_belief(SkyMAC* mac, SkyMACConfig* config, int32_t now_ms, int32_t
 	if(peer_mac_length != mac->peer_window_length){
 		mac_set_peer_window_length(mac, peer_mac_length);
 	}
-	int32_t implied_t0_for_me = wrap_ms(now_ms + peer_mac_remaining + mac->tail_constant, mac);
+	int32_t cycle = get_mac_cycle(mac);
+	int32_t implied_t0_for_me = wrap_time_ms(now_ms + peer_mac_remaining + mac->tail_constant - cycle);
 	mac->T0_ms = implied_t0_for_me;
 	mac->last_belief_update = now_ms;
 	mac->total_frames_sent_in_current_window = 0;

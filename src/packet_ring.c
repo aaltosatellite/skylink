@@ -159,7 +159,6 @@ int rcvRing_get_sequence_sync_status(SkyRcvRing* rcvRing, int peer_tx_head_seque
 		return RING_RET_SEQUENCES_OUT_OF_SYNC;
 	}
 	return RING_RET_SEQUENCES_DETACHED;
-
 }
 //===== RCV RING =======================================================================================================
 

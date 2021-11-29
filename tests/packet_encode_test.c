@@ -39,7 +39,7 @@ static void test1_round(){
 	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
 
 	int arq_on = randint_i32(0,1);
-	int arq_sequence = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
+
 	int hmac_on = randint_i32(0,1);
 	int hmac_sequence = randint_i32(0, HMAC_CYCLE_LENGTH-1);
 
@@ -81,17 +81,18 @@ static void test1_round(){
 		sky_packet_add_extension_arq_ctrl(sframe, ctrl_tx, ctrl_rx);
 	}
 
-	int extension_arq_setup = 0;
+	int extension_arq_handshake = 0;
 	uint32_t setup_identifier = randint_u32(0, 0xFFFFFFFF);
 	int setup_flag = randint_i32(0, 4);
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
-		extension_arq_setup = 1;
+		extension_arq_handshake = 1;
 		sky_packet_add_extension_arq_handshake(sframe, setup_flag, setup_identifier);
 	}
 
 
 	int extension_arq_sequence = 0;
+	int arq_sequence = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_arq_sequence = 1;
@@ -135,9 +136,14 @@ static void test1_round(){
 
 
 
+	//=== from frame to another =============================================================
 	memcpy(rframe->raw ,sframe->raw, sframe->length);
 	rframe->length = sframe->length;
+	//=== frame to another ==================================================================
 
+
+
+	//Frame static header
 	assert(rframe->start_byte == SKYLINK_START_BYTE);
 	assert(memcmp(rframe->identity, identity, SKY_IDENTITY_LEN) ==0);
 	assert(rframe->vc == vc);
@@ -145,11 +151,28 @@ static void test1_round(){
 	assert(((rframe->flags & SKY_FLAG_ARQ_ON) > 0) == (arq_on > 0));
 	if(hmac_on){
 		assert(rframe->auth_sequence == hmac_sequence);
+		assert(rframe->flags & SKY_FLAG_AUTHENTICATED);
+	} else {
+		assert(!(rframe->flags & SKY_FLAG_AUTHENTICATED));
 	}
 	assert(rframe->ext_length == sframe->ext_length);
 
 
+	SkyPacketExtension* ext1 = get_extension(rframe, EXTENSION_HMAC_SEQUENCE_RESET);
+	SkyPacketExtension* ext2 = get_extension(rframe, EXTENSION_MAC_TDD_CONTROL);
+	SkyPacketExtension* ext3 = get_extension(rframe, EXTENSION_ARQ_SEQUENCE);
+	SkyPacketExtension* ext4 = get_extension(rframe, EXTENSION_ARQ_CTRL);
+	SkyPacketExtension* ext5 = get_extension(rframe, EXTENSION_ARQ_HANDSHAKE);
+	SkyPacketExtension* ext6 = get_extension(rframe, EXTENSION_ARQ_REQUEST);
+	assert((extension_hmac_reset > 0) == (ext1 != NULL));
+	assert((extension_mac_tdd > 0) == (ext2 != NULL));
+	assert((extension_arq_sequence > 0) == (ext3 != NULL));
+	assert((extension_arq_ctrl > 0) == (ext4 != NULL));
+	assert((extension_arq_handshake > 0) == (ext5 != NULL));
+	assert((extension_arq_rrequest > 0) == (ext6 != NULL));
 
+
+	//manually extract extensions
 	int ext_remaining = rframe->ext_length;
 	int ext_cursor = EXTENSION_START_IDX;
 	while (ext_remaining) {
@@ -158,7 +181,16 @@ static void test1_round(){
 		assert(r2 > 0);
 		ext_cursor += r2;
 		ext_remaining -= r2;
+		if(ext->type == EXTENSION_HMAC_SEQUENCE_RESET){
+			assert(ext == ext1);
+			assert(ext->length == sizeof(ExtHMACSequenceReset)+1);
+			assert(extension_hmac_reset == 1);
+			assert(ext->HMACSequenceReset.sequence == sky_hton16(hmac_enforcement));
+			extension_hmac_reset--;
+			assert(extension_hmac_reset == 0);
+		}
 		if (ext->type == EXTENSION_MAC_TDD_CONTROL) {
+			assert(ext == ext2);
 			assert(ext != NULL);
 			assert(ext->length == sizeof(ExtTDDControl)+1);
 			assert(ext->TDDControl.window == mac_length);
@@ -166,30 +198,34 @@ static void test1_round(){
 			extension_mac_tdd--;
 			assert(extension_mac_tdd == 0);
 		}
-		else if(ext->type == EXTENSION_ARQ_HANDSHAKE){
-			assert(extension_arq_setup == 1);
-			assert(ext->length == sizeof(ExtARQHandshake) + 1);
-			assert(ext->ARQHandshake.peer_state == setup_flag);
-			assert(ext->ARQHandshake.identifier == setup_identifier);
-			extension_arq_setup--;
-			assert(extension_arq_setup == 0);
-		}
-		else if(ext->type == EXTENSION_ARQ_CTRL){
-			assert(extension_arq_ctrl == 1);
-			assert(ext->length == sizeof(ExtARQCtrl )+1);
-			assert(ext->ARQCtrl.tx_sequence == ctrl_tx);
-			assert(ext->ARQCtrl.rx_sequence == ctrl_rx);
-			extension_arq_ctrl--;
-			assert(extension_arq_ctrl == 0);
-		}
-		else if(ext->type == EXTENSION_ARQ_SEQUENCE){
+		if(ext->type == EXTENSION_ARQ_SEQUENCE){
+			assert(ext == ext3);
 			assert(extension_arq_sequence == 1);
 			assert(ext->length == sizeof(ExtARQSeq )+1);
 			assert(ext->ARQSeq.sequence == arq_sequence);
 			extension_arq_sequence--;
 			assert(extension_arq_sequence == 0);
 		}
-		else if(ext->type == EXTENSION_ARQ_REQUEST){
+		if(ext->type == EXTENSION_ARQ_CTRL){
+			assert(ext == ext4);
+			assert(extension_arq_ctrl == 1);
+			assert(ext->length == sizeof(ExtARQCtrl)+1);
+			assert(ext->ARQCtrl.tx_sequence == ctrl_tx);
+			assert(ext->ARQCtrl.rx_sequence == ctrl_rx);
+			extension_arq_ctrl--;
+			assert(extension_arq_ctrl == 0);
+		}
+		if(ext->type == EXTENSION_ARQ_HANDSHAKE){
+			assert(ext == ext5);
+			assert(extension_arq_handshake == 1);
+			assert(ext->length == sizeof(ExtARQHandshake) + 1);
+			assert(ext->ARQHandshake.peer_state == setup_flag);
+			assert(ext->ARQHandshake.identifier == setup_identifier);
+			extension_arq_handshake--;
+			assert(extension_arq_handshake == 0);
+		}
+		if(ext->type == EXTENSION_ARQ_REQUEST){
+			assert(ext == ext6);
 			assert(extension_arq_rrequest == 1);
 			assert(ext->length == sizeof(ExtARQReq)+1);
 			assert(ext->ARQReq.sequence == rr_sequence);
@@ -197,17 +233,12 @@ static void test1_round(){
 			extension_arq_rrequest--;
 			assert(extension_arq_rrequest == 0);
 		}
-		else if(ext->type == EXTENSION_HMAC_SEQUENCE_RESET){
-			assert(ext->length == sizeof(ExtHMACSequenceReset)+1);
-			assert(extension_hmac_reset == 1);
-			assert(ext->HMACSequenceReset.sequence == sky_hton16(hmac_enforcement));
-			extension_hmac_reset--;
-			assert(extension_hmac_reset == 0);
-		}
+
 	}
 	assert(ext_remaining == 0);
 
 
+	//compare payloads
 	int rcvd_pl_len = (int)rframe->length - (rframe->ext_length + EXTENSION_START_IDX);
 	assert(rcvd_pl_len == payload_len);
 	assert(memcmp(rframe->raw + rframe->ext_length + EXTENSION_START_IDX, pl, rcvd_pl_len) == 0);

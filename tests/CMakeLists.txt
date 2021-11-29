@@ -33,7 +33,7 @@ add_executable(module_test
         hmac_tests.c
         arq_tests.c
         arq_tests2.c
-        )
+        sky_tx_test.c sky_tx_test.h sky_rx_test.c sky_rx_test.h mac_test.c)
 
 
 add_executable(cycle_test

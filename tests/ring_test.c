@@ -8,15 +8,15 @@
 #include <math.h>
 
 static void test1(int count);
-static void test15(int count);
-static void test2_rcv(int count);
-static void test3_send(int count);
+static void test2(int count);
+static void test3_rcv(int count);
+static void test4_send(int count);
 
 void ring_tests(int load){
 	test1(1000*load +1);
-	test15(500*load +1);
-	test2_rcv(load);
-	test3_send(load);
+	test2(500*load +1);
+	test3_rcv(load);
+	test4_send(load);
 }
 
 static int positive_mod(int x, int m){
@@ -33,7 +33,7 @@ static int wrap_seq(int x){
 //======================================================================================================================
 static void test1_round();
 static void test1(int count){
-	PRINTFF(0,"[ARQ RING TEST 1: a known case]\n");
+	PRINTFF(0,"[RING TEST 1: a known case]\n");
 	for (int i = 0; i < count; ++i) {
 		if(i % 2000 == 0){
 			PRINTFF(0,"\ti=%d\n", i);
@@ -239,19 +239,19 @@ static void test1_round(){
 
 //======================================================================================================================
 //======================================================================================================================
-static void test15_round();
-static void test15(int count){
-	PRINTFF(0,"[ARQ RING TEST 1.5: spin and recall]\n");
+static void test2_round();
+static void test2(int count){
+	PRINTFF(0,"[RING TEST 2: ring horizon fill]\n");
 	for (int i = 0; i < count; ++i) {
 		if(i % 1000 == 0){
 			PRINTFF(0,"\ti=%d\n", i);
 		}
-		test15_round();
+		test2_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
-static void test15_round(){
+static void test2_round(){
 	int elesize = randint_i32(44,85);
 	int elecount = randint_i32(9000,11000);
 	int rcv_ring_len = randint_i32(20,35);
@@ -300,18 +300,18 @@ static void test15_round(){
 //test receive side.
 //======================================================================================================================
 //======================================================================================================================
-static void test2_round();
+static void test3_round();
 
-static void test2_rcv(int count){
-	PRINTFF(0,"[ARQ RING TEST 2: receive side]\n");
+static void test3_rcv(int count){
+	PRINTFF(0,"[RING TEST 3: receive side]\n");
 	for (int i = 0; i < count; ++i) {
-		test2_round();
+		test3_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
 
-static void test2_round(){
+static void test3_round(){
 	//randomize operational parameters
 	int elesize = randint_i32(64,85);
 	int elecount = randint_i32(10000,11000);
@@ -442,17 +442,17 @@ static void test2_round(){
 //test send side
 //======================================================================================================================
 //======================================================================================================================
-static void test3_round();
+static void test4_round();
 
-static void test3_send(int count){
-	PRINTFF(0,"[ARQ RING TEST 3: send side]\n");
+static void test4_send(int count){
+	PRINTFF(0,"[RING TEST 4: send side]\n");
 	for (int i = 0; i < count; ++i) {
-		test3_round();
+		test4_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
-static void test3_round(){
+static void test4_round(){
 	int elesize = randint_i32(64,85);
 	int elecount = randint_i32(10000,11000);
 	int rcv_ring_len = randint_i32(20,35);

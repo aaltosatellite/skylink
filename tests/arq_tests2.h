@@ -5,6 +5,6 @@
 #ifndef SKYLINK_ARQ_TESTS2_H
 #define SKYLINK_ARQ_TESTS2_H
 
-void arq_tests2(int load);
+void arq_system_test3(int load);
 
 #endif //SKYLINK_ARQ_TESTS2_H

@@ -81,13 +81,12 @@ static void test1();
 static void test1_round(uint64_t NN, int print_on);
 static void step_forward(int which, TXRXJob* job);
 static void print_job_status(TXRXJob* job);
-
-
-
+static void test_get_loss_chance();
 
 
 int main(int argc, char* argv[]){
 	reseed_random();
+	//test_get_loss_chance();
 	test1();
 }
 
@@ -112,12 +111,35 @@ double get_loss_chance(uint64_t now_ms, double rate0, double spin_rpm, double si
 	if( ((int64_t)now_ms % mspr) < l_silence){
 		return 1.0;
 	}
-	//double s = cos(spin_rpm * (double)now_ms * 2.0 * 3.1415 / (60.0 * 1000.0));
-	//double abs_s = fabs(s);
-	//if(abs_s > 0.95){
-	//	return 1.0;
-	//}
 	return rate0;
+}
+
+
+
+static void test_get_loss_chance(){
+	uint64_t nowms = 1;
+	double rate0 = 0.1;
+	double spin_rpm = 60;
+	double silent_section = 0.33;
+	int spin_on = 1;
+	int N = 100000;
+	double N_on = 0.0;
+	double N_off = 0.0;
+	for (int i = 0; i < N; ++i) {
+		double r = get_loss_chance(nowms, rate0, spin_rpm, silent_section, spin_on);
+		if(r == 1.0){
+			N_off += 1.0;
+			PRINTFF(0,".");
+		}
+		if(r == rate0){
+			N_on += 1.0;
+			PRINTFF(0,"#");
+		}
+		nowms++;
+	}
+	PRINTFF(0,"\n");
+	PRINTFF(0,"Ratio target: %lf\n", silent_section);
+	PRINTFF(0,"Silent ratio: %lf\n", N_off/(N_off+N_on));
 }
 
 
@@ -309,9 +331,9 @@ void test1_round(uint64_t NN, int print_on){
 	job.peer1.pl_rate 	= 4.0; 		//param
 	job.peer2.pl_rate 	= 2.0; 		//param
 	job.corrupt_rate	= 0.05; 	//param
-	job.loss_rate0 		= 0.12; 	//param (12)
+	job.loss_rate0 		= 0.11; 	//param (12)
 	job.spin_rate_rpm	= 6;
-	job.silent_section	= 0.20;
+	job.silent_section	= 0.24;
 	job.spin_on			= 1;
 	job.payloadList1 	= new_payload_list();
 	job.payloadList2 	= new_payload_list();

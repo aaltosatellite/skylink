@@ -25,7 +25,7 @@ void sky_tx_track_tdd_state(SkyHandle self, int can_send){
 
 
 static int sky_tx_extension_needed_hmac_reset(SkyHandle self, uint8_t vc){
-	return self->hmac->vc_enfocement_need[vc] != 0;
+	return (self->hmac->vc_enfocement_need[vc] != 0) && (self->conf->vc[vc].require_authentication);
 }
 static int sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	if(!sky_tx_extension_needed_hmac_reset(self, vc)){

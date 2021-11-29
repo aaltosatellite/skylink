@@ -21,15 +21,15 @@ SkyConfig* new_vanilla_config(){
 	config->array[1].element_count 		= 3600;
 	config->array[1].element_size  		= 36;
 
-	config->array[2].horizon_width 		= 0;
-	config->array[2].send_ring_len 		= 8;
-	config->array[2].rcv_ring_len 		= 8;
+	config->array[2].horizon_width 		= 8;
+	config->array[2].send_ring_len 		= 16;
+	config->array[2].rcv_ring_len 		= 16;
 	config->array[2].element_count 		= 800;
 	config->array[2].element_size  		= 36;
 
-	config->array[3].horizon_width 		= 0;
-	config->array[3].send_ring_len 		= 8;
-	config->array[3].rcv_ring_len 		= 8;
+	config->array[3].horizon_width 		= 8;
+	config->array[3].send_ring_len 		= 16;
+	config->array[3].rcv_ring_len 		= 16;
 	config->array[3].element_count 		= 800;
 	config->array[3].element_size  		= 36;
 

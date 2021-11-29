@@ -10,17 +10,23 @@
 #include "tools/tools.h"
 #include "arq_tests.h"
 #include "arq_tests2.h"
+#include "sky_tx_test.h"
+
+void mac_test(int load);
 
 int main() {
 	reseed_random();
 
-	elebuffer_tests();
-	packet_tests();
-	fec_test();
-	hmac_tests();
+	//elebuffer_tests();
+	//packet_tests();
+	//fec_test();
+	//hmac_tests();
+	mac_test(10);
 	ring_tests(15);
-	arq_tests(21);
-	arq_tests2(21);
+	arq_system_test1(21);
+	arq_system_test2(21);
+	arq_system_test3(21);
+	sky_tx_test(9);
 }
 
 

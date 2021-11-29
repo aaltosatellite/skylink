@@ -8,30 +8,27 @@
 #include "tst_utilities.h"
 
 
-void arq_test1(int load);
-void arq_test1_cycle();
+void arq_system_test1(int load);
+void arq_system_test1_cycle();
 
-void arq_test2(int load);
-void arq_test2_cycle();
+void arq_system_test2(int load);
+void arq_system_test2_cycle();
 
-void arq_tests(int load){
-	arq_test1(load);
-	arq_test2(load);
-}
 
-void arq_test1(int load){
+
+void arq_system_test1(int load){
 	PRINTFF(0, "[ARQ system test 1: ring mechanics.]\n");
 	for (int i = 0; i < (1000*load +1); ++i) {
 		if(i % 2000 == 0){
 			PRINTFF(0,"\ti=%d\n", i);
 		}
-		arq_test1_cycle();
+		arq_system_test1_cycle();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
 
-void arq_test1_cycle(){
+void arq_system_test1_cycle(){
 	String* msgs[ARQ_MAXIMUM_HORIZON+10];
 	for (int i = 0; i < ARQ_MAXIMUM_HORIZON+10; ++i) {
 		msgs[i] = get_random_string(randint_i32(0, 173));
@@ -85,13 +82,13 @@ void arq_test1_cycle(){
 
 
 
-void arq_test2(int load){
+void arq_system_test2(int load){
 	PRINTFF(0, "[ARQ system test 2: packet generation]\n");
 	for (int i = 0; i < (1000*load + 1); ++i) {
 		if(i%2000 == 0){
 			PRINTFF(0,"\ti=%d\n", i);
 		}
-		arq_test2_cycle();
+		arq_system_test2_cycle();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
@@ -100,7 +97,7 @@ void arq_test2(int load){
  * This test puts an ARQ ring into a randomized configuration, and tests packet generation.
  * Most aspects of packet formulation are tested.
  */
-void arq_test2_cycle(){
+void arq_system_test2_cycle(){
 	String* msgs[ARQ_MAXIMUM_HORIZON+10];
 	for (int i = 0; i < ARQ_MAXIMUM_HORIZON+10; ++i) {
 		msgs[i] = get_random_string(randint_i32(0, 173));
