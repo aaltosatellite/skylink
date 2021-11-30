@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-
 #include "suo.h"
 #include "skylink/skylink.h"
 #include "skylink/diag.h"
@@ -36,12 +35,32 @@ int main(int argc, char *argv[])
 	 * Read args
 	 * ------------------ */
 	int modem_base = 4000, vc_base = 5000;
-	if (argc >= 3) {
-		modem_base = atoi(argv[1]);
-		vc_base = atoi(argv[2]);
-	}
-	fprintf(stderr, "modem_base: %d vc_base %d\n", modem_base, vc_base);
+	int mimic_satellite = 0;
+	int show_link_state = 0;
 
+	int opt;
+	while ((opt = getopt(argc, argv, "m:c:xs")) != -1) {
+		switch (opt) {
+		case 'm':
+			modem_base = atoi(optarg);
+			break;
+
+		case 'c':
+			vc_base = atoi(optarg);
+			break;
+
+		case 'x':
+			mimic_satellite = 1;
+			break;
+
+		case 's':
+			show_link_state = 1;
+			break;
+
+		}
+	}
+
+	fprintf(stderr, "modem_base: %d vc_base %d\n", modem_base, vc_base);
 
 	/*
 	 * Open ZeroMQ sockets interface
@@ -56,7 +75,7 @@ int main(int argc, char *argv[])
 	 * ------------------------- */
 
 	//sky_diag_mask = 0xffff; // | SKY_DIAG_INFO  | SKY_DIAG_BUG | SKY_DIAG_BUFFER;
-	if (getopt(argc, argv, "s") > 0)
+	if (show_link_state)
 		sky_diag_mask = SKY_DIAG_INFO | SKY_DIAG_LINK_STATE;
 	else
 		sky_diag_mask &= ~SKY_DIAG_LINK_STATE;
@@ -66,7 +85,7 @@ int main(int argc, char *argv[])
 	*/
 	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
 
-	if (getopt(argc, argv, "x") > 0) {
+	if (mimic_satellite == 0) {
 		config->identity[0] = 'O';
 		config->identity[1] = 'H';
 		config->identity[2] = 'A';
