@@ -80,6 +80,7 @@ int32_t wrap_time_ms(int32_t time_ms){
 #ifdef __unix__
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 static size_t allocated = 0;
 static int allocations = 0;
 
@@ -106,6 +107,12 @@ void report_allocation(){
 	printf("%d allocations.\n", allocations); fflush(stdout);
 	printf("=====================\n"); fflush(stdout);
 }
+
+
+void xassert(int statement){
+	assert(statement);
+}
+
 #endif
 // UNIX ================================================================================================================
 
@@ -118,5 +125,9 @@ void report_allocation(){
 #ifdef __arm__
 //---
 //todo: implement FreeRTOS get_time_ms()
+
+
+void xassert(int statement){}
+
 #endif
 // ARM =================================================================================================================

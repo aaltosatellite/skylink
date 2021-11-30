@@ -11,6 +11,14 @@
 
 
 
+static int compute_required_elementount(int elementsize, int total_ring_slots, int maximum_pl_size){
+	int32_t n_per_pl = element_buffer_element_requirement(elementsize, maximum_pl_size);
+	int32_t required = (total_ring_slots * n_per_pl) + 1;
+	return required;
+}
+
+
+
 //===== SKYLINK ARRAY ==================================================================================================
 SkyArqRing* new_arq_ring(SkyArrayConfig* config){
 	if((config->rcv_ring_len >= ARQ_SEQUENCE_MODULO) || (config->send_ring_len >= ARQ_SEQUENCE_MODULO)){
@@ -19,7 +27,9 @@ SkyArqRing* new_arq_ring(SkyArrayConfig* config){
 	SkyArqRing* arqRing = SKY_MALLOC(sizeof(SkyArqRing));
 	arqRing->sendRing = new_send_ring(config->send_ring_len, 0);
 	arqRing->rcvRing = new_rcv_ring(config->rcv_ring_len, config->horizon_width, 0);
-	arqRing->elementBuffer = new_element_buffer(config->element_size, config->element_count);
+	int32_t ring_slots = config->rcv_ring_len + config->send_ring_len -2;
+	int32_t optimal_element_count = compute_required_elementount(config->element_size, ring_slots, SKY_MAX_PAYLOAD_LEN);
+	arqRing->elementBuffer = new_element_buffer(config->element_size, optimal_element_count);
 	skyArray_wipe_to_arq_off_state(arqRing);
 	return arqRing;
 }
@@ -295,8 +305,6 @@ int skyArray_fill_frame(SkyArqRing* array, SkyConfig* config, SkyRadioFrame* fra
 		int r = sendRing_peek_next_tx_size_and_sequence(array->sendRing, array->elementBuffer, 0, &length, &sequence);
 		assert(r >= 0);
 		assert(length <= available_payload_space(frame));
-		//assert((length + (int)sizeof(ExtARQSeq) + 1) <= available_payload_space(frame));
-		//sky_packet_add_extension_arq_sequence(frame, sequence);
 		int read = skyArray_read_packet_for_tx_monotonic(array, frame->raw+frame->length, &sequence);
 		assert(read >= 0);
 		frame->length += read;

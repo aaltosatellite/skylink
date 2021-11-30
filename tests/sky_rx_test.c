@@ -32,8 +32,25 @@ void sky_rx_test_cycle(){
 
 	int golay_on = randint_i32(0,1) == 1;
 	int pl_in = randint_i32(1,10) <= 4;
-	int len_pl = randint_i32(0,SKY_MAX_PAYLOAD_LEN);
+	int len_pl = randint_i32(0,SKY_MAX_PAYLOAD_LEN * pl_in);
 	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
+	int auth_required[SKY_NUM_VIRTUAL_CHANNELS];
+	int arq_on[SKY_NUM_VIRTUAL_CHANNELS];
+	int rcv_horizon_len[SKY_NUM_VIRTUAL_CHANNELS];
+	int rcv_head_s[SKY_NUM_VIRTUAL_CHANNELS];
+	int stuff_in_horizon[SKY_NUM_VIRTUAL_CHANNELS];
+	int horizon_mask[SKY_NUM_VIRTUAL_CHANNELS];
+	int tx_head_s[SKY_NUM_VIRTUAL_CHANNELS];
+	int tx_tx_head_s[SKY_NUM_VIRTUAL_CHANNELS];
+	int tx_tail_s[SKY_NUM_VIRTUAL_CHANNELS];
+
+
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
+		auth_required[i] = randint_i32(1,10) <= 5;
+
+
+	}
+
 
 
 	SkyHandle self = new_handle(conf);

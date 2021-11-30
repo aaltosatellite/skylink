@@ -99,7 +99,7 @@ int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer
 		return RING_RET_EMPTY;
 	}
 	RingItem* tail_item = &rcvRing->buff[rcvRing->tail];
-	int read = element_buffer_read(elementBuffer, tgt, tail_item->idx, SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE);
+	int read = element_buffer_read(elementBuffer, tgt, tail_item->idx, SKY_MAX_PAYLOAD_LEN + 100);
 	if(read < 0){
 		return RING_RET_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
 	}
@@ -315,7 +315,7 @@ static int sendRing_read_new_packet_to_tx_(SkySendRing* sendRing, ElementBuffer*
 		return RING_RET_EMPTY;
 	}
 	RingItem* item = &sendRing->buff[sendRing->tx_head];
-	int read = element_buffer_read(elementBuffer, tgt, item->idx, SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE);
+	int read = element_buffer_read(elementBuffer, tgt, item->idx, SKY_MAX_PAYLOAD_LEN + 100);
 	if(read < 0){
 		return RING_RET_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
 	}
@@ -337,7 +337,7 @@ static int sendRing_read_recall_packet_to_tx_(SkySendRing* sendRing, ElementBuff
 		return RING_RET_CANNOT_RECALL;
 	}
 	RingItem* item = &sendRing->buff[recall_ring_index];
-	int read = element_buffer_read(elementBuffer, tgt, item->idx, SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE);
+	int read = element_buffer_read(elementBuffer, tgt, item->idx, SKY_MAX_PAYLOAD_LEN + 100);
 	if(read < 0){
 		return RING_RET_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
 	}

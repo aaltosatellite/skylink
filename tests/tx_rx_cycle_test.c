@@ -84,9 +84,13 @@ static void print_job_status(TXRXJob* job);
 static void test_get_loss_chance();
 
 
-int main(int argc, char* argv[]){
+int main(){
 	reseed_random();
-	//test_get_loss_chance();
+	PRINTFF(0,"\n\t(testing loss function...");
+	for (int i = 0; i < 1000; ++i) {
+		test_get_loss_chance();
+	}
+	PRINTFF(0," ...ok)\n");
 	test1();
 }
 
@@ -106,8 +110,8 @@ double get_loss_chance(uint64_t now_ms, double rate0, double spin_rpm, double si
 		return rate0;
 	}
 	double ms_per_r = 60.0 * 1000.0 / spin_rpm;
-	int l_silence = round(ms_per_r * silent_section);
-	int mspr = round(ms_per_r);
+	int l_silence = (int)round(ms_per_r * silent_section);
+	int mspr = (int)round(ms_per_r);
 	if( ((int64_t)now_ms % mspr) < l_silence){
 		return 1.0;
 	}
@@ -115,31 +119,33 @@ double get_loss_chance(uint64_t now_ms, double rate0, double spin_rpm, double si
 }
 
 
-
 static void test_get_loss_chance(){
 	uint64_t nowms = 1;
 	double rate0 = 0.1;
-	double spin_rpm = 60;
-	double silent_section = 0.33;
+	double spin_rpm = randomd(0.5, 80.0);
+	double silent_section = randomd(0.0, 0.99);
 	int spin_on = 1;
-	int N = 100000;
+	int N = (int) round( 1000000.0 / spin_rpm);
 	double N_on = 0.0;
 	double N_off = 0.0;
 	for (int i = 0; i < N; ++i) {
 		double r = get_loss_chance(nowms, rate0, spin_rpm, silent_section, spin_on);
 		if(r == 1.0){
 			N_off += 1.0;
-			PRINTFF(0,".");
 		}
 		if(r == rate0){
 			N_on += 1.0;
-			PRINTFF(0,"#");
 		}
 		nowms++;
 	}
-	PRINTFF(0,"\n");
-	PRINTFF(0,"Ratio target: %lf\n", silent_section);
-	PRINTFF(0,"Silent ratio: %lf\n", N_off/(N_off+N_on));
+	double observed_silent_section = N_off / (N_on+N_off);
+	double _rel = observed_silent_section - silent_section;
+
+	//PRINTFF(0,"\n");
+	//PRINTFF(0,"Ratio rel: %lf\n", observed_silent_section/silent_section);
+	//PRINTFF(0,"Ratio target: %lf\n", silent_section);
+	//PRINTFF(0,"Silent ratio: %lf\n", observed_silent_section);
+	assert(fabs(_rel) < 0.02);
 }
 
 

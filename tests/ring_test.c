@@ -51,16 +51,15 @@ static void test1_round(){
 	config.rcv_ring_len = 10;
 	config.horizon_width = 4;
 	config.element_size = 64;
-	config.element_count = 1500;
 	SkyArqRing* array = new_arq_ring(&config);
 	uint8_t* tgt = x_alloc(60000);
-	String* s0 = get_random_string(randint_i32(0,SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE));
-	String* s1 = get_random_string(randint_i32(0,SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE));
-	String* s2 = get_random_string(randint_i32(0,SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE));
-	String* s3 = get_random_string(randint_i32(0,SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE));
-	String* s4 = get_random_string(randint_i32(0,SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE));
-	String* s5 = get_random_string(randint_i32(0,SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE));
-	String* s6 = get_random_string(randint_i32(0,SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE));
+	String* s0 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
+	String* s1 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
+	String* s2 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
+	String* s3 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
+	String* s4 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
+	String* s5 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
+	String* s6 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
 
 	skyArray_wipe_to_arq_init_state(array, 10);
 	ExtARQHandshake handshake;
@@ -253,7 +252,6 @@ static void test2(int count){
 
 static void test2_round(){
 	int elesize = randint_i32(44,85);
-	int elecount = randint_i32(9000,11000);
 	int rcv_ring_len = randint_i32(20,35);
 	int send_ring_len = randint_i32(20,35);
 	int horizon = 16;
@@ -266,7 +264,6 @@ static void test2_round(){
 	config.rcv_ring_len = rcv_ring_len;
 	config.horizon_width = horizon;
 	config.element_size = elesize;
-	config.element_count = elecount;
 	SkyArqRing* array_s = new_arq_ring(&config);
 	SkyArqRing* array_r = new_arq_ring(&config);
 
@@ -314,7 +311,6 @@ static void test3_rcv(int count){
 static void test3_round(){
 	//randomize operational parameters
 	int elesize = randint_i32(64,85);
-	int elecount = randint_i32(10000,11000);
 	int rcv_ring_len = randint_i32(20,35);
 	int send_ring_len = randint_i32(20,35);
 	int horizon = randint_i32(0, 16);
@@ -325,7 +321,7 @@ static void test3_round(){
 	int n_strings = NMSG+500;
 	String** messages = x_alloc(n_strings * sizeof(String*));
 	for (int i = 0; i < n_strings; ++i) {
-		messages[i] = get_random_string(randint_i32(0, SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE));
+		messages[i] = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
 	}
 	//int send_sq0 = randint_i32(0,100); //randomize starting sequence.
 	int rcv_sq0 = 0;
@@ -338,7 +334,6 @@ static void test3_round(){
 	config.rcv_ring_len = rcv_ring_len;
 	config.horizon_width = horizon;
 	config.element_size = elesize;
-	config.element_count = elecount;
 	SkyArqRing* array_r = new_arq_ring(&config);
 	uint8_t* tgt = x_alloc(10000);
 	int next_rcv_idx = 0;						//order index of the next message to be received by FSW side
@@ -454,7 +449,6 @@ static void test4_send(int count){
 
 static void test4_round(){
 	int elesize = randint_i32(64,85);
-	int elecount = randint_i32(10000,11000);
 	int rcv_ring_len = randint_i32(20,35);
 	int send_ring_len = randint_i32(38,39);
 	int horizon = randint_i32(0, 16);
@@ -466,7 +460,7 @@ static void test4_round(){
 	int n_strings = NMSG+500;
 	String** messages = x_alloc(n_strings * sizeof(String*));
 	for (int i = 0; i < n_strings; ++i) {
-		messages[i] = get_random_string(randint_i32(0, SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE));
+		messages[i] = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
 	}
 	int s_seq0 = 0; //randint_i32(0,100);
 	//int r_seq0 = randint_i32(0,100);
@@ -476,7 +470,6 @@ static void test4_round(){
 	config.rcv_ring_len = rcv_ring_len;
 	config.horizon_width = horizon;
 	config.element_size = elesize;
-	config.element_count = elecount;
 	SkyArqRing* array = new_arq_ring(&config);
 	uint8_t* tgt = x_alloc(10000);
 	PRINTFF(0,"\t[ring length: %d] [recall depth: %d] [N_msgs: %d]\n", send_ring_len, n_recall, NMSG);

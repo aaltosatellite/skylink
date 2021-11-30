@@ -4,6 +4,7 @@
 
 #include "skylink/elementbuffer.h"
 #include "skylink/platform.h"
+#include "skylink/utilities.h"
 
 
 
@@ -156,6 +157,11 @@ static int chain_is_ok_forward(ElementBuffer* buffer, idx_t idx){
 }
 
 
+int element_buffer_element_requirement(int32_t element_size, int32_t length){
+	int32_t usable_size = element_size - (int32_t)(2 * sizeof(idx_t));
+	int32_t n = (length + EB_LEN_BYTES + usable_size - 1) / usable_size;
+	return n;
+}
 
 
 // ==== PUBLIC FUNCTIONS ===============================================================================================

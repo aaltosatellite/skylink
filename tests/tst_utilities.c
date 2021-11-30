@@ -3,7 +3,7 @@
 //
 
 #include "tst_utilities.h"
-
+#include "../src/skylink/utilities.h"
 
 uint8_t arr_[16] = {83, 101, 105, 122, 101, 32, 84, 104, 101, 32, 78, 105, 103, 104, 116, 33};
 
@@ -11,26 +11,22 @@ SkyConfig* new_vanilla_config(){
 	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
 	config->array[0].horizon_width 		= 16;
 	config->array[0].send_ring_len 		= 24;
-	config->array[0].rcv_ring_len 		= 24;
-	config->array[0].element_count	 	= 3600;
+	config->array[0].rcv_ring_len 		= 22;
 	config->array[0].element_size  		= 36;
 
 	config->array[1].horizon_width 		= 16;
 	config->array[1].send_ring_len 		= 24;
-	config->array[1].rcv_ring_len 		= 24;
-	config->array[1].element_count 		= 3600;
+	config->array[1].rcv_ring_len 		= 22;
 	config->array[1].element_size  		= 36;
 
-	config->array[2].horizon_width 		= 8;
-	config->array[2].send_ring_len 		= 16;
-	config->array[2].rcv_ring_len 		= 16;
-	config->array[2].element_count 		= 800;
+	config->array[2].horizon_width 		= 6;
+	config->array[2].send_ring_len 		= 12;
+	config->array[2].rcv_ring_len 		= 10;
 	config->array[2].element_size  		= 36;
 
-	config->array[3].horizon_width 		= 8;
-	config->array[3].send_ring_len 		= 16;
-	config->array[3].rcv_ring_len 		= 16;
-	config->array[3].element_count 		= 800;
+	config->array[3].horizon_width 		= 6;
+	config->array[3].send_ring_len 		= 12;
+	config->array[3].rcv_ring_len 		= 10;
 	config->array[3].element_size  		= 36;
 
 	config->hmac.key_length 			= 16;

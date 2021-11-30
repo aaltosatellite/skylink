@@ -9,8 +9,8 @@
 #include "conf.h"
 #include "frame.h"
 
-#define SKY_ARRAY_MAXIMUM_PAYLOAD_SIZE	260
-#define ARQ_SEQUENCE_MODULO 			507
+
+#define ARQ_SEQUENCE_MODULO 			507 //todo: should be 65000 in prod.
 #define ARQ_RESEND_SCHEDULE_DEPTH		16
 #define ARQ_MAXIMUM_HORIZON				16
 

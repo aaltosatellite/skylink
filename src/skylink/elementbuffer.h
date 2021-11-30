@@ -65,6 +65,8 @@ int element_buffer_read(ElementBuffer* buffer, uint8_t* target, idx_t idx, int32
 /* Deletes a payload at index 'idx' */
 int element_buffer_delete(ElementBuffer* buffer, idx_t idx);
 
+/* Utility function for external calculations */
+int element_buffer_element_requirement(int32_t element_size, int32_t length);
 
 
 /* Test functions. */

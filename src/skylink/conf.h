@@ -62,7 +62,6 @@ typedef struct {
 
 typedef struct {
 	int element_size;
-	int element_count;
 
 	int rcv_ring_len;
 	int horizon_width;

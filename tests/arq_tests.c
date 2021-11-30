@@ -38,7 +38,6 @@ void arq_system_test1_cycle(){
 	config.send_ring_len = randint_i32(22,35);
 	config.rcv_ring_len = randint_i32(20,35);
 	config.element_size = 90;
-	config.element_count = 9000;
 	config.horizon_width = 16;
 	SkyArqRing* array = new_arq_ring(&config);
 	SkyArqRing* array_r = new_arq_ring(&config);
@@ -107,7 +106,6 @@ void arq_system_test2_cycle(){
 	config.send_ring_len = randint_i32(22,35);
 	config.rcv_ring_len = randint_i32(20,35);
 	config.element_size = randint_i32(30,80);
-	config.element_count = randint_i32(4000,5500);
 	config.horizon_width = 16;
 	SkyArqRing* array = new_arq_ring(&config);
 	SkyArqRing* array_r = new_arq_ring(&config);

@@ -7,7 +7,7 @@
 #include "arq_ring.h"
 #include "conf.h"
 #include "frame.h"
-
+#include "utilities.h"
 
 
 
@@ -95,6 +95,13 @@ typedef struct sky_hmac SkyHMAC;
 
 
 typedef struct {
+	uint8_t arq_state;
+	uint8_t authentication_on;
+	arq_seq_t tx_head_sequence;
+	arq_seq_t tx_tx_sequence;
+	arq_seq_t tx_tail_sequence;
+	arq_seq_t rx_head_sequence;
+	arq_seq_t rx_tail_sequence;
 
 
 } SkylinkChannelState;
@@ -135,6 +142,19 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 
 int sky_rx(SkyHandle self, SkyRadioFrame* frame, int contains_golay);
 
+//int sky_transmission_queue_full(SkyHandle self, int vc);
+
+//int sky_push_transmission(SkyHandle self, int vc, uint8_t* paylaod, int length);
+
+//int sky_receive_queue_lengt(SkyHandle self, int vc);
+
+//int sky_receive_transmission(SkyHandle self, int vc, uint8_t* tgt, arq_seq_t* sequence);
+
+//int sky_vc_arq_status(SkyHandle self, int vc);
+
+//int sky_initialze_arq(SkyHandle self, int vc);
+
+//int sky_close_arq(SkyHandle self, int vc);
 
 
 
