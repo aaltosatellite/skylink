@@ -2,6 +2,7 @@
 #include <zmq.h>
 #include <time.h>
 #include <string.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -54,29 +55,38 @@ int main(int argc, char *argv[])
 	 * Initialize protocol
 	 * ------------------------- */
 
-	sky_diag_mask = 0xFFFF;
-	/*SKY_DIAG_INFO  |
-	SKY_DIAG_DEBUG |
-	SKY_DIAG_BUG | \
-	SKY_DIAG_LINK_STATE | \
-	SKY_DIAG_FRAMES |
-	SKY_DIAG_BUFFER*/
+	//sky_diag_mask = 0xffff; // | SKY_DIAG_INFO  | SKY_DIAG_BUG | SKY_DIAG_BUFFER;
+	if (getopt(argc, argv, "s") > 0)
+		sky_diag_mask = SKY_DIAG_INFO | SKY_DIAG_LINK_STATE;
+	else
+		sky_diag_mask &= ~SKY_DIAG_LINK_STATE;
 
 	/*
 	* PHY configurations
 	*/
-	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));;
-	config->identity[0] = 'O';
-	config->identity[1] = 'H';
-	config->identity[2] = 'F';
-	config->identity[3] = 'S';
-	config->identity[4] = '1';
+	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
+
+	if (getopt(argc, argv, "x") > 0) {
+		config->identity[0] = 'O';
+		config->identity[1] = 'H';
+		config->identity[2] = 'A';
+		config->identity[3] = 'G';
+		config->identity[4] = 'S';
+	}
+	else {
+		config->identity[0] = 'O';
+		config->identity[1] = 'H';
+		config->identity[2] = 'F';
+		config->identity[3] = 'S';
+		config->identity[4] = '1';
+	}
+
 
 	/*
 	 * MAC configurations
 	 */
-	config->mac.default_gap_length           = 700; // [ms]
-	config->mac.default_tail_length          = 86;  // [ms]
+	config->mac.default_gap_length           = 1000; // [ms]
+	config->mac.default_tail_length          = 400; // [ms]
 
 	config->mac.maximum_window_length        = 350; // [ms]
 	config->mac.minimum_window_length        = 25;  // [ms]
@@ -97,25 +107,21 @@ int main(int argc, char *argv[])
 	config->array[0].horizon_width           = 16;
 	config->array[0].send_ring_len           = 24;
 	config->array[0].rcv_ring_len            = 24;
-	config->array[0].element_count           = 3600;
 	config->array[0].element_size            = 36;
 
 	config->array[1].horizon_width           = 16;
 	config->array[1].send_ring_len           = 24;
 	config->array[1].rcv_ring_len            = 24;
-	config->array[1].element_count           = 3600;
 	config->array[1].element_size            = 36;
 
 	config->array[2].horizon_width           = 0;
 	config->array[2].send_ring_len           = 8;
 	config->array[2].rcv_ring_len            = 8;
-	config->array[2].element_count           = 800;
 	config->array[2].element_size            = 36;
 
 	config->array[3].horizon_width           = 0;
 	config->array[3].send_ring_len           = 8;
 	config->array[3].rcv_ring_len            = 8;
-	config->array[3].element_count           = 800;
 	config->array[3].element_size            = 36;
 
 	/*
@@ -160,7 +166,9 @@ int main(int argc, char *argv[])
 		/*
 		 * Check VC sockets (non-blocking)
 		 */
-		vc_check();
+		vc_check_arq_states();
+		vc_check_incoming();
+		vc_check_outgoing();
 
 		/*
 		 * If we have received tick message run the Skylink TX routine
@@ -183,11 +191,12 @@ int main(int argc, char *argv[])
 
 				// Print diagnostics
 				static int d = 0;
-				if (d++ > 100) {
-					//sky_print_diag(handle);
-					d = 1;
+				if (++d > 20) {
+					sky_print_link_state(handle);
+					d = 0;
 				}
 			}
+
 
 		}
 

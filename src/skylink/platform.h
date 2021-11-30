@@ -35,8 +35,8 @@ timestamp_t get_timestamp();
 
 #define TIMESTAMP_MS ((timestamp_t)1000)
 
-#define SKY_MALLOC pvMalloc
-#define SKY_FREE pvFree
+#define SKY_MALLOC pvPortMalloc
+#define SKY_FREE pvPortFree
 
 
 #endif

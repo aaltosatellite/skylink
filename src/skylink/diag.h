@@ -13,9 +13,9 @@
 #define SKY_DIAG_DEBUG      0x0002
 #define SKY_DIAG_BUG        0x0004
 #define SKY_DIAG_LINK_STATE 0x0008
-#define SKY_DIAG_FEC        0x0008
-#define SKY_DIAG_MAC        0x0010
-#define SKY_DIAG_ARQ        0x0020
+#define SKY_DIAG_FEC        0x0010
+#define SKY_DIAG_MAC        0x0020
+#define SKY_DIAG_ARQ        0x0040
 #define SKY_DIAG_FRAMES     0x0100
 #define SKY_DIAG_BUFFER     0x0200
 
@@ -83,5 +83,7 @@ typedef struct sky_diag {
 SkyDiagnostics* new_diagnostics();
 
 void destroy_diagnostics(SkyDiagnostics* diag);
+
+//void sky_print_link_state(SkyHandle self);
 
 #endif /* __SKYLINK_DIAG_H__ */
