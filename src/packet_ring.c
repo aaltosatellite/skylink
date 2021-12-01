@@ -101,6 +101,7 @@ int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer
 	RingItem* tail_item = &rcvRing->buff[rcvRing->tail];
 	int read = element_buffer_read(elementBuffer, tgt, tail_item->idx, SKY_MAX_PAYLOAD_LEN + 100);
 	if(read < 0){
+		SKY_ASSERT(read > 0)
 		return RING_RET_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
 	}
 	*sequence = tail_item->sequence;
@@ -122,10 +123,11 @@ int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, vo
 	int ring_idx = ring_wrap(rcvRing->head + sequence_wrap(sequence - rcvRing->head_sequence), rcvRing->length);
 	RingItem* item = &rcvRing->buff[ring_idx];
 	if(item->idx != EB_NULL_IDX){
-		return RING_RET_PACKET_ALREADY_IN; //todo: or return 0?
+		return RING_RET_PACKET_ALREADY_IN;
 	}
 	int idx = element_buffer_store(elementBuffer, src, length);
 	if(idx < 0){
+		SKY_ASSERT(idx > 0)
 		return RING_RET_BUFFER_FULL;
 	}
 	item->idx = idx;
@@ -238,6 +240,7 @@ int sendRing_push_packet_to_send(SkySendRing* sendRing, ElementBuffer* elementBu
 	}
 	int idx = element_buffer_store(elementBuffer, payload, length);
 	if(idx < 0){
+		SKY_ASSERT(idx > 0)
 		return RING_RET_BUFFER_FULL;
 	}
 	RingItem* item = &sendRing->buff[sendRing->head];
@@ -317,6 +320,7 @@ static int sendRing_read_new_packet_to_tx_(SkySendRing* sendRing, ElementBuffer*
 	RingItem* item = &sendRing->buff[sendRing->tx_head];
 	int read = element_buffer_read(elementBuffer, tgt, item->idx, SKY_MAX_PAYLOAD_LEN + 100);
 	if(read < 0){
+		SKY_ASSERT(read > 0)
 		return RING_RET_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
 	}
 	*sequence = sendRing->tx_sequence;
@@ -339,6 +343,7 @@ static int sendRing_read_recall_packet_to_tx_(SkySendRing* sendRing, ElementBuff
 	RingItem* item = &sendRing->buff[recall_ring_index];
 	int read = element_buffer_read(elementBuffer, tgt, item->idx, SKY_MAX_PAYLOAD_LEN + 100);
 	if(read < 0){
+		SKY_ASSERT(read > 0)
 		return RING_RET_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
 	}
 	*sequence = recall_seq;

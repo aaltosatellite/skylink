@@ -26,10 +26,13 @@ SkyArqRing* new_arq_ring(SkyArrayConfig* config){
 	}
 	SkyArqRing* arqRing = SKY_MALLOC(sizeof(SkyArqRing));
 	arqRing->sendRing = new_send_ring(config->send_ring_len, 0);
+	SKY_ASSERT(arqRing->sendRing != NULL)
 	arqRing->rcvRing = new_rcv_ring(config->rcv_ring_len, config->horizon_width, 0);
+	SKY_ASSERT(arqRing->rcvRing != NULL)
 	int32_t ring_slots = config->rcv_ring_len + config->send_ring_len -2;
 	int32_t optimal_element_count = compute_required_elementount(config->element_size, ring_slots, SKY_MAX_PAYLOAD_LEN);
 	arqRing->elementBuffer = new_element_buffer(config->element_size, optimal_element_count);
+	SKY_ASSERT(arqRing->elementBuffer != NULL)
 	skyArray_wipe_to_arq_off_state(arqRing);
 	return arqRing;
 }
@@ -303,10 +306,10 @@ int skyArray_fill_frame(SkyArqRing* array, SkyConfig* config, SkyRadioFrame* fra
 		int length = -1;
 		int sequence = -1;
 		int r = sendRing_peek_next_tx_size_and_sequence(array->sendRing, array->elementBuffer, 0, &length, &sequence);
-		assert(r >= 0);
-		assert(length <= available_payload_space(frame));
+		SKY_ASSERT(r >= 0)
+		SKY_ASSERT(length <= available_payload_space(frame))
 		int read = skyArray_read_packet_for_tx_monotonic(array, frame->raw+frame->length, &sequence);
-		assert(read >= 0);
+		SKY_ASSERT(read >= 0)
 		frame->length += read;
 		frame->flags |= SKY_FLAG_HAS_PAYLOAD;
 		return 1;
@@ -358,7 +361,7 @@ int skyArray_fill_frame(SkyArqRing* array, SkyConfig* config, SkyRadioFrame* fra
 			if ((r == 0) && (length_requirement <= available_payload_space(frame)) && (sequence > -1)){
 				sky_packet_add_extension_arq_sequence(frame, sequence);
 				int read = sendRing_read_to_tx(array->sendRing, array->elementBuffer, frame->raw + frame->length, &sequence, 1);
-				assert(read >= 0);
+				SKY_ASSERT(read >= 0)
 				frame->length += read;
 				frame->flags |= SKY_FLAG_HAS_PAYLOAD;
 				ret = 1;

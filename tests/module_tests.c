@@ -26,7 +26,7 @@ int main() {
 	arq_system_test1(21);
 	arq_system_test2(21);
 	arq_system_test3(21);
-	sky_tx_test(9);
+	sky_tx_test(12);
 }
 
 

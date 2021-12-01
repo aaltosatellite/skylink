@@ -9,14 +9,16 @@
 
 static void test1(int count);
 static void test2(int count);
-static void test3_rcv(int count);
-static void test4_send(int count);
+static void test3(int count);
+static void test4_rcv(int count);
+static void test5_send(int count);
 
 void ring_tests(int load){
 	test1(1000*load +1);
 	test2(500*load +1);
-	test3_rcv(load);
-	test4_send(load);
+	test3(1000*load);
+	test4_rcv(load);
+	test5_send(load);
 }
 
 static int positive_mod(int x, int m){
@@ -294,21 +296,80 @@ static void test2_round(){
 
 
 
-//test receive side.
+
 //======================================================================================================================
 //======================================================================================================================
 static void test3_round();
-
-static void test3_rcv(int count){
-	PRINTFF(0,"[RING TEST 3: receive side]\n");
+static void test3(int count){
+	PRINTFF(0,"[RING TEST 3: ring elementbuffer capacity]\n");
 	for (int i = 0; i < count; ++i) {
+		if(i % 2000 == 0){
+			PRINTFF(0,"\ti=%d\n", i);
+		}
 		test3_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
-
 static void test3_round(){
+	int elesize = randint_i32(24,120);
+	int rcv_ring_len = randint_i32(20,35);
+	int send_ring_len = randint_i32(20,35);
+	int horizon = randint_i32(2,rcv_ring_len-3);
+
+	//initialize
+	SkyArrayConfig config;
+	config.send_ring_len = send_ring_len;
+	config.rcv_ring_len = rcv_ring_len;
+	config.horizon_width = horizon;
+	config.element_size = elesize;
+	SkyArqRing* array = new_arq_ring(&config);
+
+	uint8_t pl[2000];
+	fillrand(pl, 2000);
+	int k = 0;
+	for (int i = 0; i < send_ring_len - 1; ++i) {
+		int r = skyArray_push_packet_to_send(array, pl+k, SKY_MAX_PAYLOAD_LEN);
+		assert(r >= 0);
+		k++;
+	}
+	int h = array->rcvRing->head_sequence;
+	for (int i = 0; i < rcv_ring_len - 1; ++i) {
+		int r = skyArray_push_rx_packet(array, pl+k, SKY_MAX_PAYLOAD_LEN, h, 10);
+		h++;
+		assert(r >= 0);
+		k++;
+	}
+
+	destroy_arq_ring(array);
+}
+//======================================================================================================================
+//======================================================================================================================
+
+
+
+
+
+
+
+
+
+
+//test receive side.
+//======================================================================================================================
+//======================================================================================================================
+static void test4_round();
+
+static void test4_rcv(int count){
+	PRINTFF(0,"[RING TEST 4: receive side]\n");
+	for (int i = 0; i < count; ++i) {
+		test4_round();
+	}
+	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
+}
+
+
+static void test4_round(){
 	//randomize operational parameters
 	int elesize = randint_i32(64,85);
 	int rcv_ring_len = randint_i32(20,35);
@@ -437,17 +498,17 @@ static void test3_round(){
 //test send side
 //======================================================================================================================
 //======================================================================================================================
-static void test4_round();
+static void test5_round();
 
-static void test4_send(int count){
-	PRINTFF(0,"[RING TEST 4: send side]\n");
+static void test5_send(int count){
+	PRINTFF(0,"[RING TEST 5: send side]\n");
 	for (int i = 0; i < count; ++i) {
-		test4_round();
+		test5_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
-static void test4_round(){
+static void test5_round(){
 	int elesize = randint_i32(64,85);
 	int rcv_ring_len = randint_i32(20,35);
 	int send_ring_len = randint_i32(38,39);
