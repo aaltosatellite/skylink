@@ -51,6 +51,7 @@ SkyRcvRing* new_rcv_ring(int length, int horizon_width, int initial_sequence){
 	}
 	SkyRcvRing* rcvRing = SKY_MALLOC(sizeof(SkyRcvRing));
 	RingItem* ring = SKY_MALLOC(sizeof(RingItem)*length);
+	memset(ring, 0, sizeof(RingItem)*length);
 	rcvRing->length = length;
 	rcvRing->buff = ring;
 	rcvRing->horizon_width =  (horizon_width <= ARQ_MAXIMUM_HORIZON) ? horizon_width : ARQ_MAXIMUM_HORIZON; //todo: Maybe we should allow larger horizons, despire recall-mask recalling 16 at time.
@@ -195,6 +196,7 @@ SkySendRing* new_send_ring(int length, int initial_sequence){
 	}
 	SkySendRing* sendRing = SKY_MALLOC(sizeof(SkySendRing));
 	RingItem* ring = SKY_MALLOC(sizeof(RingItem)*length);
+	memset(ring, 0, sizeof(RingItem)*length);
 	sendRing->buff = ring;
 	sendRing->length = length;
 	wipe_send_ring(sendRing, NULL, wrap_sequence(initial_sequence));
