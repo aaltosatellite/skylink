@@ -112,15 +112,15 @@ void sky_tx_test_cycle(){
 		for (int i = 0; i < n_new_pl[vc] + n_recalled_pl[vc]; ++i) {
 			String* s = get_random_string(randint_i32(0, 170));
 			memset(s->data, s->length, s->length);
-			skyArray_push_packet_to_send(self->arrayBuffers[vc], s->data, s->length);
+			sky_vc_push_packet_to_send(self->arrayBuffers[vc], s->data, s->length);
 			destroy_string(s);
 		}
 		for (int i = 0; i < n_recalled_pl[vc]; ++i) {
 
 			int seq;
-			skyArray_read_packet_for_tx(self->arrayBuffers[vc], tgt, &seq, 0);
-			skyArray_schedule_resend(self->arrayBuffers[vc], sequence_wrap(array_tx_seq0[vc] +i));
-			assert(seq == sequence_wrap(array_tx_seq0[vc] + i));
+			sky_vc_read_packet_for_tx(self->arrayBuffers[vc], tgt, &seq, 0);
+			sky_vc_schedule_resend(self->arrayBuffers[vc], wrap_sequence(array_tx_seq0[vc] + i));
+			assert(seq == wrap_sequence(array_tx_seq0[vc] + i));
 		}
 
 		arq_tx_timed_out[vc] = randint_i32(1,12) <= 2;
@@ -152,9 +152,10 @@ void sky_tx_test_cycle(){
 				fillrand(tgt, 100);
 				int _len = randint_i32(0,100);
 				memset(tgt, _len, 100);
-				int _seq = sequence_wrap( array_rx_seq0[vc] +1 +randint_i32(0, self->arrayBuffers[vc]->rcvRing->horizon_width - 1) );
+				int _seq = wrap_sequence(
+						array_rx_seq0[vc] + 1 + randint_i32(0, self->arrayBuffers[vc]->rcvRing->horizon_width - 1));
 				//PRINTFF(0,"h(%d) hz(%d) ", self->arrayBuffers[vc]->rcvRing->head_sequence, self->arrayBuffers[vc]->rcvRing->horizon_width);
-				skyArray_push_rx_packet(self->arrayBuffers[vc], tgt, _len, _seq, now_ms); //this should not interfere with ts's
+				sky_vc_push_rx_packet(self->arrayBuffers[vc], tgt, _len, _seq, now_ms); //this should not interfere with ts's
 				//PRINTFF(0,"seq0(%d) _seq(%d) h(%d)\n", array_rx_seq0[vc], _seq, self->arrayBuffers[vc]->rcvRing->head_sequence);
 				assert(rcvRing_get_horizon_bitmap(self->arrayBuffers[vc]->rcvRing) != 0);
 			}

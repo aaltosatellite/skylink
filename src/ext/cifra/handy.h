@@ -9,7 +9,7 @@
  * Handy CPP defines and C inline functions.
  */
 
-/* Evaluates to the number of items in array-type variable arr. */
+/* Evaluates to the number of items in vc-type variable arr. */
 #define ARRAYCOUNT(arr) (sizeof arr / sizeof arr[0])
 
 /* Normal MIN/MAX macros.  Evaluate argument expressions only once. */

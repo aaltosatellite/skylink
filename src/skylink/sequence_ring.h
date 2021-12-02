@@ -2,8 +2,8 @@
 // Created by elmore on 20.11.2021.
 //
 
-#ifndef SKYLINK_PACKET_RING_H
-#define SKYLINK_PACKET_RING_H
+#ifndef SKYLINK_SEQUENCE_RING_H
+#define SKYLINK_SEQUENCE_RING_H
 
 #include "elementbuffer.h"
 #include "conf.h"
@@ -75,7 +75,7 @@ typedef struct sky_rcv_ring_s SkyRcvRing;
  */
 
 
-int sequence_wrap(int sequence);
+int wrap_sequence(int sequence);
 
 
 
@@ -141,6 +141,6 @@ int sendRing_clean_tail_up_to(SkySendRing* sendRing, ElementBuffer* elementBuffe
 
 
 
-#endif //SKYLINK_PACKET_RING_H
+#endif //SKYLINK_SEQUENCE_RING_H
 
 

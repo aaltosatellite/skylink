@@ -356,7 +356,7 @@ void x_init_condition(pthread_cond_t* condition){
 }
 
 int x_eventfd(uint32_t count, int flags){
-	int ev = eventfd(count, flags); //eventfd is used when queue is present in a polling array.
+	int ev = eventfd(count, flags); //eventfd is used when queue is present in a polling vc.
 	if(ev < 0){
 		quick_exit(-801);
 	}

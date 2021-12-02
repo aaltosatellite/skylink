@@ -52,9 +52,9 @@ void destroy_config(SkyConfig* config);
 
 void destroy_handle(SkyHandle self);
 
-uint16_t spin_to_seq(SkyArqRing* sring, SkyArqRing* rring, int target_sequence, int32_t now_ms);
+uint16_t spin_to_seq(SkyVirtualChannel* sring, SkyVirtualChannel* rring, int target_sequence, int32_t now_ms);
 
-void populate_horizon(SkyArqRing* sring, SkyArqRing* rring, int final_tx_head_seq, int final_rx_head_seq, uint16_t target_mask, int32_t now_ms, String** payloads);
+void populate_horizon(SkyVirtualChannel* sring, SkyVirtualChannel* rring, int final_tx_head_seq, int final_rx_head_seq, uint16_t target_mask, int32_t now_ms, String** payloads);
 
 SkyPacketExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_type);
 

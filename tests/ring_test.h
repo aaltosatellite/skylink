@@ -6,7 +6,7 @@
 #define SKYLINK_RING_TEST_H
 
 #include "../src/skylink/elementbuffer.h"
-#include "../src/skylink/arq_ring.h"
+#include "../src/skylink/reliable_vc.h"
 #include "tools/tools.h"
 #include "crc/crc_algos.h"
 

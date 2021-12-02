@@ -10,14 +10,14 @@ add_compile_options(-O2 -Wall)
 add_executable(module_test
         module_tests.c
 
-        ../src/arq_ring.c
+        ../src/reliable_vc.c
         ../src/diag.c
         ../src/elementbuffer.c
         ../src/fec.c
         ../src/frame.c
         ../src/hmac.c
         ../src/mac.c
-        ../src/packet_ring.c
+        ../src/sequence_ring.c
         ../src/skylink_rx.c
         ../src/skylink_tx.c
         ../src/utilities.c
@@ -42,14 +42,14 @@ add_executable(module_test
 add_executable(cycle_test
         tx_rx_cycle_test.c
 
-        ../src/arq_ring.c
+        ../src/reliable_vc.c
         ../src/diag.c
         ../src/elementbuffer.c
         ../src/fec.c
         ../src/frame.c
         ../src/hmac.c
         ../src/mac.c
-        ../src/packet_ring.c
+        ../src/sequence_ring.c
         ../src/skylink_rx.c
         ../src/skylink_tx.c
         ../src/utilities.c
@@ -64,14 +64,14 @@ add_compile_options(-O2 -Wall)
 add_executable(zmq_peer
         tx_rx_zmq.c
 
-        ../src/arq_ring.c
+        ../src/reliable_vc.c
         ../src/diag.c
         ../src/elementbuffer.c
         ../src/fec.c
         ../src/frame.c
         ../src/hmac.c
         ../src/mac.c
-        ../src/packet_ring.c
+        ../src/sequence_ring.c
         ../src/skylink_rx.c
         ../src/skylink_tx.c
         ../src/utilities.c
@@ -86,14 +86,14 @@ add_compile_options(-O2 -Wall)
 add_executable(alloc_test
         alloc_test.c
 
-        ../src/arq_ring.c
+        ../src/reliable_vc.c
         ../src/diag.c
         ../src/elementbuffer.c
         ../src/fec.c
         ../src/frame.c
         ../src/hmac.c
         ../src/mac.c
-        ../src/packet_ring.c
+        ../src/sequence_ring.c
         ../src/skylink_rx.c
         ../src/skylink_tx.c
         ../src/utilities.c

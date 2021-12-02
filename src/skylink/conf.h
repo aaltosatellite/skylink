@@ -68,7 +68,8 @@ typedef struct {
 
 	int send_ring_len;
 
-} SkyArrayConfig;
+	uint8_t require_authentication;
+} SkyVCConfig;
 
 
 
@@ -87,11 +88,6 @@ typedef struct {
 
 
 
-typedef struct {
-	/* Is authentication required for the channel */
-	uint8_t require_authentication;
-
-} SkyVCConfig;
 
 
 /*
@@ -105,7 +101,6 @@ typedef struct sky_conf {
 	SkyPHYConfig phy;
 	SkyMACConfig mac;
 	HMACConfig	hmac;
-	SkyArrayConfig array[SKY_NUM_VIRTUAL_CHANNELS];
 	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t identity[SKY_IDENTITY_LEN];
 	int32_t arq_timeout_ms;

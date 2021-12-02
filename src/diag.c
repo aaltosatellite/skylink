@@ -1,7 +1,7 @@
 
 #include "skylink/skylink.h"
 #include "skylink/diag.h"
-#include "skylink/arq_ring.h"
+#include "skylink/reliable_vc.h"
 
 unsigned int sky_diag_mask;
 
@@ -33,7 +33,7 @@ void sky_print_link_state(SkyHandle self) {
 
 
 	for (int vc = 0; vc < 4; vc++) {
-		SkyArqRing* ring = self->arrayBuffers[vc];
+		SkyVirtualChannel* ring = self->arrayBuffers[vc];
 
 		SKY_PRINTF(SKY_DIAG_LINK_STATE, "VC#%d   ARQ: ", vc);
 
@@ -60,8 +60,8 @@ void sky_print_link_state(SkyHandle self) {
 
 
 		SKY_PRINTF(SKY_DIAG_LINK_STATE, "TX: %d  RX: %d",
-			skyArray_count_packets_to_tx(ring, 1),
-			skyArray_count_readable_rcv_packets(ring));
+				   sky_vc_count_packets_to_tx(ring, 1),
+				   sky_vc_count_readable_rcv_packets(ring));
 
 		SKY_PRINTF(SKY_DIAG_LINK_STATE, "\n");
 

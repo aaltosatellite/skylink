@@ -80,7 +80,7 @@ static void sha256_update_block(void *vctx, const uint8_t *inp)
 {
   cf_sha256_context *ctx = vctx;
 
-  /* This is a 16-word window into the whole W array. */
+  /* This is a 16-word window into the whole W vc. */
   uint32_t W[16];
 
   uint32_t a = ctx->H[0],

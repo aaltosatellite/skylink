@@ -5,7 +5,7 @@
 #include "skylink/skylink.h"
 #include "skylink/conf.h"
 #include "skylink/fec.h"
-#include "skylink/arq_ring.h"
+#include "skylink/reliable_vc.h"
 #include "skylink/frame.h"
 #include "skylink/mac.h"
 #include "skylink/hmac.h"
@@ -48,7 +48,8 @@ static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 		if(sky_tx_extension_needed_hmac_reset(self, vc)){
 			return vc;
 		}
-		if(skyArray_content_to_send(self->arrayBuffers[vc], self->conf, now_ms, self->mac->frames_sent_in_current_window_per_vc[vc]) > 0){
+		if(sky_vc_content_to_send(self->arrayBuffers[vc], self->conf, now_ms,
+								  self->mac->frames_sent_in_current_window_per_vc[vc]) > 0){
 			return vc;
 		}
 	}
@@ -61,7 +62,7 @@ static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 
 void sky_tx_poll_arq_timeouts(SkyHandle self, int32_t now_ms, int32_t timeout_ms){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		skyArray_poll_arq_state_timeout(self->arrayBuffers[i], now_ms, timeout_ms);
+		sky_vc_poll_arq_state_timeout(self->arrayBuffers[i], now_ms, timeout_ms);
 	}
 }
 
@@ -84,7 +85,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 	const SkyVCConfig* vc_conf = &self->conf->vc[vc];
 
 
-	/* Identity gets copied to the raw-array from conf, and initialize other fields. */
+	/* Identity gets copied to the raw-vc from conf, and initialize other fields. */
 	frame->start_byte = SKYLINK_START_BYTE;
 	memcpy(frame->identity, self->conf->identity, SKY_IDENTITY_LEN);
 	frame->vc = (uint8_t)vc;
@@ -108,7 +109,8 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 
 
 	/* Add necessary extensions and a payload if one is in the ring buffer. This is a rather involved function. */
-	skyArray_fill_frame(self->arrayBuffers[vc], self->conf, frame, now_ms, self->mac->frames_sent_in_current_window_per_vc[vc]);
+	sky_vc_fill_frame(self->arrayBuffers[vc], self->conf, frame, now_ms,
+					  self->mac->frames_sent_in_current_window_per_vc[vc]);
 
 
 	/* Set HMAC state and sequence */

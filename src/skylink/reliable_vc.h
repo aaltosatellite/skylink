@@ -2,14 +2,14 @@
 // Created by elmore on 12.11.2021.
 //
 
-#ifndef SKYLINK_ARQ_RING_H
-#define SKYLINK_ARQ_RING_H
+#ifndef SKYLINK_RELIABLE_VC_H
+#define SKYLINK_RELIABLE_VC_H
 
 
 #include "elementbuffer.h"
 #include "conf.h"
 #include "frame.h"
-#include "packet_ring.h"
+#include "sequence_ring.h"
 
 
 
@@ -35,7 +35,7 @@ typedef struct {
 	int32_t last_tx_ms;
 	int32_t last_rx_ms;
 	int32_t last_ctrl_send;
-} SkyArqRing;
+} SkyVirtualChannel;
 
 
 
@@ -45,23 +45,23 @@ typedef struct {
 
 
 // The obvious...
-SkyArqRing* new_arq_ring(SkyArrayConfig* config);
-void destroy_arq_ring(SkyArqRing* array);
+SkyVirtualChannel* new_arq_ring(SkyVCConfig* config);
+void destroy_arq_ring(SkyVirtualChannel* array);
 
 // Cleans the rings, deletes all the packets from buffer, and initalizes to given sequence numbers.
-void skyArray_wipe_to_arq_off_state(SkyArqRing* array);
+void sky_vc_wipe_to_arq_off_state(SkyVirtualChannel* array);
 
 // (A) >> ( )
-int skyArray_wipe_to_arq_init_state(SkyArqRing* array, int32_t now_ms);
+int sky_vc_wipe_to_arq_init_state(SkyVirtualChannel* array, int32_t now_ms);
 
 // ---
-void skyArray_wipe_to_arq_on_state(SkyArqRing* array, uint32_t identifier, int32_t now_ms);
+void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* array, uint32_t identifier, int32_t now_ms);
 
 // asd
-int skyArray_handle_handshake(SkyArqRing* array, uint8_t peer_state, uint32_t identifier, int32_t now_ms);
+int sky_vc_handle_handshake(SkyVirtualChannel* array, uint8_t peer_state, uint32_t identifier, int32_t now_ms);
 
 // asd
-void skyArray_poll_arq_state_timeout(SkyArqRing* array, int32_t now_ms, int32_t timeout_ms);
+void sky_vc_poll_arq_state_timeout(SkyVirtualChannel* array, int32_t now_ms, int32_t timeout_ms);
 
 
 
@@ -69,34 +69,34 @@ void skyArray_poll_arq_state_timeout(SkyArqRing* array, int32_t now_ms, int32_t 
 //=== SEND =============================================================================================================
 //======================================================================================================================
 // Push packet to buffer. Return the save address index, or -1.
-int skyArray_push_packet_to_send(SkyArqRing* array, void* payload, int length);
+int sky_vc_push_packet_to_send(SkyVirtualChannel* array, void* payload, int length);
 
 // Returns boolean 1/0 wether the send ring is full.
-int skyArray_send_buffer_is_full(SkyArqRing* array);
+int sky_vc_send_buffer_is_full(SkyVirtualChannel* array);
 
 // Reads next message to be sent.
-int skyArray_read_packet_for_tx(SkyArqRing* array, void* tgt, int* sequence, int include_resend);
+int sky_vc_read_packet_for_tx(SkyVirtualChannel* array, void* tgt, int* sequence, int include_resend);
 
 // Returns the number of messages in buffer.
-int skyArray_count_packets_to_tx(SkyArqRing* array, int include_resend);
+int sky_vc_count_packets_to_tx(SkyVirtualChannel* array, int include_resend);
 
 // Return boolean wether a message of particular sequence is still recallable.
-int skyArray_can_recall(SkyArqRing* array, int sequence);
+int sky_vc_can_recall(SkyVirtualChannel* array, int sequence);
 
 // Schedules packet of a sequence to be resent. Returns 0/-1 according to if the packet was recallable.
-int skyArray_schedule_resend(SkyArqRing* arqRing, int sequence);
+int sky_vc_schedule_resend(SkyVirtualChannel* arqRing, int sequence);
 
 // This is called with the head-rx sequence provided by an arq-control-extension
-void skyArray_update_tx_sync(SkyArqRing* array, int peer_rx_head_sequence_by_ctrl, int32_t now_ms);
+void sky_vc_update_tx_sync(SkyVirtualChannel* array, int peer_rx_head_sequence_by_ctrl, int32_t now_ms);
 
 // Fills the length and sequence of the next packet to be transmitted, if the ring is not empty. Returns 0/errorcode.
-int skyArray_peek_next_tx_size_and_sequence(SkyArqRing* array, int include_resend, int* length, int* sequence);
+int sky_vc_peek_next_tx_size_and_sequence(SkyVirtualChannel* array, int include_resend, int* length, int* sequence);
 
 //-----
-int skyArray_content_to_send(SkyArqRing* array, SkyConfig* config, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
+int sky_vc_content_to_send(SkyVirtualChannel* array, SkyConfig* config, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
 
 //-----
-int skyArray_fill_frame(SkyArqRing* array, SkyConfig* config, SkyRadioFrame* frame, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
+int sky_vc_fill_frame(SkyVirtualChannel* array, SkyConfig* config, SkyRadioFrame* frame, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
 //======================================================================================================================
 //======================================================================================================================
 
@@ -105,31 +105,31 @@ int skyArray_fill_frame(SkyArqRing* array, SkyConfig* config, SkyRadioFrame* fra
 //=== RECEIVE ==========================================================================================================
 //======================================================================================================================
 // Pushes latest radio received message in without ARQ. Fills in the next sequence.
-int skyArray_push_rx_packet_monotonic(SkyArqRing* array, void* src, int length);
+int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* array, void* src, int length);
 
 // Pushes a radio received message of particular sequence to buffer.
-int skyArray_push_rx_packet(SkyArqRing* array, void* src, int length, int sequence, int32_t now_ms);
+int sky_vc_push_rx_packet(SkyVirtualChannel* array, void* src, int length, int sequence, int32_t now_ms);
 
 // Read next message to tgt buffer. Return number of bytes written on success, -1 on fail.
-int skyArray_read_next_received(SkyArqRing* array, void* tgt, int* sequence);
+int sky_vc_read_next_received(SkyVirtualChannel* array, void* tgt, int* sequence);
 
-// How many messages there are in buffer as a continuous sequence, an thus readable by skyArray_read_next_received()
-int skyArray_count_readable_rcv_packets(SkyArqRing* array);
+// How many messages there are in buffer as a continuous sequence, an thus readable by sky_vc_read_next_received()
+int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* array);
 
 // This is called with the head-tx sequence provided by an arq-control-extension
-void skyArray_update_rx_sync(SkyArqRing* array, int peer_tx_head_sequence_by_ctrl, int32_t now_ms);
+void sky_vc_update_rx_sync(SkyVirtualChannel* array, int peer_tx_head_sequence_by_ctrl, int32_t now_ms);
 
 //-----
-void skyArray_process_content(SkyArqRing* array,
-							  void* pl,
-							  int len_pl,
-							  SkyPacketExtension* ext_seq,
-							  SkyPacketExtension* ext_ctrl,
-							  SkyPacketExtension* ext_handshake,
-							  SkyPacketExtension* ext_rrequest,
-							  timestamp_t now_ms);
+void sky_vc_process_content(SkyVirtualChannel* array,
+							void* pl,
+							int len_pl,
+							SkyPacketExtension* ext_seq,
+							SkyPacketExtension* ext_ctrl,
+							SkyPacketExtension* ext_handshake,
+							SkyPacketExtension* ext_rrequest,
+							timestamp_t now_ms);
 //======================================================================================================================
 //======================================================================================================================
 
 
-#endif //SKYLINK_ARQ_RING_H
+#endif //SKYLINK_RELIABLE_VC_H

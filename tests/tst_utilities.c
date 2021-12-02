@@ -9,25 +9,25 @@ uint8_t arr_[16] = {83, 101, 105, 122, 101, 32, 84, 104, 101, 32, 78, 105, 103, 
 
 SkyConfig* new_vanilla_config(){
 	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
-	config->array[0].horizon_width 		= 16;
-	config->array[0].send_ring_len 		= 24;
-	config->array[0].rcv_ring_len 		= 22;
-	config->array[0].element_size  		= 36;
+	config->vc[0].horizon_width 		= 16;
+	config->vc[0].send_ring_len 		= 24;
+	config->vc[0].rcv_ring_len 		= 22;
+	config->vc[0].element_size  		= 179;
 
-	config->array[1].horizon_width 		= 16;
-	config->array[1].send_ring_len 		= 24;
-	config->array[1].rcv_ring_len 		= 22;
-	config->array[1].element_size  		= 36;
+	config->vc[1].horizon_width 		= 16;
+	config->vc[1].send_ring_len 		= 24;
+	config->vc[1].rcv_ring_len 		= 22;
+	config->vc[1].element_size  		= 179;
 
-	config->array[2].horizon_width 		= 6;
-	config->array[2].send_ring_len 		= 12;
-	config->array[2].rcv_ring_len 		= 10;
-	config->array[2].element_size  		= 36;
+	config->vc[2].horizon_width 		= 6;
+	config->vc[2].send_ring_len 		= 12;
+	config->vc[2].rcv_ring_len 		= 12;
+	config->vc[2].element_size  		= 179;
 
-	config->array[3].horizon_width 		= 6;
-	config->array[3].send_ring_len 		= 12;
-	config->array[3].rcv_ring_len 		= 10;
-	config->array[3].element_size  		= 36;
+	config->vc[3].horizon_width 		= 6;
+	config->vc[3].send_ring_len 		= 12;
+	config->vc[3].rcv_ring_len 		= 12;
+	config->vc[3].element_size  		= 179;
 
 	config->hmac.key_length 			= 16;
 	config->hmac.maximum_jump 			= 30;
@@ -72,7 +72,7 @@ SkyHandle new_handle(SkyConfig* config){
 	handle->diag = new_diagnostics();
 
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		handle->arrayBuffers[i] = new_arq_ring(&config->array[i]);
+		handle->arrayBuffers[i] = new_arq_ring(&config->vc[i]);
 	}
 	return handle;
 }
@@ -94,10 +94,10 @@ void destroy_handle(SkyHandle self){
 
 
 
-uint16_t spin_to_seq(SkyArqRing* sring, SkyArqRing* rring, int target_sequence, int32_t now_ms){
+uint16_t spin_to_seq(SkyVirtualChannel* sring, SkyVirtualChannel* rring, int target_sequence, int32_t now_ms){
 	uint8_t* tgt = malloc(1000);
 	int i = 0;
-	int first_tgt_sequence = sequence_wrap(target_sequence);
+	int first_tgt_sequence = wrap_sequence(target_sequence);
 	String* s1 = get_random_string(randint_i32(0,100));
 	String* s2 = get_random_string(randint_i32(0,100));
 	String* ss[2] = {s1,s2};
@@ -111,8 +111,8 @@ uint16_t spin_to_seq(SkyArqRing* sring, SkyArqRing* rring, int target_sequence, 
 		i++;
 		String* s = ss[randint_i32(0,1)];
 		int seq2;
-		int seq = skyArray_push_packet_to_send(sring, s->data, s->length);
-		int red = skyArray_read_packet_for_tx(sring, tgt, &seq2, 1);
+		int seq = sky_vc_push_packet_to_send(sring, s->data, s->length);
+		int red = sky_vc_read_packet_for_tx(sring, tgt, &seq2, 1);
 		sendRing_clean_tail_up_to(sring->sendRing, sring->elementBuffer, sring->sendRing->tx_sequence);
 		assert(seq == seq2);
 		assert(red == s->length);
@@ -121,8 +121,8 @@ uint16_t spin_to_seq(SkyArqRing* sring, SkyArqRing* rring, int target_sequence, 
 		//quick_exit(1);
 
 		//assert(sring->elementBuffer->free_elements == sring->elementBuffer->element_count - element_buffer_element_requirement_for(sring->elementBuffer, s->length));
-		int head_advanced = skyArray_push_rx_packet(rring, tgt, s->length, seq, now_ms);
-		red = skyArray_read_next_received(rring, tgt, &seq);
+		int head_advanced = sky_vc_push_rx_packet(rring, tgt, s->length, seq, now_ms);
+		red = sky_vc_read_next_received(rring, tgt, &seq);
 		assert(head_advanced == 1);
 		assert(red == s->length);
 		assert(sring->sendRing->tx_sequence == rring->rcvRing->head_sequence);
@@ -139,23 +139,23 @@ uint16_t spin_to_seq(SkyArqRing* sring, SkyArqRing* rring, int target_sequence, 
 	destroy_string(s1);
 	destroy_string(s2);
 	assert(rcvRing_get_horizon_bitmap(rring->rcvRing) == 0);
-	assert(skyArray_count_readable_rcv_packets(sring) == 0);
-	assert(skyArray_count_readable_rcv_packets(rring) == 0);
-	assert(skyArray_count_packets_to_tx(sring, 1) == 0);
-	assert(skyArray_count_packets_to_tx(rring, 1) == 0);
+	assert(sky_vc_count_readable_rcv_packets(sring) == 0);
+	assert(sky_vc_count_readable_rcv_packets(rring) == 0);
+	assert(sky_vc_count_packets_to_tx(sring, 1) == 0);
+	assert(sky_vc_count_packets_to_tx(rring, 1) == 0);
 	free(tgt);
 	return 0;
 }
 
 
 
-void populate_horizon(SkyArqRing* sring, SkyArqRing* rring, int final_tx_head_seq, int final_rx_head_seq, uint16_t target_mask, int32_t now_ms, String** payloads){
+void populate_horizon(SkyVirtualChannel* sring, SkyVirtualChannel* rring, int final_tx_head_seq, int final_rx_head_seq, uint16_t target_mask, int32_t now_ms, String** payloads){
 	spin_to_seq(sring, rring, final_rx_head_seq, now_ms);
 	if(final_tx_head_seq == final_rx_head_seq){
 		return;
 	}
 	uint8_t* tgt = malloc(1000);
-	assert(sequence_wrap(final_tx_head_seq - final_rx_head_seq) <= 16);
+	assert(wrap_sequence(final_tx_head_seq - final_rx_head_seq) <= 16);
 	int r_tx_0 = rring->sendRing->tx_sequence;
 	int s_rx_0 = sring->rcvRing->head_sequence;
 
@@ -166,8 +166,8 @@ void populate_horizon(SkyArqRing* sring, SkyArqRing* rring, int final_tx_head_se
 		s0 = get_random_string(0);
 	}
 	int seq2;
-	int seq = skyArray_push_packet_to_send(sring, s0->data, s0->length);
-	int red = skyArray_read_packet_for_tx(sring, tgt, &seq2, 1);
+	int seq = sky_vc_push_packet_to_send(sring, s0->data, s0->length);
+	int red = sky_vc_read_packet_for_tx(sring, tgt, &seq2, 1);
 	assert(seq == seq2);
 	assert(red == s0->length);
 	if(!payloads){
@@ -184,15 +184,15 @@ void populate_horizon(SkyArqRing* sring, SkyArqRing* rring, int final_tx_head_se
 		} else {
 			s = get_random_string(1+i);
 		}
-		seq = skyArray_push_packet_to_send(sring, s->data, s->length);
-		red = skyArray_read_packet_for_tx(sring, tgt, &seq2, 1);
+		seq = sky_vc_push_packet_to_send(sring, s->data, s->length);
+		red = sky_vc_read_packet_for_tx(sring, tgt, &seq2, 1);
 		assert(seq == seq2);
 		assert(red == s->length);
 		int bol = target_mask & (1<<i);
 		if(bol){
-			int head_advanced = skyArray_push_rx_packet(rring, tgt, s->length, seq, now_ms);
+			int head_advanced = sky_vc_push_rx_packet(rring, tgt, s->length, seq, now_ms);
 			assert(head_advanced == 0);
-			red = skyArray_read_next_received(rring, tgt, &seq);
+			red = sky_vc_read_next_received(rring, tgt, &seq);
 			assert(red == RING_RET_EMPTY);
 		}
 		if(!payloads){

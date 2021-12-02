@@ -34,13 +34,13 @@ void arq_system_test1_cycle(){
 		msgs[i] = get_random_string(randint_i32(0, 173));
 	}
 	uint8_t* tgt = malloc(1000);
-	SkyArrayConfig config;
+	SkyVCConfig config;
 	config.send_ring_len = randint_i32(22,35);
 	config.rcv_ring_len = randint_i32(20,35);
 	config.element_size = 90;
 	config.horizon_width = 16;
-	SkyArqRing* array = new_arq_ring(&config);
-	SkyArqRing* array_r = new_arq_ring(&config);
+	SkyVirtualChannel* array = new_arq_ring(&config);
+	SkyVirtualChannel* array_r = new_arq_ring(&config);
 
 	int32_t now_ms = randint_i32(0,100000);
 	int seq0 = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
@@ -48,18 +48,18 @@ void arq_system_test1_cycle(){
 
 	for (int i = 0; i < ARQ_MAXIMUM_HORIZON+4; ++i) {
 		int _seq;
-		skyArray_push_packet_to_send(array, msgs[i]->data, msgs[i]->length);
-		int r_ = skyArray_read_packet_for_tx(array, tgt, &_seq, 1);
+		sky_vc_push_packet_to_send(array, msgs[i]->data, msgs[i]->length);
+		int r_ = sky_vc_read_packet_for_tx(array, tgt, &_seq, 1);
 		if(i > ARQ_MAXIMUM_HORIZON){
 			assert(_seq == -1);
 			assert(r_ < 0);
 		} else{
-			assert(_seq == sequence_wrap(seq0 + i));
+			assert(_seq == wrap_sequence(seq0 + i));
 			assert(r_ == msgs[i]->length);
 		}
 	}
 	int n_confirm = randint_i32(-2,ARQ_MAXIMUM_HORIZON+3);
-	int r_conf = sendRing_clean_tail_up_to(array->sendRing, array->elementBuffer, sequence_wrap(seq0 + n_confirm));
+	int r_conf = sendRing_clean_tail_up_to(array->sendRing, array->elementBuffer, wrap_sequence(seq0 + n_confirm));
 	if((n_confirm >= 0) && (n_confirm <= (ARQ_MAXIMUM_HORIZON+1))){
 		//PRINTFF(0,"%d %d\n", r_conf, n_confirm);
 		assert(r_conf == n_confirm);
@@ -102,13 +102,13 @@ void arq_system_test2_cycle(){
 		msgs[i] = get_random_string(randint_i32(0, 173));
 	}
 	uint8_t* tgt = malloc(1000);
-	SkyArrayConfig config;
+	SkyVCConfig config;
 	config.send_ring_len = randint_i32(22,35);
 	config.rcv_ring_len = randint_i32(20,35);
 	config.element_size = randint_i32(30,80);
 	config.horizon_width = 16;
-	SkyArqRing* array = new_arq_ring(&config);
-	SkyArqRing* array_r = new_arq_ring(&config);
+	SkyVirtualChannel* array = new_arq_ring(&config);
+	SkyVirtualChannel* array_r = new_arq_ring(&config);
 	SkyConfig* sky_conf = new_vanilla_config();
 
 	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);			//virtual channel randomized
@@ -136,18 +136,18 @@ void arq_system_test2_cycle(){
 	int n_in_tail = randint_i32(0, ARQ_MAXIMUM_HORIZON-1);
 	for (int i = 0; i < n_in_tail; ++i) {
 		int _seq;
-		skyArray_push_packet_to_send(array, msgs[i]->data, msgs[i]->length);
-		int r_ = skyArray_read_packet_for_tx(array, tgt, &_seq, 1);
-		assert(_seq == sequence_wrap(seq0 + i));
+		sky_vc_push_packet_to_send(array, msgs[i]->data, msgs[i]->length);
+		int r_ = sky_vc_read_packet_for_tx(array, tgt, &_seq, 1);
+		assert(_seq == wrap_sequence(seq0 + i));
 		assert(r_ == msgs[i]->length);
 	}
-	int seq1 = sequence_wrap(seq0 + n_in_tail);
+	int seq1 = wrap_sequence(seq0 + n_in_tail);
 
 	//wether there is a fresh payload to be sent.
 	int new_pl = randint_i32(0, 10) < 8;
 	int new_pl_seq = -1;
 	if(new_pl){
-		new_pl_seq = skyArray_push_packet_to_send(array, msgs[n_in_tail]->data, msgs[n_in_tail]->length);
+		new_pl_seq = sky_vc_push_packet_to_send(array, msgs[n_in_tail]->data, msgs[n_in_tail]->length);
 		if(new_pl_seq != seq1){
 			PRINTFF(0,"%d %d\n", new_pl_seq, seq1);
 		}
@@ -159,13 +159,13 @@ void arq_system_test2_cycle(){
 	int recall_seq = -1;
 	if(recalled){
 		int _n_back = randint_i32(0, n_in_tail + 2);
-		recall_seq = sequence_wrap((seq1-1) - _n_back );
-		int ret_recall = skyArray_schedule_resend(array, recall_seq);
+		recall_seq = wrap_sequence((seq1 - 1) - _n_back);
+		int ret_recall = sky_vc_schedule_resend(array, recall_seq);
 		if(_n_back < n_in_tail){
-			//PRINTFF(0,"A  %d    %d\n", sequence_wrap(recall_seq - seq0), n_in_tail);
+			//PRINTFF(0,"A  %d    %d\n", wrap_sequence(recall_seq - seq0), n_in_tail);
 			assert(ret_recall == 0);
 		} else {
-			//PRINTFF(0,"B  %d    %d\n", sequence_wrap(recall_seq - seq0), n_in_tail);
+			//PRINTFF(0,"B  %d    %d\n", wrap_sequence(recall_seq - seq0), n_in_tail);
 			assert(ret_recall < 0);
 			recalled = 0;
 		}
@@ -187,8 +187,8 @@ void arq_system_test2_cycle(){
 	int own_recall_mask_i = randint_i32(0, 13);
 	int own_recall_mask = 1 << own_recall_mask_i;
 	if (own_recall){
-		int s = sequence_wrap(seq_rcv+1+own_recall_mask_i);
-		skyArray_push_rx_packet(array, msgs[0]->data, msgs[0]->length, s, now_ms);
+		int s = wrap_sequence(seq_rcv + 1 + own_recall_mask_i);
+		sky_vc_push_rx_packet(array, msgs[0]->data, msgs[0]->length, s, now_ms);
 		assert(array->last_rx_ms == ts_recv);
 		assert(array->last_tx_ms == ts_send);
 	}
@@ -202,8 +202,8 @@ void arq_system_test2_cycle(){
 	frame->length = EXTENSION_START_IDX;
 	frame->auth_sequence = 7777;
 
-	int content0 = skyArray_content_to_send(array, sky_conf, now_ms, frames_sent_in_vc);
-	int content = skyArray_fill_frame(array, sky_conf, frame, now_ms, frames_sent_in_vc);
+	int content0 = sky_vc_content_to_send(array, sky_conf, now_ms, frames_sent_in_vc);
+	int content = sky_vc_fill_frame(array, sky_conf, frame, now_ms, frames_sent_in_vc);
 	SkyPacketExtension* extArqCtrl = get_extension(frame, EXTENSION_ARQ_CTRL);
 	SkyPacketExtension* extArqSeq = get_extension(frame, EXTENSION_ARQ_SEQUENCE);
 	SkyPacketExtension* extArqRr = get_extension(frame, EXTENSION_ARQ_REQUEST);
@@ -263,7 +263,7 @@ void arq_system_test2_cycle(){
 			assert(extArqCtrl != NULL);
 			assert(extArqCtrl->ARQCtrl.tx_sequence == seq1);
 			if(new_pl && (!recalled)){
-				assert(array->sendRing->tx_sequence == sequence_wrap(seq1+1));
+				assert(array->sendRing->tx_sequence == wrap_sequence(seq1 + 1));
 			} else {
 				assert(array->sendRing->tx_sequence == seq1);
 			}
@@ -307,7 +307,7 @@ void arq_system_test2_cycle(){
 	if(frame->flags & SKY_FLAG_HAS_PAYLOAD){
 		int pl_i = n_in_tail;
 		if(recalled && (array->arq_state_flag == ARQ_STATE_ON)){
-			pl_i = sequence_wrap(recall_seq - seq0);
+			pl_i = wrap_sequence(recall_seq - seq0);
 		}
 		int pl_start_idx = (frame->ext_length + EXTENSION_START_IDX);
 		assert((int)(frame->length - pl_start_idx) == msgs[pl_i]->length);

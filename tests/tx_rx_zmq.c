@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "skylink/arq_ring.h"
+#include "skylink/reliable_vc.h"
 #include "skylink/skylink.h"
 #include "skylink/utilities.h"
 #include "skylink/frame.h"
@@ -174,7 +174,7 @@ void* write_to_send_cycle(void* arg){
 				quick_exit(2);
 			}
 			pthread_mutex_lock(&peer->mutex);    //lock
-			int ret = skyArray_push_packet_to_send(peer->self->arrayBuffers[vc], &tgt[5], r - 5);
+			int ret = sky_vc_push_packet_to_send(peer->self->arrayBuffers[vc], &tgt[5], r - 5);
 			if(ret < 0){
 				peer->failed_send_pushes++;
 			}
@@ -244,12 +244,12 @@ void peer_packets_from_ring_to_zmq(SkylinkPeer* peer){
 	memcpy(tgt, &peer->ID, 4);
 	for (uint8_t vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
 		tgt[4] = vc;
-		int n = skyArray_count_readable_rcv_packets(peer->self->arrayBuffers[vc]);
+		int n = sky_vc_count_readable_rcv_packets(peer->self->arrayBuffers[vc]);
 		while (n > 0){
-			int r = skyArray_read_next_received(peer->self->arrayBuffers[vc], tgt+5, &sequence);
+			int r = sky_vc_read_next_received(peer->self->arrayBuffers[vc], tgt + 5, &sequence);
 			zmq_send(peer->pl_read_socket, tgt, r + 5, 0);
 			PRINTFF(0,"#4 packets sent to read socket.\n");
-			n = skyArray_count_readable_rcv_packets(peer->self->arrayBuffers[vc]);
+			n = sky_vc_count_readable_rcv_packets(peer->self->arrayBuffers[vc]);
 		}
 	}
 }
@@ -307,7 +307,7 @@ int main(int argc, char *argv[]){
 	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 4*1200);
 	if(ID == 5){
 		int32_t now_ms = rget_time_ms();
-		skyArray_wipe_to_arq_init_state(peer->self->arrayBuffers[0], now_ms);
+		sky_vc_wipe_to_arq_init_state(peer->self->arrayBuffers[0], now_ms);
 	}
 	relative_time_speed = peer->physicalParams.relative_speed;
 

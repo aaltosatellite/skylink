@@ -2,7 +2,7 @@
 // Created by elmore on 20.11.2021.
 //
 
-#include "skylink/packet_ring.h"
+#include "skylink/sequence_ring.h"
 #include "skylink/platform.h"
 #include "skylink/skylink.h"
 #include "skylink/utilities.h"
@@ -16,7 +16,7 @@ static int ring_wrap(int idx, int len){
 
 
 
-int sequence_wrap(int sequence){
+int wrap_sequence(int sequence){
 	return ring_wrap(sequence, ARQ_SEQUENCE_MODULO);
 }
 
@@ -36,8 +36,8 @@ void wipe_rcv_ring(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, int initia
 	rcvRing->head = 0;
 	rcvRing->tail = 0;
 	rcvRing->storage_count = 0;
-	rcvRing->head_sequence = sequence_wrap(initial_sequence);
-	rcvRing->tail_sequence = sequence_wrap(initial_sequence);
+	rcvRing->head_sequence = wrap_sequence(initial_sequence);
+	rcvRing->tail_sequence = wrap_sequence(initial_sequence);
 }
 
 
@@ -53,7 +53,7 @@ SkyRcvRing* new_rcv_ring(int length, int horizon_width, int initial_sequence){
 	rcvRing->length = length;
 	rcvRing->buff = ring;
 	rcvRing->horizon_width =  (horizon_width <= ARQ_MAXIMUM_HORIZON) ? horizon_width : ARQ_MAXIMUM_HORIZON; //todo: Maybe we should allow larger horizons, despire recall-mask recalling 16 at time.
-	wipe_rcv_ring(rcvRing, NULL, sequence_wrap(initial_sequence) );
+	wipe_rcv_ring(rcvRing, NULL, wrap_sequence(initial_sequence) );
 	return rcvRing;
 }
 
@@ -78,7 +78,7 @@ static int rcvRing_advance_head(SkyRcvRing* rcvRing){
 			break;
 		}
 		rcvRing->head = ring_wrap(rcvRing->head + 1, rcvRing->length);
-		rcvRing->head_sequence = sequence_wrap(rcvRing->head_sequence + 1);
+		rcvRing->head_sequence = wrap_sequence(rcvRing->head_sequence + 1);
 		item = &rcvRing->buff[rcvRing->head];
 		advanced++;
 	}
@@ -87,7 +87,7 @@ static int rcvRing_advance_head(SkyRcvRing* rcvRing){
 
 
 static int rcvRing_rx_sequence_fits(SkyRcvRing* rcvRing, int sequence){
-	if(sequence_wrap(sequence - rcvRing->head_sequence) > rcvRing->horizon_width){
+	if(wrap_sequence(sequence - rcvRing->head_sequence) > rcvRing->horizon_width){
 		return 0;
 	}
 	return 1;
@@ -110,7 +110,7 @@ int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer
 	tail_item->sequence = 0;
 	rcvRing->storage_count--;
 	rcvRing->tail = ring_wrap(rcvRing->tail + 1, rcvRing->length);
-	rcvRing->tail_sequence = sequence_wrap(rcvRing->tail_sequence + 1);
+	rcvRing->tail_sequence = wrap_sequence(rcvRing->tail_sequence + 1);
 	rcvRing_advance_head(rcvRing); //This nees to be performed bc: If the buffer has been so full that head advance has stalled, it needs to be advanced "manually"
 	return read;
 }
@@ -120,7 +120,7 @@ int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, vo
 	if(!rcvRing_rx_sequence_fits(rcvRing, sequence)){
 		return RING_RET_INVALID_SEQUENCE;
 	}
-	int ring_idx = ring_wrap(rcvRing->head + sequence_wrap(sequence - rcvRing->head_sequence), rcvRing->length);
+	int ring_idx = ring_wrap(rcvRing->head + wrap_sequence(sequence - rcvRing->head_sequence), rcvRing->length);
 	RingItem* item = &rcvRing->buff[ring_idx];
 	if(item->idx != EB_NULL_IDX){
 		return RING_RET_PACKET_ALREADY_IN;
@@ -156,7 +156,7 @@ int rcvRing_get_sequence_sync_status(SkyRcvRing* rcvRing, int peer_tx_head_seque
 	if(peer_tx_head_sequence_by_ctrl == rcvRing->head_sequence){
 		return RING_RET_SEQUENCES_IN_SYNC;
 	}
-	int offset = sequence_wrap(peer_tx_head_sequence_by_ctrl - rcvRing->head_sequence);
+	int offset = wrap_sequence(peer_tx_head_sequence_by_ctrl - rcvRing->head_sequence);
 	if(offset <= ARQ_MAXIMUM_HORIZON){
 		return RING_RET_SEQUENCES_OUT_OF_SYNC;
 	}
@@ -181,9 +181,9 @@ void wipe_send_ring(SkySendRing* sendRing, ElementBuffer* elementBuffer, int ini
 	sendRing->tx_head = 0;
 	sendRing->tail = 0;
 	sendRing->storage_count = 0;
-	sendRing->head_sequence = sequence_wrap(initial_sequence);
-	sendRing->tx_sequence = sequence_wrap(initial_sequence);
-	sendRing->tail_sequence = sequence_wrap(initial_sequence);
+	sendRing->head_sequence = wrap_sequence(initial_sequence);
+	sendRing->tx_sequence = wrap_sequence(initial_sequence);
+	sendRing->tail_sequence = wrap_sequence(initial_sequence);
 	sendRing->resend_count = 0;
 }
 
@@ -196,7 +196,7 @@ SkySendRing* new_send_ring(int length, int initial_sequence){
 	RingItem* ring = SKY_MALLOC(sizeof(RingItem)*length);
 	sendRing->buff = ring;
 	sendRing->length = length;
-	wipe_send_ring(sendRing, NULL, sequence_wrap(initial_sequence));
+	wipe_send_ring(sendRing, NULL, wrap_sequence(initial_sequence));
 	return sendRing;
 }
 
@@ -215,7 +215,7 @@ int sendRing_is_full(SkySendRing* sendRing){
 //This function employs two ring inexings with different modulos. If you are not the original author (Markus), get some coffee.
 int sendRing_can_recall(SkySendRing* sendRing, int sequence){
 	int tx_head_ahead_of_tail = ring_wrap(sendRing->tx_head - sendRing->tail, sendRing->length);
-	int sequence_ahead_of_tail = sequence_wrap(sequence - sendRing->tail_sequence);
+	int sequence_ahead_of_tail = wrap_sequence(sequence - sendRing->tail_sequence);
 	if(sequence_ahead_of_tail >= tx_head_ahead_of_tail){
 		return 0;
 	}
@@ -228,7 +228,7 @@ int sendRing_get_recall_ring_index(SkySendRing* sendRing, int recall_sequence){
 	if(!sendRing_can_recall(sendRing, recall_sequence)){
 		return RING_RET_CANNOT_RECALL;
 	}
-	int sequence_ahead_of_tail = sequence_wrap(recall_sequence - sendRing->tail_sequence);
+	int sequence_ahead_of_tail = wrap_sequence(recall_sequence - sendRing->tail_sequence);
 	int index = ring_wrap(sendRing->tail + sequence_ahead_of_tail, sendRing->length);
 	return index;
 }
@@ -249,7 +249,7 @@ int sendRing_push_packet_to_send(SkySendRing* sendRing, ElementBuffer* elementBu
 
 	sendRing->storage_count++;
 	sendRing->head = ring_wrap(sendRing->head+1, sendRing->length);
-	sendRing->head_sequence = sequence_wrap(sendRing->head_sequence + 1);
+	sendRing->head_sequence = wrap_sequence(sendRing->head_sequence + 1);
 	return item->sequence;
 }
 
@@ -274,7 +274,7 @@ int sendRing_schedule_resends_by_mask(SkySendRing* sendRing, int sequence, uint1
 	int r = sendRing_schedule_resend(sendRing, sequence);
 	for (int i = 0; i < 16; ++i) {
 		if ( !(mask & (1<<i)) ){
-			int s = sequence_wrap(sequence + i + 1);
+			int s = wrap_sequence(sequence + i + 1);
 			r |= sendRing_schedule_resend(sendRing, s);
 		}
 	}
@@ -325,7 +325,7 @@ static int sendRing_read_new_packet_to_tx_(SkySendRing* sendRing, ElementBuffer*
 	}
 	*sequence = sendRing->tx_sequence;
 	sendRing->tx_head = ring_wrap(sendRing->tx_head+1, sendRing->length);
-	sendRing->tx_sequence = sequence_wrap(sendRing->tx_sequence + 1);
+	sendRing->tx_sequence = wrap_sequence(sendRing->tx_sequence + 1);
 	return read;
 }
 
@@ -390,8 +390,8 @@ int sendRing_peek_next_tx_size_and_sequence(SkySendRing* sendRing, ElementBuffer
 
 
 int sendRing_clean_tail_up_to(SkySendRing* sendRing, ElementBuffer* elementBuffer, int new_tail_sequence){
-	int tx_ahead_of_tail = sequence_wrap(sendRing->tx_sequence - sendRing->tail_sequence);
-	int peer_head_ahead_of_tail = sequence_wrap(new_tail_sequence - sendRing->tail_sequence);
+	int tx_ahead_of_tail = wrap_sequence(sendRing->tx_sequence - sendRing->tail_sequence);
+	int peer_head_ahead_of_tail = wrap_sequence(new_tail_sequence - sendRing->tail_sequence);
 	if(peer_head_ahead_of_tail > tx_ahead_of_tail){ //attempt to ack sequences that have not been sent.
 		return RING_RET_INVALID_ACKNOWLEDGE;
 	}
@@ -404,7 +404,7 @@ int sendRing_clean_tail_up_to(SkySendRing* sendRing, ElementBuffer* elementBuffe
 		tail_item->sequence = 0;
 		sendRing->storage_count--;
 		sendRing->tail = ring_wrap(sendRing->tail+1, sendRing->length);
-		sendRing->tail_sequence = sequence_wrap(sendRing->tail_sequence + 1);
+		sendRing->tail_sequence = wrap_sequence(sendRing->tail_sequence + 1);
 		n_cleared++;
 	}
 	return n_cleared; //the number of payloads cleared.

@@ -5,7 +5,7 @@
 #include "skylink/skylink.h"
 #include "skylink/conf.h"
 #include "skylink/fec.h"
-#include "skylink/arq_ring.h"
+#include "skylink/reliable_vc.h"
 #include "skylink/frame.h"
 #include "skylink/mac.h"
 #include "skylink/hmac.h"
@@ -114,7 +114,8 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 	if(!(frame->flags & SKY_FLAG_HAS_PAYLOAD)){
 		len_pl = -1;
 	}
-	skyArray_process_content(self->arrayBuffers[frame->vc], pl, len_pl, ext_seq, ext_ctrl, ext_handshake, ext_rrequest, frame->rx_time_ms);
+	sky_vc_process_content(self->arrayBuffers[frame->vc], pl, len_pl, ext_seq, ext_ctrl, ext_handshake, ext_rrequest,
+						   frame->rx_time_ms);
 
 
 	//todo: log behavior based on r.

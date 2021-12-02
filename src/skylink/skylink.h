@@ -4,7 +4,7 @@
 
 #include "diag.h"
 #include "platform.h"
-#include "arq_ring.h"
+#include "reliable_vc.h"
 #include "conf.h"
 #include "frame.h"
 #include "utilities.h"
@@ -127,11 +127,11 @@ typedef struct {
  * since it ties several different blocks togehter.
  */
 struct sky_all {
-	SkyConfig*		conf;                 					// Configuration
-	SkyDiagnostics*	diag;                 					// Diagnostics
-	SkyArqRing* 	arrayBuffers[SKY_NUM_VIRTUAL_CHANNELS]; //ARQ capable buffers.
-	SkyMAC* 		mac;                    				// MAC state
-	SkyHMAC* 		hmac;
+	SkyConfig*			conf;                 					// Configuration
+	SkyDiagnostics*		diag;                 					// Diagnostics
+	SkyVirtualChannel* 	arrayBuffers[SKY_NUM_VIRTUAL_CHANNELS]; //ARQ capable buffers.
+	SkyMAC* 			mac;                    				// MAC state
+	SkyHMAC* 			hmac;
 };
 typedef struct sky_all* SkyHandle;
 //================================================================================================================================

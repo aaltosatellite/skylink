@@ -6,7 +6,7 @@
 
 
 #include "skylink/skylink.h"
-#include "skylink/arq_ring.h"
+#include "skylink/reliable_vc.h"
 #include "skylink/diag.h"
 #include "skylink/utilities.h"
 

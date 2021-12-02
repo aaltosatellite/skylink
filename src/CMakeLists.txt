@@ -8,14 +8,14 @@ include_directories(../platforms/posix)
 add_compile_options(-O2 -Wall)
 
 add_library(skylink SHARED
-        arq_ring.c
+        reliable_vc.c
         diag.c
         elementbuffer.c
         fec.c
         frame.c
         hmac.c
         mac.c
-        packet_ring.c
+        sequence_ring.c
         skylink_rx.c
         skylink_tx.c
         utilities.c

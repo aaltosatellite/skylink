@@ -36,13 +36,13 @@ void arq_system_test3_cycle(){
 
 	SkyConfig* sky_config = new_vanilla_config();
 
-	SkyArrayConfig config;
+	SkyVCConfig config;
 	config.send_ring_len = randint_i32(22,35);
 	config.rcv_ring_len = randint_i32(20,35);
 	config.element_size = randint_i32(30,80);
 	config.horizon_width = 16;
-	SkyArqRing* array = new_arq_ring(&config);
-	SkyArqRing* array_r = new_arq_ring(&config);
+	SkyVirtualChannel* array = new_arq_ring(&config);
+	SkyVirtualChannel* array_r = new_arq_ring(&config);
 
 	int32_t ts_base = randint_i32(0,100000);						//coarse timestamp
 	int32_t ts_last_ctrl = ts_base + randint_i32(0,2000);			//random times for all timestamps
@@ -84,18 +84,18 @@ void arq_system_test3_cycle(){
 	int n_in_tail = randint_i32(0, ARQ_MAXIMUM_HORIZON-1);
 	for (int i = 0; i < n_in_tail; ++i) {
 		int _seq;
-		skyArray_push_packet_to_send(array, msgs[i]->data, msgs[i]->length);
-		int r_ = skyArray_read_packet_for_tx(array, tgt, &_seq, 1);
-		assert(_seq == sequence_wrap(seq_send0 + i));
+		sky_vc_push_packet_to_send(array, msgs[i]->data, msgs[i]->length);
+		int r_ = sky_vc_read_packet_for_tx(array, tgt, &_seq, 1);
+		assert(_seq == wrap_sequence(seq_send0 + i));
 		assert(r_ == msgs[i]->length);
 	}
-	int seq_send1 = sequence_wrap(seq_send0 + n_in_tail);
+	int seq_send1 = wrap_sequence(seq_send0 + n_in_tail);
 	assert(array->sendRing->tx_sequence == seq_send1);
 	assert(array->sendRing->tail_sequence == seq_send0);
 
 	int unsent_packet = randint_i32(1,10) <= 5;
 	if(unsent_packet){
-		skyArray_push_packet_to_send(array, msgs[n_in_tail]->data, msgs[n_in_tail]->length);
+		sky_vc_push_packet_to_send(array, msgs[n_in_tail]->data, msgs[n_in_tail]->length);
 	}
 
 	int recall = randint_i32(1,10) <= 5;
@@ -103,7 +103,7 @@ void arq_system_test3_cycle(){
 	int recall_mask = -1;
 	if(recall){
 		int _n_back = randint_i32(-3, n_in_tail + 3);
-		recall_seq = sequence_wrap(seq_send0 + _n_back );
+		recall_seq = wrap_sequence(seq_send0 + _n_back);
 		recall_mask = randint_i32(0, 0xFFFF);
 	}
 
@@ -128,17 +128,17 @@ void arq_system_test3_cycle(){
 	int ctrl_peer_rx = -1;
 	if(ctrl_on){
 		int _x = randint_i32(-3, n_in_tail+3);
-		ctrl_peer_rx = sequence_wrap(seq_send0 + _x);
+		ctrl_peer_rx = wrap_sequence(seq_send0 + _x);
 
 		_x = randint_i32(-5, 5);
-		ctrl_peer_tx = sequence_wrap( seq_recv0 + _x  );
+		ctrl_peer_tx = wrap_sequence(seq_recv0 + _x);
 	}
 
 	int seq_on = randint_i32(1,10) <= 5;
 	int arq_seq = -1;
 	if(seq_on){
 		int _x = randint_i32(-3, ARQ_MAXIMUM_HORIZON+3);
-		arq_seq = sequence_wrap(seq_recv0 + _x);
+		arq_seq = wrap_sequence(seq_recv0 + _x);
 	}
 
 	int len_pl;
@@ -181,7 +181,7 @@ void arq_system_test3_cycle(){
 	}
 
 
-	skyArray_process_content(array, pl, len_pl, ext_seq_ptr, ext_ctrl_ptr, ext_hs_ptr, ext_rr_ptr, now_ms);
+	sky_vc_process_content(array, pl, len_pl, ext_seq_ptr, ext_ctrl_ptr, ext_hs_ptr, ext_rr_ptr, now_ms);
 
 
 	int wiped = 0;
@@ -220,19 +220,19 @@ void arq_system_test3_cycle(){
 		if(arq_state0 == ARQ_STATE_OFF){
 			if(len_pl > -1){
 				//PRINTFF(0,"B");
-				assert(array->rcvRing->head_sequence == sequence_wrap(seq_recv0 +1));
-				assert(array->rcvRing->tail_sequence == sequence_wrap(seq_recv0));
+				assert(array->rcvRing->head_sequence == wrap_sequence(seq_recv0 + 1));
+				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0));
 				uint8_t temp[300];
 				int _s = -1;
-				int red = skyArray_read_next_received(array, &temp, &_s);
+				int red = sky_vc_read_next_received(array, &temp, &_s);
 				assert(red == len_pl);
 				assert(_s == seq_recv0);
 				assert(memcmp(temp, pl, len_pl) == 0);
-				assert(array->rcvRing->tail_sequence == sequence_wrap(seq_recv0 +1));
+				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0 + 1));
 			} else {
 				//PRINTFF(0,"C");
-				assert(array->rcvRing->head_sequence == sequence_wrap(seq_recv0));
-				assert(array->rcvRing->tail_sequence == sequence_wrap(seq_recv0));
+				assert(array->rcvRing->head_sequence == wrap_sequence(seq_recv0));
+				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0));
 			}
 			assert(rcvRing_get_horizon_bitmap(array->rcvRing) == 0);
 			assert(array->sendRing->resend_count == 0);
@@ -243,8 +243,8 @@ void arq_system_test3_cycle(){
 		if((arq_state0 == ARQ_STATE_IN_INIT) && (!transition_to_on)){
 			//PRINTFF(0,"D");
 			assert(array->arq_state_flag == ARQ_STATE_IN_INIT);
-			assert(array->rcvRing->head_sequence == sequence_wrap(seq_recv0));
-			assert(array->rcvRing->tail_sequence == sequence_wrap(seq_recv0));
+			assert(array->rcvRing->head_sequence == wrap_sequence(seq_recv0));
+			assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0));
 			assert(array->last_tx_ms == ts_send);
 			assert(array->last_rx_ms == ts_recv);
 			assert(array->last_ctrl_send == ts_last_ctrl);
@@ -260,8 +260,8 @@ void arq_system_test3_cycle(){
 
 			if((len_pl > -1) && (seq_on) && (arq_seq == seq_recv0)){
 				//PRINTFF(0,"(E %d)", transition_to_on);
-				assert(array->rcvRing->head_sequence == sequence_wrap(seq_recv0 +1));
-				assert(array->rcvRing->tail_sequence == sequence_wrap(seq_recv0));
+				assert(array->rcvRing->head_sequence == wrap_sequence(seq_recv0 + 1));
+				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0));
 				last_rx_updated = 1;
 				uint8_t temp[300];
 				int _s = -1;
@@ -269,15 +269,15 @@ void arq_system_test3_cycle(){
 				assert(red == len_pl);
 				assert(_s == seq_recv0);
 				assert(memcmp(temp, pl, len_pl) == 0);
-				assert(array->rcvRing->tail_sequence == sequence_wrap(seq_recv0 +1));
+				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0 + 1));
 				assert(rcvRing_get_horizon_bitmap(array->rcvRing) == 0);
 			}
 
 
-			if ((len_pl == -1) || (!seq_on) || (sequence_wrap(arq_seq - seq_recv0) > array->rcvRing->horizon_width) ) {
+			if ((len_pl == -1) || (!seq_on) || (wrap_sequence(arq_seq - seq_recv0) > array->rcvRing->horizon_width) ) {
 				//PRINTFF(0,"F");
-				assert(array->rcvRing->head_sequence == sequence_wrap(seq_recv0));
-				assert(array->rcvRing->tail_sequence == sequence_wrap(seq_recv0));
+				assert(array->rcvRing->head_sequence == wrap_sequence(seq_recv0));
+				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0));
 				assert(rcvRing_get_horizon_bitmap(array->rcvRing) == 0);
 				uint8_t temp[300];
 				int _s = -1;
@@ -287,10 +287,10 @@ void arq_system_test3_cycle(){
 			}
 
 
-			if ((len_pl > -1) && (seq_on) && (arq_seq != seq_recv0) && (sequence_wrap(arq_seq - seq_recv0) <= array->rcvRing->horizon_width) ) {
+			if ((len_pl > -1) && (seq_on) && (arq_seq != seq_recv0) && (wrap_sequence(arq_seq - seq_recv0) <= array->rcvRing->horizon_width) ) {
 				//PRINTFF(0,"G");
-				assert(array->rcvRing->head_sequence == sequence_wrap(seq_recv0));
-				assert(array->rcvRing->tail_sequence == sequence_wrap(seq_recv0));
+				assert(array->rcvRing->head_sequence == wrap_sequence(seq_recv0));
+				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0));
 				assert(rcvRing_get_horizon_bitmap(array->rcvRing) != 0);
 				uint8_t temp[300];
 				int _s = -1;
@@ -304,16 +304,16 @@ void arq_system_test3_cycle(){
 			int new_n_in_tail = n_in_tail;
 			if(ctrl_on){
 				//PRINTFF(0,"H");
-				int _after_tail = sequence_wrap(ctrl_peer_rx - seq_send0) > 0;
-				int _before_head = sequence_wrap(ctrl_peer_rx - seq_send0) < n_in_tail;
+				int _after_tail = wrap_sequence(ctrl_peer_rx - seq_send0) > 0;
+				int _before_head = wrap_sequence(ctrl_peer_rx - seq_send0) < n_in_tail;
 				int at_current = ctrl_peer_rx == seq_send1;
 				if((_after_tail && _before_head ) || at_current){
 					//PRINTFF(0,"H1 ");
 					assert(array->last_tx_ms == now_ms);
 					assert(array->sendRing->tail_sequence == ctrl_peer_rx);
 					new_seq_send0 = ctrl_peer_rx;
-					new_n_in_tail = sequence_wrap(array->sendRing->tx_sequence - new_seq_send0);
-					assert(new_n_in_tail == (n_in_tail - sequence_wrap(ctrl_peer_rx - seq_send0)));
+					new_n_in_tail = wrap_sequence(array->sendRing->tx_sequence - new_seq_send0);
+					assert(new_n_in_tail == (n_in_tail - wrap_sequence(ctrl_peer_rx - seq_send0)));
 				} else {
 					//PRINTFF(0,"H2 ");
 					assert(array->last_tx_ms == ts_send);
@@ -325,7 +325,7 @@ void arq_system_test3_cycle(){
 					last_rx_updated = 1;
 					assert(array->need_recall == 0);
 				}
-				if((sequence_wrap(ctrl_peer_tx - seq_recv0) > 0) && (sequence_wrap(ctrl_peer_tx - seq_recv0) <= array->rcvRing->horizon_width) ) {
+				if((wrap_sequence(ctrl_peer_tx - seq_recv0) > 0) && (wrap_sequence(ctrl_peer_tx - seq_recv0) <= array->rcvRing->horizon_width) ) {
 					//PRINTFF(0,"H4 ");
 					assert(array->need_recall == 1);
 				}
@@ -336,7 +336,7 @@ void arq_system_test3_cycle(){
 			if(recall){
 				//PRINTFF(0,"I");
 				int ok_recall_s = 0;
-				if( (sequence_wrap(recall_seq - new_seq_send0) < new_n_in_tail) && (new_n_in_tail != 0) ){
+				if((wrap_sequence(recall_seq - new_seq_send0) < new_n_in_tail) && (new_n_in_tail != 0) ){
 					//PRINTFF(0,"I1 ");
 					assert(array->sendRing->resend_count > 0);
 					assert(x_in_u16_array(recall_seq, array->sendRing->resend_list, array->sendRing->resend_count) > -1);
@@ -344,12 +344,12 @@ void arq_system_test3_cycle(){
 				}
 
 				for (int i = 0; i < 16; ++i) {
-					int s = sequence_wrap(recall_seq + i + 1);
+					int s = wrap_sequence(recall_seq + i + 1);
 					int b = recall_mask & (1 << i);
 					if(b){
 						continue;
 					}
-					if( (sequence_wrap(s - new_seq_send0) < new_n_in_tail) && (new_n_in_tail != 0) ){
+					if((wrap_sequence(s - new_seq_send0) < new_n_in_tail) && (new_n_in_tail != 0) ){
 						//PRINTFF(0,"I2 ");
 						assert(array->sendRing->resend_count > 0);
 						assert(x_in_u16_array(s, array->sendRing->resend_list, array->sendRing->resend_count) > -1);
@@ -358,11 +358,11 @@ void arq_system_test3_cycle(){
 				}
 				ok_recall_s = i32_min(ok_recall_s, 16);
 				//PRINTFF(0,"\n--------\n");
-				//PRINTFF(0,"resend count:%d    expected:%d\n", array->sendRing->resend_count, ok_recall_s);
+				//PRINTFF(0,"resend count:%d    expected:%d\n", vc->sendRing->resend_count, ok_recall_s);
 				//PRINTFF(0,"recall seq:%d   send_seq0:%d    n_in_tail:%d\n", recall_seq, seq_send0, new_n_in_tail);
 				//PRINTFF(0,"MASK:%d  \n", recall_mask);
-				//for (int i = 0; i < array->sendRing->resend_count; ++i) {
-					//PRINTFF(0,"%d ", array->sendRing->resend_list[i]);
+				//for (int i = 0; i < vc->sendRing->resend_count; ++i) {
+					//PRINTFF(0,"%d ", vc->sendRing->resend_list[i]);
 				//}
 				//PRINTFF(0,"\n");
 				assert(array->sendRing->resend_count == ok_recall_s);
