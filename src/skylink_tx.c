@@ -131,6 +131,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 	/* Apply Forward Error Correction (FEC) coding */
 	sky_fec_encode(frame);
 
+	self->diag->tx_bytes += frame->length;
 
 	/* Encode length field. */
 	if(insert_golay){

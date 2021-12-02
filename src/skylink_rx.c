@@ -47,6 +47,8 @@ int sky_rx(SkyHandle self, SkyRadioFrame* frame, int contains_golay) {
 			frame->raw[i] = frame->raw[i + 3];
 	}
 
+	self->diag->rx_frames++;
+
 	// Decode FEC
 	if ((ret = sky_fec_decode(frame, self->diag)) < 0){
 		return ret;

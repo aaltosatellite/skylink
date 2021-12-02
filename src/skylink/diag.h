@@ -30,7 +30,7 @@
 #define SKY_ASSERT(...)   assert(__VA_ARGS__);
 #else
 /* Assert for embedded platforms */
-#define SKY_ASSERT(...)    if ((__VA_ARGS__) != 0) while(1);
+#define SKY_ASSERT(...)    if ((__VA_ARGS__) == 0) while(1);
 #endif //__unix__
 
 #else //DEBUG
@@ -75,9 +75,10 @@ struct sky_diag {
 	uint16_t rx_fec_ok;      // Number of successfully decoded codewords
 	uint16_t rx_fec_fail;    // Number of failed decodes
 	uint16_t rx_fec_octs;    // Total number of octets successfully decoded
-	uint16_t rx_fec_errs;    // Number of octet errors corrected
-	uint16_t rx_arq_resets;  // Number of octet errors corrected
+	uint16_t rx_fec_errs;    // Number of bytes errors corrected
+	uint16_t rx_arq_resets;  // Number of bytes errors corrected
 	uint16_t tx_frames;      // Total number of transmitted frames
+	uint16_t tx_bytes;       // Number of bytes transmitted
 };
 typedef struct sky_diag SkyDiagnostics;
 
