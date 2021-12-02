@@ -175,7 +175,7 @@ void* write_to_send_cycle(void* arg){
 				quick_exit(2);
 			}
 			pthread_mutex_lock(&peer->mutex);    //lock
-			int ret = sky_vc_push_packet_to_send(peer->self->virtualChannels[vc], &tgt[5], r - 5);
+			int ret = sky_vc_push_packet_to_send(peer->self->virtual_channels[vc], &tgt[5], r - 5);
 			if(ret < 0){
 				peer->failed_send_pushes++;
 			}
@@ -202,7 +202,7 @@ _Noreturn void* tx_cycle(void* arg){
 		cycle++;
 		if(cycle % 1000 == 0){
 			PRINTFF(0,"==========================\n");
-			PRINTFF(0,"Identifier: %d\n", peer->self->virtualChannels[0]->arq_session_identifier);
+			PRINTFF(0,"Identifier: %d\n", peer->self->virtual_channels[0]->arq_session_identifier);
 			PRINTFF(0,"Failed send pushed: %d \n", peer->failed_send_pushes);
 			PRINTFF(0,"==========================\n");
 			//PRINTFF(0, "s Cycle %ld.\n", cycle);
@@ -245,12 +245,12 @@ void peer_packets_from_ring_to_zmq(SkylinkPeer* peer){
 	memcpy(tgt, &peer->ID, 4);
 	for (uint8_t vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
 		tgt[4] = vc;
-		int n = sky_vc_count_readable_rcv_packets(peer->self->virtualChannels[vc]);
+		int n = sky_vc_count_readable_rcv_packets(peer->self->virtual_channels[vc]);
 		while (n > 0){
-			int r = sky_vc_read_next_received(peer->self->virtualChannels[vc], tgt + 5, &sequence);
+			int r = sky_vc_read_next_received(peer->self->virtual_channels[vc], tgt + 5, &sequence);
 			zmq_send(peer->pl_read_socket, tgt, r + 5, 0);
 			PRINTFF(0,"#4 packets sent to read socket.\n");
-			n = sky_vc_count_readable_rcv_packets(peer->self->virtualChannels[vc]);
+			n = sky_vc_count_readable_rcv_packets(peer->self->virtual_channels[vc]);
 		}
 	}
 }
@@ -308,7 +308,7 @@ int main(int argc, char *argv[]){
 	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 4*1200);
 	if(ID == 5){
 		int32_t now_ms = rget_time_ms();
-		sky_vc_wipe_to_arq_init_state(peer->self->virtualChannels[0], now_ms);
+		sky_vc_wipe_to_arq_init_state(peer->self->virtual_channels[0], now_ms);
 	}
 	relative_time_speed = peer->physicalParams.relative_speed;
 

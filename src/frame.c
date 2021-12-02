@@ -15,11 +15,13 @@ SkyRadioFrame* new_frame(){
 	return frame;
 }
 
-void destroy_frame(SkyRadioFrame* frame){
+void destroy_frame(SkyRadioFrame* frame) {
 	SKY_FREE(frame);
 }
 
-
+void sky_frame_clear(SkyRadioFrame* frame) {
+	memset(frame, 0, sizeof(SkyRadioFrame));
+}
 
 
 
@@ -144,4 +146,3 @@ SkyPacketExtension* sky_rx_get_extension(const SkyRadioFrame* frame, uint8_t thi
 	}
 	return NULL;
 }
-

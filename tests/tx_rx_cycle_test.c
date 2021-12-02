@@ -348,7 +348,7 @@ void test1_round(uint64_t NN, int print_on){
 	job.receivedFrames 	= new_eframe_list();
 	job.missedFrames 	= new_eframe_list();
 
-	sky_vc_wipe_to_arq_init_state(handle1->virtualChannels[0], job.now_ms);
+	sky_vc_wipe_to_arq_init_state(handle1->virtual_channels[0], job.now_ms);
 
 	for (uint64_t i = 0; i < NN; ++i) {
 		step_forward(1, &job);
@@ -398,9 +398,9 @@ static void step_forward(int which, TXRXJob* job){
 
 	//generate new pl to send queue
 	if((job->now_ms > 10000) && roll_chance(peer->pl_rate/1000.0) && !sky_vc_send_buffer_is_full(
-			peer->handle->virtualChannels[0])){
+			peer->handle->virtual_channels[0])){
 		Payload* pl = new_random_payload(target, job->now_ms);
-		int push_ret = sky_vc_push_packet_to_send(peer->handle->virtualChannels[0], pl->msg->data, pl->msg->length);
+		int push_ret = sky_vc_push_packet_to_send(peer->handle->virtual_channels[0], pl->msg->data, pl->msg->length);
 		assert(push_ret != RING_RET_RING_FULL);
 		assert(push_ret != RING_RET_BUFFER_FULL);
 		pl->assigned_sequence = push_ret;
@@ -408,8 +408,8 @@ static void step_forward(int which, TXRXJob* job){
 	}
 
 	if(job->now_ms > 15500){
-		int state_on1 = job->peer1.handle->virtualChannels[0]->arq_state_flag == ARQ_STATE_ON;
-		int state_on2 = job->peer2.handle->virtualChannels[0]->arq_state_flag == ARQ_STATE_ON;
+		int state_on1 = job->peer1.handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON;
+		int state_on2 = job->peer2.handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON;
 		if(!state_on1 || !state_on2){
 			PRINTFF(0,"now:%ld   states_on:%d %d\n", job->now_ms, state_on1, state_on2);
 		}
@@ -454,9 +454,9 @@ static void step_forward(int which, TXRXJob* job){
 		if(eframe->rx_ok){
 			eframe->frame.rx_time_ms = job->now_ms;
 			sky_rx(peer->handle, &eframe->frame, 1);
-			if(sky_vc_count_readable_rcv_packets(peer->handle->virtualChannels[0])){
+			if(sky_vc_count_readable_rcv_packets(peer->handle->virtual_channels[0])){
 				int seq = -1;
-				int red = sky_vc_read_next_received(peer->handle->virtualChannels[0], tgt, &seq);
+				int red = sky_vc_read_next_received(peer->handle->virtual_channels[0], tgt, &seq);
 				assert(red >= 0);
 				assert(seq >= 0);
 				payload_list_mark_as_received(peers_plList, tgt, red, seq, which, job->now_ms);
@@ -520,9 +520,3 @@ static void print_job_status(TXRXJob* job){
 	PRINTFF(0,"Payloads not acked 2: %d\n", unacked_of_2);
 	PRINTFF(0, "=====================================\n");
 }
-
-
-
-
-
-

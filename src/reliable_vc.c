@@ -230,14 +230,14 @@ int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, void* src, int length, in
 
 void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequence_by_ctrl, int32_t now_ms){
 	int sync = rcvRing_get_sequence_sync_status(vchannel->rcvRing, peer_tx_head_sequence_by_ctrl);
-	if(sync == RING_RET_SEQUENCES_IN_SYNC){
+	if(sync == SKY_RET_RING_SEQUENCES_IN_SYNC){
 		vchannel->last_rx_ms = now_ms;
 		vchannel->need_recall = 0;
 	}
-	if(sync == RING_RET_SEQUENCES_OUT_OF_SYNC){
+	if(sync == SKY_RET_RING_SEQUENCES_OUT_OF_SYNC){
 		vchannel->need_recall = 1;
 	}
-	if(sync == RING_RET_SEQUENCES_DETACHED){
+	if(sync == SKY_RET_RING_SEQUENCES_DETACHED){
 		//vc->arq_state_flag = ARQ_STATE_BROKEN;
 	}
 }
@@ -307,10 +307,10 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 		int length = -1;
 		int sequence = -1;
 		int r = sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 0, &length, &sequence);
-		SKY_ASSERT(r >= 0)
-		SKY_ASSERT(length <= available_payload_space(frame))
+		SKY_ASSERT(r >= 0);
+		SKY_ASSERT(length <= available_payload_space(frame));
 		int read = sky_vc_read_packet_for_tx_monotonic(vchannel, frame->raw + frame->length, &sequence);
-		SKY_ASSERT(read >= 0)
+		SKY_ASSERT(read >= 0);
 		frame->length += read;
 		frame->flags |= SKY_FLAG_HAS_PAYLOAD;
 		return 1;

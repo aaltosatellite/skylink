@@ -90,9 +90,9 @@ void sky_tx_test_cycle(){
 	int hmac_reset_need[SKY_NUM_VIRTUAL_CHANNELS];
 	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
 		arq_on[vc] = randint_i32(1,10) <= 4;
-		self->virtualChannels[vc]->arq_state_flag = ARQ_STATE_OFF;
+		self->virtual_channels[vc]->arq_state_flag = ARQ_STATE_OFF;
 		if(arq_on[vc]){
-			self->virtualChannels[vc]->arq_state_flag = ARQ_STATE_ON;
+			self->virtual_channels[vc]->arq_state_flag = ARQ_STATE_ON;
 		}
 
 		auth_seq_rx[vc] = randint_i32(0, HMAC_CYCLE_LENGTH-1);
@@ -105,22 +105,22 @@ void sky_tx_test_cycle(){
 		self->mac->frames_sent_in_current_window_per_vc[vc] = frames_sent_per_vc[vc];
 		self->mac->total_frames_sent_in_current_window = total_frames_sent;
 
-		spin_to_seq(self->virtualChannels[vc], self2->virtualChannels[vc], array_tx_seq0[vc], now_ms);
-		spin_to_seq(self2->virtualChannels[vc], self->virtualChannels[vc], array_rx_seq0[vc], now_ms);
-		assert(self->virtualChannels[vc]->sendRing->head_sequence == array_tx_seq0[vc]);
-		assert(self->virtualChannels[vc]->rcvRing->head_sequence == array_rx_seq0[vc]);
+		spin_to_seq(self->virtual_channels[vc], self2->virtual_channels[vc], array_tx_seq0[vc], now_ms);
+		spin_to_seq(self2->virtual_channels[vc], self->virtual_channels[vc], array_rx_seq0[vc], now_ms);
+		assert(self->virtual_channels[vc]->sendRing->head_sequence == array_tx_seq0[vc]);
+		assert(self->virtual_channels[vc]->rcvRing->head_sequence == array_rx_seq0[vc]);
 
 		for (int i = 0; i < n_new_pl[vc] + n_recalled_pl[vc]; ++i) {
 			String* s = get_random_string(randint_i32(0, 170));
 			memset(s->data, s->length, s->length);
-			sky_vc_push_packet_to_send(self->virtualChannels[vc], s->data, s->length);
+			sky_vc_push_packet_to_send(self->virtual_channels[vc], s->data, s->length);
 			destroy_string(s);
 		}
 		for (int i = 0; i < n_recalled_pl[vc]; ++i) {
 
 			int seq;
-			sky_vc_read_packet_for_tx(self->virtualChannels[vc], tgt, &seq, 0);
-			sky_vc_schedule_resend(self->virtualChannels[vc], wrap_sequence(array_tx_seq0[vc] + i));
+			sky_vc_read_packet_for_tx(self->virtual_channels[vc], tgt, &seq, 0);
+			sky_vc_schedule_resend(self->virtual_channels[vc], wrap_sequence(array_tx_seq0[vc] + i));
 			assert(seq == wrap_sequence(array_tx_seq0[vc] + i));
 		}
 
@@ -140,11 +140,11 @@ void sky_tx_test_cycle(){
 
 		arq_tx_ts[vc] = wrap_time_ms(now_ms - _tx_since);
 		arq_rx_ts[vc] = wrap_time_ms(now_ms - _rx_since);
-		self->virtualChannels[vc]->last_tx_ms = arq_tx_ts[vc];
-		self->virtualChannels[vc]->last_rx_ms = arq_rx_ts[vc];
+		self->virtual_channels[vc]->last_tx_ms = arq_tx_ts[vc];
+		self->virtual_channels[vc]->last_rx_ms = arq_rx_ts[vc];
 
 		last_ctrl[vc] = wrap_time_ms(now_ms - randint_i32(1, arq_timeout/2));
-		self->virtualChannels[vc]->last_ctrl_send = last_ctrl[vc];
+		self->virtual_channels[vc]->last_ctrl_send = last_ctrl[vc];
 
 		if(arq_on[vc]){
 			stuff_in_horizon[vc] = 0;
@@ -154,18 +154,18 @@ void sky_tx_test_cycle(){
 				int _len = randint_i32(0,100);
 				memset(tgt, _len, 100);
 				int _seq = wrap_sequence(
-						array_rx_seq0[vc] + 1 + randint_i32(0, self->virtualChannels[vc]->rcvRing->horizon_width - 1));
-				//PRINTFF(0,"h(%d) hz(%d) ", self->virtualChannels[vc]->rcvRing->head_sequence, self->virtualChannels[vc]->rcvRing->horizon_width);
-				sky_vc_push_rx_packet(self->virtualChannels[vc], tgt, _len, _seq, now_ms); //this should not interfere with ts's
-				//PRINTFF(0,"seq0(%d) _seq(%d) h(%d)\n", array_rx_seq0[vc], _seq, self->virtualChannels[vc]->rcvRing->head_sequence);
-				assert(rcvRing_get_horizon_bitmap(self->virtualChannels[vc]->rcvRing) != 0);
+						array_rx_seq0[vc] + 1 + randint_i32(0, self->virtual_channels[vc]->rcvRing->horizon_width - 1));
+				//PRINTFF(0,"h(%d) hz(%d) ", self->virtual_channels[vc]->rcvRing->head_sequence, self->virtual_channels[vc]->rcvRing->horizon_width);
+				sky_vc_push_rx_packet(self->virtual_channels[vc], tgt, _len, _seq, now_ms); //this should not interfere with ts's
+				//PRINTFF(0,"seq0(%d) _seq(%d) h(%d)\n", array_rx_seq0[vc], _seq, self->virtual_channels[vc]->rcvRing->head_sequence);
+				assert(rcvRing_get_horizon_bitmap(self->virtual_channels[vc]->rcvRing) != 0);
 			}
 		}
 
 		rr_need_on[vc] = 0;
 		if(randint_i32(1, 10) <= 2){
 			rr_need_on[vc] = 1;
-			self->virtualChannels[vc]->need_recall = 1;
+			self->virtual_channels[vc]->need_recall = 1;
 		}
 
 		hmac_reset_need[vc] = randint_i32(1,10) <= 2;
@@ -276,18 +276,18 @@ void sky_tx_test_cycle(){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		if(arq_on[i]){
 			if(arq_rx_timed_out[i] || arq_tx_timed_out[i]){
-				assert(self->virtualChannels[i]->last_tx_ms == 0);
-				assert(self->virtualChannels[i]->last_rx_ms == 0);
-				assert(self->virtualChannels[i]->last_ctrl_send == 0);
-				assert(self->virtualChannels[i]->arq_state_flag == ARQ_STATE_OFF);
-				assert(self->virtualChannels[i]->sendRing->head == 0);
-				assert(self->virtualChannels[i]->sendRing->head_sequence == 0);
-				assert(self->virtualChannels[i]->sendRing->tail == 0);
-				assert(self->virtualChannels[i]->rcvRing->head == 0);
-				assert(self->virtualChannels[i]->rcvRing->head_sequence == 0);
-				assert(self->virtualChannels[i]->rcvRing->tail == 0);
+				assert(self->virtual_channels[i]->last_tx_ms == 0);
+				assert(self->virtual_channels[i]->last_rx_ms == 0);
+				assert(self->virtual_channels[i]->last_ctrl_send == 0);
+				assert(self->virtual_channels[i]->arq_state_flag == ARQ_STATE_OFF);
+				assert(self->virtual_channels[i]->sendRing->head == 0);
+				assert(self->virtual_channels[i]->sendRing->head_sequence == 0);
+				assert(self->virtual_channels[i]->sendRing->tail == 0);
+				assert(self->virtual_channels[i]->rcvRing->head == 0);
+				assert(self->virtual_channels[i]->rcvRing->head_sequence == 0);
+				assert(self->virtual_channels[i]->rcvRing->tail == 0);
 			} else {
-				assert(self->virtualChannels[i]->arq_state_flag == ARQ_STATE_ON);
+				assert(self->virtual_channels[i]->arq_state_flag == ARQ_STATE_ON);
 			}
 		}
 	}
@@ -480,6 +480,3 @@ exit:
 	destroy_handle(self);
 	destroy_handle(self2);
 }
-
-
-

@@ -76,7 +76,7 @@ SkyHandle new_handle(SkyConfig* config){
 	handle->diag = new_diagnostics();
 
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		handle->virtualChannels[i] = new_arq_ring(&config->vc[i]);
+		handle->virtual_channels[i] = new_arq_ring(&config->vc[i]);
 	}
 	return handle;
 }
@@ -87,7 +87,7 @@ void destroy_handle(SkyHandle self){
 	destroy_hmac(self->hmac);
 	destroy_diagnostics(self->diag);
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		destroy_arq_ring(self->virtualChannels[i]);
+		destroy_arq_ring(self->virtual_channels[i]);
 	}
 	free(self);
 }

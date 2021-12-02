@@ -85,6 +85,6 @@ SkyDiagnostics* new_diagnostics();
 
 void destroy_diagnostics(SkyDiagnostics* diag);
 
-//void sky_print_link_state(SkyHandle self);
+void sky_print_link_state(SkyHandle self);
 
 #endif /* __SKYLINK_DIAG_H__ */

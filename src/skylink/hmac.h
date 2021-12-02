@@ -36,7 +36,7 @@ void destroy_hmac(SkyHMAC* hmac);
 
 
 /* Get next sequence number from transmit counter and advance it by one (and wrap modulo cycle) */
-int sky_hmac_get_next_hmac_tx_sequence_and_advance(SkyHandle self, uint8_t vc);
+int32_t sky_hmac_get_next_hmac_tx_sequence_and_advance(SkyHandle self, uint8_t vc);
 
 
 /* Authenticate a frame. */

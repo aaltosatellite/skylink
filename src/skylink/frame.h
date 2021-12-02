@@ -3,34 +3,52 @@
 
 #include <string.h>
 #include <stdint.h>
-#include "platform.h"
-#include "conf.h"
+
+#include "skylink.h"
+
+/*
+ * All packets start with this.
+ * ("encoded" protocol + version identifier)
+ */
+#define SKYLINK_START_BYTE              's'
+
+/*
+ * Number of bytes in frame identity field
+ */
+#define SKY_IDENTITY_LEN                5
+
+/*
+ * Frame header flags
+ */
+#define SKY_FLAG_AUTHENTICATED          0b00001
+#define SKY_FLAG_ARQ_ON                 0b00010
+#define SKY_FLAG_HAS_PAYLOAD            0b00100
 
 
+// Extensions start at this byte index. At the same time the minimum length of a healthy frame.
+#define EXTENSION_START_IDX             10
 
-
-#define SKYLINK_START_BYTE              's' 	//all packets start with this
-#define EXTENSION_ARQ_SEQUENCE			0
-#define EXTENSION_ARQ_REQUEST			1
-#define EXTENSION_ARQ_CTRL				2
-#define EXTENSION_ARQ_HANDSHAKE			3
+// Extension header type IDs
+#define EXTENSION_ARQ_SEQUENCE          0
+#define EXTENSION_ARQ_REQUEST           1
+#define EXTENSION_ARQ_CTRL              2
+#define EXTENSION_ARQ_HANDSHAKE         3
 #define EXTENSION_MAC_TDD_CONTROL       4
 #define EXTENSION_HMAC_SEQUENCE_RESET   5
 
-//extensions start at this byte index. At the same time the minimum length of a healthy frame.
-#define EXTENSION_START_IDX				10
+
 // The maximum payload size that fits a worst case frame with all extensions.
-#define SKY_MAX_PAYLOAD_LEN				173
-#define SKY_PLAIN_FRAME_MIN_LENGTH		EXTENSION_START_IDX
-#define SKY_ENCODED_FRAME_MIN_LENGTH	(EXTENSION_START_IDX + RS_PARITYS)
-#define SKY_FRAME_MAX_LEN       		0x100
+#define SKY_MAX_PAYLOAD_LEN             173
+#define SKY_PLAIN_FRAME_MIN_LENGTH      (EXTENSION_START_IDX)
+#define SKY_ENCODED_FRAME_MIN_LENGTH    (EXTENSION_START_IDX + RS_PARITYS)
+#define SKY_FRAME_MAX_LEN               (0x100)
 
 
 typedef uint16_t arq_seq_t;
 
 
 /* frames ========================================================================================== */
-struct sky_radioframe {
+struct sky_radio_frame {
 
 	timestamp_t rx_time_ms;
 
@@ -45,14 +63,13 @@ struct sky_radioframe {
 		struct __attribute__((__packed__)) {
 			uint8_t start_byte;
 			uint8_t identity[SKY_IDENTITY_LEN];
-			uint8_t vc 		: 3;
-			uint8_t flags 	: 5;
+			uint8_t vc : 3;
+			uint8_t flags : 5;
 			uint8_t ext_length;
 			uint16_t auth_sequence;
 		};
 	};
 };
-typedef struct sky_radioframe SkyRadioFrame;
 /* frames ========================================================================================== */
 
 
@@ -117,10 +134,17 @@ typedef struct __attribute__((__packed__)) {
 
 
 
-
+/*
+ * Allocate a new radio frame object
+ */
 SkyRadioFrame* new_frame();
+
 void destroy_frame(SkyRadioFrame* frame);
 
+/*
+ * Clear the radio frame
+ */
+void sky_frame_clear(SkyRadioFrame* frame);
 
 
 // encoding ============================================================================================================

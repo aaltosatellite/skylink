@@ -1,27 +1,21 @@
 #ifndef __SKYLINK_CONF_H__
 #define __SKYLINK_CONF_H__
 
-#include <stdint.h>
 #include "skylink.h"
+#include "skylink/frame.h"
 
-//HMAC
-#define SKY_HMAC_LENGTH 				8
 
-//FLAGS
-#define SKY_FLAG_AUTHENTICATED 			0b00001
-#define SKY_FLAG_ARQ_ON 				0b00010
-#define SKY_FLAG_HAS_PAYLOAD 			0b00100
+// HMAC
+#define SKY_HMAC_LENGTH                 8 // bytes
 
-//Number of frames justified to send only due to protocol control reasons (in absence of payloads).
-#define UTILITY_FRAMES_PER_WINDOW		3
-
-//Number of bytes in frame identity field
-#define SKY_IDENTITY_LEN				5
+// Number of frames justified to send only due to protocol control reasons (in absence of payloads).
+#define UTILITY_FRAMES_PER_WINDOW       3
 
 
 
-
-
+/*
+ * Physical level configuration
+ */
 typedef struct {
 	/* Enable CCSDS randomizer/scrambler */
 	uint8_t enable_scrambler;
@@ -61,33 +55,50 @@ typedef struct {
 
 
 
+/* Virtual channel authentication option flags */
+#define SKY_VC_FLAG_AUTHENTICATE_TX          0x01
+#define SKY_VC_FLAG_REQUIRE_AUTHENTICATION   0x02
+#define SKY_VC_FLAG_REQUIRE_SEQUENCE         0x04
+
+/*
+ * Per virtual channel configurations
+ */
 typedef struct {
+
+	/* Size of single element in the element buffer*/
 	int element_size;
 
+	/**/
 	int rcv_ring_len;
+
+	/* */
 	int horizon_width;
 
+	/* Length of the ARQ sequence ring.  */
 	int send_ring_len;
 
+	/* Is authentication code (HMAC) required for the virtual channel */
 	uint8_t require_authentication;
 } SkyVCConfig;
 
 
-
+/*
+ * HMAC configurations
+ */
 typedef struct {
+	/* Length of the authentication key */
 	int32_t key_length;
 
+	/* Authentication key */
 	uint8_t key[16];
 
 	/* Length of the sequence cycle */
 	//int32_t cycle_length;
 
-	/* Maximum jump in sequence allowed */
+	/* Maximum allowed forward jump in sequence count */
 	int32_t maximum_jump;
 
 } HMACConfig;
-
-
 
 
 
