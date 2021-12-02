@@ -78,7 +78,7 @@ static void test1_round(){
 	//attempt recall. Should fail.
 	assert(sky_vc_can_recall(array, 0) == 0);
 	r = sky_vc_schedule_resend(array, 0);
-	assert(r == RING_RET_CANNOT_RECALL);
+	assert(r == SKY_RET_RING_CANNOT_RECALL);
 
 	//read for tx. assert data matches.
 	int seq_read_for_tx = -1;
@@ -98,7 +98,7 @@ static void test1_round(){
 
 	//get pl to send. This should fail, as recall=0
 	r = sky_vc_read_packet_for_tx(array, tgt, &seq_read_for_tx, 0);
-	assert(r == RING_RET_EMPTY);
+	assert(r == SKY_RET_RING_EMPTY);
 
 	//get pl to send. This should succeed, as recall=1
 	r = sky_vc_read_packet_for_tx(array, tgt, &seq_read_for_tx, 1);
@@ -133,7 +133,7 @@ static void test1_round(){
 
 	//push data as rx, as sequence = sq0+6. should fail.
 	r = sky_vc_push_rx_packet(array, s6->data, s6->length, sq0 + 6, 12);
-	assert(r == RING_RET_INVALID_SEQUENCE);
+	assert(r == SKY_RET_RING_INVALID_SEQUENCE);
 	assert(sky_vc_count_readable_rcv_packets(array) == 1);
 
 	//push data as rx, as sequence = sq0+1.
@@ -164,7 +164,7 @@ static void test1_round(){
 	assert(sky_vc_count_readable_rcv_packets(array) == 0);
 
 	r = sky_vc_read_next_received(array, tgt, &seq);
-	assert(r == RING_RET_EMPTY);
+	assert(r == SKY_RET_RING_EMPTY);
 	assert(sky_vc_count_readable_rcv_packets(array) == 0);
 
 	uint16_t window5 = rcvRing_get_horizon_bitmap(array->rcvRing);
@@ -435,7 +435,7 @@ static void test4_round(){
 				continue;
 			}
 			if(succesfully_given[idx] == 1){ //already in
-				assert(r == RING_RET_PACKET_ALREADY_IN);
+				assert(r == SKY_RET_RING_PACKET_ALREADY_IN);
 				continue;
 			}
 
@@ -584,7 +584,7 @@ static void test5_round(){
 				assert(peeked_seq1 == -1);
 				assert(peeked_seq1 == -1);
 				assert(peeked_leng1 == -1);
-				assert(r == RING_RET_EMPTY);
+				assert(r == SKY_RET_RING_EMPTY);
 				assert(sq_tx == -1);
 			} else {
 				sendRing_clean_tail_up_to(array->sendRing, array->elementBuffer,wrap_sequence(array->sendRing->tx_sequence - n_recall));
@@ -631,16 +631,16 @@ static void test5_round(){
 								n_successful_schedules++;
 							}
 						} else{
-							assert(r2 == RING_RET_RESEND_FULL);
+							assert(r2 == SKY_RET_RING_RESEND_FULL);
 							assert(array->sendRing->resend_count == 16);
 						}
 					} else {
 						assert(r1 == 0);
 						if(n_successful_schedules < 16){
-							assert(r2 == RING_RET_CANNOT_RECALL);
+							assert(r2 == SKY_RET_RING_CANNOT_RECALL);
 						}
 						else{
-							assert(r2 == RING_RET_RESEND_FULL);
+							assert(r2 == SKY_RET_RING_RESEND_FULL);
 						}
 					}
 				}
@@ -672,12 +672,3 @@ static void test5_round(){
 }
 //======================================================================================================================
 //======================================================================================================================
-
-
-
-
-
-
-
-
-

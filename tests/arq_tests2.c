@@ -283,7 +283,7 @@ void arq_system_test3_cycle(){
 				uint8_t temp[300];
 				int _s = -1;
 				int red = rcvRing_read_next_received(array->rcvRing, array->elementBuffer, &temp, &_s);
-				assert(red == RING_RET_EMPTY);
+				assert(red == SKY_RET_RING_EMPTY);
 				assert(_s == -1);
 			}
 
@@ -296,7 +296,7 @@ void arq_system_test3_cycle(){
 				uint8_t temp[300];
 				int _s = -1;
 				int red = rcvRing_read_next_received(array->rcvRing, array->elementBuffer, &temp, &_s);
-				assert(red == RING_RET_EMPTY);
+				assert(red == SKY_RET_RING_EMPTY);
 				assert(_s == -1);
 			}
 
@@ -394,14 +394,3 @@ void arq_system_test3_cycle(){
 	destroy_arq_ring(array_r);
 	destroy_config(sky_config);
 }
-
-
-
-
-
-
-
-
-
-
-

@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "skylink.h"
+#include "skylink/platform.h"
 
 /*
  * All packets start with this.

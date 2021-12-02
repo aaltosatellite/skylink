@@ -10,37 +10,8 @@
 #include "skylink/diag.h"
 #include "skylink/utilities.h"
 
-#include "vcs.h"
+#include "vc_interface.h"
 
-/*
- * List of control message command/response types
- */
-#define VC_CTRL_TRANSMIT_VC0        0
-#define VC_CTRL_TRANSMIT_VC1        1
-#define VC_CTRL_TRANSMIT_VC2        2
-#define VC_CTRL_TRANSMIT_VC3        3
-
-#define VC_CTRL_RECEIVE_VC0         4
-#define VC_CTRL_RECEIVE_VC1         5
-#define VC_CTRL_RECEIVE_VC2         6
-#define VC_CTRL_RECEIVE_VC3         7
-
-
-#define VC_CTRL_GET_STATE           10
-#define VC_CTRL_STATE_RSP           11
-#define VC_CTRL_FLUSH_BUFFERS       12
-
-#define VC_CTRL_GET_STATS           13
-#define VC_CTRL_STATS_RSP           14
-#define VC_CTRL_CLEAR_STATS         15
-
-#define VC_CTRL_SET_CONFIG          16
-#define VC_CTRL_GET_CONFIG          17
-#define VC_CTRL_CONFIG_RSP          18
-
-#define VC_CTRL_ARQ_CONNECT         20
-#define VC_CTRL_ARQ_DISCONNECT      21
-#define VC_CTRL_ARQ_TIMEOUT         22
 
 int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len);
 
@@ -145,7 +116,7 @@ int vc_check_arq_states() {
 	for (int vc = 0; vc < 4; vc++) {
 
 		if (vcs[vc].arq_expected_state != ARQ_STATE_OFF) {
-		 	if (handle->arrayBuffers[vc]->arq_state_flag == ARQ_STATE_OFF) {
+		 	if (handle->virtual_channels[vc]->arq_state_flag == ARQ_STATE_OFF) {
 				vcs[vc].arq_expected_state = 0;
 
 				SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ has disconnected!\n", vc);
@@ -158,7 +129,7 @@ int vc_check_arq_states() {
 		}
 		else {
 			// Has ARQ turned on
-			if (handle->arrayBuffers[vc]->arq_state_flag != ARQ_STATE_OFF)
+			if (handle->virtual_channels[vc]->arq_state_flag != ARQ_STATE_OFF)
 				vcs[vc].arq_expected_state = 1;
 		}
 	}
@@ -176,7 +147,7 @@ int vc_check_outgoing() {
 	/* If packets appeared to some RX buffer, send them to ZMQ */
 	for (unsigned int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 
-		int ret = skyArray_read_next_received(handle->arrayBuffers[vc], data + 1, &sequence);
+		int ret = sky_vc_read_next_received(handle->virtual_channels[vc], data + 1, &sequence);
 		if (ret > 0) {
 			SKY_PRINTF(SKY_DIAG_DEBUG, "VC%d: Received %d bytes\n", vc, ret);
 
@@ -254,7 +225,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		 */
 		//unsigned int vc = cmd - VC_CTRL_TRANSMIT_VC0;
 		SKY_PRINTF(SKY_DIAG_FRAMES, "VC%d: Sending %d bytes\n", vc, msg_len);
-		skyArray_push_packet_to_send(handle->arrayBuffers[vc], msg, msg_len);
+		sky_vc_push_packet_to_send(handle->virtual_channels[vc], msg, msg_len);
 		break; // No response
 	}
 
@@ -269,7 +240,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		unsigned int vc = cmd - VC_CTRL_RECEIVE_VC0;
 		int sequence;
 		uint8_t frame[500];
-		int read = skyArray_read_next_received(handle->arrayBuffers[vc], frame, &sequence);
+		int read = sky_vc_read_next_received(handle->virtual_channels[vc], frame, &sequence);
 		send_control_response(vc, VC_CTRL_RECEIVE_VC0 + vc, frame, read);
 		break;
 	}
@@ -281,9 +252,9 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 
 		SkyBufferState state;
 		for (int vc = 0; vc < 4; vc++) {
-			state.vc[vc].arq_state = handle->arrayBuffers[vc]->arq_state_flag;
-			state.vc[vc].tx_buffer = skyArray_count_packets_to_tx(handle->arrayBuffers[vc], 1);
-			state.vc[vc].tx_buffer = skyArray_count_readable_rcv_packets(handle->arrayBuffers[vc]);
+			state.vc[vc].arq_state = handle->virtual_channels[vc]->arq_state_flag;
+			state.vc[vc].tx_buffer = sky_vc_count_packets_to_tx(handle->virtual_channels[vc], 1);
+			state.vc[vc].tx_buffer = sky_vc_count_readable_rcv_packets(handle->virtual_channels[vc]);
 		}
 
 //		sky_get_buffer_status(handle, &state);
@@ -302,7 +273,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		 * Flush virtual channel buffers
 		 */
 		for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++)
-			skyArray_wipe_to_arq_off_state(handle->arrayBuffers[vc]);
+			sky_vc_wipe_to_arq_off_state(handle->virtual_channels[vc]);
 		break; // No response
 	}
 
@@ -363,7 +334,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		 * ARQ connect
 		 */
 		SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ connecting\n", vc);
-		skyArray_wipe_to_arq_init_state(handle->arrayBuffers[vc], get_timestamp());
+		sky_vc_wipe_to_arq_init_state(handle->virtual_channels[vc], get_timestamp());
 		break; // No response
 	}
 
@@ -372,7 +343,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		 * ARQ disconnect
 		 */
 		SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ disconnecting\n", vc);
-		skyArray_wipe_to_arq_off_state(handle->arrayBuffers[vc]);
+		sky_vc_wipe_to_arq_off_state(handle->virtual_channels[vc]);
 		break; // No response
 	}
 

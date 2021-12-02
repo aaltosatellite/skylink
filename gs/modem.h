@@ -2,6 +2,7 @@
 #define __MODEM_H__
 
 #include "skylink/skylink.h"
+#include "skylink/platform.h"
 
 /*
  * Initialize modem (interface)

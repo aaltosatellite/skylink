@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "skylink/skylink.h"
+#include "skylink/frame.h"
 #include "skylink/diag.h"
 
 #include "suo.h"

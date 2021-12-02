@@ -7,12 +7,15 @@
 #include <assert.h>
 
 #include "suo.h"
+
 #include "skylink/skylink.h"
+#include "skylink/frame.h"
 #include "skylink/diag.h"
 #include "skylink/platform.h"
 #include "skylink/hmac.h"
 #include "skylink/mac.h"
-#include "vcs.h"
+
+#include "vc_interface.h"
 #include "modem.h"
 
 
@@ -80,10 +83,14 @@ int main(int argc, char *argv[])
 	else
 		sky_diag_mask &= ~SKY_DIAG_LINK_STATE;
 
+	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
+
 	/*
 	* PHY configurations
 	*/
-	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
+	config->phy.enable_scrambler = 1;
+	config->phy.enable_rs = 1;
+	config->phy.authenticate_tx = 1;
 
 	if (mimic_satellite == 0) {
 		config->identity[0] = 'O';
@@ -116,32 +123,33 @@ int main(int argc, char *argv[])
 	config->mac.shift_threshold_ms           = 4000; // [ms]
 
 	/*
-	 * ARQ configurations
+	 * Virtual channel configurations
 	 */
-	config->vc[0].require_authentication     = 1;
-	config->vc[1].require_authentication     = 0;
-	config->vc[2].require_authentication     = 0;
-	config->vc[3].require_authentication     = 0;
+	config->vc[0].horizon_width           = 16;
+	config->vc[0].send_ring_len           = 24;
+	config->vc[0].rcv_ring_len            = 24;
+	config->vc[0].element_size            = 36;
+	config->vc[0].require_authentication  = 1;
 
-	config->array[0].horizon_width           = 16;
-	config->array[0].send_ring_len           = 24;
-	config->array[0].rcv_ring_len            = 24;
-	config->array[0].element_size            = 36;
+	config->vc[1].horizon_width           = 16;
+	config->vc[1].send_ring_len           = 24;
+	config->vc[1].rcv_ring_len            = 24;
+	config->vc[1].element_size            = 36;
+	config->vc[1].require_authentication  = 1;
 
-	config->array[1].horizon_width           = 16;
-	config->array[1].send_ring_len           = 24;
-	config->array[1].rcv_ring_len            = 24;
-	config->array[1].element_size            = 36;
+	config->vc[2].horizon_width           = 0;
+	config->vc[2].send_ring_len           = 8;
+	config->vc[2].rcv_ring_len            = 8;
+	config->vc[2].element_size            = 36;
+	config->vc[2].require_authentication  = 0;
 
-	config->array[2].horizon_width           = 0;
-	config->array[2].send_ring_len           = 8;
-	config->array[2].rcv_ring_len            = 8;
-	config->array[2].element_size            = 36;
+	config->vc[3].horizon_width           = 0;
+	config->vc[3].send_ring_len           = 8;
+	config->vc[3].rcv_ring_len            = 8;
+	config->vc[3].element_size            = 36;
+	config->vc[3].require_authentication  = 0;
 
-	config->array[3].horizon_width           = 0;
-	config->array[3].send_ring_len           = 8;
-	config->array[3].rcv_ring_len            = 8;
-	config->array[3].element_size            = 36;
+	config->arq_timeout_ms                = 10000; // [ms]
 
 	/*
 	 * HMAC configuration
@@ -157,9 +165,8 @@ int main(int argc, char *argv[])
 	handle->mac = sky_mac_create(&config->mac);
 	handle->hmac = new_hmac_instance(&config->hmac);
 	handle->diag = new_diagnostics();
-	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		handle->arrayBuffers[i] = new_arq_ring(&config->array[i]);
-	}
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i)
+		handle->virtual_channels[i] = new_arq_ring(&config->vc[i]);
 
 
 	/* Wait for the first timing message */

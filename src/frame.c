@@ -4,6 +4,7 @@
 
 #include "skylink/frame.h"
 #include "skylink/fec.h"
+#include "skylink/hmac.h"
 #include "skylink/utilities.h"
 #include "skylink/platform.h"
 

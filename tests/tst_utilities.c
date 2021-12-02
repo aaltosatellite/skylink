@@ -197,7 +197,7 @@ void populate_horizon(SkyVirtualChannel* sring, SkyVirtualChannel* rring, int fi
 			int head_advanced = sky_vc_push_rx_packet(rring, tgt, s->length, seq, now_ms);
 			assert(head_advanced == 0);
 			red = sky_vc_read_next_received(rring, tgt, &seq);
-			assert(red == RING_RET_EMPTY);
+			assert(red == SKY_RET_RING_EMPTY);
 		}
 		if(!payloads){
 			destroy_string(s);

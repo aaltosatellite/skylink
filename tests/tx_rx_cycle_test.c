@@ -401,8 +401,8 @@ static void step_forward(int which, TXRXJob* job){
 			peer->handle->virtual_channels[0])){
 		Payload* pl = new_random_payload(target, job->now_ms);
 		int push_ret = sky_vc_push_packet_to_send(peer->handle->virtual_channels[0], pl->msg->data, pl->msg->length);
-		assert(push_ret != RING_RET_RING_FULL);
-		assert(push_ret != RING_RET_BUFFER_FULL);
+		assert(push_ret != SKY_RET_RING_RING_FULL);
+		assert(push_ret != SKY_RET_RING_BUFFER_FULL);
 		pl->assigned_sequence = push_ret;
 		payload_list_append(plList, pl);
 	}
