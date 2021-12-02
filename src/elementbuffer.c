@@ -4,7 +4,6 @@
 
 #include "skylink/elementbuffer.h"
 #include "skylink/platform.h"
-#include "skylink/utilities.h"
 
 
 

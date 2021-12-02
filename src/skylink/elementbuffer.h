@@ -10,19 +10,21 @@
 #include <string.h>
 
 
+typedef uint16_t idx_t;
+typedef uint16_t pl_len_t;
+
 #define EBUFFER_RET_INVALID_INDEX		(-110)
 #define EBUFFER_RET_CHAIN_CORRUPTED		(-111)
 #define EBUFFER_RET_NO_SPACE			(-112)
 #define EBUFFER_RET_TOO_LONG_PAYLOAD	(-113)
 
-
-typedef uint16_t idx_t;
-typedef uint16_t pl_len_t;
-
 #define EB_MAX_ELEMENT_COUNT 		65530
 #define EB_END_IDX					(EB_MAX_ELEMENT_COUNT + 1)
 #define EB_NULL_IDX					(EB_MAX_ELEMENT_COUNT + 2)
 #define EB_LEN_BYTES				((int)sizeof(pl_len_t))
+
+
+
 
 struct slot_buffer_s {
 	void* pool;

@@ -2,13 +2,8 @@
 #define __SKYLINK_H__
 
 
-#include "diag.h"
-#include "platform.h"
-#include "reliable_vc.h"
-#include "conf.h"
-#include "frame.h"
-#include "utilities.h"
-
+//#include "frame.h"
+#include <stdint.h>
 
 
 
@@ -63,36 +58,25 @@
 #define SKY_RET_MALLOC_FAILED      			(-70)
 
 
+//Physical layer radio frame structure.
+#define SKY_NUM_VIRTUAL_CHANNELS  			4
 
 
-
-//================================================================================================================================
 //============ STRUCTS ===========================================================================================================
 //================================================================================================================================
-
-
-
-
-
 typedef struct sky_mac_s SkyMAC;
 
-
-
-
-/* HMAC runtime state */
-struct sky_hmac {
-	uint8_t* key;
-	int32_t key_len;
-	int32_t sequence_tx[SKY_NUM_VIRTUAL_CHANNELS];
-	int32_t sequence_rx[SKY_NUM_VIRTUAL_CHANNELS];
-	uint8_t vc_enfocement_need[SKY_NUM_VIRTUAL_CHANNELS];
-	void* ctx;
-};
 typedef struct sky_hmac SkyHMAC;
 
+typedef struct sky_conf SkyConfig;
 
+typedef struct sky_virtual_channel SkyVirtualChannel;
 
+typedef struct sky_diag SkyDiagnostics;
 
+typedef struct sky_radioframe SkyRadioFrame;
+
+typedef uint16_t arq_seq_t;
 
 typedef struct {
 	uint8_t arq_state;
@@ -102,41 +86,31 @@ typedef struct {
 	arq_seq_t tx_tail_sequence;
 	arq_seq_t rx_head_sequence;
 	arq_seq_t rx_tail_sequence;
-
-
 } SkylinkChannelState;
 
 /* A state information struct provided for higher level software stack. */
 typedef struct {
 	SkylinkChannelState v_channels[SKY_NUM_VIRTUAL_CHANNELS];
-
-
 } SkylinkState;
 
 
 
-
-
-
-/*
- * Struct to store pointers to all the data structures related to a
- * protocol instance.
- * SkyPhyConfig_t phy_conf;
- * Having these in one place makes it easier to use them from
- * different places, which is particularly useful for MUX,
- * since it ties several different blocks togehter.
- */
+/* Struct to store pointers to all the data structures related to a protocol instance. */
 struct sky_all {
 	SkyConfig*			conf;                 					// Configuration
 	SkyDiagnostics*		diag;                 					// Diagnostics
-	SkyVirtualChannel* 	arrayBuffers[SKY_NUM_VIRTUAL_CHANNELS]; //ARQ capable buffers.
+	SkyVirtualChannel* 	virtualChannels[SKY_NUM_VIRTUAL_CHANNELS]; // ARQ capable buffers
 	SkyMAC* 			mac;                    				// MAC state
-	SkyHMAC* 			hmac;
+	SkyHMAC* 			hmac;									// HMAC authentication state
 };
 typedef struct sky_all* SkyHandle;
-//================================================================================================================================
 //============ STRUCTS ===========================================================================================================
 //================================================================================================================================
+
+
+
+
+
 
 int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_ms);
 

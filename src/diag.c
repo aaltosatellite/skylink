@@ -33,7 +33,7 @@ void sky_print_link_state(SkyHandle self) {
 
 
 	for (int vc = 0; vc < 4; vc++) {
-		SkyVirtualChannel* ring = self->arrayBuffers[vc];
+		SkyVirtualChannel* ring = self->virtualChannels[vc];
 
 		SKY_PRINTF(SKY_DIAG_LINK_STATE, "VC#%d   ARQ: ", vc);
 

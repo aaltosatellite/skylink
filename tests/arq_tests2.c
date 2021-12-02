@@ -5,6 +5,7 @@
 #include "arq_tests2.h"
 #include "../src/skylink/skylink.h"
 #include "../src/skylink/utilities.h"
+#include "../src/skylink/reliable_vc.h"
 #include "tst_utilities.h"
 
 

@@ -6,13 +6,14 @@
 #include "skylink/conf.h"
 #include "skylink/frame.h"
 #include "skylink/utilities.h"
+#include "skylink/platform.h"
 
 
 static int32_t get_mac_cycle(SkyMAC* mac){
 	return mac->my_window_length + mac->gap_constant + mac->peer_window_length + mac->tail_constant;
 }
 
-static int32_t wrap_ms(int32_t time_ms, SkyMAC* mac){ //This mess is a conversion from C-modulo, to always-positive-modulo.
+static int32_t wrap_tdd_cycle(int32_t time_ms, SkyMAC* mac){ //This mess is a conversion from C-modulo, to always-positive-modulo.
 	int32_t mod = get_mac_cycle(mac);
 	return ((time_ms % mod) + mod) % mod;
 }
@@ -81,7 +82,7 @@ int32_t mac_set_gap_constant(SkyMAC* mac, int32_t new_gap_constant){
 
 
 int32_t mac_time_to_own_window(SkyMAC* mac, int32_t now_ms){
-	int32_t dt = wrap_ms(wrap_time_ms(now_ms - mac->T0_ms), mac);
+	int32_t dt = wrap_tdd_cycle(wrap_time_ms(now_ms - mac->T0_ms), mac);
 	if(dt < mac->my_window_length){
 		return 0;
 	}
@@ -90,13 +91,13 @@ int32_t mac_time_to_own_window(SkyMAC* mac, int32_t now_ms){
 
 
 int32_t mac_own_window_remaining(SkyMAC* mac, int32_t now_ms){
-	int32_t dt = wrap_ms(wrap_time_ms(now_ms - mac->T0_ms), mac);
+	int32_t dt = wrap_tdd_cycle(wrap_time_ms(now_ms - mac->T0_ms), mac);
 	return mac->my_window_length - dt;
 }
 
 
 int32_t mac_peer_window_remaining(SkyMAC* mac, int32_t now_ms){
-	int32_t dt = wrap_ms(wrap_time_ms(now_ms - (mac->T0_ms + mac->my_window_length + mac->gap_constant)), mac);
+	int32_t dt = wrap_tdd_cycle(wrap_time_ms(now_ms - (mac->T0_ms + mac->my_window_length + mac->gap_constant)), mac);
 	return mac->peer_window_length - dt;
 }
 

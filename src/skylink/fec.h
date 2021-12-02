@@ -9,10 +9,9 @@
 #include "skylink/diag.h"
 #include <string.h>
 
-/*
- */
-#define RS_MSGLEN       223
-#define RS_PARITYS      32
+
+#define RS_MSGLEN       223		// Maximum length of message under FEC
+#define RS_PARITYS      32		// Number of parity bytes used by FEC. These two in effect sum to 255
 
 
 /**
@@ -27,12 +26,6 @@
 #define SKY_GOLAY_RS_ENABLED           0x200
 
 
-
-int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag);
-
-int sky_fec_encode(SkyRadioFrame *frame);
-
-
 /*
  * Decode Forward error correcting code on the received frame.
  * Randomizer + Reed-solomon.
@@ -42,10 +35,10 @@ int sky_fec_encode(SkyRadioFrame *frame);
  *   diag: Diagnostics telemetry struct.
  *
  * returns:
- *   Returns the number of errors corrected.
- *   On error returns a negative return code.
+ *   Returns 0 of success, negative error code on failure.
  */
-//int sky_fec_decode(SkyRadioFrame_t *frame, SkyDiagnostics *diag);
+int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag);
+
 
 
 /*
@@ -57,7 +50,11 @@ int sky_fec_encode(SkyRadioFrame *frame);
  * returns:
  *   O on success. Negative return code on error.
  */
-//int sky_fec_encode(SkyRadioFrame_t *frame)
+int sky_fec_encode(SkyRadioFrame *frame);
+
+
+
+
 
 
 

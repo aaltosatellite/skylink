@@ -2,7 +2,7 @@
 #define __SKYLINK_CONF_H__
 
 #include <stdint.h>
-
+#include "skylink.h"
 
 //HMAC
 #define SKY_HMAC_LENGTH 				8
@@ -12,13 +12,15 @@
 #define SKY_FLAG_ARQ_ON 				0b00010
 #define SKY_FLAG_HAS_PAYLOAD 			0b00100
 
-//Physical layer radio frame structure.
-#define SKY_NUM_VIRTUAL_CHANNELS  		4
-
 //Number of frames justified to send only due to protocol control reasons (in absence of payloads).
 #define UTILITY_FRAMES_PER_WINDOW		3
 
+//Number of bytes in frame identity field
 #define SKY_IDENTITY_LEN				5
+
+
+
+
 
 typedef struct {
 	/* Enable CCSDS randomizer/scrambler */
@@ -28,7 +30,6 @@ typedef struct {
 	uint8_t enable_rs;
 
 	uint32_t authenticate_tx;
-
 } SkyPHYConfig;
 
 
@@ -97,13 +98,14 @@ typedef struct {
  * Where feasible, sublayer implementations should read their parameters
  * directly from here, allowing configuration changes.
  */
-typedef struct sky_conf {
+struct sky_conf {
 	SkyPHYConfig phy;
 	SkyMACConfig mac;
 	HMACConfig	hmac;
 	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t identity[SKY_IDENTITY_LEN];
 	int32_t arq_timeout_ms;
-} SkyConfig;
+};
+typedef struct sky_conf SkyConfig;
 
 #endif /* __SKYLINK_CONF_H__ */

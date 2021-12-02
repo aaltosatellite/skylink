@@ -4,6 +4,10 @@
 
 #include "tst_utilities.h"
 #include "../src/skylink/utilities.h"
+#include "../src/skylink/reliable_vc.h"
+#include "../src/skylink/diag.h"
+
+
 
 uint8_t arr_[16] = {83, 101, 105, 122, 101, 32, 84, 104, 101, 32, 78, 105, 103, 104, 116, 33};
 
@@ -11,22 +15,22 @@ SkyConfig* new_vanilla_config(){
 	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
 	config->vc[0].horizon_width 		= 16;
 	config->vc[0].send_ring_len 		= 24;
-	config->vc[0].rcv_ring_len 		= 22;
+	config->vc[0].rcv_ring_len 			= 22;
 	config->vc[0].element_size  		= 179;
 
 	config->vc[1].horizon_width 		= 16;
 	config->vc[1].send_ring_len 		= 24;
-	config->vc[1].rcv_ring_len 		= 22;
+	config->vc[1].rcv_ring_len 			= 22;
 	config->vc[1].element_size  		= 179;
 
 	config->vc[2].horizon_width 		= 6;
 	config->vc[2].send_ring_len 		= 12;
-	config->vc[2].rcv_ring_len 		= 12;
+	config->vc[2].rcv_ring_len 			= 12;
 	config->vc[2].element_size  		= 179;
 
 	config->vc[3].horizon_width 		= 6;
 	config->vc[3].send_ring_len 		= 12;
-	config->vc[3].rcv_ring_len 		= 12;
+	config->vc[3].rcv_ring_len 			= 12;
 	config->vc[3].element_size  		= 179;
 
 	config->hmac.key_length 			= 16;
@@ -72,7 +76,7 @@ SkyHandle new_handle(SkyConfig* config){
 	handle->diag = new_diagnostics();
 
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		handle->arrayBuffers[i] = new_arq_ring(&config->vc[i]);
+		handle->virtualChannels[i] = new_arq_ring(&config->vc[i]);
 	}
 	return handle;
 }
@@ -83,7 +87,7 @@ void destroy_handle(SkyHandle self){
 	destroy_hmac(self->hmac);
 	destroy_diagnostics(self->diag);
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		destroy_arq_ring(self->arrayBuffers[i]);
+		destroy_arq_ring(self->virtualChannels[i]);
 	}
 	free(self);
 }

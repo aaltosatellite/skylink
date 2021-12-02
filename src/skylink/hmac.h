@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "skylink/skylink.h"
+#include "skylink/conf.h"
 #include "../ext/cifra/hmac.h"
 #include "../ext/cifra/sha2.h"
 
@@ -12,16 +13,26 @@
 #define HMAC_NO_SEQUENCE	65010
 
 
+/* HMAC runtime state */
+struct sky_hmac {
+	uint8_t* key;
+	int32_t key_len;
+	int32_t sequence_tx[SKY_NUM_VIRTUAL_CHANNELS];
+	int32_t sequence_rx[SKY_NUM_VIRTUAL_CHANNELS];
+	uint8_t vc_enfocement_need[SKY_NUM_VIRTUAL_CHANNELS];
+	void* ctx;
+};
+typedef struct sky_hmac SkyHMAC;
+
+
+
+
 
 /* Allocate and initialize HMAC state instance */
 SkyHMAC* new_hmac_instance(HMACConfig* config);
 
 /* Free HMAC resources */
 void destroy_hmac(SkyHMAC* hmac);
-
-
-
-
 
 
 /* Get next sequence number from transmit counter and advance it by one (and wrap modulo cycle) */

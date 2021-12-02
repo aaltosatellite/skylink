@@ -6,21 +6,19 @@
 #include "skylink/skylink.h"
 
 
-#define MODE_RX		11
-#define MODE_TX		22
 
 
 /* MAC-system */
 struct sky_mac_s {
-	int32_t T0_ms;
-	int32_t my_window_length;
-	int32_t peer_window_length;
-	int32_t gap_constant;
-	int32_t tail_constant;
-	int32_t last_belief_update;
-	uint8_t vc_round_robin_start;
-	uint16_t frames_sent_in_current_window_per_vc[SKY_NUM_VIRTUAL_CHANNELS];
-	uint16_t total_frames_sent_in_current_window;
+	int32_t T0_ms;				// Timestamp of the beginning of a cycle. Not necassarily the last cycle. Also beginnign of one of our windows.
+	int32_t my_window_length;	// Length of our own transmission window.
+	int32_t peer_window_length;	// Length of the peer's transmission window. (Or our belief of what it is)
+	int32_t gap_constant;		// Length of time spent waiting between windows, if we do not hear peer transmissions.
+	int32_t tail_constant;		// Length of time spent waiting after peer window has ended before ours opens.
+	int32_t last_belief_update;	// Timestamp of last time we updated our belief of T0 (and peer window length).
+	uint8_t vc_round_robin_start;	// The virtual channel that takes presence on next window.
+	uint16_t frames_sent_in_current_window_per_vc[SKY_NUM_VIRTUAL_CHANNELS];	// Self-explanatory
+	uint16_t total_frames_sent_in_current_window;								// Self-explanatory
 };
 
 

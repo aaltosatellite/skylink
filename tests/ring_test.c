@@ -4,6 +4,7 @@
 
 #include "ring_test.h"
 #include "tst_utilities.h"
+#include "../src/skylink/utilities.h"
 #include <assert.h>
 #include <math.h>
 
@@ -21,13 +22,8 @@ void ring_tests(int load){
 	test5_send(load);
 }
 
-static int positive_mod(int x, int m){
-	return ((x % m) + m) % m;
-}
 
-//static int wrap_seq(int x){
-//	return ((x % ARQ_SEQUENCE_MODULO) + ARQ_SEQUENCE_MODULO) % ARQ_SEQUENCE_MODULO;
-//}
+
 
 
 //a quick generic test of base functionality with a known case.
@@ -539,7 +535,7 @@ static void test5_round(){
 	int tail_seq = s_seq0;
 	int in_buffer = 0;
 	while (next_idx_to_tx < NMSG) {
-		int send_buffer = positive_mod(array->sendRing->tx_head - array->sendRing->tail, array->sendRing->length);
+		int send_buffer = positive_modulo(array->sendRing->tx_head - array->sendRing->tail, array->sendRing->length);
 
 
 		if(send_buffer <= ARQ_MAXIMUM_HORIZON){

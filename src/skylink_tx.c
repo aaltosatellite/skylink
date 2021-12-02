@@ -48,7 +48,7 @@ static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 		if(sky_tx_extension_needed_hmac_reset(self, vc)){
 			return vc;
 		}
-		if(sky_vc_content_to_send(self->arrayBuffers[vc], self->conf, now_ms,
+		if(sky_vc_content_to_send(self->virtualChannels[vc], self->conf, now_ms,
 								  self->mac->frames_sent_in_current_window_per_vc[vc]) > 0){
 			return vc;
 		}
@@ -62,7 +62,7 @@ static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 
 void sky_tx_poll_arq_timeouts(SkyHandle self, int32_t now_ms, int32_t timeout_ms){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		sky_vc_poll_arq_state_timeout(self->arrayBuffers[i], now_ms, timeout_ms);
+		sky_vc_poll_arq_state_timeout(self->virtualChannels[i], now_ms, timeout_ms);
 	}
 }
 
@@ -99,7 +99,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 
 
 	/* ARQ status. */
-	if (self->arrayBuffers[vc]->arq_state_flag == ARQ_STATE_ON){
+	if (self->virtualChannels[vc]->arq_state_flag == ARQ_STATE_ON){
 		frame->flags |= SKY_FLAG_ARQ_ON;
 	}
 
@@ -109,7 +109,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 
 
 	/* Add necessary extensions and a payload if one is in the ring buffer. This is a rather involved function. */
-	sky_vc_fill_frame(self->arrayBuffers[vc], self->conf, frame, now_ms,
+	sky_vc_fill_frame(self->virtualChannels[vc], self->conf, frame, now_ms,
 					  self->mac->frames_sent_in_current_window_per_vc[vc]);
 
 

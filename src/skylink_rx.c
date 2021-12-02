@@ -114,7 +114,7 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 	if(!(frame->flags & SKY_FLAG_HAS_PAYLOAD)){
 		len_pl = -1;
 	}
-	sky_vc_process_content(self->arrayBuffers[frame->vc], pl, len_pl, ext_seq, ext_ctrl, ext_handshake, ext_rrequest,
+	sky_vc_process_content(self->virtualChannels[frame->vc], pl, len_pl, ext_seq, ext_ctrl, ext_handshake, ext_rrequest,
 						   frame->rx_time_ms);
 
 

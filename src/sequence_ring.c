@@ -7,6 +7,7 @@
 #include "skylink/skylink.h"
 #include "skylink/utilities.h"
 #include "skylink/frame.h"
+#include "skylink/diag.h"
 
 
 

@@ -1,9 +1,10 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "skylink/skylink.h"
 #include "skylink/hmac.h"
 #include "skylink/platform.h"
+#include "skylink/conf.h"
+#include "skylink/frame.h"
 
 
 

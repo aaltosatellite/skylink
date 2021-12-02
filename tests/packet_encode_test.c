@@ -6,6 +6,7 @@
 #include "tst_utilities.h"
 #include "skylink/fec.h"
 #include "skylink/utilities.h"
+#include "skylink/reliable_vc.h"
 
 static void test1();
 static void test1_round();

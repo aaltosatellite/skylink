@@ -5,6 +5,9 @@
 
 #include "skylink/fec.h"
 #include "skylink/diag.h"
+#include "skylink/skylink.h"
+#include "skylink/conf.h"
+#include "skylink/frame.h"
 
 
 
@@ -116,7 +119,7 @@ SkyPHYConfig* conf = &phy_defaults;
 /** Decode a received frame */
 int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
 {
-	int ret = 0;
+	int ret = SKY_RET_OK;
 
 	if (conf->enable_scrambler) {
 		/*
@@ -140,15 +143,16 @@ int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
 	 	 * the original metadata. */
 		if ((ret = decode_rs_8(frame->raw, NULL, 0, RS_MSGLEN + RS_PARITYS - frame->length)) < 0) {
 			diag->rx_fec_fail++;
-			SKY_PRINTF(SKY_DIAG_FEC, "\x1B[31m" "FEC failed" "\x1B[0m\n");
+			SKY_PRINTF(SKY_DIAG_FEC, "\x1B[31m" "FEC failed" "\x1B[0m\n")
 			return SKY_RET_RS_FAILED; /* Reed-Solomon decode failed */
 		}
 
 		// Frame is now "shorter"
 		frame->length -= RS_PARITYS;
 
-		if (ret > 0)
-			SKY_PRINTF(SKY_DIAG_FEC, "\x1B[33m" "FEC corrected %d bytes" "\x1B[0m\n", ret);
+		if (ret > 0){
+			SKY_PRINTF(SKY_DIAG_FEC, "\x1B[33m" "FEC corrected %d bytes" "\x1B[0m\n", ret)
+		}
 
 		// Update FEC Telemetry
 		diag->rx_fec_ok++;

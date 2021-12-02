@@ -70,7 +70,7 @@ void sky_diag_dump_hex(uint8_t* data, unsigned int len);
 /*
  * Protocol diagnostic information.
  */
-typedef struct sky_diag {
+struct sky_diag {
 	uint16_t rx_frames;      // Total number of received frames
 	uint16_t rx_fec_ok;      // Number of successfully decoded codewords
 	uint16_t rx_fec_fail;    // Number of failed decodes
@@ -78,7 +78,8 @@ typedef struct sky_diag {
 	uint16_t rx_fec_errs;    // Number of octet errors corrected
 	uint16_t rx_arq_resets;  // Number of octet errors corrected
 	uint16_t tx_frames;      // Total number of transmitted frames
-} SkyDiagnostics;
+};
+typedef struct sky_diag SkyDiagnostics;
 
 SkyDiagnostics* new_diagnostics();
 

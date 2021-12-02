@@ -19,6 +19,7 @@ timestamp_t get_timestamp();
 
 //#include "utilities.h"
 //#define SKY_MALLOC instr_malloc
+#include <stdlib.h>
 #define SKY_MALLOC malloc
 #define SKY_FREE free
 
