@@ -15,8 +15,6 @@
 
 int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len);
 
-const int PP = 0; // use push/pull instead of pub/sub for VC interfaces?
-
 
 struct zmq_vc {
 	void *zmq_tx;
@@ -26,16 +24,13 @@ struct zmq_vc {
 
 struct zmq_vc vcs[SKY_NUM_VIRTUAL_CHANNELS];
 
+
 extern SkyHandle handle;
 extern void *zmq;
 
+
 #define PACKET_RX_MAXLEN  0x1000
 #define PACKET_TX_MAXLEN  0x200
-
-
-void* z_ps_rx[SKY_NUM_VIRTUAL_CHANNELS];
-void* z_ps_tx[SKY_NUM_VIRTUAL_CHANNELS];
-
 
 
 int vc_init(unsigned int vc_base, bool use_push_pull) {
@@ -59,7 +54,7 @@ int vc_init(unsigned int vc_base, bool use_push_pull) {
 		if (zmq_bind(sock, uri) < 0)
 			fprintf(stderr, "zmq_bind() failed: %s", zmq_strerror(errno));
 
-		z_ps_rx[vc] = sock;
+		vcs[vc].zmq_rx = sock;
 	}
 
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
@@ -73,40 +68,12 @@ int vc_init(unsigned int vc_base, bool use_push_pull) {
 		if (zmq_bind(sock, uri) < 0)
 			SKY_PRINTF(SKY_DIAG_BUG, "zmq_bind() failed: %s", zmq_strerror(errno));
 
-		if (!PP)
+		if (use_push_pull == 0)
 			zmq_setsockopt(sock, ZMQ_SUBSCRIBE, "", 0);
-		z_ps_tx[vc] = sock;
+		vcs[vc].zmq_tx = sock;
 	}
 
 	return 0;
-}
-
-
-int vc_tx(void *arg, uint8_t *data, int maxlen)
-{
-	struct zmq_vc *vc = arg;
-	int ret;
-
-	ret = zmq_recv(vc->zmq_tx, data, maxlen, ZMQ_DONTWAIT);
-
-	if (ret < 0) {
-		return -1; /* Nothing to send */
-	} else if (ret > maxlen) {
-		// TODO?
-		SKY_PRINTF(SKY_DIAG_DEBUG, "Truncated packet\n");
-		return maxlen;
-	} else {
-		return ret; /* Packet returned */
-	}
-}
-
-
-int vc_rx(void *arg, const uint8_t *data, int len)
-{
-	struct zmq_vc *vc = arg;
-	SKY_PRINTF(SKY_DIAG_DEBUG, "Received packet of %d bytes\n", len);
-	zmq_send(vc->zmq_rx, data, len, ZMQ_DONTWAIT);
-	return 0; /* OK */
 }
 
 
@@ -123,7 +90,7 @@ int vc_check_arq_states() {
 
 				/* Send ARQ disconnected message */
 				uint8_t msg[2] = { VC_CTRL_ARQ_TIMEOUT, vc };
-				if (zmq_send(z_ps_rx[vc], msg, 2, ZMQ_DONTWAIT) < 0)
+				if (zmq_send(vcs[vc].zmq_rx, msg, 2, ZMQ_DONTWAIT) < 0)
 					SKY_PRINTF(SKY_DIAG_BUG, "zmq_send() failed: %s", zmq_strerror(errno));
 			}
 		}
@@ -152,7 +119,7 @@ int vc_check_outgoing() {
 			SKY_PRINTF(SKY_DIAG_DEBUG, "VC%d: Received %d bytes\n", vc, ret);
 
 			data[0] = VC_CTRL_RECEIVE_VC1 + vc;
-			if (zmq_send(z_ps_rx[vc], data, ret + 1, ZMQ_DONTWAIT) < 0)
+			if (zmq_send(vcs[vc].zmq_rx, data, ret + 1, ZMQ_DONTWAIT) < 0)
 				SKY_PRINTF(SKY_DIAG_BUG, "zmq_send() failed: %s", zmq_strerror(errno));
 
 		}
@@ -168,7 +135,7 @@ int vc_check_incoming() {
 
 	for (unsigned int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 
-		int ret = zmq_recv(z_ps_tx[vc], data, PACKET_TX_MAXLEN, ZMQ_DONTWAIT);
+		int ret = zmq_recv(vcs[vc].zmq_tx, data, PACKET_TX_MAXLEN, ZMQ_DONTWAIT);
 		if (ret < 0) {
 			if(errno == EAGAIN)
 				continue;
@@ -192,7 +159,7 @@ int send_control_response(int vc, int rsp_code, void* data, unsigned int data_le
 	rsp[0] = rsp_code;
 	memcpy(&rsp[1], data, data_len);
 
-	if (zmq_send(z_ps_rx[vc], rsp, data_len + 1, ZMQ_DONTWAIT) < 0) {
+	if (zmq_send(vcs[vc].zmq_rx, rsp, data_len + 1, ZMQ_DONTWAIT) < 0) {
 		SKY_PRINTF(SKY_DIAG_FRAMES, "zmq_send() error %s\n", zmq_strerror(errno));
 		return -1;
 	}

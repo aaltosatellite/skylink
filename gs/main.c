@@ -10,6 +10,7 @@
 
 #include "skylink/skylink.h"
 #include "skylink/frame.h"
+#include "skylink/reliable_vc.h"
 #include "skylink/diag.h"
 #include "skylink/platform.h"
 #include "skylink/hmac.h"
@@ -26,7 +27,6 @@ SkyHandle handle;
 
 void *zmq = NULL;
 
-int main(int argc, char* argv[]) __attribute__((noreturn));
 
 int main(int argc, char *argv[])
 {
@@ -165,9 +165,13 @@ int main(int argc, char *argv[])
 	handle->mac = sky_mac_create(&config->mac);
 	handle->hmac = new_hmac_instance(&config->hmac);
 	handle->diag = new_diagnostics();
-	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i)
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		handle->virtual_channels[i] = new_arq_ring(&config->vc[i]);
-
+		if (handle->virtual_channels[i] == NULL) {
+			fprintf(stderr, "Failed to create virtual channel %d", i);
+			return 1;
+		}
+	}
 
 	/* Wait for the first timing message */
 	modem_wait_for_sync();
@@ -228,5 +232,5 @@ int main(int argc, char *argv[])
 
 	}
 
-
+	return 0;
 }

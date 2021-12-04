@@ -43,7 +43,7 @@ int vc_check_arq_states();
 
 int vc_check_incoming();
 
-int vc_check_outcoming();
+int vc_check_outgoing();
 
 
 
