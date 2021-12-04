@@ -5,17 +5,17 @@ from __future__ import annotations
 
 import struct
 import asyncio
-from typing import Union, Any, Optional
+from typing import Any, Dict, Optional, Union
 
 import zmq
 import zmq.asyncio
 
-from skylink import SkyFrame, SkyStatus, SkyStatistics, parse_status, parse_stats
+from skylink import SkyStatus, SkyStatistics, parse_status, parse_stats
 
 try:
     import pylink
 except:
-    pass
+    pass # Allow starting without pylink installed
 
 
 __all__ = [
@@ -28,24 +28,33 @@ __all__ = [
 #
 # Virtual Channel Control message codes
 #
-VC_CTRL_PUSH              =  0
-VC_CTRL_PULL              =  1
+VC_CTRL_TRANSMIT_VC0      = 0
+VC_CTRL_TRANSMIT_VC1      = 1
+VC_CTRL_TRANSMIT_VC2      = 2
+VC_CTRL_TRANSMIT_VC3      = 3
 
-VC_CTRL_GET_BUFFER        =  5
-VC_CTRL_BUFFER_RSP        =  6
-VC_CTRL_FLUSH_BUFFERS     =  7
+VC_CTRL_RECEIVE_VC0       = 4
+VC_CTRL_RECEIVE_VC1       = 5
+VC_CTRL_RECEIVE_VC2       = 6
+VC_CTRL_RECEIVE_VC3       = 7
 
-VC_CTRL_GET_STATS         =  10
-VC_CTRL_STATS_RSP         =  11
-VC_CTRL_CLEAR_STATS       =  12
+VC_CTRL_GET_STATE         = 10
+VC_CTRL_STATE_RSP         = 11
+VC_CTRL_FLUSH_BUFFERS     = 12
 
-VC_CTRL_SET_CONFIG        =  13
-VC_CTRL_GET_CONFIG        =  14
-VC_CTRL_CONFIG_RSP        =  15
+VC_CTRL_GET_STATS         = 13
+VC_CTRL_STATS_RSP         = 14
+VC_CTRL_CLEAR_STATS       = 15
 
-VC_CTRL_ARQ_CONNECT       =  20
-VC_CTRL_ARQ_RESET         =  21
-VC_CTRL_ARQ_TIMEOUT       =  22
+VC_CTRL_SET_CONFIG        = 16
+VC_CTRL_GET_CONFIG        = 17
+VC_CTRL_CONFIG_RSP        = 18
+
+VC_CTRL_ARQ_CONNECT       = 20
+VC_CTRL_ARQ_DISCONNECT    = 21
+VC_CTRL_ARQ_TIMEOUT       = 22
+
+
 
 
 class ARQTimeout(Exception):
@@ -56,7 +65,7 @@ class VCCommands:
     """
     General definitons of the control messages
     """
-
+    vc: int
     frame_queue: asyncio.Queue[bytes]
     control_queue: asyncio.Queue[bytes]
 
@@ -72,8 +81,54 @@ class VCCommands:
         if self.control_queue is None:
             raise RuntimeError("Channel closed")
 
-        await self._send_command(VC_CTRL_GET_BUFFER)
-        return parse_status(await self._wait_control_response(VC_CTRL_BUFFER_RSP))
+        await self._send_command(VC_CTRL_GET_STATE)
+        return parse_status(await self._wait_control_response(VC_CTRL_STATE_RSP))
+
+
+    async def transmit(self, frame: Union[bytes, str]) -> None:
+        """
+        Send a frame to Virtual Channel buffer.
+
+        Args:
+            frame: Frame to be send. `str`, `bytes` or `SkyFrame`
+        """
+        if isinstance(frame, str):
+            frame = frame.encode('utf-8', 'ignore')
+        await self._send_command(VC_CTRL_TRANSMIT_VC0 + self.vc, frame)
+
+
+    async def receive(self, timeout: Optional[float]=None) -> bytes:
+        """
+        Receive a frame from VC.
+
+        Args:
+            timeout: Optional timeout time in seconds.
+                If None, receive will block.
+
+        Raises:
+            asyncio.TimeoutError in case of timeout.
+        """
+        if self.frame_queue is None:
+            raise RuntimeError("Channel closed")
+
+        frame = await asyncio.wait_for(self.frame_queue.get(), timeout)
+        if isinstance(frame, ARQTimeout):
+            raise frame
+
+
+    async def arq_connect(self):
+        """
+        ARQ connect
+        """
+        await self._send_command(VC_CTRL_ARQ_CONNECT, struct.pack("B", self.vc))
+
+
+    async def arq_disconnect(self):
+        """
+        ARQ disconnect
+        """
+        await self._send_command(VC_CTRL_ARQ_DISCONNECT, struct.pack("B", self.vc))
+
 
 
     async def get_free(self) -> int:
@@ -98,6 +153,14 @@ class VCCommands:
 
         await self._send_command(VC_CTRL_GET_STATS)
         return parse_stats(await self._wait_control_response(VC_CTRL_STATS_RSP))
+
+
+    async def clear_stats(self) -> None:
+        """
+        Clear Skylnk statistics
+        """
+        await self._send_command(VC_CTRL_CLEAR_STATS)
+
 
 
 class RTTChannel(VCCommands):
@@ -171,8 +234,10 @@ class RTTChannel(VCCommands):
                     data_len, cmd = await self._read_exactly(2)
                     data = await self._read_exactly(data_len)
 
-                    if cmd == VC_CTRL_PULL:
+                    if VC_CTRL_RECEIVE_VC0 <= cmd <= VC_CTRL_RECEIVE_VC3:
                         await self.frame_queue.put(data)
+                    elif cmd == VC_CTRL_ARQ_TIMEOUT:
+                        await self.frame_queue.put(ARQTimeout())
                     else:
                         await self.control_queue.put((cmd, data))
 
@@ -214,35 +279,6 @@ class RTTChannel(VCCommands):
                 return ctrl[1]
 
 
-    async def transmit(self, frame: Union[SkyFrame, bytes, str]) -> None:
-        """
-        Send a frame to Virtual Channel buffer.
-
-        Args:
-            frame: Frame to be send. `str`, `bytes` or `SkyFrame`
-        """
-        if isinstance(frame, str):
-            frame = frame.encode('utf-8', 'ignore')
-        await self._send_command(VC_CTRL_PUSH, frame)
-
-
-    async def receive(self, timeout: Optional[float]=None) -> bytes:
-        """
-        Receive a frame from VC.
-
-        Args:
-            timeout: Optional timeout time in seconds.
-                If None, receive will block.
-
-        Raises:
-            asyncio.TimeoutError in case of timeout.
-        """
-        if self.frame_queue is None:
-            raise RuntimeError("Channel closed")
-
-        return await asyncio.wait_for(self.frame_queue.get(), timeout)
-
-
 
 class ZMQChannel(VCCommands):
     """
@@ -251,7 +287,7 @@ class ZMQChannel(VCCommands):
 
     def __init__(self, host: str, port: int, vc: int, ctx=None, pp: bool=False):
         """ Initialize ZMQ connection. """
-        self.vc: int = vc
+        self.vc = vc
         if ctx is None:
             ctx = zmq.asyncio.Context()
 
@@ -283,8 +319,11 @@ class ZMQChannel(VCCommands):
         while True:
             # Wait for message from the ZMQ PUB
             msg = await self.dl.recv()
-            if msg[0] == VC_CTRL_PULL:
+
+            if VC_CTRL_RECEIVE_VC0 <= msg[0] <= VC_CTRL_RECEIVE_VC3:
                 await self.frame_queue.put(msg[1:])
+            elif msg[0] == VC_CTRL_ARQ_TIMEOUT:
+                await self.frame_queue.put(ARQTimeout())
             else:
                 await self.control_queue.put((msg[0], msg[1:]))
 
@@ -319,23 +358,6 @@ class ZMQChannel(VCCommands):
             ctrl = await asyncio.wait_for(self.control_queue.get(), timeout=0.5)
             if ctrl[0] == cmd:
                 return ctrl[1:]
-
-
-    async def transmit(self, frame: Union[SkyFrame, bytes, str]) -> None:
-        """ Transmit a frame to virtual channel. """
-        if isinstance(frame, SkyFrame):
-            frame = frame.data
-        if isinstance(frame, str):
-            frame = frame.encode('ascii')
-        await self._send_command(VC_CTRL_PUSH, frame)
-
-
-    async def receive(self, timeout: Optional[int] = None) -> SkyFrame:
-        """ Receive a frame from the virtual channel. """
-        if self.frame_queue is None:
-            raise RuntimeError("Channel closed")
-
-        return await asyncio.wait_for(self.frame_queue.get(), timeout)
 
 
 

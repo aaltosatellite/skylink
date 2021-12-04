@@ -5,14 +5,15 @@ from collections import namedtuple
 SkyFrame = namedtuple("SkyFrame", ["data", ])
 
 SkyStatistics = namedtuple("SkyStatistics",
-    ["rx_frames", "rx_fec_ok", "rx_fec_fail", "rx_fec_octs", "rx_fec_errs", "tx_frames"])
+    ["rx_frames", "rx_fec_ok", "rx_fec_fail", "rx_fec_octs", "rx_fec_errs", "tx_frames", "tx_bytes"])
 
 def parse_stats(bs: bytes) -> SkyStatistics:
     """ Parse Skylink statistics structure """
-    return SkyStatistics(*struct.unpack("!HHHHHH", bs))
+    return SkyStatistics(*struct.unpack("8H", bs))
 
 
 SkyStatus = namedtuple("SkyStatus", ["state", "rx_available", "tx_free"])
+
 def parse_status(bs: bytes) -> SkyStatus:
     """ Parse Skylink statistics structure """
     return SkyStatus(
