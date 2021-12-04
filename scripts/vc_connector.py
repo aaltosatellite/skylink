@@ -114,7 +114,7 @@ class VCCommands:
         frame = await asyncio.wait_for(self.frame_queue.get(), timeout)
         if isinstance(frame, ARQTimeout):
             raise frame
-
+        return frame
 
     async def arq_connect(self):
         """
