@@ -1,23 +1,40 @@
 
 import struct
-from collections import namedtuple
+from typing import List, NamedTuple
 
-SkyFrame = namedtuple("SkyFrame", ["data", ])
+#SkyFrame = namedtuple("SkyFrame", ["data", ])
 
-SkyStatistics = namedtuple("SkyStatistics",
-    ["rx_frames", "rx_fec_ok", "rx_fec_fail", "rx_fec_octs", "rx_fec_errs", "tx_frames", "tx_bytes"])
+class SkyStatistics(NamedTuple):
+    rx_frames: int
+    rx_fec_ok: int
+    rx_fec_fail: int
+    rx_fec_octs: int
+    rx_fec_errs: int
+    rx_arq_resets: int
+    tx_frames: int
+    tx_bytes: int
+
 
 def parse_stats(bs: bytes) -> SkyStatistics:
     """ Parse Skylink statistics structure """
-    return SkyStatistics(*struct.unpack("8H", bs))
+    return SkyStatistics(*struct.unpack("!8H", bs))
 
 
-SkyStatus = namedtuple("SkyStatus", ["state", "rx_available", "tx_free"])
+class SkyVCState(NamedTuple):
+    state: int
+    buffer_free: int
+    tx_frames: int
+    rx_frames: int
 
-def parse_status(bs: bytes) -> SkyStatus:
+class SkyState(NamedTuple):
+    vc: List[SkyVCState]
+
+
+def parse_state(bs: bytes) -> SkyState:
     """ Parse Skylink statistics structure """
-    return SkyStatus(
-        struct.unpack("!4B", bs[0:4]),
-        struct.unpack("!4H", bs[4:4+8]),
-        struct.unpack("!4H", bs[4+8:]),
+    return SkyState(
+        [ SkyVCState(*struct.unpack("!4H", bs[0:8])),
+          SkyVCState(*struct.unpack("!4H", bs[8:16])),
+          SkyVCState(*struct.unpack("!4H", bs[16:24])),
+          SkyVCState(*struct.unpack("!4H", bs[24:32])) ]
     )

@@ -168,15 +168,6 @@ int send_control_response(int vc, int rsp_code, void* data, unsigned int data_le
 }
 
 
-typedef struct {
-	struct {
-		uint16_t arq_state;
-		uint16_t tx_buffer;
-		uint16_t rx_buffer;
-	} vc[4];
-} SkyBufferState;
-
-
 int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) {
 
 	SKY_PRINTF(SKY_DIAG_DEBUG, "CTRL MSG vc: %d  cmd: %d len: msg_len %d\n", vc, cmd, msg_len);
@@ -216,22 +207,14 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * Get virtual channel buffer status
 		 */
+		SkyState state;
+		sky_get_state(handle, &state);
 
-		SkyBufferState state;
-		for (int vc = 0; vc < 4; vc++) {
-			state.vc[vc].arq_state = handle->virtual_channels[vc]->arq_state_flag;
-			state.vc[vc].tx_buffer = sky_vc_count_packets_to_tx(handle->virtual_channels[vc], 1);
-			state.vc[vc].tx_buffer = sky_vc_count_readable_rcv_packets(handle->virtual_channels[vc]);
-		}
-
-//		sky_get_buffer_status(handle, &state);
-#if 0
-		uint16_t* vals = (uint16_t*)rsp;
-		for (int i = 2; i < sizeof(SkyBufferState_t)/2; i++)
+		uint16_t* vals = (uint16_t*)&state;
+		for (int i = 2; i < sizeof(SkyState)/2; i++)
 			vals[i] = sky_hton16(vals[i]);
-#endif
 
-		send_control_response(vc, VC_CTRL_STATE_RSP, &state, sizeof(SkyBufferState));
+		send_control_response(vc, VC_CTRL_STATE_RSP, &state, sizeof(SkyState));
 		break;
 	}
 
@@ -252,11 +235,9 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		SkyDiagnostics stats;
 		memcpy(&stats, handle->diag, sizeof(SkyDiagnostics));
 
-#if 0
-		uint16_t* vals = (uint16_t*)stats;
+		uint16_t* vals = (uint16_t*)&stats;
 		for (unsigned int i = 0; i < sizeof(SkyDiagnostics)/2; i++)
 			vals[i] = sky_hton16(vals[i]);
-#endif
 
 		send_control_response(vc, VC_CTRL_STATS_RSP, &stats, sizeof(SkyDiagnostics));
 		break;

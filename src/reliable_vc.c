@@ -12,6 +12,21 @@
 
 
 
+void sky_get_state(SkyHandle self, SkyState* state) {
+
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++) {
+		SkyVirtualChannel* vc = &self->virtual_channels[i];
+		SkyVCState* vc_state = &state->vc[i];
+
+		vc_state->state = vc->arq_state_flag;
+		vc_state->buffer_free = 0; // (XXX * vc->elementBuffer->element_size);
+		vc_state->tx_frames = sendRing_count_packets_to_send(vc->sendRing, 1);
+		vc_state->tx_frames = rcvRing_count_readable_packets(vc->rcvRing);
+	}
+
+}
+
+
 static int compute_required_elementount(int elementsize, int total_ring_slots, int maximum_pl_size){
 	int32_t n_per_pl = element_buffer_element_requirement(elementsize, maximum_pl_size);
 	int32_t required = (total_ring_slots * n_per_pl);

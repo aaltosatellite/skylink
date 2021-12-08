@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import struct
 import asyncio
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 import zmq
 import zmq.asyncio
 
-from skylink import SkyStatus, SkyStatistics, parse_status, parse_stats
+from skylink import SkyState, SkyStatistics, parse_state, parse_stats
 
 try:
     import pylink
@@ -67,14 +67,14 @@ class VCCommands:
     """
     vc: int
     frame_queue: asyncio.Queue[bytes]
-    control_queue: asyncio.Queue[bytes]
+    control_queue: asyncio.Queue[Tuple[int, bytes]]
 
-    async def get_status(self) -> SkyStatus:
+    async def get_state(self) -> SkyState:
         """
         Request virtual buffer status.
 
         Returns:
-            SkyStatus object containting the buffer statuses
+            SkyState object containting the buffer states
         Raises:
             `asyncio.exceptions.TimeoutError`
         """
@@ -82,7 +82,7 @@ class VCCommands:
             raise RuntimeError("Channel closed")
 
         await self._send_command(VC_CTRL_GET_STATE)
-        return parse_status(await self._wait_control_response(VC_CTRL_STATE_RSP))
+        return parse_state(await self._wait_control_response(VC_CTRL_STATE_RSP))
 
 
     async def transmit(self, frame: Union[bytes, str]) -> None:
@@ -130,13 +130,12 @@ class VCCommands:
         await self._send_command(VC_CTRL_ARQ_DISCONNECT, struct.pack("B", self.vc))
 
 
-
     async def get_free(self) -> int:
         """
         Get number of free bytes in the virtual channel buffer.
         """
         status = await self.get_status()
-        return status.tx_free[self.vc]
+        return status.vc[self.vc].buffer_free
 
 
     async def get_stats(self) -> SkyStatistics:
@@ -229,7 +228,6 @@ class RTTChannel(VCCommands):
 
             else:
                 if b == b"\xBA":
-
                     # Sync received, receive rest of the frame
                     data_len, cmd = await self._read_exactly(2)
                     data = await self._read_exactly(data_len)
@@ -267,16 +265,16 @@ class RTTChannel(VCCommands):
         await asyncio.sleep(0) # For the function to behave as a couroutine
 
 
-    async def _wait_control_response(self, cmd: int) -> bytes:
+    async def _wait_control_response(self, expected_rsp: int) -> bytes:
         """
         Wait for specific control message.
         """
         if self.control_queue is None or not self.jlink.connected():
             raise RuntimeError("Channel closed")
         while True:
-            ctrl = await asyncio.wait_for(self.control_queue.get(), timeout=0.5)
-            if ctrl[0] == cmd:
-                return ctrl[1]
+            rsp_code, rsp_data = await asyncio.wait_for(self.control_queue.get(), timeout=0.5)
+            if rsp_code == expected_rsp:
+                return rsp_data
 
 
 
@@ -328,7 +326,6 @@ class ZMQChannel(VCCommands):
                 await self.control_queue.put((msg[0], msg[1:]))
 
 
-
     async def _send_command(self, cmd: int, data: bytes = b"") -> None:
         """
         Send general command to ZMQ VC buffer.
@@ -357,7 +354,7 @@ class ZMQChannel(VCCommands):
         while True:
             ctrl = await asyncio.wait_for(self.control_queue.get(), timeout=0.5)
             if ctrl[0] == cmd:
-                return ctrl[1:]
+                return ctrl[1]
 
 
 
@@ -373,16 +370,19 @@ def connect_to_vc(host: str="127.0.0.1", port: int=5000, rtt: bool=False, vc: in
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-
-    #vc = RTTChannel(vc=0)
-    vc = ZMQChannel("127.0.0.1", 5000, vc=0)
-
     async def testing():
-        while True:
-            await vc.transmit(b"Hello world")
-            #print(await vc.get_status())
-            #print(await vc.get_stats())
-            await asyncio.sleep(1.1)
 
+        vc = RTTChannel(vc=0)
+        #vc = ZMQChannel("127.0.0.1", 5000, vc=0)
+        await asyncio.sleep(1) # Wait for the ZMQ connection
+
+        #await vc.arq_connect()
+
+        while True:
+            #await vc.transmit(b"Hello world")
+            print(await vc.get_stats())
+            print(await vc.get_state())
+            await asyncio.sleep(1)
+
+    loop = asyncio.get_event_loop()
     loop.run_until_complete(testing())

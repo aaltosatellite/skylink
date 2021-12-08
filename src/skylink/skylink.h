@@ -56,8 +56,7 @@
 #define SKY_RET_MALLOC_FAILED               (-70)
 
 
-//Physical layer radio frame structure.
-#define SKY_NUM_VIRTUAL_CHANNELS  			4
+#define SKY_NUM_VIRTUAL_CHANNELS            4
 
 
 //============ STRUCTS ===========================================================================================================
@@ -77,20 +76,35 @@ typedef struct sky_radio_frame SkyRadioFrame;
 typedef uint16_t arq_seq_t;
 
 
-typedef struct {
-	uint8_t arq_state;
-	arq_seq_t tx_head_sequence;
-	arq_seq_t tx_tx_sequence;
-	arq_seq_t tx_tail_sequence;
-	arq_seq_t rx_head_sequence;
-	arq_seq_t rx_tail_sequence;
+typedef struct __attribute__((__packed__)) {
+	/*
+	 * ARQ state
+	 */
+	uint16_t state;
+
+	/*
+	 * Amount of free space in bytes in shared element buffer
+	 */
+	uint16_t buffer_free;
+
+	/*
+	 * Number of frames in the buffer waiting to be sent
+	 * In realiable mode non-acknownledged frame are included.
+	 */
+	uint16_t tx_frames;
+
+	/*
+	 * Number of frames ready for reading.
+	 */
+	uint16_t rx_frames;
+
 } SkyVCState;
 
-/* A state information struct provided for higher level software stack. */
-typedef struct {
-	SkyVCState vc[SKY_NUM_VIRTUAL_CHANNELS];
-} SkylinkState;
 
+/* A state information struct provided for higher level software stack. */
+typedef struct __attribute__((__packed__)) {
+	SkyVCState vc[SKY_NUM_VIRTUAL_CHANNELS];
+} SkyState;
 
 
 /* Struct to store pointers to all the data structures related to a protocol instance. */
@@ -107,8 +121,10 @@ typedef struct sky_all* SkyHandle;
 
 
 
-
-
+/*
+ * Get skylink protocol state
+ */
+void sky_get_state(SkyHandle self, SkyState* state);
 
 int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_ms);
 
