@@ -6,7 +6,7 @@
 
 // GENERAL PURPOSE =====================================================================================================
 uint16_t sky_hton16(uint16_t vh) {
-#ifndef __LITTLE_ENDIAN__
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 	return vh;
 #else
 	return (((vh & 0xff00) >> 8) | ((vh & 0x00ff) << 8));
@@ -19,7 +19,7 @@ inline uint16_t __attribute__ ((__const__)) sky_ntoh16(uint16_t vn) {
 
 
 inline uint32_t __attribute__ ((__const__)) sky_hton32(uint32_t vh) {
-#ifndef __LITTLE_ENDIAN__
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 	return vh;
 #else
 	return (((vh & 0xff000000) >> 24) | ((vh & 0x000000ff) << 24) |
@@ -32,7 +32,7 @@ inline uint32_t __attribute__ ((__const__)) sky_ntoh32(uint32_t vn) {
 }
 
 inline int32_t __attribute__ ((__const__)) sky_htoni32(int32_t vh) {
-#ifndef __LITTLE_ENDIAN__
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 	return vh;
 #else
 	return (int32_t) (((vh & 0xff000000) >> 24) | ((vh & 0x000000ff) << 24) | ((vh & 0x0000ff00) <<  8) | ((vh & 0x00ff0000) >>  8));
