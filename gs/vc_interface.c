@@ -1,10 +1,6 @@
 
 #include <zmq.h>
-#include <time.h>
 #include <string.h>
-#include <stdlib.h>
-
-
 #include "skylink/skylink.h"
 #include "skylink/reliable_vc.h"
 #include "skylink/diag.h"
@@ -118,7 +114,7 @@ int vc_check_outgoing() {
 		if (ret > 0) {
 			SKY_PRINTF(SKY_DIAG_DEBUG, "VC%d: Received %d bytes\n", vc, ret);
 
-			data[0] = VC_CTRL_RECEIVE_VC1 + vc;
+			data[0] = VC_CTRL_RECEIVE_VC0 + vc;
 			if (zmq_send(vcs[vc].zmq_rx, data, ret + 1, ZMQ_DONTWAIT) < 0)
 				SKY_PRINTF(SKY_DIAG_BUG, "zmq_send() failed: %s", zmq_strerror(errno));
 
@@ -195,11 +191,11 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * Read data from buffer.
 		 */
-		unsigned int vc = cmd - VC_CTRL_RECEIVE_VC0;
+		unsigned int vc_to_read = cmd - VC_CTRL_RECEIVE_VC0;
 		int sequence;
 		uint8_t frame[500];
-		int read = sky_vc_read_next_received(handle->virtual_channels[vc], frame, &sequence);
-		send_control_response(vc, VC_CTRL_RECEIVE_VC0 + vc, frame, read);
+		int read = sky_vc_read_next_received(handle->virtual_channels[vc_to_read], frame, &sequence);
+		send_control_response(vc_to_read, VC_CTRL_RECEIVE_VC0 + vc_to_read, frame, read);
 		break;
 	}
 
@@ -211,7 +207,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		sky_get_state(handle, &state);
 
 		uint16_t* vals = (uint16_t*)&state;
-		for (int i = 2; i < sizeof(SkyState)/2; i++)
+		for (int i = 2; i < (int)sizeof(SkyState)/2; i++)
 			vals[i] = sky_hton16(vals[i]);
 
 		send_control_response(vc, VC_CTRL_STATE_RSP, &state, sizeof(SkyState));
@@ -222,8 +218,8 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * Flush virtual channel buffers
 		 */
-		for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++)
-			sky_vc_wipe_to_arq_off_state(handle->virtual_channels[vc]);
+		for (int vc_ = 0; vc_ < SKY_NUM_VIRTUAL_CHANNELS; vc_++)
+			sky_vc_wipe_to_arq_off_state(handle->virtual_channels[vc_]);
 		break; // No response
 	}
 

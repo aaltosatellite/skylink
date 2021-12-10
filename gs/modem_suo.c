@@ -3,7 +3,6 @@
  */
 
 #include <zmq.h>
-#include <time.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -11,8 +10,10 @@
 #include "skylink/frame.h"
 #include "skylink/diag.h"
 
-#include "suo.h"
-#include "frame-io/zmq_interface.h"
+#include "../../suo/libsuo/suo.h"
+#include "../../suo/libsuo/frame-io/zmq_interface.h"
+//#include "suo.h"
+//#include "frame-io/zmq_interface.h"
 #include "modem.h"
 
 

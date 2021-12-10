@@ -1,15 +1,10 @@
 
 #include <zmq.h>
-#include <time.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <assert.h>
-
-#include "suo.h"
 
 #include "skylink/skylink.h"
-#include "skylink/frame.h"
 #include "skylink/reliable_vc.h"
 #include "skylink/diag.h"
 #include "skylink/platform.h"
@@ -111,15 +106,15 @@ int main(int argc, char *argv[])
 	/*
 	 * MAC configurations
 	 */
-	config->mac.default_gap_length           = 1000; // [ms]
-	config->mac.default_tail_length          = 400; // [ms]
+	config->mac.default_gap_length           = 800; // [ms]
+	config->mac.default_tail_length          = 100; // [ms]
 
 	config->mac.maximum_window_length        = 350; // [ms]
-	config->mac.minimum_window_length        = 25;  // [ms]
-	config->mac.default_window_length        = 220; // [ms]
+	config->mac.minimum_window_length        = 250; // [ms]
+	config->mac.default_window_length        = 280; // [ms]
 
 	config->mac.default_tail_length          = 86;  // [ms]
-	config->mac.unauthenticated_mac_updates  = 0;   // [ms]
+	config->mac.unauthenticated_mac_updates  = 0;
 	config->mac.shift_threshold_ms           = 4000; // [ms]
 
 	/*
@@ -187,7 +182,7 @@ int main(int argc, char *argv[])
 		 * Receive frames from the modem interface (blocking)
 		 */
 		if (modem_rx(&frame, 0) > 0) {
-			int ret = sky_rx(handle, &frame, 0);
+			sky_rx(handle, &frame, 0);
 			//if (ret < 0)
 			//	SKY_PRINTF(SKY_DIAG_BUG, "sky_rx() error %d\n", ret);
 			//sky_frame_clear(frame);
@@ -226,7 +221,6 @@ int main(int argc, char *argv[])
 					d = 0;
 				}
 			}
-
 
 		}
 
