@@ -223,16 +223,16 @@ void arq_system_test2_cycle(){
 		if(handshake_on){
 			assert(extArqHs != NULL);
 			assert(extArqHs->ARQHandshake.peer_state == array->arq_state_flag);
-			assert(extArqHs->ARQHandshake.identifier == identifier);
+			assert(sky_ntoh32( extArqHs->ARQHandshake.identifier ) == identifier);
 		} else {
 			assert(extArqHs == NULL);
 		}
 
 		if(own_recall && (frames_sent_in_vc < UTILITY_FRAMES_PER_WINDOW)){
 			assert(extArqRr != NULL);
-			assert(extArqRr->ARQReq.sequence == seq_rcv);
-			assert(extArqRr->ARQReq.sequence == array->rcvRing->head_sequence);
-			assert(extArqRr->ARQReq.mask == own_recall_mask);
+			assert(sky_ntoh16( extArqRr->ARQReq.sequence ) == seq_rcv);
+			assert(sky_ntoh16( extArqRr->ARQReq.sequence ) == array->rcvRing->head_sequence);
+			assert(sky_ntoh16( extArqRr->ARQReq.mask ) == own_recall_mask);
 			//PRINTFF(0, "!");
 		} else {
 			//PRINTFF(0, "=");
@@ -250,9 +250,9 @@ void arq_system_test2_cycle(){
 			assert(extArqSeq != NULL);
 			assert(frame->flags & SKY_FLAG_HAS_PAYLOAD);
 			if(recalled){
-				assert(extArqSeq->ARQSeq.sequence == recall_seq);
+				assert(sky_ntoh16( extArqSeq->ARQSeq.sequence ) == recall_seq);
 			} else {
-				assert(extArqSeq->ARQSeq.sequence == new_pl_seq);
+				assert(sky_ntoh16( extArqSeq->ARQSeq.sequence ) == new_pl_seq);
 			}
 		}
 
@@ -262,13 +262,13 @@ void arq_system_test2_cycle(){
 		int b3 = wrap_time_ms(now_ms - ts_last_ctrl) > sky_conf->arq_timeout_ms/4;
 		if((b0 && (b1 || b2 || b3)) || (frame->flags & SKY_FLAG_HAS_PAYLOAD)){
 			assert(extArqCtrl != NULL);
-			assert(extArqCtrl->ARQCtrl.tx_sequence == seq1);
+			assert(sky_ntoh16( extArqCtrl->ARQCtrl.tx_sequence ) == seq1);
 			if(new_pl && (!recalled)){
 				assert(array->sendRing->tx_sequence == wrap_sequence(seq1 + 1));
 			} else {
 				assert(array->sendRing->tx_sequence == seq1);
 			}
-			assert(extArqCtrl->ARQCtrl.rx_sequence == seq_rcv);
+			assert(sky_ntoh16( extArqCtrl->ARQCtrl.rx_sequence ) == seq_rcv);
 		} else {
 			//PRINTFF(0,"%d %d %d %d\n", b0, b1, b2, b3);
 			//PRINTFF(0,"%d %d %d\n", extArqCtrl == NULL, ts_base, MOD_TIME_MS);

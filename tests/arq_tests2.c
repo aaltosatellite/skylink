@@ -163,22 +163,22 @@ void arq_system_test3_cycle(){
 
 	if(seq_on){
 		ext_seq_ptr = &ext_seq;
-		ext_seq.ARQSeq.sequence = arq_seq;
+		ext_seq.ARQSeq.sequence = sky_hton16(arq_seq);
 	}
 	if(ctrl_on){
 		ext_ctrl_ptr = &ext_ctrl;
-		ext_ctrl_ptr->ARQCtrl.tx_sequence = ctrl_peer_tx;
-		ext_ctrl_ptr->ARQCtrl.rx_sequence = ctrl_peer_rx;
+		ext_ctrl_ptr->ARQCtrl.tx_sequence = sky_hton16(ctrl_peer_tx);
+		ext_ctrl_ptr->ARQCtrl.rx_sequence = sky_hton16(ctrl_peer_rx);
 	}
 	if(hs){
 		ext_hs_ptr = &ext_hs;
 		ext_hs_ptr->ARQHandshake.peer_state = hs_state;
-		ext_hs_ptr->ARQHandshake.identifier = hs_identifier;
+		ext_hs_ptr->ARQHandshake.identifier = sky_hton32(hs_identifier);
 	}
 	if(recall){
 		ext_rr_ptr = &ext_rr;
-		ext_rr_ptr->ARQReq.sequence = recall_seq;
-		ext_rr_ptr->ARQReq.mask 	= recall_mask;
+		ext_rr_ptr->ARQReq.sequence = sky_hton16(recall_seq);
+		ext_rr_ptr->ARQReq.mask 	= sky_hton16(recall_mask);
 	}
 
 

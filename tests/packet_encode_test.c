@@ -194,8 +194,8 @@ static void test1_round(){
 			assert(ext == ext2);
 			assert(ext != NULL);
 			assert(ext->length == sizeof(ExtTDDControl)+1);
-			assert(ext->TDDControl.window == mac_length);
-			assert(ext->TDDControl.remaining == mac_left);
+			assert(sky_ntoh16(ext->TDDControl.window) == mac_length);
+			assert(sky_ntoh16(ext->TDDControl.remaining) == mac_left);
 			extension_mac_tdd--;
 			assert(extension_mac_tdd == 0);
 		}
@@ -203,7 +203,7 @@ static void test1_round(){
 			assert(ext == ext3);
 			assert(extension_arq_sequence == 1);
 			assert(ext->length == sizeof(ExtARQSeq )+1);
-			assert(ext->ARQSeq.sequence == arq_sequence);
+			assert(sky_ntoh16(ext->ARQSeq.sequence) == arq_sequence);
 			extension_arq_sequence--;
 			assert(extension_arq_sequence == 0);
 		}
@@ -211,8 +211,8 @@ static void test1_round(){
 			assert(ext == ext4);
 			assert(extension_arq_ctrl == 1);
 			assert(ext->length == sizeof(ExtARQCtrl)+1);
-			assert(ext->ARQCtrl.tx_sequence == ctrl_tx);
-			assert(ext->ARQCtrl.rx_sequence == ctrl_rx);
+			assert(sky_ntoh16(ext->ARQCtrl.tx_sequence) == ctrl_tx);
+			assert(sky_ntoh16(ext->ARQCtrl.rx_sequence) == ctrl_rx);
 			extension_arq_ctrl--;
 			assert(extension_arq_ctrl == 0);
 		}
@@ -221,7 +221,7 @@ static void test1_round(){
 			assert(extension_arq_handshake == 1);
 			assert(ext->length == sizeof(ExtARQHandshake) + 1);
 			assert(ext->ARQHandshake.peer_state == setup_flag);
-			assert(ext->ARQHandshake.identifier == setup_identifier);
+			assert(sky_ntoh32(ext->ARQHandshake.identifier) == setup_identifier);
 			extension_arq_handshake--;
 			assert(extension_arq_handshake == 0);
 		}
@@ -229,8 +229,8 @@ static void test1_round(){
 			assert(ext == ext6);
 			assert(extension_arq_rrequest == 1);
 			assert(ext->length == sizeof(ExtARQReq)+1);
-			assert(ext->ARQReq.sequence == rr_sequence);
-			assert(ext->ARQReq.mask == sky_hton16(mask));
+			assert(sky_ntoh16(ext->ARQReq.sequence) == rr_sequence);
+			assert(sky_ntoh16(ext->ARQReq.mask) == mask);
 			extension_arq_rrequest--;
 			assert(extension_arq_rrequest == 0);
 		}

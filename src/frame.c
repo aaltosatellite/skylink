@@ -71,7 +71,7 @@ int sky_packet_add_extension_arq_handshake(SkyRadioFrame* frame, uint8_t state_f
 	extension->type = EXTENSION_ARQ_HANDSHAKE;
 	extension->length = sizeof(ExtARQHandshake) +1;
 	extension->ARQHandshake.peer_state = state_flag;
-	extension->ARQHandshake.identifier = sky_ntoh32(identifier);
+	extension->ARQHandshake.identifier = sky_hton32(identifier);
 
 	frame->ext_length += extension->length;
 	frame->length = EXTENSION_START_IDX + frame->ext_length;

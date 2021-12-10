@@ -431,12 +431,12 @@ static void sky_vc_process_content_arq_on(SkyVirtualChannel* vchannel, void* pl,
 	SkyPacketExtension* ext_rrequest = exts[2];
 	int seq = -1;
 	if (ext_seq){
-		seq = sky_hton16(ext_seq->ARQSeq.sequence);
+		seq = sky_ntoh16(ext_seq->ARQSeq.sequence);
 	}
 
 	if (ext_ctrl){
-		sky_vc_update_tx_sync(vchannel, sky_hton16(ext_ctrl->ARQCtrl.rx_sequence), now_ms);
-		sky_vc_update_rx_sync(vchannel, sky_hton16(ext_ctrl->ARQCtrl.tx_sequence), now_ms);
+		sky_vc_update_tx_sync(vchannel, sky_ntoh16(ext_ctrl->ARQCtrl.rx_sequence), now_ms);
+		sky_vc_update_rx_sync(vchannel, sky_ntoh16(ext_ctrl->ARQCtrl.tx_sequence), now_ms);
 	}
 
 	if ( (seq > -1) && (len_pl >= 0) ){

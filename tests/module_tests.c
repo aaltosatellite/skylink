@@ -17,7 +17,7 @@ void mac_test(int load);
 int main() {
 	reseed_random();
 
-	elebuffer_tests();
+	//elebuffer_tests();
 	packet_tests();
 	fec_test();
 	hmac_tests();
