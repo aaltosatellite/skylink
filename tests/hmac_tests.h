@@ -9,6 +9,7 @@
 #include "skylink/diag.h"
 #include "skylink/hmac.h"
 #include "skylink/frame.h"
+#include "skylink/utilities.h"
 #include "tst_utilities.h"
 #include "tools/tools.h"
 

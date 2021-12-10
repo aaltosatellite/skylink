@@ -15,7 +15,7 @@
 void sky_get_state(SkyHandle self, SkyState* state) {
 
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++) {
-		SkyVirtualChannel* vc = &self->virtual_channels[i];
+		SkyVirtualChannel* vc = self->virtual_channels[i];
 		SkyVCState* vc_state = &state->vc[i];
 
 		vc_state->state = vc->arq_state_flag;

@@ -74,13 +74,14 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 		return SKY_RET_OWN_TRANSMISSION;
 	}
 
-
 	const SkyVCConfig* vc_conf = &self->conf->vc[frame->vc];
+
 
 	// This extension has to be checked here. Otherwise, if both peers use incorrect hmac-sequencing, we would be in lock state.
 	sky_rx_process_extensions(self, frame, EXTENSION_HMAC_SEQUENCE_RESET);
+
+
 	// The virtual channel necessitates auth.
-	frame->auth_sequence = sky_ntoh16(frame->auth_sequence);
 	if (vc_conf->require_authentication){
 		if ((frame->flags & SKY_FLAG_AUTHENTICATED) == 0){
 			self->hmac->vc_enfocement_need[frame->vc] = 1;
@@ -94,6 +95,7 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 			return ret;
 		}
 	}
+	frame->auth_sequence = sky_ntoh16(frame->auth_sequence);
 
 
 	// The virtual channel does not require auth, but it is there. Just remove the hash.

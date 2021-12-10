@@ -5,6 +5,7 @@
 #include "skylink/platform.h"
 #include "skylink/conf.h"
 #include "skylink/frame.h"
+#include "skylink/utilities.h"
 
 
 
@@ -87,7 +88,7 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 	}
 
 	SkyHMAC* hmac = self->hmac;
-
+	uint16_t frame_auth_sequence = sky_ntoh16(frame->auth_sequence);
 	//Calculate the hash for the frame
 	uint8_t calculated_hash[32];
 	cf_hmac_init(hmac->ctx, &cf_sha256, hmac->key, hmac->key_len);
@@ -101,13 +102,13 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 	}
 
 	//Check if the hmac sequence number is something we are expecting
-	int32_t jump = wrap_hmac_sequence( (int32_t)(frame->auth_sequence - self->hmac->sequence_rx[frame->vc]));
+	int32_t jump = wrap_hmac_sequence( (int32_t)(frame_auth_sequence - self->hmac->sequence_rx[frame->vc]));
 	if (jump > self->conf->hmac.maximum_jump) {
 		return SKY_RET_EXCESSIVE_HMAC_JUMP;
 	}
 
 	//The hmac sequence on our side jumps to the immediate next sequence number.
-	self->hmac->sequence_rx[frame->vc] = wrap_hmac_sequence((int32_t)(frame->auth_sequence + 1));
+	self->hmac->sequence_rx[frame->vc] = wrap_hmac_sequence((int32_t)(frame_auth_sequence + 1));
 	frame->length -= SKY_HMAC_LENGTH;
 	return SKY_RET_OK;
 }

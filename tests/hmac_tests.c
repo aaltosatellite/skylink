@@ -68,7 +68,7 @@ static void test1_round(){
 	int hmac_seq = sky_hmac_get_next_hmac_tx_sequence_and_advance(self1, vc);
 	assert(hmac_seq == wrap_hmac_sequence(self1->hmac->sequence_tx[vc]-1));
 	sframe->auth_sequence = hmac_seq;
-
+	sframe->auth_sequence = sky_hton16(sframe->auth_sequence);
 
 	sky_hmac_extend_with_authentication(self1, sframe);
 	assert((int)sframe->length == length + SKY_HMAC_LENGTH);
