@@ -12,6 +12,11 @@ import asyncio
 import zmq
 import zmq.asyncio
 
+plot = None
+
+#from realtime_plot.drawer import create_realplot
+#plot = create_realplot(10, 1)
+
 
 propagation_delay = 0.010 # [s]
 second_per_octet = 8.0 / 9600.0 # [s]
@@ -130,7 +135,7 @@ async def link(tx, rx, ticks, name: str, frame_loss: float) -> None:
                     text = ""
 
                 color = "\u001b[36m" if name == "UL" else "\u001b[34m"
-                print(f"{color}{get_timestamp() * 1e-9:10.3f} {name} {text}\u001b[0m")
+                print(f"{color}{get_timestamp() * 1e-9:10.3f} {name} {len(data)} bytes {text}\u001b[0m")
 
                 data = None
                 cs = False
@@ -144,6 +149,9 @@ async def link(tx, rx, ticks, name: str, frame_loss: float) -> None:
         # Send tick message
         #
         ticks.send(struct.pack("@IIQ", 3, flags, get_timestamp() ))
+
+        if plot is not None:
+            plot.put((name, state))
 
         await asyncio.sleep(0.001)
 

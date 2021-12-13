@@ -55,7 +55,11 @@ VC_CTRL_ARQ_DISCONNECT    = 21
 VC_CTRL_ARQ_TIMEOUT       = 22
 
 
+class ReceptionTimeout(Exception):
+    pass
 
+class ControlTimeout(Exception):
+    pass
 
 class ARQTimeout(Exception):
     pass
@@ -103,18 +107,23 @@ class VCCommands:
 
         Args:
             timeout: Optional timeout time in seconds.
-                If None, receive will block.
+                If None, receive will block forever.
 
         Raises:
-            asyncio.TimeoutError in case of timeout.
+            ReceptionTimeout in case of timeout.
         """
         if self.frame_queue is None:
             raise RuntimeError("Channel closed")
 
-        frame = await asyncio.wait_for(self.frame_queue.get(), timeout)
+        try:
+            frame = await asyncio.wait_for(self.frame_queue.get(), timeout)
+        except asyncio.TimeoutError as e:
+            raise ReceptionTimeout() from e
+
         if isinstance(frame, ARQTimeout):
             raise frame
         return frame
+
 
     async def arq_connect(self):
         """
@@ -134,7 +143,7 @@ class VCCommands:
         """
         Get number of free bytes in the virtual channel buffer.
         """
-        status = await self.get_status()
+        status = await self.get_state()
         return status.vc[self.vc].buffer_free
 
 
@@ -268,14 +277,24 @@ class RTTChannel(VCCommands):
     async def _wait_control_response(self, expected_rsp: int) -> bytes:
         """
         Wait for specific control message.
+
+        Args:
+            expected_rsp: Wait until a controll message with this code is received.
+
+        Raises:
+            ControlTimeout is raised if no response from Skylink is received in 200ms.
         """
+
         if self.control_queue is None or not self.jlink.connected():
             raise RuntimeError("Channel closed")
-        while True:
-            rsp_code, rsp_data = await asyncio.wait_for(self.control_queue.get(), timeout=0.5)
-            if rsp_code == expected_rsp:
-                return rsp_data
 
+        try:
+            while True:
+                rsp_code, rsp_data = await asyncio.wait_for(self.control_queue.get(), timeout=0.5)
+                if expected_rsp is None or rsp_code == expected_rsp:
+                    return rsp_data
+        except asyncio.TimeoutError as e:
+            raise ControlTimeout() from e
 
 
 class ZMQChannel(VCCommands):

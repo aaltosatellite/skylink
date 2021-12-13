@@ -6,7 +6,7 @@ import time
 import asyncio
 import argparse
 import random
-from vc_connector import connect_to_vc
+from vc_connector import connect_to_vc, ReceptionTimeout, ARQTimeout
 
 
 parser = argparse.ArgumentParser(description='Skylink test terminal')
@@ -44,14 +44,14 @@ async def pinger():
 
     # Initialize ARQ
     if args.arq:
-        conn.init_arq()
+        await conn.arq_connect()
 
     async def generate_pings():
         i = 0
         while True:
             await asyncio.sleep(args.rate)
 
-            # Limit the maximum number of ping on the air
+            # Limit the maximum number of pings on the air
             if args.arq and len(on_air) > args.max_on_air:
                 continue
 
@@ -95,7 +95,11 @@ async def ponger():
                 await conn.transmit(rsp)
             else:
                 print(frame)
-        except asyncio.exceptions.TimeoutError:
+
+        except ARQTimeout:
+            print("ARQTimeout")
+
+        except ReceptionTimeout:
             print(".", end="", flush=True)
 
 
