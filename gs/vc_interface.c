@@ -179,7 +179,9 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		 */
 		//unsigned int vc = cmd - VC_CTRL_TRANSMIT_VC0;
 		SKY_PRINTF(SKY_DIAG_FRAMES, "VC%d: Sending %d bytes\n", vc, msg_len);
-		sky_vc_push_packet_to_send(handle->virtual_channels[vc], msg, msg_len);
+		int ret = sky_vc_push_packet_to_send(handle->virtual_channels[vc], msg, msg_len);
+		if (ret < 0)
+			SKY_PRINTF(SKY_DIAG_BUG, "VC%d: Failed to push new frame! %d\n", vc, ret);
 		break; // No response
 	}
 
@@ -207,7 +209,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		sky_get_state(handle, &state);
 
 		uint16_t* vals = (uint16_t*)&state;
-		for (int i = 2; i < (int)sizeof(SkyState)/2; i++)
+		for (int i = 0; i < (int)sizeof(SkyState)/2; i++)
 			vals[i] = sky_hton16(vals[i]);
 
 		send_control_response(vc, VC_CTRL_STATE_RSP, &state, sizeof(SkyState));
