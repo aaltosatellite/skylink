@@ -193,8 +193,12 @@ class RTTChannel(VCCommands):
         self.jlink.open()
 
         loop = asyncio.get_event_loop()
-        loop.create_task(self.receiver_task())
+        self.task = loop.create_task(self.receiver_task())
 
+    def exit(self):
+        if self.task:
+            self.task.cancel()
+        self.task = None
 
     async def _read_exactly(self, num: int) -> bytes:
         """
@@ -325,8 +329,12 @@ class ZMQChannel(VCCommands):
         print(f"Connected to VC {vc} via ZMQ {host}:{port+vc}")
 
         loop = asyncio.get_event_loop()
-        loop.create_task(self.receiver_task())
+        self.task = loop.create_task(self.receiver_task())
 
+    def exit(self):
+        if self.task:
+            self.task.cancel()
+        self.task = None
 
     async def receiver_task(self) -> None:
         """

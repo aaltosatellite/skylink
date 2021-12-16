@@ -151,7 +151,7 @@ async def link(tx, rx, ticks, name: str, frame_loss: float) -> None:
         ticks.send(struct.pack("@IIQ", 3, flags, get_timestamp() ))
 
         if plot is not None:
-            plot.put((name, state))
+            plot.put((name, state + (1.2 if name == "UL" else 0)))
 
         await asyncio.sleep(0.001)
 

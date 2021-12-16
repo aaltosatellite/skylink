@@ -10,11 +10,12 @@ import asyncio
 import argparse
 import binascii
 
-from vc_connector import connect_to_vc, ARQTimeout
+from vc_connector import connect_to_vc, ARQTimeout, ReceptionTimeout
 
 
 parser = argparse.ArgumentParser(description='Skylink test terminal')
 parser.add_argument("role")
+parser.add_argument('--filename', '-f', type=str)
 parser.add_argument('--host', '-H', type=str, default="127.0.0.1")
 parser.add_argument('--port', '-p', type=int, default=5000)
 parser.add_argument('--vc', '-V', type=int, default=0)
@@ -22,9 +23,8 @@ parser.add_argument('--block_size', '-B', type=int, default=128)
 parser.add_argument('--pp', action='store_false')
 parser.add_argument('--rtt', action='store_true')
 parser.add_argument('--arq', action='store_true')
+parser.add_argument('--ack', action='store_true')
 args = parser.parse_args()
-
-args.filename = "cat2.jpg"
 
 
 #
@@ -53,9 +53,10 @@ async def transmit():
     #
     # Send init
     #
-    #await conn.arq_connect()
+    if args.arq:
+        await conn.arq_connect()
     await conn.transmit(struct.pack("!BII", ord("I"), filesize, local_crc) + basename.encode())
-    rsp = await conn.receive(timeout=5)
+    rsp = await conn.receive(timeout=10)
     if rsp != b"OK":
         raise RuntimeError(f"Failed to init! {rsp!r}")
 
@@ -78,8 +79,12 @@ async def transmit():
         block_data = f.read(args.block_size)
         await conn.transmit(struct.pack("!BH", ord("T"), block_idx) + block_data)
 
-        await asyncio.sleep(0.2)
-
+        # Wait for
+        try:
+            rsp = await conn.receive(timeout=0.2)
+            print("Received:", rsp)
+        except ReceptionTimeout:
+            pass # Ignore receive timeouts
 
 async def receive():
     """
@@ -90,6 +95,7 @@ async def receive():
     remote_crc = 0
     block_count = 0
     start_time = 0
+    prev_idx = 0
 
     while True:
 
@@ -114,6 +120,7 @@ async def receive():
             filename = msg[9:].decode()
             await conn.transmit(b"OK")
             start_time = time.time()
+            prev_idx = -1
 
             print(f"New file transfer {filename}, {filesize} bytes")
 
@@ -129,18 +136,25 @@ async def receive():
             #
 
             if f is None:
-                raise RuntimeError()
+                raise RuntimeError("No file open!")
 
             _, block_idx = struct.unpack("!BH", msg[0:3])
             print(f"Received {block_idx}")
 
+            if args.arq:
+                if block_idx != prev_idx + 1:
+                    raise RuntimeError("")
+                prev_idx = block_idx
+
             f.seek(block_idx * args.block_size, 0)
             f.write(msg[3:])
 
-            #await conn.transmit(struct.pack("!BH", ord("A"), block_idx))
+            if args.ack:
+                await conn.transmit(struct.pack("!BH", ord("A"), block_idx))
 
-            if block_idx == block_count:
+            if block_idx == block_count - 1:
                 print("Completed!")
+
                 f.seek(0, 0)
                 local_crc = binascii.crc32(f.read())
                 print(f"Remote CRC: 0x{remote_crc:08x}")
@@ -153,11 +167,15 @@ async def receive():
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
-    if args.role == "transmit":
-        task = transmit()
-    elif args.role == "receive":
-        task = receive()
-    else:
-        raise ValueError(f"Unknown role {args.role}")
+    async def run():
+        try:
+            if args.role == "transmit":
+                await transmit()
+            elif args.role == "receive":
+                await receive()
+            else:
+                raise ValueError(f"Unknown role {args.role}")
+        finally:
+            conn.exit()
 
-    loop.run_until_complete(task)
+    loop.run_until_complete(run())

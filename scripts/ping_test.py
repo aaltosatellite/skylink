@@ -107,11 +107,15 @@ async def ponger():
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
-    if args.role == "ping":
-        task = pinger()
-    elif args.role == "pong":
-        task = ponger()
-    else:
-        raise ValueError(f"Unknown role {args.role}")
+    async def run():
+        try:
+            if args.role == "ping":
+                await pinger()
+            elif args.role == "pong":
+                await ponger()
+            else:
+                raise ValueError(f"Unknown role {args.role}")
+        finally:
+            conn.exit()
 
     loop.run_until_complete(task)
