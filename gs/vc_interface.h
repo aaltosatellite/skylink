@@ -41,9 +41,9 @@ int vc_init(unsigned int base, bool use_push_pull);
 
 int vc_check_arq_states();
 
-int vc_check_incoming();
+int vc_check_sys_to_rf();
 
-int vc_check_outgoing();
+int vc_check_rf_to_sys();
 
 
 

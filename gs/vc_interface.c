@@ -80,7 +80,7 @@ int vc_check_arq_states() {
 
 		if (vcs[vc].arq_expected_state != ARQ_STATE_OFF) {
 		 	if (handle->virtual_channels[vc]->arq_state_flag == ARQ_STATE_OFF) {
-				vcs[vc].arq_expected_state = 0;
+				vcs[vc].arq_expected_state = ARQ_STATE_OFF;
 
 				SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ has disconnected!\n", vc);
 
@@ -102,7 +102,7 @@ int vc_check_arq_states() {
 
 
 /* Check frame going out (skylink -> ZMQ) */
-int vc_check_outgoing() {
+int vc_check_rf_to_sys() {
 
 	int sequence;
 	uint8_t data[PACKET_RX_MAXLEN];
@@ -125,7 +125,7 @@ int vc_check_outgoing() {
 }
 
 /* Check frame going out (ZMQ -> skylink) */
-int vc_check_incoming() {
+int vc_check_sys_to_rf() {
 
 	uint8_t data[PACKET_TX_MAXLEN];
 

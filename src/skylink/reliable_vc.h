@@ -108,7 +108,7 @@ int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, void* src, int 
 // Pushes a radio received message of particular sequence to buffer.
 int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, void* src, int length, int sequence, int32_t now_ms);
 
-// Read next message to tgt buffer. Return number of bytes written on success, -1 on fail.
+// Read next message to tgt buffer. Return number of bytes written on success, or negative error code.
 int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int* sequence);
 
 // How many messages there are in buffer as a continuous sequence, an thus readable by sky_vc_read_next_received()

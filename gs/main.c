@@ -58,7 +58,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	fprintf(stderr, "modem_base: %d vc_base %d\n", modem_base, vc_base);
+	fprintf(stderr, "modem_base: %d  vc_base: %d\n", modem_base, vc_base);
+	if(mimic_satellite){
+		printf("role: satellite\n");
+	} else {
+		printf("role: ground station\n");
+	}
 
 	/*
 	 * Open ZeroMQ sockets interface
@@ -132,19 +137,19 @@ int main(int argc, char *argv[])
 	config->vc[1].element_size            = 36;
 	config->vc[1].require_authentication  = 1;
 
-	config->vc[2].horizon_width           = 0;
+	config->vc[2].horizon_width           = 2;
 	config->vc[2].send_ring_len           = 8;
 	config->vc[2].rcv_ring_len            = 8;
 	config->vc[2].element_size            = 36;
 	config->vc[2].require_authentication  = 0;
 
-	config->vc[3].horizon_width           = 0;
+	config->vc[3].horizon_width           = 2;
 	config->vc[3].send_ring_len           = 8;
 	config->vc[3].rcv_ring_len            = 8;
 	config->vc[3].element_size            = 36;
 	config->vc[3].require_authentication  = 0;
 
-	config->arq_timeout_ms                = 10000; // [ms]
+	config->arq_timeout_ms                = 12000; // [ms]
 
 	/*
 	 * HMAC configuration
@@ -192,8 +197,8 @@ int main(int argc, char *argv[])
 		 * Check VC sockets (non-blocking)
 		 */
 		vc_check_arq_states();
-		vc_check_incoming();
-		vc_check_outgoing();
+		vc_check_sys_to_rf();
+		vc_check_rf_to_sys();
 
 		/*
 		 * If we have received tick message run the Skylink TX routine
