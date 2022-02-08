@@ -10,7 +10,7 @@
 
 
 int32_t wrap_hmac_sequence(int32_t sequence){
-	return ((sequence % HMAC_CYCLE_LENGTH) + HMAC_CYCLE_LENGTH) % HMAC_CYCLE_LENGTH;
+	return positive_modulo_true(sequence, HMAC_CYCLE_LENGTH);
 }
 
 
@@ -55,6 +55,23 @@ int32_t sky_hmac_get_next_hmac_tx_sequence_and_advance(SkyHandle self, uint8_t v
 	int32_t seq = self->hmac->sequence_tx[vc];
 	self->hmac->sequence_tx[vc] = wrap_hmac_sequence(self->hmac->sequence_tx[vc] + 1);
 	return seq;
+}
+
+
+int32_t sky_hmac_get_tx_sequence(SkyHandle self, int8_t vc){
+	return self->hmac->sequence_tx[vc];
+}
+
+void sky_hmac_set_tx_sequence(SkyHandle self, int8_t vc, int32_t sequence){
+	self->hmac->sequence_tx[vc] = sequence;
+}
+
+int32_t sky_hmac_get_rx_sequence(SkyHandle self, int8_t vc){
+	return self->hmac->sequence_rx[vc];
+}
+
+void sky_hmac_set_rx_sequence(SkyHandle self, int8_t vc, int32_t sequence){
+	self->hmac->sequence_rx[vc] = sequence;
 }
 
 

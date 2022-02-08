@@ -2,8 +2,14 @@
 // Created by elmore on 25.10.2021.
 //
 
+#include <stdio.h>
+#include <stdlib.h>
+#include "skylink/platform.h"
 #include "skylink/utilities.h"
-
+#define DEBUG
+#ifdef DEBUG
+#include <assert.h>
+#endif
 // GENERAL PURPOSE =====================================================================================================
 uint16_t sky_hton16(uint16_t vh) {
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -45,9 +51,36 @@ inline int32_t __attribute__ ((__const__)) sky_ntohi32(int32_t vn) {
 
 
 
-int positive_modulo(int x, int m){
+
+
+int positive_modulo_x(int32_t x, int32_t m){
 	return ((x % m) + m) % m;
 }
+
+
+
+int32_t positive_modulo_true(int32_t x, int32_t m){
+	//return (((x % m) + m) % m);
+	if((abs(x) > (m*12))){
+		//printf("slw.");
+		return ((x % m) + m) % m;
+	}
+	while(x < 0){
+		x = x + m;
+	}
+	while(x >= m){
+		x = x - m;
+	}
+#ifdef DEBUG
+	assert(x == (((x % m) + m) % m) );
+#endif
+	return x;
+}
+
+
+
+
+
 
 int x_in_u8_array(uint8_t x, const uint8_t* array, int length){
 	for (int i = 0; i < length; ++i) {
@@ -68,9 +101,31 @@ int x_in_u16_array(uint16_t x, const uint16_t* array, int length){
 }
 
 int32_t wrap_time_ms(int32_t time_ms){
-	return ((time_ms % MOD_TIME_MS) + MOD_TIME_MS) % MOD_TIME_MS;
+	return positive_modulo_true(time_ms, MOD_TIME_MS);
 }
+
+
 // GENERAL PURPOSE =====================================================================================================
+
+
+
+
+// GLOBAL TIME =====================================================================================================
+timestamp_t _global_time_now_ms = 0;
+
+int sky_tick(timestamp_t time_ms){
+	int ret = 0;
+	if(time_ms != _global_time_now_ms){
+		ret = 1;
+	}
+	_global_time_now_ms = MAX(0, _global_time_now_ms + 1);
+	return ret;
+}
+
+timestamp_t get_sky_tick_time(){
+	return _global_time_now_ms;
+}
+// GLOBAL TIME =====================================================================================================
 
 
 
@@ -84,14 +139,6 @@ static size_t allocated = 0;
 static int allocations = 0;
 
 
-int32_t get_time_ms(){
-	struct timespec t;
-	clock_gettime(CLOCK_REALTIME, &t);
-	uint64_t ts = t.tv_sec*1000;
-	ts += t.tv_nsec/1000000;
-	ts = ts % MOD_TIME_MS;
-	return (int32_t) ts;
-}
 
 void* instr_malloc(size_t n){
 	printf("  (allocating %ld)\n", n); fflush(stdout);
@@ -119,9 +166,6 @@ void report_allocation(){
 
 // ARM =================================================================================================================
 #ifdef __arm__
-//---
-//todo: implement FreeRTOS get_time_ms()
-
 
 #endif
 // ARM =================================================================================================================

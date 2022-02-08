@@ -22,8 +22,9 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame);
 
 int sky_rx(SkyHandle self, SkyRadioFrame* frame, int contains_golay) {
 	int ret;
-	if(frame->length < SKY_ENCODED_FRAME_MIN_LENGTH)
+	if(frame->length < SKY_ENCODED_FRAME_MIN_LENGTH) {
 		return SKY_RET_INVALID_ENCODED_LENGTH;
+	}
 
 	if (contains_golay) {
 		// Read Golay decoded len
@@ -118,8 +119,7 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 	if(!(frame->flags & SKY_FLAG_HAS_PAYLOAD)){
 		len_pl = -1;
 	}
-	sky_vc_process_content(self->virtual_channels[frame->vc], pl, len_pl, ext_seq, ext_ctrl, ext_handshake, ext_rrequest,
-						   frame->rx_time_ms);
+	sky_vc_process_content(self->virtual_channels[frame->vc], pl, len_pl, ext_seq, ext_ctrl, ext_handshake, ext_rrequest, get_sky_tick_time());
 
 
 	//todo: log behavior based on r.
@@ -178,5 +178,5 @@ static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* 
 	}
 	uint16_t w = sky_ntoh16(ext->TDDControl.window);
 	uint16_t r = sky_ntoh16(ext->TDDControl.remaining);
-	mac_update_belief(self->mac, &self->conf->mac, frame->rx_time_ms, w, r);
+	mac_update_belief(self->mac, &self->conf->mac, get_sky_tick_time() , w, r);
 }

@@ -8,7 +8,7 @@
 #include "../src/skylink/reliable_vc.h"
 #include "tst_utilities.h"
 
-
+extern timestamp_t _global_time_now_ms;
 
 void arq_system_test3_cycle();
 
@@ -67,6 +67,7 @@ void arq_system_test3_cycle(){
 	assert(array->rcvRing->head_sequence == array->rcvRing->tail_sequence);
 
 	int now_ms = ts_base + randint_i32(2001, sky_config->arq_timeout_ms + 2000);
+	_global_time_now_ms = now_ms;
 
 	//ARQ state
 	array->arq_state_flag = ARQ_STATE_OFF;

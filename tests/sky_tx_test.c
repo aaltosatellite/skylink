@@ -24,6 +24,7 @@ void sky_tx_test(int load){
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
+extern timestamp_t _global_time_now_ms;
 
 void sky_tx_test_cycle(){
 	uint8_t tgt[1000];
@@ -37,6 +38,7 @@ void sky_tx_test_cycle(){
 
 	int golay_on = randint_i32(1,10) <= 5;
 	int32_t now_ms = randint_i32(0, MOD_TIME_MS-1);
+	_global_time_now_ms = now_ms;
 
 	int mac_shift_threshold = randint_i32(100, 9000);
 	config->mac.shift_threshold_ms = mac_shift_threshold;
@@ -89,7 +91,7 @@ void sky_tx_test_cycle(){
 	int arq_rx_timed_out[SKY_NUM_VIRTUAL_CHANNELS];
 	int hmac_reset_need[SKY_NUM_VIRTUAL_CHANNELS];
 	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
-		arq_on[vc] = randint_i32(1,10) <= 4;
+		arq_on[vc] = randint_i32(1,10) <= 5;
 		self->virtual_channels[vc]->arq_state_flag = ARQ_STATE_OFF;
 		if(arq_on[vc]){
 			self->virtual_channels[vc]->arq_state_flag = ARQ_STATE_ON;
@@ -148,7 +150,7 @@ void sky_tx_test_cycle(){
 
 		if(arq_on[vc]){
 			stuff_in_horizon[vc] = 0;
-			if(randint_i32(1, 10) <= 2){
+			if(randint_i32(1, 10) <= 3){
 				stuff_in_horizon[vc] = 1;
 				fillrand(tgt, 100);
 				int _len = randint_i32(0,100);
@@ -187,12 +189,16 @@ void sky_tx_test_cycle(){
 	int mac_gap = config->mac.default_gap_length;
 	int mac_tail = config->mac.default_tail_length;
 	int mac_cycle = my_window + peer_window + mac_gap + mac_tail;
+	int mac_window_on = randint_i32(0, 10) < 5;
+	int mac_window_adjust_plan0 = randint_i32(-3, 3);
 	self->mac->my_window_length = my_window;
 	self->mac->peer_window_length = peer_window;
 	self->mac->gap_constant = mac_gap;
 	self->mac->tail_constant = mac_tail;
+	self->mac->window_on = mac_window_on;
+	self->mac->window_adjust_plan = mac_window_adjust_plan0;
 
-	int can_send = randint_i32(1,10) <= 6;
+	int can_send = randint_i32(1,10) <= 7;
 	int mac_t0;
 	if(can_send){
 		mac_t0 = wrap_time_ms( (now_ms + mac_cycle * randint_i32(-1000, 0)) - randint_i32(0, my_window-1));
@@ -203,10 +209,17 @@ void sky_tx_test_cycle(){
 	self->mac->T0_ms = mac_t0;
 
 
+	int _content_to_send = 0;
+	for (int ii = 0; ii < SKY_NUM_VIRTUAL_CHANNELS; ++ii) {
+		_content_to_send |= sky_vc_content_to_send(self->virtual_channels[ii], config, now_ms, self->mac->frames_sent_in_current_window_per_vc[ii]);
+		_content_to_send |= (hmac_reset_need[ii] && auth_required[ii]);
+	}
+	_content_to_send |= (total_frames_sent > 0);
+
 
 	// =================================================================================================================
 	// =================================================================================================================
-	int ret = sky_tx(self, frame, golay_on, now_ms);
+	int ret = sky_tx(self, frame, golay_on);
 	// =================================================================================================================
 	if(ret){
 		if(golay_on){
@@ -245,6 +258,10 @@ void sky_tx_test_cycle(){
 		}
 	}
 
+	if(mac_silence > mac_shift_threshold){
+		assert(self->mac->last_belief_update == now_ms);
+	}
+
 	if(!can_send){
 		if(ret != 0){
 			PRINTFF(0,"\t%d\n", mac_silence > mac_shift_threshold);
@@ -257,8 +274,24 @@ void sky_tx_test_cycle(){
 	}
 
 
-	if(mac_silence > mac_shift_threshold){
-		assert(self->mac->last_belief_update == now_ms);
+	if(can_send){
+		assert(self->mac->window_on == 1);
+		if(mac_window_on == 0){
+			if(mac_window_adjust_plan0 <= -2){
+				//PRINTFF(0,"-");
+				assert(self->mac->my_window_length == MAX(config->mac.minimum_window_length, my_window - config->mac.window_adjust_increment) );
+				assert(self->mac->window_adjust_plan == 0);
+			}
+			else if(mac_window_adjust_plan0 >= 2){
+				//PRINTFF(0,"+");
+				assert(self->mac->my_window_length == MIN(config->mac.maximum_window_length, my_window + config->mac.window_adjust_increment) );
+				assert(self->mac->window_adjust_plan == 0);
+			} else {
+				assert(self->mac->my_window_length == my_window);
+			}
+		} else {
+			assert(self->mac->my_window_length == my_window);
+		}
 	}
 
 
@@ -269,8 +302,15 @@ void sky_tx_test_cycle(){
 		}
 	}
 	if(!can_send){
+		assert(self->mac->window_on == 0);
 		goto exit;
 	}
+
+
+	// can_send == 1
+
+
+
 
 
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
@@ -316,7 +356,7 @@ void sky_tx_test_cycle(){
 	*/
 
 	for (int j = 0; j < SKY_NUM_VIRTUAL_CHANNELS; ++j) {
-		int i = ((round_robin_start + 1 + j) % SKY_NUM_VIRTUAL_CHANNELS);
+		int i = ((round_robin_start + 0 + j) % SKY_NUM_VIRTUAL_CHANNELS);
 		if(deduced_vc > -1){
 			continue;
 		}
@@ -400,6 +440,13 @@ void sky_tx_test_cycle(){
 	}
 
 
+	if(content == 0){
+		assert(ret == 0);
+		goto exit;
+	}
+	assert(ret == 1);
+
+
 
 	int arq_timed_out = 0;
 	if(arq_on[deduced_vc]){
@@ -407,13 +454,6 @@ void sky_tx_test_cycle(){
 			arq_timed_out = 1;
 		}
 	}
-
-	if(content == 0){
-		assert(ret == 0);
-		goto exit;
-	}
-	assert(ret == 1);
-
 
 	int pl_lenn = ((int)frame->length - (int)(EXTENSION_START_IDX + (int)frame->ext_length));
 	assert(pl_lenn >= 0);

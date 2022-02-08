@@ -4,6 +4,7 @@
 
 #include "skylink/elementbuffer.h"
 #include "skylink/platform.h"
+#include "skylink/utilities.h"
 
 
 
@@ -33,7 +34,8 @@ static BufferElement as_element(void* mem){
 
 static idx_t wrap_element(ElementBuffer* buffer, int32_t idx){
 	int32_t m = (int32_t) buffer->element_count;
-	int32_t r = ((idx % m) + m) % m;
+	int32_t r = positive_modulo_true(idx, m);
+	//int32_t r = ((idx % m) + m) % m;
 	return (idx_t) r;
 }
 

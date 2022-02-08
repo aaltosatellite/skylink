@@ -20,9 +20,9 @@ static int get_cycle(SkyMAC* mac){
 
 void mac_test(int load){
 	PRINTFF(0, "[MAC TEST]\n");
-	for (int i = 0; i < (load*2000 +1); ++i) {
+	for (int i = 0; i < (load*1000+1); ++i) {
 		mac_test_cycle();
-		if(i % 4000 == 0){
+		if(i % 1000 == 0){
 			PRINTFF(0,"\ti=%d\n", i);
 		}
 	}

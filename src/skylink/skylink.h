@@ -25,6 +25,7 @@
 
 // MAC
 #define SKY_RET_INVALID_MAC_WINDOW_SIZE     (-21)
+#define SKY_RET_INVALID_MAC_REMAINING_SIZE  (-22)
 
 // AUTH
 #define SKY_RET_AUTH_FAILED                 (-30)
@@ -126,7 +127,7 @@ typedef struct sky_all* SkyHandle;
  */
 void sky_get_state(SkyHandle self, SkyState* state);
 
-int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_ms);
+int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay);
 
 int sky_rx(SkyHandle self, SkyRadioFrame* frame, int contains_golay);
 

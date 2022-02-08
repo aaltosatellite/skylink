@@ -15,7 +15,8 @@ static int32_t get_mac_cycle(SkyMAC* mac){
 
 static int32_t wrap_tdd_cycle(int32_t time_ms, SkyMAC* mac){ //This mess is a conversion from C-modulo, to always-positive-modulo.
 	int32_t mod = get_mac_cycle(mac);
-	return ((time_ms % mod) + mod) % mod;
+	return positive_modulo_true(time_ms, mod);
+	//return ((time_ms % mod) + mod) % mod;
 }
 
 
@@ -38,11 +39,13 @@ int mac_valid_window_length(SkyMACConfig* config, int32_t length){
 SkyMAC* sky_mac_create(SkyMACConfig* config){
 	SkyMAC* mac = SKY_MALLOC(sizeof(SkyMAC));
 	mac->T0_ms = 0;
+	mac->window_adjust_plan = 0;
+	mac->window_on = 0;
 	mac->my_window_length = config->default_window_length;
 	mac->peer_window_length = config->default_window_length;
 	mac->gap_constant = config->default_gap_length;
 	mac->tail_constant = config->default_tail_length;
-	mac->last_belief_update = -1;
+	mac->last_belief_update = 0;
 	mac->total_frames_sent_in_current_window = 0;
 	mac->vc_round_robin_start = 0;
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
@@ -77,6 +80,20 @@ int32_t mac_set_peer_window_length(SkyMAC* mac, int32_t new_length){
 
 int32_t mac_set_gap_constant(SkyMAC* mac, int32_t new_gap_constant){
 	mac->gap_constant = new_gap_constant;
+	return 0;
+}
+
+
+int32_t mac_expand_window(SkyMAC* mac, SkyMACConfig* config){
+	mac->my_window_length = mac->my_window_length + config->window_adjust_increment;
+	mac->my_window_length = MIN(mac->my_window_length, config->maximum_window_length);
+	return 0;
+}
+
+
+int32_t mac_shrink_window(SkyMAC* mac, SkyMACConfig* config){
+	mac->my_window_length = mac->my_window_length - config->window_adjust_increment;
+	mac->my_window_length = MAX(mac->my_window_length, config->minimum_window_length);
 	return 0;
 }
 
@@ -119,6 +136,9 @@ int mac_can_send(SkyMAC* mac, int32_t now_ms){
 int mac_update_belief(SkyMAC* mac, SkyMACConfig* config, int32_t now_ms, int32_t peer_mac_length, int32_t peer_mac_remaining){
 	if(!mac_valid_window_length(config, peer_mac_length)){
 		return SKY_RET_INVALID_MAC_WINDOW_SIZE;
+	}
+	if(peer_mac_remaining > peer_mac_length){
+		return SKY_RET_INVALID_MAC_REMAINING_SIZE;
 	}
 	if(peer_mac_length != mac->peer_window_length){
 		mac_set_peer_window_length(mac, peer_mac_length);

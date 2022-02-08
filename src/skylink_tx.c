@@ -12,23 +12,56 @@
 #include "skylink/utilities.h"
 
 
+#define TDD_ADJUST_FREQ 		2
 
-void sky_tx_track_tdd_state(SkyHandle self, int can_send){
+
+
+static int _content_in_vc(SkyHandle self, int vc, int32_t now_ms){
+	int r = sky_vc_content_to_send(self->virtual_channels[vc], self->conf, now_ms, self->mac->frames_sent_in_current_window_per_vc[vc]);
+	return r;
+}
+
+
+
+/* This zeroes the tracking of how many frames have been sent in current window. */
+static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_send){
+	if((!can_send) && self->mac->window_on) { //window is closing.
+		if(content_to_send){
+			self->mac->window_adjust_plan += 1;  //indicate need to grow window.
+		}
+		if(!content_to_send){
+			self->mac->window_adjust_plan -= 1;  //indicate need to grow window.
+		}
+	}
+	if(can_send && (!self->mac->window_on)){ //window is opening
+		if(self->mac->window_adjust_plan <= -TDD_ADJUST_FREQ){ //need to shrink window?
+			mac_shrink_window(self->mac, &self->conf->mac);
+			self->mac->window_adjust_plan = 0; //reset indications.
+		}
+		if(self->mac->window_adjust_plan >= TDD_ADJUST_FREQ){ //need to grow window?
+			mac_expand_window(self->mac, &self->conf->mac);
+			self->mac->window_adjust_plan = 0; //reset indications.
+		}
+	}
 	if(!can_send){
+		self->mac->window_on = 0;
 		for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 			self->mac->frames_sent_in_current_window_per_vc[i] = 0;
 		}
 		self->mac->total_frames_sent_in_current_window = 0;
+	} else {
+		self->mac->window_on = 1;
 	}
 }
 
 
 
-static int sky_tx_extension_needed_hmac_reset(SkyHandle self, uint8_t vc){
+/* Returns boolean 0/1 wether virtual channel necessitates reset of HMAC authentication sequence. */
+static int _sky_tx_extension_needed_hmac_reset(SkyHandle self, uint8_t vc){
 	return (self->hmac->vc_enfocement_need[vc] != 0) && (self->conf->vc[vc].require_authentication);
 }
-static int sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
-	if(!sky_tx_extension_needed_hmac_reset(self, vc)){
+static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
+	if(!_sky_tx_extension_needed_hmac_reset(self, vc)){
 		return 0;
 	}
 	self->hmac->vc_enfocement_need[vc] = 0;
@@ -41,15 +74,16 @@ static int sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* frame
 
 
 
-static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
+static void _sky_tx_advance_vc_round_robin(SkyHandle self){
 	self->mac->vc_round_robin_start = (self->mac->vc_round_robin_start + 1) % SKY_NUM_VIRTUAL_CHANNELS;
+}
+static int _sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		int vc = (self->mac->vc_round_robin_start + i) % SKY_NUM_VIRTUAL_CHANNELS;
-		if(sky_tx_extension_needed_hmac_reset(self, vc)){
+		if(_sky_tx_extension_needed_hmac_reset(self, vc)){
 			return vc;
 		}
-		if(sky_vc_content_to_send(self->virtual_channels[vc], self->conf, now_ms,
-								  self->mac->frames_sent_in_current_window_per_vc[vc]) > 0){
+		if(_content_in_vc(self, vc, now_ms) > 0){
 			return vc;
 		}
 	}
@@ -60,7 +94,7 @@ static int sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 }
 
 
-void sky_tx_poll_arq_timeouts(SkyHandle self, int32_t now_ms, int32_t timeout_ms){
+static void _sky_tx_poll_arq_timeouts(SkyHandle self, int32_t now_ms, int32_t timeout_ms){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		sky_vc_poll_arq_state_timeout(self->virtual_channels[i], now_ms, timeout_ms);
 	}
@@ -69,21 +103,22 @@ void sky_tx_poll_arq_timeouts(SkyHandle self, int32_t now_ms, int32_t timeout_ms
 
 
 /* Returns boolean value 0/1 as to if there is need to actually send something. */
-int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_ms){
+int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
+	timestamp_t now_ms = get_sky_tick_time();
 	mac_silence_shift_check(self->mac, &self->conf->mac, now_ms);
 	int can_send = mac_can_send(self->mac, now_ms);
-	sky_tx_track_tdd_state(self, can_send);
-	sky_tx_poll_arq_timeouts(self, now_ms, self->conf->arq_timeout_ms);
-	if(!can_send){
-		return 0;
-	}
+	_sky_tx_poll_arq_timeouts(self, now_ms, self->conf->arq_timeout_ms);
+	int vc = _sky_tx_pick_vc(self, now_ms);
+	int content_to_send = (vc >= 0);
+	_sky_tx_track_tdd_state(self, can_send, content_to_send);
 
-	int vc = sky_tx_pick_vc(self, now_ms);
-	if (vc < 0){
+	if ((!can_send) || (vc < 0)){
 		return 0;  //This is supposed to return 0, Not "-1": sky_tx returns a boolean value as to if there is need to send somethign.
 	}
-	const SkyVCConfig* vc_conf = &self->conf->vc[vc];
 
+	_sky_tx_advance_vc_round_robin(self);
+
+	const SkyVCConfig* vc_conf = &self->conf->vc[vc];
 
 	/* Identity gets copied to the raw-vc from conf, and initialize other fields. */
 	frame->start_byte = SKYLINK_START_BYTE;
@@ -105,7 +140,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay, int32_t now_m
 
 
 	/* HMAC/AUTH extension addition is evaluated separately from payload mechanics. */
-	sky_tx_extension_eval_hmac_reset(self, frame, vc);
+	_sky_tx_extension_eval_hmac_reset(self, frame, vc);
 
 
 	/* Add necessary extensions and a payload if one is in the ring buffer. This is a rather involved function. */

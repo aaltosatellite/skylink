@@ -41,31 +41,36 @@ int vc_init(unsigned int vc_base, bool use_push_pull) {
 	 */
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		void *sock = zmq_socket(zmq, use_push_pull ? ZMQ_PUSH : ZMQ_PUB);
-		if (sock == NULL)
-				SKY_PRINTF(SKY_DIAG_BUG, "zmq_socket() failed: %s", zmq_strerror(errno));
+		if (sock == NULL) {
+			SKY_PRINTF(SKY_DIAG_BUG, "zmq_socket() failed: %s", zmq_strerror(errno));
+		}
 
 		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%d", vc_base + vc);
 		SKY_PRINTF(SKY_DIAG_INFO, "VC %d RX binding %s\n", vc, uri);
 
-		if (zmq_bind(sock, uri) < 0)
+		if (zmq_bind(sock, uri) < 0) {
 			fprintf(stderr, "zmq_bind() failed: %s", zmq_strerror(errno));
+		}
 
 		vcs[vc].zmq_rx = sock;
 	}
 
 	for (vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		void *sock = zmq_socket(zmq, use_push_pull ? ZMQ_PULL : ZMQ_SUB);
-		if (sock == NULL)
+		if (sock == NULL) {
 			SKY_PRINTF(SKY_DIAG_BUG, "zmq_socket() failed: %s", zmq_strerror(errno));
+		}
 
 		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%d", vc_base + 100 + vc);
 		SKY_PRINTF(SKY_DIAG_INFO, "VC %d TX binding %s\n", vc, uri);
 
-		if (zmq_bind(sock, uri) < 0)
+		if (zmq_bind(sock, uri) < 0) {
 			SKY_PRINTF(SKY_DIAG_BUG, "zmq_bind() failed: %s", zmq_strerror(errno));
+		}
 
-		if (use_push_pull == 0)
+		if (use_push_pull == 0) {
 			zmq_setsockopt(sock, ZMQ_SUBSCRIBE, "", 0);
+		}
 		vcs[vc].zmq_tx = sock;
 	}
 
@@ -86,14 +91,16 @@ int vc_check_arq_states() {
 
 				/* Send ARQ disconnected message */
 				uint8_t msg[2] = { VC_CTRL_ARQ_TIMEOUT, vc };
-				if (zmq_send(vcs[vc].zmq_rx, msg, 2, ZMQ_DONTWAIT) < 0)
+				if (zmq_send(vcs[vc].zmq_rx, msg, 2, ZMQ_DONTWAIT) < 0) {
 					SKY_PRINTF(SKY_DIAG_BUG, "zmq_send() failed: %s", zmq_strerror(errno));
+				}
 			}
 		}
 		else {
 			// Has ARQ turned on
-			if (handle->virtual_channels[vc]->arq_state_flag != ARQ_STATE_OFF)
+			if (handle->virtual_channels[vc]->arq_state_flag != ARQ_STATE_OFF) {
 				vcs[vc].arq_expected_state = 1;
+			}
 		}
 	}
 
@@ -115,8 +122,9 @@ int vc_check_rf_to_sys() {
 			SKY_PRINTF(SKY_DIAG_DEBUG, "VC%d: Received %d bytes\n", vc, ret);
 
 			data[0] = VC_CTRL_RECEIVE_VC0 + vc;
-			if (zmq_send(vcs[vc].zmq_rx, data, ret + 1, ZMQ_DONTWAIT) < 0)
+			if (zmq_send(vcs[vc].zmq_rx, data, ret + 1, ZMQ_DONTWAIT) < 0) {
 				SKY_PRINTF(SKY_DIAG_BUG, "zmq_send() failed: %s", zmq_strerror(errno));
+			}
 
 		}
 	}
@@ -133,14 +141,16 @@ int vc_check_sys_to_rf() {
 
 		int ret = zmq_recv(vcs[vc].zmq_tx, data, PACKET_TX_MAXLEN, ZMQ_DONTWAIT);
 		if (ret < 0) {
-			if(errno == EAGAIN)
+			if(errno == EAGAIN) {
 				continue;
+			}
 			SKY_PRINTF(SKY_DIAG_BUG, "VC%d: zmq_recv() error %d %s\n", vc, errno, zmq_strerror(errno));
 		}
 
 		/* Handle control messages */
-		if (ret > 0)
-			handle_control_message(vc, data[0], &data[1], ret-1);
+		if (ret > 0) {
+			handle_control_message(vc, data[0], &data[1], ret - 1);
+		}
 
 	}
 	return 0;
@@ -180,8 +190,9 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		//unsigned int vc = cmd - VC_CTRL_TRANSMIT_VC0;
 		SKY_PRINTF(SKY_DIAG_FRAMES, "VC%d: Sending %d bytes\n", vc, msg_len);
 		int ret = sky_vc_push_packet_to_send(handle->virtual_channels[vc], msg, msg_len);
-		if (ret < 0)
+		if (ret < 0) {
 			SKY_PRINTF(SKY_DIAG_BUG, "VC%d: Failed to push new frame! %d\n", vc, ret);
+		}
 		break; // No response
 	}
 
@@ -209,8 +220,9 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		sky_get_state(handle, &state);
 
 		uint16_t* vals = (uint16_t*)&state;
-		for (int i = 0; i < (int)sizeof(SkyState)/2; i++)
+		for (int i = 0; i < (int)sizeof(SkyState)/2; i++) {
 			vals[i] = sky_hton16(vals[i]);
+		}
 
 		send_control_response(vc, VC_CTRL_STATE_RSP, &state, sizeof(SkyState));
 		break;
@@ -220,8 +232,9 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * Flush virtual channel buffers
 		 */
-		for (int vc_ = 0; vc_ < SKY_NUM_VIRTUAL_CHANNELS; vc_++)
+		for (int vc_ = 0; vc_ < SKY_NUM_VIRTUAL_CHANNELS; vc_++) {
 			sky_vc_wipe_to_arq_off_state(handle->virtual_channels[vc_]);
+		}
 		break; // No response
 	}
 
@@ -234,8 +247,9 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		memcpy(&stats, handle->diag, sizeof(SkyDiagnostics));
 
 		uint16_t* vals = (uint16_t*)&stats;
-		for (unsigned int i = 0; i < sizeof(SkyDiagnostics)/2; i++)
+		for (unsigned int i = 0; i < sizeof(SkyDiagnostics)/2; i++) {
 			vals[i] = sky_hton16(vals[i]);
+		}
 
 		send_control_response(vc, VC_CTRL_STATS_RSP, &stats, sizeof(SkyDiagnostics));
 		break;
@@ -254,8 +268,8 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * Set Skylink Configuration
 		 */
-		unsigned int cfg = msg[0]; // TODO: Correct byte-lengths
-		unsigned int val = msg[1];
+		//unsigned int cfg = msg[0]; // TODO: Correct byte-lengths
+		//unsigned int val = msg[1];
 		//sky_set_config(handle, cfg, val);
 		break; // No response
 	}
@@ -264,7 +278,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * Get Skylink Configuration
 		 */
-		unsigned int cfg = msg[0]; // TODO: Correct byte-lengths
+		//unsigned int cfg = msg[0]; // TODO: Correct byte-lengths
 		unsigned int val = 0xDEADBEEF;
 
 		//if (handle_get_config(handle, cfg, &val) < 0) {

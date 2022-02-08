@@ -51,6 +51,8 @@ typedef struct {
 
 	int32_t shift_threshold_ms;
 
+	int16_t window_adjust_increment;
+
 } SkyMACConfig;
 
 

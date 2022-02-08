@@ -17,7 +17,7 @@ static void test5_send(int count);
 void ring_tests(int load){
 	test1(1000*load +1);
 	test2(500*load +1);
-	test3(1000*load);
+	test3(1000*load+1);
 	test4_rcv(load);
 	test5_send(load);
 }
@@ -535,10 +535,10 @@ static void test5_round(){
 	int tail_seq = s_seq0;
 	int in_buffer = 0;
 	while (next_idx_to_tx < NMSG) {
-		int send_buffer = positive_modulo(array->sendRing->tx_head - array->sendRing->tail, array->sendRing->length);
+		int tail_to_tx = positive_modulo_true(array->sendRing->tx_head - array->sendRing->tail, array->sendRing->length);
 
 
-		if(send_buffer <= ARQ_MAXIMUM_HORIZON){
+		if(tail_to_tx <= ARQ_MAXIMUM_HORIZON){
 			assert(sky_vc_count_packets_to_tx(array, 0) == (next_idx_to_push - next_idx_to_tx));
 		} else{
 			assert(sky_vc_count_packets_to_tx(array, 0) == 0);

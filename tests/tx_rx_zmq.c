@@ -19,6 +19,7 @@
 #define MODE_RX		11
 #define MODE_TX		22
 
+extern timestamp_t _global_time_now_ms;
 
 //extern double relative_time_speed;
 
@@ -50,7 +51,7 @@ typedef struct skylink_peer {
 } SkylinkPeer;
 
 
-
+extern timestamp_t _global_time_now_ms;
 
 double relative_time_speed = 0.2;
 
@@ -65,6 +66,10 @@ int32_t rget_time_ms(){
 	return rms;
 }
 
+void rel_sky_tick(){
+	int32_t _now = rget_time_ms();
+	_global_time_now_ms = _now;
+}
 
 void rsleep_us(int64_t us){
 	double ft_us = (double)us;
@@ -97,7 +102,7 @@ SkylinkPeer* new_peer(int ID, int tx_port, int rx_port, int pl_write_port, int p
 	peer->pl_read_socket = zmq_socket(peer->zmq_context, ZMQ_PUB);
 
 	mac_shift_windowing(peer->self->mac, randint_i32(100, 10000) );
-	peer->self->mac->last_belief_update = rget_time_ms();
+	peer->self->mac->last_belief_update = get_sky_tick_time();
 
 
 	sprintf(url, "tcp://127.0.0.1:%d", pl_write_port);
@@ -199,6 +204,7 @@ _Noreturn void* tx_cycle(void* arg){
 	memcpy(tx_tgt, &peer->ID, 4);
 	pthread_mutex_lock(&peer->mutex); 	//lock
 	while (1){
+		rel_sky_tick();
 		cycle++;
 		if(cycle % 1000 == 0){
 			PRINTFF(0,"==========================\n");
@@ -209,8 +215,7 @@ _Noreturn void* tx_cycle(void* arg){
 		}
 
 
-		int32_t now_ms = rget_time_ms();
-		int send = sky_tx(peer->self, peer->sendFrame, 1, now_ms);
+		int send = sky_tx(peer->self, peer->sendFrame, 1);
 		if(send){
 			say_tx(peer);
 			memcpy(tx_tgt+4, peer->sendFrame->raw, peer->sendFrame->length);
@@ -263,6 +268,7 @@ void* ether_cycle(void* arg){
 	int32_t timeo = 200;
 	zmq_setsockopt(peer->rx_socket, ZMQ_RCVTIMEO, &timeo, sizeof(int32_t));
 	while (1){
+		rel_sky_tick();
 		cycle++;
 		if(cycle % 50 == 0){
 			//PRINTFF(0, "e Cycle %ld.\n", cycle);
@@ -282,7 +288,7 @@ void* ether_cycle(void* arg){
 			if(peer->physicalParams.RADIO_MODE == MODE_RX){
 				memcpy(peer->rcvFrame->raw, &tgt[4], r-4);
 				peer->rcvFrame->length = r-4;
-				peer->rcvFrame->rx_time_ms = rget_time_ms();
+				peer->rcvFrame->rx_time_ms = get_sky_tick_time();
 				int rxr = sky_rx(peer->self, peer->rcvFrame, 1);
 				PRINTFF(0,"#3 %d bytes successfully rx'ed. rx ret: %d\n", r, rxr);
 				peer_packets_from_ring_to_zmq(peer);
@@ -307,7 +313,7 @@ int main(int argc, char *argv[]){
 	PRINTFF(0, "Starting peer cycle with ID=%d \n",ID);
 	SkylinkPeer* peer = new_peer(ID, 4440, 4441, 4442, 4443, 0.2, 4*1200);
 	if(ID == 5){
-		int32_t now_ms = rget_time_ms();
+		int32_t now_ms = _global_time_now_ms;
 		sky_vc_wipe_to_arq_init_state(peer->self->virtual_channels[0], now_ms);
 	}
 	relative_time_speed = peer->physicalParams.relative_speed;

@@ -10,6 +10,7 @@
 #include "skylink/platform.h"
 #include "skylink/hmac.h"
 #include "skylink/mac.h"
+#include "skylink/utilities.h"
 
 #include "vc_interface.h"
 #include "modem.h"
@@ -203,7 +204,9 @@ int main(int argc, char *argv[])
 		/*
 		 * If we have received tick message run the Skylink TX routine
 		 */
-		if (tick()) {
+		timestamp_t time_ms = get_timestamp();
+		if (sky_tick(time_ms)) {
+
 
 			if (modem_carrier_sensed())
 				sky_mac_carrier_sensed(handle->mac, &handle->conf->mac, get_timestamp());
@@ -211,7 +214,7 @@ int main(int argc, char *argv[])
 		 	if (modem_tx_active() == 0) {
 				uint64_t t = get_timestamp() + tx_ahead_time;
 
-				int ret = sky_tx(handle, &frame, 0, t);
+				int ret = sky_tx(handle, &frame, 0);
 				if (ret < 0)
 					SKY_PRINTF(SKY_DIAG_BUG, "sky_tx() error %d\n", ret);
 				if (ret == 1) {

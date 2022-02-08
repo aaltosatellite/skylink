@@ -49,16 +49,16 @@ void destroy_arq_ring(SkyVirtualChannel* vchannel);
 // Cleans the rings, deletes all the packets from buffer, and initalizes to given sequence numbers.
 void sky_vc_wipe_to_arq_off_state(SkyVirtualChannel* vchannel);
 
-// (A) >> ( )
+// FG
 int sky_vc_wipe_to_arq_init_state(SkyVirtualChannel* vchannel, int32_t now_ms);
 
-// ---
+// Sets the virtual channel to reliable transmission state
 void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* vchannel, uint32_t identifier, int32_t now_ms);
 
-// asd
+// Processes a handshake received in a packet.
 int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint32_t identifier, int32_t now_ms);
 
-// asd
+// If too much time has passed since previous successful communication, fall back to non-reliable state.
 void sky_vc_poll_arq_state_timeout(SkyVirtualChannel* vchannel, int32_t now_ms, int32_t timeout_ms);
 
 
@@ -90,10 +90,10 @@ void sky_vc_update_tx_sync(SkyVirtualChannel* vchannel, int peer_rx_head_sequenc
 // Fills the length and sequence of the next packet to be transmitted, if the ring is not empty. Returns 0/errorcode.
 int sky_vc_peek_next_tx_size_and_sequence(SkyVirtualChannel* vchannel, int include_resend, int* length, int* sequence);
 
-//-----
+// Returns boolean 0/1 as to if there is content to be sent on this virtual channel.
 int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
 
-//-----
+// Fills the frame with a packet if there is something to send. Returns boolean 0/1 as to if it actually wrote a frame.
 int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFrame* frame, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
 //======================================================================================================================
 //======================================================================================================================
@@ -117,7 +117,7 @@ int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* vchannel);
 // This is called with the head-tx sequence provided by an arq-control-extension
 void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequence_by_ctrl, int32_t now_ms);
 
-//-----
+// Processes the content
 void sky_vc_process_content(SkyVirtualChannel* vchannel,
 							void* pl,
 							int len_pl,

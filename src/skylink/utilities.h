@@ -7,10 +7,12 @@
 
 #include <stdint.h>
 #include <time.h>
+#include "skylink/platform.h"
 
 #define MOD_TIME_MS		16777216
 
-
+#define MAX(x,y)		(x > y ? x : y)
+#define MIN(x,y)		(x < y ? x : y)
 
 // GENERAL PURPOSE =====================================================================================================
 uint16_t sky_hton16(uint16_t vh);
@@ -25,7 +27,9 @@ int32_t sky_ntohi32(int32_t vn);
 
 int32_t sky_htoni32(int32_t vn);
 
-int positive_modulo(int x, int m);
+int positive_modulo_x(int32_t x, int32_t m);
+
+int32_t positive_modulo_true(int32_t x, int32_t m);
 
 int x_in_u8_array(uint8_t x, const uint8_t* array, int length);
 
@@ -35,17 +39,18 @@ int32_t wrap_time_ms(int32_t time_ms);
 // GENERAL PURPOSE =====================================================================================================
 
 
+// GLOBAL TIME =====================================================================================================
+int sky_tick(timestamp_t time_ms);
+timestamp_t get_sky_tick_time();
+// GLOBAL TIME =====================================================================================================
+
+
+
 
 // == unix =============================================================================================================
 void* instr_malloc(size_t n);
 void report_allocation();
 // == unix =============================================================================================================
-
-
-
-// == unix/arm =========================================================================================================
-int32_t get_time_ms();
-// == unix/arm =========================================================================================================
 
 
 

@@ -44,6 +44,8 @@ SkyConfig* new_vanilla_config(){
 	config->mac.default_window_length 		= 320;
 	config->mac.minimum_window_length 		= 120;
 
+	config->mac.window_adjust_increment		= 6;
+
 	config->mac.unauthenticated_mac_updates = 0;
 	config->mac.shift_threshold_ms 			= 4000;
 

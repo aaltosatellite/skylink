@@ -126,7 +126,7 @@ int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
 		 * Remove scrambler/whitening
 		 */
 		for (unsigned int i = 0; i < frame->length; i++){
-			frame->raw[i] ^= whitening[i % WHITENING_LEN];
+			frame->raw[i] ^= whitening[i & WHITENING_LEN]; //Note: this '&' is an effective modulo, and a lot faster than actual modulo on Cortex-M0
 		}
 	}
 
@@ -182,7 +182,7 @@ int sky_fec_encode(SkyRadioFrame *frame)
 		 * Apply data whitening
 		 */
 		for (unsigned int i = 0; i < frame->length; i++){
-			frame->raw[i] ^= whitening[i % WHITENING_LEN];
+			frame->raw[i] ^= whitening[i & WHITENING_LEN]; //Note: this & is an effective modulo, and a lot faster than actual modulo on Cortex-M0
 		}
 	}
 

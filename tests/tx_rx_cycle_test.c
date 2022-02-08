@@ -9,12 +9,13 @@
 #include "tst_utilities.h"
 #include "tools/tools.h"
 #include <math.h>
+#include <stdio.h>
 
 #define STATE_RX		0
 #define STATE_TX		1
 
 
-
+extern timestamp_t _global_time_now_ms;
 
 
 
@@ -83,14 +84,26 @@ static void step_forward(int which, TXRXJob* job);
 static void print_job_status(TXRXJob* job);
 static void test_get_loss_chance();
 
-
-int main(){
-	reseed_random();
+static void test_loss(){
 	PRINTFF(0,"\n\t(testing loss function...");
 	for (int i = 0; i < 1000; ++i) {
 		test_get_loss_chance();
 	}
 	PRINTFF(0," ...ok)\n");
+}
+
+char* ARGF_PATH;
+
+int main(int argc, char *argv[]){
+	reseed_random();
+	test_loss();
+	//if(argc > 1){
+	//	ARGF_PATH = argv[1];
+	//	FILE* ff = fopen(ARGF_PATH, "r");
+	//	int32_t* tgt = malloc(1200);
+	//	int r = fread(tgt, 1200, 1, ff);
+	//	assert(r == (4*56));
+	//}
 	test1();
 }
 
@@ -333,10 +346,10 @@ void test1_round(uint64_t NN, int print_on){
 	job.peer2.tx_end = 0;
 	job.now_ms = 9;
 	job.byterate 		= 2*1200.0; //param
-	job.lag_ms 			= 4; 		//param
-	job.peer1.pl_rate 	= 4.0; 		//param
+	job.lag_ms 			= 6; 		//param
+	job.peer1.pl_rate 	= 3.0; 		//param
 	job.peer2.pl_rate 	= 2.0; 		//param
-	job.corrupt_rate	= 0.05; 	//param
+	job.corrupt_rate	= 0.02; 	//param
 	job.loss_rate0 		= 0.11; 	//param (0.12)
 	job.spin_rate_rpm	= 6;		//param
 	job.silent_section	= 0.24;		//param
@@ -351,14 +364,17 @@ void test1_round(uint64_t NN, int print_on){
 	sky_vc_wipe_to_arq_init_state(handle1->virtual_channels[0], job.now_ms);
 
 	for (uint64_t i = 0; i < NN; ++i) {
+		job.now_ms++;
+		_global_time_now_ms = job.now_ms;
 		step_forward(1, &job);
 		step_forward(2, &job);
 		if((i % 60000 == 0) && print_on){
-			PRINTFF(0,"\ni:%d \n",i);
+			PRINTFF(0,"\nt_ms:%d \n",i);
 			PRINTFF(0,"%dh %dmin %ds \n",i/(3600*1000),  (i%(3600*1000))/60000,  (i%60000)/1000);
 			print_job_status(&job);
 		}
-		job.now_ms++;
+
+
 	}
 
 	//sleepms(2000);
@@ -473,7 +489,7 @@ static void step_forward(int which, TXRXJob* job){
 
 	//transmit new packet if sky_tx says so. Also corrup and maybe lose entirely.
 	if(peer->radio_state != STATE_TX){
-		int r_tx = sky_tx(peer->handle, &job->frame, 1, job->now_ms);
+		int r_tx = sky_tx(peer->handle, &job->frame, 1);
 		if(r_tx){
 			uint64_t tx_end = job->now_ms + ((job->frame.length * 1000) / job->byterate) + 1;
 			EtherFrame* eframe = new_eframe(job->frame, job->now_ms, tx_end, target);
@@ -518,5 +534,7 @@ static void print_job_status(TXRXJob* job){
 	PRINTFF(0,"Payloads acked 2: %d\n", job->payloadList2->n - unacked_of_2 );
 	PRINTFF(0,"Payloads not acked 1: %d\n", unacked_of_1);
 	PRINTFF(0,"Payloads not acked 2: %d\n", unacked_of_2);
+	PRINTFF(0,"Window of 1: %d  (peer 2 believes: %d)\n", job->peer1.handle->mac->my_window_length, job->peer2.handle->mac->peer_window_length);
+	PRINTFF(0,"Window of 2: %d  (peer 1 believes: %d)\n", job->peer2.handle->mac->my_window_length, job->peer1.handle->mac->peer_window_length);
 	PRINTFF(0, "=====================================\n");
 }

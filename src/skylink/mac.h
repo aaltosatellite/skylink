@@ -17,6 +17,8 @@ struct sky_mac_s {
 	int32_t tail_constant;		// Length of time spent waiting after peer window has ended before ours opens.
 	int32_t last_belief_update;	// Timestamp of last time we updated our belief of T0 (and peer window length).
 	uint8_t vc_round_robin_start;	// The virtual channel that takes presence on next window.
+	int32_t window_adjust_plan;
+	uint8_t window_on;
 	uint16_t frames_sent_in_current_window_per_vc[SKY_NUM_VIRTUAL_CHANNELS];	// Self-explanatory
 	uint16_t total_frames_sent_in_current_window;								// Self-explanatory
 };
@@ -40,6 +42,14 @@ void sky_mac_destroy(SkyMAC* mac);
 // This is mainly useful if there is reason to suspect that gs and satellite are in lockstep and talk over
 // each other. Preferably use the current own window length with random sign to shift by.
 void mac_shift_windowing(SkyMAC* mac, int32_t t_shift);
+
+
+// Expand own window, capped by config maximum
+int32_t mac_expand_window(SkyMAC* mac, SkyMACConfig* config);
+
+
+// Shrink own window, capped by config minimum
+int32_t mac_shrink_window(SkyMAC* mac, SkyMACConfig* config);
 
 
 // Returns positive integer number of milliseconds to own transmit window opening,

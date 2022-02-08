@@ -120,7 +120,6 @@ typedef struct __attribute__((__packed__)) {
 		ExtARQReq ARQReq;
 		ExtARQCtrl ARQCtrl;
 		ExtARQHandshake ARQHandshake;
-		//ExtTDDParams TDDParams;
 		ExtTDDControl TDDControl;
 		ExtHMACSequenceReset HMACSequenceReset;
 	};
