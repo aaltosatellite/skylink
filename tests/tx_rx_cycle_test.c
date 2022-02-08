@@ -6,6 +6,7 @@
 #include "../src/skylink/elementbuffer.h"
 #include "../src/skylink/reliable_vc.h"
 #include "../src/skylink/skylink.h"
+#include "../src/skylink/utilities.h"
 #include "tst_utilities.h"
 #include "tools/tools.h"
 #include <math.h>
@@ -360,8 +361,8 @@ void test1_round(uint64_t NN, int print_on){
 	job.lostFrames 		= new_eframe_list();
 	job.receivedFrames 	= new_eframe_list();
 	job.missedFrames 	= new_eframe_list();
-
-	sky_vc_wipe_to_arq_init_state(handle1->virtual_channels[0], job.now_ms);
+	sky_tick(job.now_ms);
+	sky_vc_wipe_to_arq_init_state(handle1->virtual_channels[0]);
 
 	for (uint64_t i = 0; i < NN; ++i) {
 		job.now_ms++;

@@ -50,13 +50,13 @@ void destroy_arq_ring(SkyVirtualChannel* vchannel);
 void sky_vc_wipe_to_arq_off_state(SkyVirtualChannel* vchannel);
 
 // FG
-int sky_vc_wipe_to_arq_init_state(SkyVirtualChannel* vchannel, int32_t now_ms);
+int sky_vc_wipe_to_arq_init_state(SkyVirtualChannel* vchannel);
 
 // Sets the virtual channel to reliable transmission state
-void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* vchannel, uint32_t identifier, int32_t now_ms);
+void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* vchannel, uint32_t identifier);
 
 // Processes a handshake received in a packet.
-int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint32_t identifier, int32_t now_ms);
+int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint32_t identifier);
 
 // If too much time has passed since previous successful communication, fall back to non-reliable state.
 void sky_vc_poll_arq_state_timeout(SkyVirtualChannel* vchannel, int32_t now_ms, int32_t timeout_ms);

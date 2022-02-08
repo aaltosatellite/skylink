@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 	 * Initialize protocol
 	 * ------------------------- */
 
-	//sky_diag_mask = 0xffff; // | SKY_DIAG_INFO  | SKY_DIAG_BUG | SKY_DIAG_BUFFER;
+	sky_diag_mask |= SKY_DIAG_ARQ; // | SKY_DIAG_INFO  | SKY_DIAG_BUG | SKY_DIAG_BUFFER;
 	if (show_link_state)
 		sky_diag_mask = SKY_DIAG_INFO | SKY_DIAG_LINK_STATE;
 	else
@@ -207,9 +207,8 @@ int main(int argc, char *argv[])
 		timestamp_t time_ms = get_timestamp();
 		if (sky_tick(time_ms)) {
 
-
 			if (modem_carrier_sensed())
-				sky_mac_carrier_sensed(handle->mac, &handle->conf->mac, get_timestamp());
+				sky_mac_carrier_sensed(handle->mac, &handle->conf->mac);
 
 		 	if (modem_tx_active() == 0) {
 				uint64_t t = get_timestamp() + tx_ahead_time;

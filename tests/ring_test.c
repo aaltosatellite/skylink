@@ -59,11 +59,13 @@ static void test1_round(){
 	String* s5 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
 	String* s6 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
 
-	sky_vc_wipe_to_arq_init_state(array, 10);
+	sky_tick(10);
+	sky_vc_wipe_to_arq_init_state(array);
 	ExtARQHandshake handshake;
 	handshake.identifier = array->arq_session_identifier;
 	handshake.peer_state = ARQ_STATE_ON;
-	sky_vc_handle_handshake(array, handshake.peer_state, handshake.identifier, 12);
+	sky_tick(12);
+	sky_vc_handle_handshake(array, handshake.peer_state, handshake.identifier);
 
 
 	//check the msg counts are 0.
@@ -187,7 +189,8 @@ static void test1_round(){
 
 	//reset receive side sequence to sqn
 	int sqn = 0;
-	sky_vc_wipe_to_arq_on_state(array, 77, 10);
+	sky_tick(10);
+	sky_vc_wipe_to_arq_on_state(array, 77);
 
 
 	//push data as rx, as sequence = sqn+1.

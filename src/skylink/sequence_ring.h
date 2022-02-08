@@ -125,6 +125,9 @@ int sendRing_schedule_resend(SkySendRing* sendRing, int sequence);
 /* Schedules resend for the sequence argument, and all the sequences pointed to by the mask if possible. */
 int sendRing_schedule_resends_by_mask(SkySendRing* sendRing, int sequence, uint16_t mask);
 
+/* Calculates the number of free ring slots for packets. */
+int sendRing_count_free_send_slots(SkySendRing* sendRing);
+
 /* Returns the number of packets that wait sending (>=0) */
 int sendRing_count_packets_to_send(SkySendRing* sendRing, int include_resend);
 

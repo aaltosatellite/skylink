@@ -285,6 +285,12 @@ int sendRing_schedule_resends_by_mask(SkySendRing* sendRing, int sequence, uint1
 }
 
 
+int sendRing_count_free_send_slots(SkySendRing* sendRing){
+	int n = ring_wrap(sendRing->tail - (sendRing->head + 1), sendRing->length);
+	return n;
+}
+
+
 int sendRing_count_packets_to_send(SkySendRing* sendRing, int include_resend){
 	int n = ring_wrap(sendRing->head - sendRing->tx_head, sendRing->length);
 

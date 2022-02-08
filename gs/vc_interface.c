@@ -294,7 +294,7 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		 * ARQ connect
 		 */
 		SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ connecting\n", vc);
-		sky_vc_wipe_to_arq_init_state(handle->virtual_channels[vc], get_timestamp());
+		sky_vc_wipe_to_arq_init_state(handle->virtual_channels[vc]);
 		break; // No response
 	}
 

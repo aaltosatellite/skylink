@@ -19,7 +19,7 @@ void sky_get_state(SkyHandle self, SkyState* state) {
 		SkyVCState* vc_state = &state->vc[i];
 
 		vc_state->state = vc->arq_state_flag;
-		vc_state->buffer_free = 0; // (XXX * vc->elementBuffer->element_size);
+		vc_state->buffer_free = sendRing_count_free_send_slots(vc->sendRing) * SKY_MAX_PAYLOAD_LEN;
 		vc_state->tx_frames = sendRing_count_packets_to_send(vc->sendRing, 1);
 		vc_state->tx_frames = rcvRing_count_readable_packets(vc->rcvRing);
 	}
@@ -76,34 +76,34 @@ void sky_vc_wipe_to_arq_off_state(SkyVirtualChannel* vchannel){
 }
 
 
-int sky_vc_wipe_to_arq_init_state(SkyVirtualChannel* vchannel, int32_t now_ms){
+int sky_vc_wipe_to_arq_init_state(SkyVirtualChannel* vchannel){
 	wipe_rcv_ring(vchannel->rcvRing, vchannel->elementBuffer, 0);
 	wipe_send_ring(vchannel->sendRing, vchannel->elementBuffer, 0);
 	vchannel->need_recall = 0;
 	vchannel->arq_state_flag = ARQ_STATE_IN_INIT;
-	vchannel->arq_session_identifier = now_ms;
-	vchannel->last_tx_ms = now_ms;
-	vchannel->last_rx_ms = now_ms;
+	vchannel->arq_session_identifier = sky_get_tick_time();
+	vchannel->last_tx_ms = sky_get_tick_time();
+	vchannel->last_rx_ms = sky_get_tick_time();
 	vchannel->last_ctrl_send = 0;
 	vchannel->handshake_send = 0;
 	return 0;
 }
 
 
-void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* vchannel, uint32_t identifier, int32_t now_ms){
+void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* vchannel, uint32_t identifier){
 	wipe_rcv_ring(vchannel->rcvRing, vchannel->elementBuffer, 0);
 	wipe_send_ring(vchannel->sendRing, vchannel->elementBuffer, 0);
 	vchannel->need_recall = 0;
 	vchannel->arq_state_flag = ARQ_STATE_ON;
 	vchannel->arq_session_identifier = identifier;
-	vchannel->last_tx_ms = now_ms;
-	vchannel->last_rx_ms = now_ms;
+	vchannel->last_tx_ms = sky_get_tick_time();
+	vchannel->last_rx_ms = sky_get_tick_time();
 	vchannel->last_ctrl_send = 0;
 	vchannel->handshake_send = 1;
 }
 
 
-int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint32_t identifier, int32_t now_ms){
+int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint32_t identifier){
 	int match = (identifier == vchannel->arq_session_identifier);
 
 	if((vchannel->arq_state_flag == ARQ_STATE_ON) && match ){
@@ -115,7 +115,7 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 	}
 
 	if((vchannel->arq_state_flag == ARQ_STATE_ON) && !match ){
-		sky_vc_wipe_to_arq_on_state(vchannel, identifier, now_ms);
+		sky_vc_wipe_to_arq_on_state(vchannel, identifier);
 		vchannel->handshake_send = 1;
 		return 1;
 	}
@@ -128,7 +128,7 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 
 	if((vchannel->arq_state_flag == ARQ_STATE_IN_INIT) && !match ){
 		if(identifier > vchannel->arq_session_identifier){
-			sky_vc_wipe_to_arq_on_state(vchannel, identifier, now_ms);
+			sky_vc_wipe_to_arq_on_state(vchannel, identifier);
 			vchannel->handshake_send = 1;
 			return 1;
 		}
@@ -136,7 +136,7 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 	}
 
 	if(vchannel->arq_state_flag == ARQ_STATE_OFF){
-		sky_vc_wipe_to_arq_on_state(vchannel, identifier, now_ms);
+		sky_vc_wipe_to_arq_on_state(vchannel, identifier);
 		vchannel->handshake_send = 1;
 		return 1;
 	}
@@ -403,7 +403,7 @@ void sky_vc_process_content(SkyVirtualChannel* vchannel,
 	if (ext_handshake){
 		uint8_t peer_state = ext_handshake->ARQHandshake.peer_state;
 		uint32_t identifier = sky_ntoh32(ext_handshake->ARQHandshake.identifier);
-		sky_vc_handle_handshake(vchannel, peer_state, identifier, now_ms);
+		sky_vc_handle_handshake(vchannel, peer_state, identifier);
 	}
 
 	SkyPacketExtension* exts[3] = {ext_seq, ext_ctrl, ext_rrequest};

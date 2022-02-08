@@ -434,10 +434,10 @@ void sky_tx_test_cycle(){
 	}
 
 
-	if((content == 0) && (total_frames_sent < UTILITY_FRAMES_PER_WINDOW) ){
-		content = 1;
-		deduced_vc = 0;
-	}
+	//if((content == 0) && (total_frames_sent < UTILITY_FRAMES_PER_WINDOW) ){
+	//	content = 1;
+	//	deduced_vc = 0;
+	//}
 
 
 	if(content == 0){

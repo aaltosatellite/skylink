@@ -87,9 +87,10 @@ static int _sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 			return vc;
 		}
 	}
-	if(self->mac->total_frames_sent_in_current_window < UTILITY_FRAMES_PER_WINDOW){
-		return 0;
-	}
+	// This was here to ensure that the peer advances its window through TDD gap even if there are no messages to send
+	//if(self->mac->total_frames_sent_in_current_window < UTILITY_FRAMES_PER_WINDOW){
+	//	return 0;
+	//}
 	return -1;
 }
 
@@ -104,7 +105,7 @@ static void _sky_tx_poll_arq_timeouts(SkyHandle self, int32_t now_ms, int32_t ti
 
 /* Returns boolean value 0/1 as to if there is need to actually send something. */
 int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
-	timestamp_t now_ms = get_sky_tick_time();
+	timestamp_t now_ms = sky_get_tick_time();
 	mac_silence_shift_check(self->mac, &self->conf->mac, now_ms);
 	int can_send = mac_can_send(self->mac, now_ms);
 	_sky_tx_poll_arq_timeouts(self, now_ms, self->conf->arq_timeout_ms);

@@ -122,7 +122,7 @@ int sky_tick(timestamp_t time_ms){
 	return ret;
 }
 
-timestamp_t get_sky_tick_time(){
+timestamp_t sky_get_tick_time(){
 	return _global_time_now_ms;
 }
 // GLOBAL TIME =====================================================================================================

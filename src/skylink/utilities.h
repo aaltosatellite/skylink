@@ -41,7 +41,7 @@ int32_t wrap_time_ms(int32_t time_ms);
 
 // GLOBAL TIME =====================================================================================================
 int sky_tick(timestamp_t time_ms);
-timestamp_t get_sky_tick_time();
+timestamp_t sky_get_tick_time();
 // GLOBAL TIME =====================================================================================================
 
 

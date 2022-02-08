@@ -155,12 +155,12 @@ int mac_update_belief(SkyMAC* mac, SkyMACConfig* config, int32_t now_ms, int32_t
 }
 
 
-int sky_mac_carrier_sensed(SkyMAC* mac, SkyMACConfig* config, int32_t now_ms){
-	int32_t peer_remaining_priori = mac_peer_window_remaining(mac, now_ms);
+int sky_mac_carrier_sensed(SkyMAC* mac, SkyMACConfig* config){
+	int32_t peer_remaining_priori = mac_peer_window_remaining(mac, sky_get_tick_time());
 	if(peer_remaining_priori > 0){
 		return 0;
 	}
-	mac_update_belief(mac, config, now_ms, mac->peer_window_length, 1);
+	mac_update_belief(mac, config, sky_get_tick_time(), mac->peer_window_length, 1);
 	return 1;
 }
 
