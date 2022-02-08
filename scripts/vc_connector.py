@@ -176,7 +176,7 @@ class RTTChannel(VCCommands):
     Connect to embedded Skylink implementation via Segger RTT.
     """
 
-    def __init__(self, vc: int = 0):
+    def __init__(self, vc: int = 0, rtt_init: bool=False):
         """
         Initialize J-Link RTT server's Telnet connection.
 
@@ -191,6 +191,11 @@ class RTTChannel(VCCommands):
 
         self.jlink = pylink.JLink()
         self.jlink.open()
+
+        if rtt_init:
+            self.jlink.set_tif(pylink.enums.JLinkInterfaces.JTAG)
+            self.jlink.connect("STM32F446RE")
+            self.jlink.rtt_start()
 
         loop = asyncio.get_event_loop()
         self.task = loop.create_task(self.receiver_task())
@@ -386,14 +391,14 @@ class ZMQChannel(VCCommands):
 
 
 
-def connect_to_vc(host: str="127.0.0.1", port: int=5000, rtt: bool=False, vc: int=0, **kwargs):
+def connect_to_vc(host: str="127.0.0.1", port: int=5000, rtt: bool=False, vc: int=0, rtt_init: bool=False, **kwargs):
     """
     Connect to Skylink implementation over ZMQ or RTT
     """
     if not rtt:
         return ZMQChannel(host, port, vc)
     else:
-        return RTTChannel(vc)
+        return RTTChannel(vc, rtt_init)
 
 
 if __name__ == "__main__":
