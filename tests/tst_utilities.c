@@ -57,8 +57,8 @@ SkyConfig* new_vanilla_config(){
 	config->identity[3] = 'S';
 	config->identity[4] = '1';
 
-	config->vc[0].require_authentication = 1;
-	config->vc[1].require_authentication = 1;
+	config->vc[0].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX | SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE;
+	config->vc[1].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX | SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE;
 	config->vc[2].require_authentication = 0;
 	config->vc[3].require_authentication = 0;
 	return config;

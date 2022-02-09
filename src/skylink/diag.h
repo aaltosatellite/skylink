@@ -15,7 +15,8 @@
 #define SKY_DIAG_LINK_STATE 0x0008
 #define SKY_DIAG_FEC        0x0010
 #define SKY_DIAG_MAC        0x0020
-#define SKY_DIAG_ARQ        0x0040
+#define SKY_DIAG_HMAC       0x0040
+#define SKY_DIAG_ARQ        0x0080
 #define SKY_DIAG_FRAMES     0x0100
 #define SKY_DIAG_BUFFER     0x0200
 
@@ -49,11 +50,11 @@ extern unsigned int sky_diag_mask;
 #include <stdio.h>
 #include <stdint.h>
 /* printf for POSIX platforms */
-#define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) != 0) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
+#define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) == (x)) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
 #else
 /* printf for embedded platforms */
 #include "SEGGER_RTT.h"
-#define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) != 0) { SEGGER_RTT_printf(0, __VA_ARGS__); }
+#define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) == (x)) { SEGGER_RTT_printf(0, __VA_ARGS__); }
 #endif //__unix__
 
 #else

@@ -75,36 +75,16 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 		return SKY_RET_OWN_TRANSMISSION;
 	}
 
-	const SkyVCConfig* vc_conf = &self->conf->vc[frame->vc];
-
 
 	// This extension has to be checked here. Otherwise, if both peers use incorrect hmac-sequencing, we would be in lock state.
 	sky_rx_process_extensions(self, frame, EXTENSION_HMAC_SEQUENCE_RESET);
 
 
-	// The virtual channel necessitates auth.
-	if (vc_conf->require_authentication){
-		if ((frame->flags & SKY_FLAG_AUTHENTICATED) == 0){
-			self->hmac->vc_enfocement_need[frame->vc] = 1;
-			return SKY_RET_AUTH_MISSING;
-		}
-		int ret = sky_hmac_check_authentication(self, frame);
-		if (ret != 0){ //this may be a failure, OR a "SKY_RET_HMAC_BENIGN_OFFSET"
-			self->hmac->vc_enfocement_need[frame->vc] = 1;
-		}
-		if (ret < 0){
-			return ret;
-		}
-	}
-	frame->auth_sequence = sky_ntoh16(frame->auth_sequence);
+	// Check the authentication/HMAC if the virtual channel necessitates it.
+	int ret = sky_hmac_check_authentication(self, frame);
+	if (ret != SKY_RET_OK)
+		return ret;
 
-
-	// The virtual channel does not require auth, but it is there. Just remove the hash.
-	if (vc_conf->require_authentication == 0) {
-		if ((frame->flags & SKY_FLAG_AUTHENTICATED) != 0){
-			sky_hmac_remove_hash(frame);
-		}
-	}
 
 	// Update MAC/TDD state, and check for MAC/TDD handshake extension
 	sky_rx_process_extensions(self, frame, EXTENSION_MAC_TDD_CONTROL);
@@ -124,7 +104,7 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 
 
 	//todo: log behavior based on r.
-	return 0;
+	return SKY_RET_OK;
 }
 
 

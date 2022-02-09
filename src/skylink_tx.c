@@ -150,15 +150,12 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 
 
 	/* Set HMAC state and sequence */
-	frame->auth_sequence = 0;
-	if(vc_conf->require_authentication){
-		frame->flags |= SKY_FLAG_AUTHENTICATED;
-		frame->auth_sequence = sky_hmac_get_next_hmac_tx_sequence_and_advance(self, vc);
-	}
+	frame->auth_sequence = sky_hmac_get_next_hmac_tx_sequence_and_advance(self, vc);
 	frame->auth_sequence = sky_hton16(frame->auth_sequence);
 
 	/* Authenticate the frame. Ie. appends a hash digest to the end of the frame. */
-	if (vc_conf->require_authentication){
+	if (vc_conf->require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX){
+		frame->flags |= SKY_FLAG_AUTHENTICATED;
 		sky_hmac_extend_with_authentication(self, frame);
 	}
 

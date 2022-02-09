@@ -23,7 +23,6 @@ typedef struct {
 	/* Enable CCSDS Reed-Solomon */
 	uint8_t enable_rs;
 
-	uint32_t authenticate_tx;
 } SkyPHYConfig;
 
 

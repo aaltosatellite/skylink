@@ -43,17 +43,24 @@ int32_t sky_hmac_get_next_hmac_tx_sequence_and_advance(SkyHandle self, uint8_t v
 int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame);
 
 
-/* Check the frame authentication. */
+/* Check the frame authentication and sequence number if required for the virtual channel.
+ * Also, corrects sequence number field endianess and removes the HMAC extension from the frame if provided. */
 int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame);
-
-
-/* Just remove the bytes in the end. */
-void sky_hmac_remove_hash(SkyRadioFrame* frame);
-
 
 /* Positive modulo by max hmac sequence */
 int32_t wrap_hmac_sequence(int32_t sequence);
 
+/*
+ * Load HMAC sequence numbers from given array.
+ * Size of the array is 2 * SKY_NUM_VIRTUAL_CHANNELS.
+ */
+int sky_hmac_load_sequences(SkyHandle self, const int32_t* sequences);
+
+/*
+ * Dump HMAC sequence numbers to given array.
+ * Size of the array is 2 * SKY_NUM_VIRTUAL_CHANNELS.
+ */
+int sky_hmac_dump_sequences(SkyHandle self, int32_t* sequences);
 
 
 /* Marks a vc number as requiring hmac-sequence reset. This is used after a peer attempts authentication with too big sequence jump. */
