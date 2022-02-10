@@ -16,7 +16,7 @@
 /*
  * Number of bytes in frame identity field
  */
-#define SKY_IDENTITY_LEN                5
+#define SKY_IDENTITY_LEN                6
 
 /*
  * Frame header flags
@@ -27,7 +27,7 @@
 
 
 // Extensions start at this byte index. At the same time the minimum length of a healthy frame.
-#define EXTENSION_START_IDX             10
+#define EXTENSION_START_IDX             (SKY_IDENTITY_LEN+5)
 
 // Extension header type IDs
 #define EXTENSION_ARQ_SEQUENCE          0

@@ -274,7 +274,7 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, int32
 
 	// ARQ IN INIT -----------------------------------------------------------------------------------------------------
 	if(state0 == ARQ_STATE_IN_INIT){
-		if (frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW) {
+		if (frames_sent_in_this_vc_window < ARQ_IDLE_FRAMES_PER_WINDOW) {
 			return 1;
 		}
 	}
@@ -286,7 +286,7 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, int32
 			return 1;
 		}
 
-		if((frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW) && (rcvRing_get_horizon_bitmap(vchannel->rcvRing) || vchannel->need_recall)){
+		if((frames_sent_in_this_vc_window < ARQ_IDLE_FRAMES_PER_WINDOW) && (rcvRing_get_horizon_bitmap(vchannel->rcvRing) || vchannel->need_recall)){
 			return 1;
 		}
 
@@ -294,7 +294,7 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, int32
 			return 1;
 		}
 
-		int b0 = frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW;
+		int b0 = frames_sent_in_this_vc_window < ARQ_IDLE_FRAMES_PER_WINDOW;
 		int b1 = wrap_time_ms(now_ms - vchannel->last_ctrl_send) > (config->arq_timeout_ms / 4);
 		int b2 = wrap_time_ms(now_ms - vchannel->last_tx_ms) > (config->arq_timeout_ms / 4);
 		int b3 = wrap_time_ms(now_ms - vchannel->last_rx_ms) > (config->arq_timeout_ms / 4);
@@ -335,7 +335,7 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 
 	// ARQ IN INIT -----------------------------------------------------------------------------------------------------
 	if(state0 == ARQ_STATE_IN_INIT){
-		if(frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW){
+		if(frames_sent_in_this_vc_window < ARQ_IDLE_FRAMES_PER_WINDOW){
 			sky_packet_add_extension_arq_handshake(frame, ARQ_STATE_IN_INIT, vchannel->arq_session_identifier);
 			return 1;
 		}
@@ -352,14 +352,14 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 			ret = 1;
 		}
 		uint16_t mask = rcvRing_get_horizon_bitmap(vchannel->rcvRing);
-		if((frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW) && (mask || vchannel->need_recall)){
+		if((frames_sent_in_this_vc_window < ARQ_IDLE_FRAMES_PER_WINDOW) && (mask || vchannel->need_recall)){
 			sky_packet_add_extension_arq_request(frame, vchannel->rcvRing->head_sequence, mask);
 			vchannel->need_recall = 0;
 			ret = 1;
 		}
 
 		int payload_to_send = sendRing_count_packets_to_send(vchannel->sendRing, 1) > 0;
-		int b0 = frames_sent_in_this_vc_window < UTILITY_FRAMES_PER_WINDOW;
+		int b0 = frames_sent_in_this_vc_window < ARQ_IDLE_FRAMES_PER_WINDOW;
 		int b1 = wrap_time_ms(now_ms - vchannel->last_ctrl_send) > (config->arq_timeout_ms / 4);
 		int b2 = wrap_time_ms(now_ms - vchannel->last_tx_ms) > (config->arq_timeout_ms / 4);
 		int b3 = wrap_time_ms(now_ms - vchannel->last_rx_ms) > (config->arq_timeout_ms / 4);

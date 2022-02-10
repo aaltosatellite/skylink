@@ -82,6 +82,7 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame) {
 	if(frame->length > (SKY_FRAME_MAX_LEN - SKY_HMAC_LENGTH)){
 		return SKY_RET_FRAME_TOO_LONG_FOR_HMAC;
 	}
+	frame->flags |= SKY_FLAG_AUTHENTICATED;
 
 	// Calculate SHA256 hash
 	uint8_t full_hash[32];
@@ -101,7 +102,7 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame) {
 int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 	//If the frame is too short don't even try to calculate anything
 
-	if (frame->length < SKY_HMAC_LENGTH){
+	if ((frame->flags & SKY_FLAG_AUTHENTICATED) && (frame->length < (SKY_PLAIN_FRAME_MIN_LENGTH + SKY_HMAC_LENGTH))){
 		return SKY_RET_FRAME_TOO_SHORT_FOR_HMAC;
 	}
 
@@ -143,7 +144,7 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 
 	// Correct sequence field endianess after hash calculation for later use
 	frame->auth_sequence = sky_ntoh16(frame->auth_sequence);
-	//SKY_PRINTF(SKY_DIAG_DEBUG | SKY_DIAG_HMAC, "HMAC: Received sequence %d\n", frame->auth_sequence);
+	SKY_PRINTF(SKY_DIAG_DEBUG | SKY_DIAG_HMAC, "HMAC: Received sequence %d\n", frame->auth_sequence);
 
 	if (vc_conf->require_authentication & SKY_VC_FLAG_REQUIRE_SEQUENCE) {
 		// Check if the hmac sequence number is something we are expecting

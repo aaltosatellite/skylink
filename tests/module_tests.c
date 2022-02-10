@@ -38,9 +38,9 @@ int main() {
 	*/
 	uint64_t t0 = real_microseconds();
 
-	elebuffer_tests();
-	packet_tests();
-	fec_test();
+	//elebuffer_tests();
+	//packet_tests();
+	//fec_test();
 	hmac_tests();
 	mac_test(4);
 	ring_tests(15);

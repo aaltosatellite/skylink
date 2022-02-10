@@ -88,9 +88,11 @@ static int _sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 		}
 	}
 	// This was here to ensure that the peer advances its window through TDD gap even if there are no messages to send
-	//if(self->mac->total_frames_sent_in_current_window < UTILITY_FRAMES_PER_WINDOW){
-	//	return 0;
-	//}
+	int mac_active = abs(sky_get_tick_time() - self->mac->last_belief_update) < MAC_IDLE_TIMEOUT;
+	int idle_frame_needed = self->mac->total_frames_sent_in_current_window < MAC_IDLE_FRAMES_PER_WINDOW;
+	if(mac_active && idle_frame_needed){
+		return 0;
+	}
 	return -1;
 }
 
@@ -155,7 +157,6 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 
 	/* Authenticate the frame. Ie. appends a hash digest to the end of the frame. */
 	if (vc_conf->require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX){
-		frame->flags |= SKY_FLAG_AUTHENTICATED;
 		sky_hmac_extend_with_authentication(self, frame);
 	}
 

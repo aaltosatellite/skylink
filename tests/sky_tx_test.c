@@ -40,7 +40,7 @@ void sky_tx_test_cycle(){
 	int32_t now_ms = randint_i32(0, MOD_TIME_MS-1);
 	_global_time_now_ms = now_ms;
 
-	int mac_shift_threshold = randint_i32(100, 9000);
+	int mac_shift_threshold = randint_i32(MAC_IDLE_FRAMES_PER_WINDOW/2, MAC_IDLE_FRAMES_PER_WINDOW*2);
 	config->mac.shift_threshold_ms = mac_shift_threshold;
 
 
@@ -102,7 +102,7 @@ void sky_tx_test_cycle(){
 		self->hmac->sequence_rx[vc] = auth_seq_rx[vc];
 		self->hmac->sequence_tx[vc] = auth_seq_tx[vc];
 
-		frames_sent_per_vc[vc] = randint_i32(0,UTILITY_FRAMES_PER_WINDOW+1);
+		frames_sent_per_vc[vc] = randint_i32(0, ARQ_IDLE_FRAMES_PER_WINDOW + 1);
 		total_frames_sent += frames_sent_per_vc[vc];
 		self->mac->frames_sent_in_current_window_per_vc[vc] = frames_sent_per_vc[vc];
 		self->mac->total_frames_sent_in_current_window = total_frames_sent;
@@ -378,7 +378,7 @@ void sky_tx_test_cycle(){
 
 
 		if(arq_on[i] && (!arq_tx_timed_out[i]) && (!arq_rx_timed_out[i]) ){
-			int util_frame = frames_sent_per_vc[i] < UTILITY_FRAMES_PER_WINDOW;
+			int util_frame = frames_sent_per_vc[i] < ARQ_IDLE_FRAMES_PER_WINDOW;
 			//assert(frame->flags & SKY_FLAG_ARQ_ON);
 			if(util_frame && (wrap_time_ms(now_ms - arq_tx_ts[i]) > (arq_timeout / 4)) ){
 				content = 1;
@@ -434,10 +434,10 @@ void sky_tx_test_cycle(){
 	}
 
 
-	//if((content == 0) && (total_frames_sent < UTILITY_FRAMES_PER_WINDOW) ){
-	//	content = 1;
-	//	deduced_vc = 0;
-	//}
+	if((content == 0) && (total_frames_sent < MAC_IDLE_FRAMES_PER_WINDOW) && ((now_ms - mac_last_belief_update)<MAC_IDLE_TIMEOUT) ){
+		content = 1;
+		deduced_vc = 0;
+	}
 
 
 	if(content == 0){

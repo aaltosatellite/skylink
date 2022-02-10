@@ -9,7 +9,9 @@
 #define SKY_HMAC_LENGTH                 8 // bytes
 
 // Number of frames justified to send only due to protocol control reasons (in absence of payloads).
-#define UTILITY_FRAMES_PER_WINDOW       1
+#define ARQ_IDLE_FRAMES_PER_WINDOW       1
+#define MAC_IDLE_FRAMES_PER_WINDOW       1 //No sense to be more than 1.
+#define MAC_IDLE_TIMEOUT       			30
 
 
 

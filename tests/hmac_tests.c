@@ -20,7 +20,7 @@ void hmac_tests(){
 
 static void test1(){
 	PRINTFF(0,"[HMAC TEST 1]\n");
-	for (int i = 0; i < 9500; ++i) {
+	for (int i = 0; i < 160000; ++i) {
 		test1_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
@@ -40,7 +40,7 @@ static void test1_round(){
 	SkyHandle self1 = new_handle(config1);
 	SkyHandle self2 = new_handle(config2);
 
-	int corrupt_key = (randint_i32(0,2) == 0);
+	int corrupt_key = (randint_i32(0,10) == 0);
 	if(corrupt_key){
 		fillrand(self2->hmac->key, self2->hmac->key_len);
 	}
@@ -55,6 +55,19 @@ static void test1_round(){
 	self1->hmac->sequence_rx[vc] = wrap_hmac_sequence(self2->hmac->sequence_tx[vc] + shift_rx);
 	self1->hmac->sequence_tx[vc] = wrap_hmac_sequence(self2->hmac->sequence_rx[vc] + shift_tx);
 
+	assert((SKY_VC_FLAG_AUTHENTICATE_TX & SKY_VC_FLAG_REQUIRE_SEQUENCE) == 0);
+	assert((SKY_VC_FLAG_AUTHENTICATE_TX & SKY_VC_FLAG_REQUIRE_AUTHENTICATION) == 0);
+	assert((SKY_VC_FLAG_REQUIRE_SEQUENCE & SKY_VC_FLAG_REQUIRE_AUTHENTICATION) == 0);
+
+	self1->conf->vc[vc].require_authentication = 0;
+	self1->conf->vc[vc].require_authentication |= (SKY_VC_FLAG_AUTHENTICATE_TX * randint_i32(0,1));
+	int auth_tx = self1->conf->vc[vc].require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX;
+
+	self2->conf->vc[vc].require_authentication = 0;
+	self2->conf->vc[vc].require_authentication |= (SKY_VC_FLAG_REQUIRE_AUTHENTICATION * randint_i32(0,1));
+	self2->conf->vc[vc].require_authentication |= (SKY_VC_FLAG_REQUIRE_SEQUENCE * randint_i32(0,1));
+	int req_auth = self2->conf->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION;
+	int req_seq = self2->conf->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_SEQUENCE;
 
 	SkyRadioFrame* sframe = new_frame();
 	SkyRadioFrame* rframe = new_frame();
@@ -69,14 +82,22 @@ static void test1_round(){
 	assert(hmac_seq == wrap_hmac_sequence(self1->hmac->sequence_tx[vc]-1));
 	sframe->auth_sequence = hmac_seq;
 	sframe->auth_sequence = sky_hton16(sframe->auth_sequence);
+	sframe->flags = 0;
+	if(auth_tx){
+		sky_hmac_extend_with_authentication(self1, sframe);
+		assert((int)sframe->length == (length + SKY_HMAC_LENGTH));
+		assert(sframe->flags & SKY_FLAG_AUTHENTICATED);
+		if(randint_i32(0,20) == 0){
+			sframe->flags = sframe->flags & (~SKY_FLAG_AUTHENTICATED);
+		}
+	}
 
-	sky_hmac_extend_with_authentication(self1, sframe);
-	assert((int)sframe->length == length + SKY_HMAC_LENGTH);
-
-
-	int corrupt_pl = (randint_i32(0, 2) == 0);
+	int corrupt_pl = (randint_i32(0, 4) == 0);
 	if(corrupt_pl){
-		int i = randint_i32(0, length+SKY_HMAC_LENGTH-1);
+		int i = randint_i32(0, sframe->length-1);
+		while (i == 7){
+			i = randint_i32(0, sframe->length-1);
+		}
 		uint8_t old = sframe->raw[i];
 		while (sframe->raw[i] == old){
 			sframe->raw[i] = (uint8_t) randint_i32(0,255);
@@ -84,23 +105,48 @@ static void test1_round(){
 	}
 
 
+	int flag_in_place = (sframe->flags & SKY_FLAG_AUTHENTICATED) > 0;
+
 	memcpy(rframe, sframe, sizeof(SkyRadioFrame));
+	int rlength0 = rframe->length;
+	int too_short = (int)rframe->length < (SKY_PLAIN_FRAME_MIN_LENGTH + SKY_HMAC_LENGTH*flag_in_place);
 	int r1 = sky_hmac_check_authentication(self2, rframe);
 
 
-	if((shift_tx <= config1->hmac.maximum_jump) && (!corrupt_pl) && (!corrupt_key)){
-		assert(r1 == 0);
-		assert((int)rframe->length == length);
-		//assert(rframe->auth_verified == 1);
+	if((!req_auth)){
+		if(flag_in_place && too_short){
+			assert(r1 < 0);
+			assert((int)rframe->length == rlength0);
+		}
+		if(flag_in_place && (!too_short)){
+			assert(r1 == 0);
+			assert((int)rframe->length == (rlength0 - SKY_HMAC_LENGTH));
+		}
+		if(!flag_in_place){
+			assert(r1 == 0);
+			assert((int)rframe->length == rlength0);
+		}
 	}
 
+	if(req_auth){
+		if(flag_in_place && (!corrupt_pl) && (!corrupt_key) && auth_tx && (!too_short)){
+			if(!req_seq){
+				assert(r1 == 0);
+				assert((int)rframe->length == (rlength0 - SKY_HMAC_LENGTH));
+			}
+			if(req_seq && (shift_tx <= config1->hmac.maximum_jump)){
+				assert(r1 == 0);
+				assert((int)rframe->length == (rlength0 - SKY_HMAC_LENGTH));
+			}
+			if(req_seq && (shift_tx > config1->hmac.maximum_jump)){
+				assert(r1 < 0);
+			}
+		}
 
-	if((shift_tx > config1->hmac.maximum_jump) || corrupt_pl || corrupt_key) {
-		assert(r1 < 0);
-		assert((int)rframe->length == length + SKY_HMAC_LENGTH);
-		//assert(rframe->auth_verified == 0);
+		if((!flag_in_place) || corrupt_key || corrupt_pl || (!auth_tx) || too_short){
+			assert(r1 < 0);
+		}
 	}
-
 
 	destroy_handle(self1);
 	destroy_handle(self2);

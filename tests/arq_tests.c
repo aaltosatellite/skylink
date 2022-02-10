@@ -181,7 +181,7 @@ void arq_system_test2_cycle(){
 	}
 
 	//arq handshake
-	int frames_sent_in_vc = randint_i32(0,UTILITY_FRAMES_PER_WINDOW +2);
+	int frames_sent_in_vc = randint_i32(0, ARQ_IDLE_FRAMES_PER_WINDOW + 2);
 	int now_ms = ts_base + randint_i32(5001, sky_conf->arq_timeout_ms+500);
 
 	int own_recall = randint_i32(0, 10) < 4;
@@ -228,7 +228,7 @@ void arq_system_test2_cycle(){
 			assert(extArqHs == NULL);
 		}
 
-		if(own_recall && (frames_sent_in_vc < UTILITY_FRAMES_PER_WINDOW)){
+		if(own_recall && (frames_sent_in_vc < ARQ_IDLE_FRAMES_PER_WINDOW)){
 			assert(extArqRr != NULL);
 			assert(sky_ntoh16( extArqRr->ARQReq.sequence ) == seq_rcv);
 			assert(sky_ntoh16( extArqRr->ARQReq.sequence ) == array->rcvRing->head_sequence);
@@ -256,7 +256,7 @@ void arq_system_test2_cycle(){
 			}
 		}
 
-		int b0 = (frames_sent_in_vc < UTILITY_FRAMES_PER_WINDOW);
+		int b0 = (frames_sent_in_vc < ARQ_IDLE_FRAMES_PER_WINDOW);
 		int b1 = wrap_time_ms(now_ms - ts_send) > sky_conf->arq_timeout_ms /4;
 		int b2 = wrap_time_ms(now_ms - ts_recv) > sky_conf->arq_timeout_ms/4;
 		int b3 = wrap_time_ms(now_ms - ts_last_ctrl) > sky_conf->arq_timeout_ms/4;
@@ -282,7 +282,7 @@ void arq_system_test2_cycle(){
 
 		int b_a = !new_pl && !recalled && !handshake_on;
 		int b_b	= !(b0 && (b1 || b2 || b3));
-		int b_c = !(own_recall && (frames_sent_in_vc < UTILITY_FRAMES_PER_WINDOW))  ;
+		int b_c = !(own_recall && (frames_sent_in_vc < ARQ_IDLE_FRAMES_PER_WINDOW))  ;
 		if(b_a && b_b && b_c){
 			assert(content == 0);
 		} else{
@@ -322,7 +322,7 @@ void arq_system_test2_cycle(){
 		assert(extArqSeq == NULL);
 		assert(extArqRr == NULL);
 		assert(extArqCtrl == NULL);
-		if(frames_sent_in_vc < UTILITY_FRAMES_PER_WINDOW){
+		if(frames_sent_in_vc < ARQ_IDLE_FRAMES_PER_WINDOW){
 			assert(extArqHs != NULL);
 		}
 		assert(!(frame->flags & SKY_FLAG_HAS_PAYLOAD));
