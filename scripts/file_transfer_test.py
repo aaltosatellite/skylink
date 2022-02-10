@@ -69,7 +69,7 @@ async def transmit():
 
         # Make sure there's room in the buffer
         while True:
-            if await conn.get_free() > 7 * 1024:
+            if await conn.get_free() > (2 * args.block_size):
                 break
             await asyncio.sleep(0.4)
 
