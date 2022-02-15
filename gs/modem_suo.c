@@ -10,10 +10,8 @@
 #include "skylink/frame.h"
 #include "skylink/diag.h"
 
-#include "../../suo/libsuo/suo.h"
-#include "../../suo/libsuo/frame-io/zmq_interface.h"
-//#include "suo.h"
-//#include "frame-io/zmq_interface.h"
+#include "suo.h"
+#include "frame-io/zmq_interface.h"
 #include "modem.h"
 
 
@@ -22,6 +20,7 @@ static timestamp_t last_received_time;
 static int tick_received = 0;
 static int carrier_sensed = 0;
 static int tx_active = 0;
+static int rx_active = 0;
 void *suo_rx, *suo_tx;
 
 extern void *zmq;
@@ -73,7 +72,7 @@ void modem_wait_for_sync() {
 			abort();
 		}
 		if (ret == 1) {
-			last_received_time = suo_frame->hdr.timestamp / 1e6;
+			last_received_time = suo_frame->hdr.timestamp / 1e6; // ns -> ms
 			break;
 		}
 		SKY_PRINTF(SKY_DIAG_INFO, ".");
@@ -133,6 +132,7 @@ int modem_rx(SkyRadioFrame* sky_frame, int flags) {
 		tick_received = 1;
 
 		tx_active = ((suo_frame->hdr.flags & SUO_FLAGS_TX_ACTIVE) != 0);
+		rx_active = ((suo_frame->hdr.flags & SUO_FLAGS_RX_LOCKED) != 0);
 
 		if ((suo_frame->hdr.flags & SUO_FLAGS_RX_LOCKED) != 0 && carrier_sensed == 0)
 			carrier_sensed = 1;
@@ -147,7 +147,7 @@ int modem_rx(SkyRadioFrame* sky_frame, int flags) {
 
 		// Copy data from Suo frame to Skylink frame
 		sky_frame->length = suo_frame->data_len;
-		sky_frame->rx_time_ms = suo_frame->hdr.timestamp / 1000;
+		sky_frame->rx_time_ms = suo_frame->hdr.timestamp / 1e6;
 		//frame->meta.rssi = suo_frame.metadata[0];
 		memcpy(sky_frame->raw, suo_frame->data, suo_frame->data_len);
 
@@ -161,8 +161,8 @@ int modem_rx(SkyRadioFrame* sky_frame, int flags) {
 }
 
 
-int modem_tx_active() {
-	return tx_active;
+int modem_tx_active() { // Can send?
+	return (tx_active == 0) && (rx_active == 0);
 }
 
 int tick() {
