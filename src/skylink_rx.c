@@ -3,7 +3,6 @@
 //
 
 #include "skylink/skylink.h"
-#include "skylink/conf.h"
 #include "skylink/fec.h"
 #include "skylink/reliable_vc.h"
 #include "skylink/frame.h"
@@ -106,9 +105,6 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 	//todo: log behavior based on r.
 	return SKY_RET_OK;
 }
-
-
-
 
 
 

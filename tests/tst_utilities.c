@@ -33,6 +33,11 @@ SkyConfig* new_vanilla_config(){
 	config->vc[3].rcv_ring_len 			= 12;
 	config->vc[3].element_size  		= 179;
 
+	config->vc[0].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX | SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE;
+	config->vc[1].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX | SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE;
+	config->vc[2].require_authentication = 0;
+	config->vc[3].require_authentication = 0;
+
 	config->hmac.key_length 			= 16;
 	config->hmac.maximum_jump 			= 30;
 	memcpy(config->hmac.key, arr_, config->hmac.key_length);
@@ -50,6 +55,10 @@ SkyConfig* new_vanilla_config(){
 	config->mac.shift_threshold_ms 			= 4000;
 
 	config->arq_timeout_ms 					= 26000;
+	config->mac_idle_timeout_ms				= 30000;
+	config->arq_idle_frames_per_window		= 2;
+	config->mac_idle_frames_per_window		= 2;
+	config->mac_adjustment_period			= 2;
 
 	config->identity[0] = 'O';
 	config->identity[1] = 'H';
@@ -57,10 +66,6 @@ SkyConfig* new_vanilla_config(){
 	config->identity[3] = 'S';
 	config->identity[4] = '1';
 
-	config->vc[0].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX | SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE;
-	config->vc[1].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX | SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE;
-	config->vc[2].require_authentication = 0;
-	config->vc[3].require_authentication = 0;
 	return config;
 }
 

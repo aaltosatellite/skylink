@@ -93,18 +93,21 @@ static void test_loss(){
 	PRINTFF(0," ...ok)\n");
 }
 
-char* ARGF_PATH;
+
+double corrupt_scaler = 10;
+int spin_on_glob = 0;
 
 int main(int argc, char *argv[]){
 	reseed_random();
 	test_loss();
-	//if(argc > 1){
-	//	ARGF_PATH = argv[1];
-	//	FILE* ff = fopen(ARGF_PATH, "r");
-	//	int32_t* tgt = malloc(1200);
-	//	int r = fread(tgt, 1200, 1, ff);
-	//	assert(r == (4*56));
-	//}
+	if(argc > 1){
+		int corr_scale = atoi(argv[1]);
+		assert(corr_scale > 0);
+		corrupt_scaler = (double)corr_scale;
+	}
+	if(argc > 2){
+		spin_on_glob = strstr(argv[2], "spin") != NULL;
+	}
 	test1();
 }
 
@@ -112,7 +115,7 @@ void test1(){
 	PRINTFF(0,"[TX-RX Test 1]\n");
 	int N = 1;
 	for (int i = 0; i < N; ++i) {
-		test1_round(3600*1000, 1);
+		test1_round(3600*1000, randint_i32(0,10) < 100);
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
@@ -252,6 +255,19 @@ void destroy_payload_list(PayloadList* payloadList){
 	free(payloadList);
 }
 
+int payload_list_count_unreceived(PayloadList* payloadList){
+	int unreceived = 0;
+	for (int i = 0; i < payloadList->n; ++i) {
+		Payload* pl = payloadList->array[i];
+		if(pl->ts_rcv == 0){
+			unreceived++;
+		} else {
+			assert(pl->ts_rcv > pl->ts_push);
+		}
+	}
+	return unreceived;
+}
+
 int payload_list_append(PayloadList* payloadList, Payload* payload){
 	payloadList->array[payloadList->n] = payload;
 	payloadList->n++;
@@ -271,6 +287,10 @@ void payload_list_mark_as_received(PayloadList* payloadList, void* msg, int msg_
 		//if(!found){
 		//	assert(pl->ts_rcv > 0);
 		//}
+		if(string_same(ref_string, pl->msg) && (pl->msg->length >= 4) && (pl->ts_rcv > 0)){
+			PRINTFF(0,"PL alerady received: len:%d  s_assigned:%d, seq:%d\n",
+					pl->msg->length, pl->assigned_sequence, sequence);
+		}
 		if(pl->ts_rcv > 0){
 			continue;
 		}
@@ -282,26 +302,25 @@ void payload_list_mark_as_received(PayloadList* payloadList, void* msg, int msg_
 			pl->ts_rcv = ts_now;
 			found++;
 		}
+		if(string_same(ref_string, pl->msg) && (pl->assigned_sequence != sequence) && (pl->msg->length >= 4) ){
+			PRINTFF(0,"Same pl, different sequences: len:%d  s_assigned:%d, seq:%d\n",
+					pl->msg->length, pl->assigned_sequence, sequence);
+		}
 	}
 	destroy_string(ref_string);
 	if(found != 1){
-		PRINTFF(0, "found: %d\n",found);
+		PRINTFF(0, "found: %d. Msg_len:%d. Now:%d\n",found, msg_len, ts_now);
+		int unrec = payload_list_count_unreceived(payloadList);
+		PRINTFF(0, "Peer unreceived:%d\n", unrec );
+		for (int i = 0; i < unrec; ++i) {
+			Payload* nth_unrec = payloadList->array[payloadList->n - (unrec - i)];
+			PRINTFF(0, "\tLen of %dth unrec:%d\n", i, nth_unrec->msg->length );
+		}
 	}
 	assert(found == 1);
 }
 
-int payload_list_count_unreceived(PayloadList* payloadList){
-	int unreceived = 0;
-	for (int i = 0; i < payloadList->n; ++i) {
-		Payload* pl = payloadList->array[i];
-		if(pl->ts_rcv == 0){
-			unreceived++;
-		} else {
-			assert(pl->ts_rcv > pl->ts_push);
-		}
-	}
-	return unreceived;
-}
+
 
 
 
@@ -350,11 +369,11 @@ void test1_round(uint64_t NN, int print_on){
 	job.lag_ms 			= 6; 		//param
 	job.peer1.pl_rate 	= 3.0; 		//param
 	job.peer2.pl_rate 	= 2.0; 		//param
-	job.corrupt_rate	= 0.02; 	//param
-	job.loss_rate0 		= 0.11; 	//param (0.12)
+	job.corrupt_rate	= 0.002 * corrupt_scaler; 	//param
+	job.loss_rate0 		= 0.011 * corrupt_scaler; 	//param (0.12)
 	job.spin_rate_rpm	= 6;		//param
 	job.silent_section	= 0.24;		//param
-	job.spin_on			= 1;		//param
+	job.spin_on			= spin_on_glob;	//param
 	job.payloadList1 	= new_payload_list();
 	job.payloadList2 	= new_payload_list();
 	job.inEther 		= new_eframe_list();
@@ -420,6 +439,7 @@ static void step_forward(int which, TXRXJob* job){
 		int push_ret = sky_vc_push_packet_to_send(peer->handle->virtual_channels[0], pl->msg->data, pl->msg->length);
 		assert(push_ret != SKY_RET_RING_RING_FULL);
 		assert(push_ret != SKY_RET_RING_BUFFER_FULL);
+		assert(push_ret >= 0);
 		pl->assigned_sequence = push_ret;
 		payload_list_append(plList, pl);
 	}
@@ -521,7 +541,10 @@ static void step_forward(int which, TXRXJob* job){
 
 
 static void print_job_status(TXRXJob* job){
-	PRINTFF(0, "=====================================\n");
+	PRINTFF(0,"=====================================\n");
+	PRINTFF(0,"Spin on: %d\n", job->spin_on);
+	PRINTFF(0,"Corrupt rate: %lf\n", job->corrupt_rate);
+	PRINTFF(0,"Loss rate: %lf\n", job->loss_rate0);
 	PRINTFF(0,"Frames created: %d\n", job->inEther->n + job->missedFrames->n + job->lostFrames->n + job->receivedFrames->n);
 	PRINTFF(0,"Frames lost: %d\n", job->lostFrames->n);
 	PRINTFF(0,"Frames in ether: %d\n", job->inEther->n);
@@ -537,5 +560,5 @@ static void print_job_status(TXRXJob* job){
 	PRINTFF(0,"Payloads not acked 2: %d\n", unacked_of_2);
 	PRINTFF(0,"Window of 1: %d  (peer 2 believes: %d)\n", job->peer1.handle->mac->my_window_length, job->peer2.handle->mac->peer_window_length);
 	PRINTFF(0,"Window of 2: %d  (peer 1 believes: %d)\n", job->peer2.handle->mac->my_window_length, job->peer1.handle->mac->peer_window_length);
-	PRINTFF(0, "=====================================\n");
+	PRINTFF(0,"=====================================\n");
 }

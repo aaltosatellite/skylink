@@ -8,10 +8,6 @@
 // HMAC
 #define SKY_HMAC_LENGTH                 8 // bytes
 
-// Number of frames justified to send only due to protocol control reasons (in absence of payloads).
-#define ARQ_IDLE_FRAMES_PER_WINDOW       1
-#define MAC_IDLE_FRAMES_PER_WINDOW       1 //No sense to be more than 1.
-#define MAC_IDLE_TIMEOUT       			30
 
 
 
@@ -119,6 +115,10 @@ struct sky_conf {
 	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t identity[SKY_IDENTITY_LEN];
 	int32_t arq_timeout_ms;
+	int32_t mac_idle_timeout_ms;
+	int8_t arq_idle_frames_per_window;
+	int8_t mac_idle_frames_per_window;
+	int8_t mac_adjustment_period;
 };
 typedef struct sky_conf SkyConfig;
 
