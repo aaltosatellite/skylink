@@ -69,9 +69,9 @@ void sky_vc_wipe_to_arq_off_state(SkyVirtualChannel* vchannel){
 	vchannel->need_recall = 0;
 	vchannel->arq_state_flag = ARQ_STATE_OFF;
 	vchannel->arq_session_identifier = 0;
-	vchannel->last_tx_ms = 0;
-	vchannel->last_rx_ms = 0;
-	vchannel->last_ctrl_send = 0;
+	vchannel->last_tx_tick = 0;
+	vchannel->last_rx_tick = 0;
+	vchannel->last_ctrl_send_tick = 0;
 	vchannel->handshake_send = 0;
 }
 
@@ -82,9 +82,9 @@ int sky_vc_wipe_to_arq_init_state(SkyVirtualChannel* vchannel){
 	vchannel->need_recall = 0;
 	vchannel->arq_state_flag = ARQ_STATE_IN_INIT;
 	vchannel->arq_session_identifier = sky_get_tick_time();
-	vchannel->last_tx_ms = sky_get_tick_time();
-	vchannel->last_rx_ms = sky_get_tick_time();
-	vchannel->last_ctrl_send = 0;
+	vchannel->last_tx_tick = sky_get_tick_time();
+	vchannel->last_rx_tick = sky_get_tick_time();
+	vchannel->last_ctrl_send_tick = 0;
 	vchannel->handshake_send = 0;
 	return 0;
 }
@@ -96,9 +96,9 @@ void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* vchannel, uint32_t identifie
 	vchannel->need_recall = 0;
 	vchannel->arq_state_flag = ARQ_STATE_ON;
 	vchannel->arq_session_identifier = identifier;
-	vchannel->last_tx_ms = sky_get_tick_time();
-	vchannel->last_rx_ms = sky_get_tick_time();
-	vchannel->last_ctrl_send = 0;
+	vchannel->last_tx_tick = sky_get_tick_time();
+	vchannel->last_rx_tick = sky_get_tick_time();
+	vchannel->last_ctrl_send_tick = 0;
 	vchannel->handshake_send = 1;
 }
 
@@ -144,14 +144,14 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 }
 
 
-void sky_vc_poll_arq_state_timeout(SkyVirtualChannel* vchannel, int32_t now_ms, int32_t timeout_ms){
+void sky_vc_poll_arq_state_timeout(SkyVirtualChannel* vchannel, tick_t now, tick_t timeout){
 	if(vchannel->arq_state_flag == ARQ_STATE_OFF){
 		return;
 	}
-	if(wrap_time_ms(now_ms - vchannel->last_tx_ms) > timeout_ms ){
+	if(wrap_time_ticks(now - vchannel->last_tx_tick) > timeout ){
 		sky_vc_wipe_to_arq_off_state(vchannel); //todo: notify up in stack?
 	}
-	if(wrap_time_ms(now_ms - vchannel->last_rx_ms) > timeout_ms ){
+	if(wrap_time_ticks(now - vchannel->last_rx_tick) > timeout ){
 		sky_vc_wipe_to_arq_off_state(vchannel); //todo: notify up in stack?
 	}
 }
@@ -197,13 +197,13 @@ int sky_vc_can_recall(SkyVirtualChannel* vchannel, int sequence){
 	return sendRing_can_recall(vchannel->sendRing, sequence);
 }
 
-void sky_vc_update_tx_sync(SkyVirtualChannel* vchannel, int peer_rx_head_sequence_by_ctrl, int32_t now_ms){
+void sky_vc_update_tx_sync(SkyVirtualChannel* vchannel, int peer_rx_head_sequence_by_ctrl, tick_t now){
 	int n_cleared = sendRing_clean_tail_up_to(vchannel->sendRing, vchannel->elementBuffer, peer_rx_head_sequence_by_ctrl);
 	if(n_cleared > 0){
-		vchannel->last_tx_ms = now_ms;
+		vchannel->last_tx_tick = now;
 	}
 	if(vchannel->sendRing->tx_sequence == peer_rx_head_sequence_by_ctrl){
-		vchannel->last_tx_ms = now_ms;
+		vchannel->last_tx_tick = now;
 	}
 }
 
@@ -234,19 +234,19 @@ int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, void* src, int 
 	return rcvRing_push_rx_packet(vchannel->rcvRing, vchannel->elementBuffer, src, length, sequence);
 }
 
-int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, void* src, int length, int sequence, int32_t now_ms){
+int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, void* src, int length, int sequence, tick_t now){
 	int r = rcvRing_push_rx_packet(vchannel->rcvRing, vchannel->elementBuffer, src, length, sequence);
 	if(r > 0){ //head advanced at least by 1
-		vchannel->last_rx_ms = now_ms;
+		vchannel->last_rx_tick = now;
 	}
 	return r;
 }
 
 
-void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequence_by_ctrl, int32_t now_ms){
+void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequence_by_ctrl, tick_t now){
 	int sync = rcvRing_get_sequence_sync_status(vchannel->rcvRing, peer_tx_head_sequence_by_ctrl);
 	if(sync == SKY_RET_RING_SEQUENCES_IN_SYNC){
-		vchannel->last_rx_ms = now_ms;
+		vchannel->last_rx_tick = now;
 		vchannel->need_recall = 0;
 	}
 	if(sync == SKY_RET_RING_SEQUENCES_OUT_OF_SYNC){
@@ -261,7 +261,7 @@ void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequenc
 
 
 
-int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, int32_t now_ms, uint16_t frames_sent_in_this_vc_window){
+int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, tick_t now, uint16_t frames_sent_in_this_vc_window){
 	uint8_t state0 = vchannel->arq_state_flag;
 
 	// ARQ OFF ---------------------------------------------------------------------------------------------------------
@@ -295,9 +295,9 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, int32
 		}
 
 		int b0 = frames_sent_in_this_vc_window < config->arq_idle_frames_per_window;
-		int b1 = wrap_time_ms(now_ms - vchannel->last_ctrl_send) > (config->arq_timeout_ms / 4);
-		int b2 = wrap_time_ms(now_ms - vchannel->last_tx_ms) > (config->arq_timeout_ms / 4);
-		int b3 = wrap_time_ms(now_ms - vchannel->last_rx_ms) > (config->arq_timeout_ms / 4);
+		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > (config->arq_timeout_ticks / 4);
+		int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > (config->arq_timeout_ticks / 4);
+		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > (config->arq_timeout_ticks / 4);
 		if(b0 && (b1 || b2 || b3)){
 			return 1;
 		}
@@ -310,7 +310,7 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, int32
 
 
 
-int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFrame* frame, int32_t now_ms, uint16_t frames_sent_in_this_vc_window){
+int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFrame* frame, tick_t now, uint16_t frames_sent_in_this_vc_window){
 
 	uint8_t state0 = vchannel->arq_state_flag;
 
@@ -360,12 +360,12 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 
 		int payload_to_send = sendRing_count_packets_to_send(vchannel->sendRing, 1) > 0;
 		int b0 = frames_sent_in_this_vc_window < config->arq_idle_frames_per_window;
-		int b1 = wrap_time_ms(now_ms - vchannel->last_ctrl_send) > (config->arq_timeout_ms / 4);
-		int b2 = wrap_time_ms(now_ms - vchannel->last_tx_ms) > (config->arq_timeout_ms / 4);
-		int b3 = wrap_time_ms(now_ms - vchannel->last_rx_ms) > (config->arq_timeout_ms / 4);
+		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > (config->arq_timeout_ticks / 4);
+		int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > (config->arq_timeout_ticks / 4);
+		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > (config->arq_timeout_ticks / 4);
 		if((b0 && (b1 || b2 || b3)) || payload_to_send){
 			sky_packet_add_extension_arq_ctrl(frame, vchannel->sendRing->tx_sequence, vchannel->rcvRing->head_sequence);
-			vchannel->last_ctrl_send = now_ms;
+			vchannel->last_ctrl_send_tick = now;
 			ret = 1;
 		}
 
@@ -391,7 +391,7 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 
 
 static void sky_vc_process_content_arq_off(SkyVirtualChannel* vchannel, void* pl, int len_pl);
-static void sky_vc_process_content_arq_on(SkyVirtualChannel* vchannel, void* pl, int len_pl, SkyPacketExtension** exts, int32_t now_ms);
+static void sky_vc_process_content_arq_on(SkyVirtualChannel* vchannel, void* pl, int len_pl, SkyPacketExtension** exts, tick_t now);
 void sky_vc_process_content(SkyVirtualChannel* vchannel,
 							void* pl,
 							int len_pl,
@@ -399,7 +399,7 @@ void sky_vc_process_content(SkyVirtualChannel* vchannel,
 							SkyPacketExtension* ext_ctrl,
 							SkyPacketExtension* ext_handshake,
 							SkyPacketExtension* ext_rrequest,
-							timestamp_t now_ms){
+							tick_t now){
 	if (ext_handshake){
 		uint8_t peer_state = ext_handshake->ARQHandshake.peer_state;
 		uint32_t identifier = sky_ntoh32(ext_handshake->ARQHandshake.identifier);
@@ -412,7 +412,7 @@ void sky_vc_process_content(SkyVirtualChannel* vchannel,
 		sky_vc_process_content_arq_off(vchannel, pl, len_pl);
 	}
 	if(state0 == ARQ_STATE_ON){
-		sky_vc_process_content_arq_on(vchannel, pl, len_pl, exts, now_ms);
+		sky_vc_process_content_arq_on(vchannel, pl, len_pl, exts, now);
 	}
 
 }
@@ -425,7 +425,7 @@ static void sky_vc_process_content_arq_off(SkyVirtualChannel* vchannel, void* pl
 }
 
 
-static void sky_vc_process_content_arq_on(SkyVirtualChannel* vchannel, void* pl, int len_pl, SkyPacketExtension** exts, int32_t now_ms){
+static void sky_vc_process_content_arq_on(SkyVirtualChannel* vchannel, void* pl, int len_pl, SkyPacketExtension** exts, tick_t now){
 	SkyPacketExtension* ext_seq = exts[0];
 	SkyPacketExtension* ext_ctrl = exts[1];
 	SkyPacketExtension* ext_rrequest = exts[2];
@@ -435,12 +435,12 @@ static void sky_vc_process_content_arq_on(SkyVirtualChannel* vchannel, void* pl,
 	}
 
 	if (ext_ctrl){
-		sky_vc_update_tx_sync(vchannel, sky_ntoh16(ext_ctrl->ARQCtrl.rx_sequence), now_ms);
-		sky_vc_update_rx_sync(vchannel, sky_ntoh16(ext_ctrl->ARQCtrl.tx_sequence), now_ms);
+		sky_vc_update_tx_sync(vchannel, sky_ntoh16(ext_ctrl->ARQCtrl.rx_sequence), now);
+		sky_vc_update_rx_sync(vchannel, sky_ntoh16(ext_ctrl->ARQCtrl.tx_sequence), now);
 	}
 
 	if ( (seq > -1) && (len_pl >= 0) ){
-		sky_vc_push_rx_packet(vchannel, pl, len_pl, seq, now_ms);
+		sky_vc_push_rx_packet(vchannel, pl, len_pl, seq, now);
 	}
 	if ( (seq == -1) && (len_pl >= 0) ){
 		//break arq?

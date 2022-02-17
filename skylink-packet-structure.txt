@@ -33,7 +33,7 @@ EXTENSIONS_LENGTH   1 Byte                          length of the extension fiel
 AUTH_SEQUENCE       2 Bytes                         sequence for hmac packet authentication. uint16.
 -----------------------------------
 MAC_WINDOW          2 Bytes                         MAC window length. uint16
-MAC_REMAINING       2 Bytes                         MAC remaining milliseconds of the window. uint16
+MAC_REMAINING       2 Bytes                         MAC remaining ticks of the window. uint16
 -----------------------------------
 ARQ_SEQUENCE        1 Bytes                         sequence for ARQ. uint8.
 ----------------------------------- 15

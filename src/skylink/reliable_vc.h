@@ -29,9 +29,9 @@ struct sky_virtual_channel {
 	uint8_t handshake_send;				// A flag set to indicate a need to send a handshake extension on next transmission window.
 	uint32_t arq_session_identifier;	// A unique identifier of the current arq session, if arq is on.
 	uint8_t need_recall;				// A flag set to indicate a need to send rend recall extension. *1
-	int32_t last_tx_ms;					// Timestamp of last time peer confirmed new payloads received, or being in sync with us.
-	int32_t last_rx_ms;					// Timestamp of last time a new continuous payloads was received, or we confirmed sync with peer.
-	int32_t last_ctrl_send;				// Timestamp of last time a control extension was transmitted.
+	tick_t last_tx_tick;				// Tick of last time peer confirmed new payloads received, or being in sync with us.
+	tick_t last_rx_tick;				// Tick of last time a new continuous payloads was received, or we confirmed sync with peer.
+	tick_t last_ctrl_send_tick;		// Tick of last time a control extension was transmitted.
 };
 typedef struct sky_virtual_channel SkyVirtualChannel;
 // *1 In the case where a received control extension reveals that the latest received payload is not the latest
@@ -59,7 +59,7 @@ void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* vchannel, uint32_t identifie
 int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint32_t identifier);
 
 // If too much time has passed since previous successful communication, fall back to non-reliable state.
-void sky_vc_poll_arq_state_timeout(SkyVirtualChannel* vchannel, int32_t now_ms, int32_t timeout_ms);
+void sky_vc_poll_arq_state_timeout(SkyVirtualChannel* vchannel, tick_t now, tick_t timeout);
 
 
 
@@ -85,16 +85,16 @@ int sky_vc_can_recall(SkyVirtualChannel* vchannel, int sequence);
 int sky_vc_schedule_resend(SkyVirtualChannel* arqRing, int sequence);
 
 // This is called with the head-rx sequence provided by an arq-control-extension
-void sky_vc_update_tx_sync(SkyVirtualChannel* vchannel, int peer_rx_head_sequence_by_ctrl, int32_t now_ms);
+void sky_vc_update_tx_sync(SkyVirtualChannel* vchannel, int peer_rx_head_sequence_by_ctrl, tick_t now);
 
 // Fills the length and sequence of the next packet to be transmitted, if the ring is not empty. Returns 0/errorcode.
 int sky_vc_peek_next_tx_size_and_sequence(SkyVirtualChannel* vchannel, int include_resend, int* length, int* sequence);
 
 // Returns boolean 0/1 as to if there is content to be sent on this virtual channel.
-int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
+int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, tick_t now, uint16_t frames_sent_in_this_vc_window);
 
 // Fills the frame with a packet if there is something to send. Returns boolean 0/1 as to if it actually wrote a frame.
-int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFrame* frame, int32_t now_ms, uint16_t frames_sent_in_this_vc_window);
+int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFrame* frame, tick_t now, uint16_t frames_sent_in_this_vc_window);
 //======================================================================================================================
 //======================================================================================================================
 
@@ -106,7 +106,7 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, void* src, int length);
 
 // Pushes a radio received message of particular sequence to buffer.
-int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, void* src, int length, int sequence, int32_t now_ms);
+int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, void* src, int length, int sequence, tick_t now);
 
 // Read next message to tgt buffer. Return number of bytes written on success, or negative error code.
 int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int* sequence);
@@ -115,7 +115,7 @@ int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int* seque
 int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* vchannel);
 
 // This is called with the head-tx sequence provided by an arq-control-extension
-void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequence_by_ctrl, int32_t now_ms);
+void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequence_by_ctrl, tick_t now);
 
 // Processes the content
 void sky_vc_process_content(SkyVirtualChannel* vchannel,
@@ -125,7 +125,7 @@ void sky_vc_process_content(SkyVirtualChannel* vchannel,
 							SkyPacketExtension* ext_ctrl,
 							SkyPacketExtension* ext_handshake,
 							SkyPacketExtension* ext_rrequest,
-							timestamp_t now_ms);
+							tick_t now);
 //======================================================================================================================
 //======================================================================================================================
 

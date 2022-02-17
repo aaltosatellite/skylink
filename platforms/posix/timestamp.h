@@ -5,7 +5,7 @@
 
 /* Timestamps in microsecond, 32 bits.
  * (wraps around every 4295 seconds) */
-typedef uint32_t timestamp_t;
+typedef int32_t timestamp_t;
 typedef int32_t timediff_t;
 
 timestamp_t get_timestamp();

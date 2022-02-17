@@ -24,7 +24,7 @@ void sky_tx_test(int load){
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
-extern timestamp_t _global_time_now_ms;
+extern tick_t _global_ticks_now;
 
 void sky_tx_test_cycle(){
 	uint8_t tgt[1000];
@@ -37,15 +37,15 @@ void sky_tx_test_cycle(){
 
 
 	int golay_on = randint_i32(1,10) <= 5;
-	int32_t now_ms = randint_i32(0, MOD_TIME_MS-1);
-	_global_time_now_ms = now_ms;
+	tick_t now = randint_i32(0, MOD_TIME_TICKS - 1);
+	_global_ticks_now = now;
 
 	int mac_shift_threshold = randint_i32(config->mac_idle_frames_per_window / 2, config->mac_idle_frames_per_window * 2);
-	config->mac.shift_threshold_ms = mac_shift_threshold;
+	config->mac.shift_threshold_ticks = mac_shift_threshold;
 
 
 	int arq_timeout = randint_i32(100,30000);
-	config->arq_timeout_ms = arq_timeout;
+	config->arq_timeout_ticks = arq_timeout;
 
 	int auth_required[SKY_NUM_VIRTUAL_CHANNELS];
 	int array_tx_seq0[SKY_NUM_VIRTUAL_CHANNELS];
@@ -107,8 +107,8 @@ void sky_tx_test_cycle(){
 		self->mac->frames_sent_in_current_window_per_vc[vc] = frames_sent_per_vc[vc];
 		self->mac->total_frames_sent_in_current_window = total_frames_sent;
 
-		spin_to_seq(self->virtual_channels[vc], self2->virtual_channels[vc], array_tx_seq0[vc], now_ms);
-		spin_to_seq(self2->virtual_channels[vc], self->virtual_channels[vc], array_rx_seq0[vc], now_ms);
+		spin_to_seq(self->virtual_channels[vc], self2->virtual_channels[vc], array_tx_seq0[vc], now);
+		spin_to_seq(self2->virtual_channels[vc], self->virtual_channels[vc], array_rx_seq0[vc], now);
 		assert(self->virtual_channels[vc]->sendRing->head_sequence == array_tx_seq0[vc]);
 		assert(self->virtual_channels[vc]->rcvRing->head_sequence == array_rx_seq0[vc]);
 
@@ -140,13 +140,13 @@ void sky_tx_test_cycle(){
 			//_rx_since = arq_timeout;
 		}
 
-		arq_tx_ts[vc] = wrap_time_ms(now_ms - _tx_since);
-		arq_rx_ts[vc] = wrap_time_ms(now_ms - _rx_since);
-		self->virtual_channels[vc]->last_tx_ms = arq_tx_ts[vc];
-		self->virtual_channels[vc]->last_rx_ms = arq_rx_ts[vc];
+		arq_tx_ts[vc] = wrap_time_ticks(now - _tx_since);
+		arq_rx_ts[vc] = wrap_time_ticks(now - _rx_since);
+		self->virtual_channels[vc]->last_tx_tick = arq_tx_ts[vc];
+		self->virtual_channels[vc]->last_rx_tick = arq_rx_ts[vc];
 
-		last_ctrl[vc] = wrap_time_ms(now_ms - randint_i32(1, arq_timeout/2));
-		self->virtual_channels[vc]->last_ctrl_send = last_ctrl[vc];
+		last_ctrl[vc] = wrap_time_ticks(now - randint_i32(1, arq_timeout / 2));
+		self->virtual_channels[vc]->last_ctrl_send_tick = last_ctrl[vc];
 
 		if(arq_on[vc]){
 			stuff_in_horizon[vc] = 0;
@@ -158,7 +158,7 @@ void sky_tx_test_cycle(){
 				int _seq = wrap_sequence(
 						array_rx_seq0[vc] + 1 + randint_i32(0, self->virtual_channels[vc]->rcvRing->horizon_width - 1));
 				//PRINTFF(0,"h(%d) hz(%d) ", self->virtual_channels[vc]->rcvRing->head_sequence, self->virtual_channels[vc]->rcvRing->horizon_width);
-				sky_vc_push_rx_packet(self->virtual_channels[vc], tgt, _len, _seq, now_ms); //this should not interfere with ts's
+				sky_vc_push_rx_packet(self->virtual_channels[vc], tgt, _len, _seq, now); //this should not interfere with ts's
 				//PRINTFF(0,"seq0(%d) _seq(%d) h(%d)\n", array_rx_seq0[vc], _seq, self->virtual_channels[vc]->rcvRing->head_sequence);
 				assert(rcvRing_get_horizon_bitmap(self->virtual_channels[vc]->rcvRing) != 0);
 			}
@@ -178,16 +178,16 @@ void sky_tx_test_cycle(){
 	}
 
 	int mac_silence = randint_i32(0, mac_shift_threshold * 2);
-	int mac_last_belief_update = wrap_time_ms(now_ms - mac_silence);
+	int mac_last_belief_update = wrap_time_ticks(now - mac_silence);
 	self->mac->last_belief_update = mac_last_belief_update;
 
 	int round_robin_start = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
 	self->mac->vc_round_robin_start = round_robin_start;
 
-	int my_window = randint_i32(config->mac.minimum_window_length, config->mac.maximum_window_length);
-	int peer_window = randint_i32(config->mac.minimum_window_length, config->mac.maximum_window_length);
-	int mac_gap = config->mac.default_gap_length;
-	int mac_tail = config->mac.default_tail_length;
+	int my_window = randint_i32(config->mac.minimum_window_length_ticks, config->mac.maximum_window_length_ticks);
+	int peer_window = randint_i32(config->mac.minimum_window_length_ticks, config->mac.maximum_window_length_ticks);
+	int mac_gap = config->mac.gap_constant_ticks;
+	int mac_tail = config->mac.tail_constant_ticks;
 	int mac_cycle = my_window + peer_window + mac_gap + mac_tail;
 	int mac_window_on = randint_i32(0, 10) < 5;
 	int mac_window_adjust_plan0 = randint_i32(-3, 3);
@@ -201,17 +201,18 @@ void sky_tx_test_cycle(){
 	int can_send = randint_i32(1,10) <= 7;
 	int mac_t0;
 	if(can_send){
-		mac_t0 = wrap_time_ms( (now_ms + mac_cycle * randint_i32(-1000, 0)) - randint_i32(0, my_window-1));
+		mac_t0 = wrap_time_ticks((now + mac_cycle * randint_i32(-1000, 0)) - randint_i32(0, my_window - 1));
 	}
 	else {
-		mac_t0 = wrap_time_ms( (now_ms + mac_cycle * randint_i32(-1000, 0)) - randint_i32(my_window +1, mac_cycle -1));
+		mac_t0 = wrap_time_ticks(
+				(now + mac_cycle * randint_i32(-1000, 0)) - randint_i32(my_window + 1, mac_cycle - 1));
 	}
-	self->mac->T0_ms = mac_t0;
+	self->mac->T0 = mac_t0;
 
 
 	int _content_to_send = 0;
 	for (int ii = 0; ii < SKY_NUM_VIRTUAL_CHANNELS; ++ii) {
-		_content_to_send |= sky_vc_content_to_send(self->virtual_channels[ii], config, now_ms, self->mac->frames_sent_in_current_window_per_vc[ii]);
+		_content_to_send |= sky_vc_content_to_send(self->virtual_channels[ii], config, now, self->mac->frames_sent_in_current_window_per_vc[ii]);
 		_content_to_send |= (hmac_reset_need[ii] && auth_required[ii]);
 	}
 	_content_to_send |= (total_frames_sent > 0);
@@ -248,9 +249,9 @@ void sky_tx_test_cycle(){
 
 	//PRINTFF(0,"\n\t%d\n",can_send);
 	if(mac_silence > mac_shift_threshold){
-		assert(self->mac->last_belief_update == now_ms);
+		assert(self->mac->last_belief_update == now);
 		int m = mac_cycle;
-		int dt = wrap_time_ms(now_ms - self->mac->T0_ms);
+		int dt = wrap_time_ticks(now - self->mac->T0);
 		if( (((dt % m) + m) % m) < my_window){
 			can_send = 1;
 		} else {
@@ -259,14 +260,14 @@ void sky_tx_test_cycle(){
 	}
 
 	if(mac_silence > mac_shift_threshold){
-		assert(self->mac->last_belief_update == now_ms);
+		assert(self->mac->last_belief_update == now);
 	}
 
 	if(!can_send){
 		if(ret != 0){
 			PRINTFF(0,"\t%d\n", mac_silence > mac_shift_threshold);
-			PRINTFF(0,"\tnow %d\n", now_ms);
-			PRINTFF(0,"\tt0: %d  (%d)\n", mac_t0, self->mac->T0_ms);
+			PRINTFF(0,"\tnow %d\n", now);
+			PRINTFF(0,"\tt0: %d  (%d)\n", mac_t0, self->mac->T0);
 			PRINTFF(0,"\tcycle: %d   (%d)\n", mac_cycle, self->mac->gap_constant + self->mac->tail_constant + self->mac->my_window_length + self->mac->peer_window_length);
 			PRINTFF(0,"\tmy window: %d   (%d)\n", my_window, self->mac->my_window_length);
 		}
@@ -279,12 +280,12 @@ void sky_tx_test_cycle(){
 		if(mac_window_on == 0){
 			if(mac_window_adjust_plan0 <= -2){
 				//PRINTFF(0,"-");
-				assert(self->mac->my_window_length == MAX(config->mac.minimum_window_length, my_window - config->mac.window_adjust_increment) );
+				assert(self->mac->my_window_length == MAX(config->mac.minimum_window_length_ticks, my_window - config->mac.window_adjust_increment_ticks) );
 				assert(self->mac->window_adjust_plan == 0);
 			}
 			else if(mac_window_adjust_plan0 >= 2){
 				//PRINTFF(0,"+");
-				assert(self->mac->my_window_length == MIN(config->mac.maximum_window_length, my_window + config->mac.window_adjust_increment) );
+				assert(self->mac->my_window_length == MIN(config->mac.maximum_window_length_ticks, my_window + config->mac.window_adjust_increment_ticks) );
 				assert(self->mac->window_adjust_plan == 0);
 			} else {
 				assert(self->mac->my_window_length == my_window);
@@ -316,9 +317,9 @@ void sky_tx_test_cycle(){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		if(arq_on[i]){
 			if(arq_rx_timed_out[i] || arq_tx_timed_out[i]){
-				assert(self->virtual_channels[i]->last_tx_ms == 0);
-				assert(self->virtual_channels[i]->last_rx_ms == 0);
-				assert(self->virtual_channels[i]->last_ctrl_send == 0);
+				assert(self->virtual_channels[i]->last_tx_tick == 0);
+				assert(self->virtual_channels[i]->last_rx_tick == 0);
+				assert(self->virtual_channels[i]->last_ctrl_send_tick == 0);
 				assert(self->virtual_channels[i]->arq_state_flag == ARQ_STATE_OFF);
 				assert(self->virtual_channels[i]->sendRing->head == 0);
 				assert(self->virtual_channels[i]->sendRing->head_sequence == 0);
@@ -380,19 +381,19 @@ void sky_tx_test_cycle(){
 		if(arq_on[i] && (!arq_tx_timed_out[i]) && (!arq_rx_timed_out[i]) ){
 			int util_frame = frames_sent_per_vc[i] < self->conf->arq_idle_frames_per_window;
 			//assert(frame->flags & SKY_FLAG_ARQ_ON);
-			if(util_frame && (wrap_time_ms(now_ms - arq_tx_ts[i]) > (arq_timeout / 4)) ){
+			if(util_frame && (wrap_time_ticks(now - arq_tx_ts[i]) > (arq_timeout / 4)) ){
 				content = 1;
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
 				assert(ret == 1);
 			}
-			if(util_frame && (wrap_time_ms(now_ms - arq_rx_ts[i]) > (arq_timeout / 4)) ){
+			if(util_frame && (wrap_time_ticks(now - arq_rx_ts[i]) > (arq_timeout / 4)) ){
 				content = 1;
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
 				assert(ret == 1);
 			}
-			if(util_frame && (wrap_time_ms(now_ms - last_ctrl[i]) > (arq_timeout / 4)) ){
+			if(util_frame && (wrap_time_ticks(now - last_ctrl[i]) > (arq_timeout / 4)) ){
 				content = 1;
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
@@ -434,7 +435,7 @@ void sky_tx_test_cycle(){
 	}
 
 
-	if((content == 0) && (total_frames_sent < self->conf->mac_idle_frames_per_window) && ((now_ms - mac_last_belief_update) < self->conf->mac_idle_timeout_ms) ){
+	if((content == 0) && (total_frames_sent < self->conf->mac_idle_frames_per_window) && ((now - mac_last_belief_update) < self->conf->mac_idle_timeout_ticks) ){
 		content = 1;
 		deduced_vc = 0;
 	}

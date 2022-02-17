@@ -51,7 +51,7 @@ typedef uint16_t arq_seq_t;
 /* frames ========================================================================================== */
 struct sky_radio_frame {
 
-	timestamp_t rx_time_ms;
+	tick_t rx_time_ticks;
 
 	//uint8_t auth_verified;
 

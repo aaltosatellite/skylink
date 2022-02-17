@@ -3,6 +3,7 @@
 
 #include "skylink/skylink.h"
 #include "skylink/platform.h"
+#include "../platforms/posix/timestamp.h"
 
 /*
  * Initialize modem (interface)

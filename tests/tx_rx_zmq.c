@@ -19,7 +19,7 @@
 #define MODE_RX		11
 #define MODE_TX		22
 
-extern timestamp_t _global_time_now_ms;
+extern tick_t _global_ticks_now;
 
 //extern double relative_time_speed;
 
@@ -51,7 +51,7 @@ typedef struct skylink_peer {
 } SkylinkPeer;
 
 
-extern timestamp_t _global_time_now_ms;
+extern tick_t _global_ticks_now;
 
 double relative_time_speed = 0.2;
 
@@ -62,13 +62,13 @@ int32_t rget_time_ms(){
 	X = (int64_t) ms;
 	X = X % 60000000;
 	int32_t rms = (int32_t) X;
-	rms = rms % MOD_TIME_MS;
+	rms = rms % MOD_TIME_TICKS;
 	return rms;
 }
 
 void rel_sky_tick(){
 	int32_t _now = rget_time_ms();
-	_global_time_now_ms = _now;
+	_global_ticks_now = _now;
 }
 
 void rsleep_us(int64_t us){
@@ -288,7 +288,7 @@ void* ether_cycle(void* arg){
 			if(peer->physicalParams.RADIO_MODE == MODE_RX){
 				memcpy(peer->rcvFrame->raw, &tgt[4], r-4);
 				peer->rcvFrame->length = r-4;
-				peer->rcvFrame->rx_time_ms = sky_get_tick_time();
+				peer->rcvFrame->rx_time_ticks = sky_get_tick_time();
 				int rxr = sky_rx(peer->self, peer->rcvFrame, 1);
 				PRINTFF(0,"#3 %d bytes successfully rx'ed. rx ret: %d\n", r, rxr);
 				peer_packets_from_ring_to_zmq(peer);

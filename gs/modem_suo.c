@@ -9,6 +9,7 @@
 #include "skylink/skylink.h"
 #include "skylink/frame.h"
 #include "skylink/diag.h"
+#include "../platforms/posix/timestamp.h"
 
 #include "suo.h"
 #include "frame-io/zmq_interface.h"
@@ -147,7 +148,7 @@ int modem_rx(SkyRadioFrame* sky_frame, int flags) {
 
 		// Copy data from Suo frame to Skylink frame
 		sky_frame->length = suo_frame->data_len;
-		sky_frame->rx_time_ms = suo_frame->hdr.timestamp / 1e6;
+		sky_frame->rx_time_ticks = suo_frame->hdr.timestamp / 1e6;
 		//frame->meta.rssi = suo_frame.metadata[0];
 		memcpy(sky_frame->raw, suo_frame->data, suo_frame->data_len);
 

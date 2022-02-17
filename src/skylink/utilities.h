@@ -9,7 +9,7 @@
 #include <time.h>
 #include "skylink/platform.h"
 
-#define MOD_TIME_MS		16777216
+#define MOD_TIME_TICKS		16777216
 
 #define MAX(x,y)		(x > y ? x : y)
 #define MIN(x,y)		(x < y ? x : y)
@@ -35,20 +35,20 @@ int x_in_u8_array(uint8_t x, const uint8_t* array, int length);
 
 int x_in_u16_array(uint16_t x, const uint16_t* array, int length);
 
-int32_t wrap_time_ms(int32_t time_ms);
+int32_t wrap_time_ticks(tick_t time_ticks);
 // GENERAL PURPOSE =====================================================================================================
 
 
 // GLOBAL TIME =====================================================================================================
-int sky_tick(timestamp_t time_ms);
-timestamp_t sky_get_tick_time();
+int sky_tick(tick_t time_in_ticks);
+tick_t sky_get_tick_time();
 // GLOBAL TIME =====================================================================================================
 
 
 
 
 // == unix =============================================================================================================
-void* instr_malloc(size_t n);
+void* instrumented_malloc(size_t n);
 void report_allocation();
 // == unix =============================================================================================================
 

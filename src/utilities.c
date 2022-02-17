@@ -100,8 +100,8 @@ int x_in_u16_array(uint16_t x, const uint16_t* array, int length){
 	return -1;
 }
 
-int32_t wrap_time_ms(int32_t time_ms){
-	return positive_modulo_true(time_ms, MOD_TIME_MS);
+int32_t wrap_time_ticks(tick_t time_ticks){
+	return positive_modulo_true(time_ticks, MOD_TIME_TICKS);
 }
 
 
@@ -111,19 +111,19 @@ int32_t wrap_time_ms(int32_t time_ms){
 
 
 // GLOBAL TIME =====================================================================================================
-timestamp_t _global_time_now_ms = 0;
+tick_t _global_ticks_now = 0;
 
-int sky_tick(timestamp_t time_ms){
+int sky_tick(tick_t time_in_ticks){
 	int ret = 0;
-	if(time_ms != _global_time_now_ms){
+	if(time_in_ticks != _global_ticks_now){
 		ret = 1;
 	}
-	_global_time_now_ms = MAX(0, _global_time_now_ms + 1);
+	_global_ticks_now = MAX(0, _global_ticks_now + 1);
 	return ret;
 }
 
-timestamp_t sky_get_tick_time(){
-	return _global_time_now_ms;
+tick_t sky_get_tick_time(){
+	return _global_ticks_now;
 }
 // GLOBAL TIME =====================================================================================================
 
@@ -133,14 +133,12 @@ timestamp_t sky_get_tick_time(){
 
 // UNIX ================================================================================================================
 #ifdef __unix__
-#include <stdlib.h>
-#include <stdio.h>
 static size_t allocated = 0;
 static int allocations = 0;
 
 
 
-void* instr_malloc(size_t n){
+void* instrumented_malloc(size_t n){
 	printf("  (allocating %ld)\n", n); fflush(stdout);
 	allocated += n;
 	allocations++;
@@ -153,7 +151,6 @@ void report_allocation(){
 	printf("%d allocations.\n", allocations); fflush(stdout);
 	printf("=====================\n"); fflush(stdout);
 }
-
 
 
 #endif

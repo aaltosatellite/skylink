@@ -8,7 +8,7 @@
 #include "../src/skylink/reliable_vc.h"
 #include "tst_utilities.h"
 
-extern timestamp_t _global_time_now_ms;
+extern tick_t _global_ticks_now;
 
 void arq_system_test3_cycle();
 
@@ -49,14 +49,14 @@ void arq_system_test3_cycle(){
 	int32_t ts_last_ctrl = ts_base + randint_i32(0,2000);			//random times for all timestamps
 	int32_t ts_send = ts_base + randint_i32(0,2000);
 	int32_t ts_recv = ts_base + randint_i32(0,2000);
-	array->last_ctrl_send = ts_last_ctrl;
+	array->last_ctrl_send_tick = ts_last_ctrl;
 	int seq_send0 = randint_i32(0, ARQ_SEQUENCE_MODULO-1);				//sequence number for send dierction
 	int seq_recv0 = randint_i32(0, ARQ_SEQUENCE_MODULO-1);			//sequence number for receive direction
 	spin_to_seq(array, array_r, seq_send0, ts_send);							//spin the arrays into the sequences we want.
 	spin_to_seq(array_r, array, seq_recv0, ts_recv);
-	array->last_tx_ms = ts_send;										//spin function sets receive timestamp, but not tx
-	assert(array->last_tx_ms == ts_send);
-	assert(array->last_rx_ms == ts_recv);
+	array->last_tx_tick = ts_send;										//spin function sets receive timestamp, but not tx
+	assert(array->last_tx_tick == ts_send);
+	assert(array->last_rx_tick == ts_recv);
 	assert(array->sendRing->head == array->sendRing->tail);
 	assert(array->sendRing->head == array->sendRing->tx_head);
 	assert(array->sendRing->head_sequence == array->sendRing->tx_sequence);
@@ -66,8 +66,8 @@ void arq_system_test3_cycle(){
 	assert(array->rcvRing->head_sequence == seq_recv0);
 	assert(array->rcvRing->head_sequence == array->rcvRing->tail_sequence);
 
-	int now_ms = ts_base + randint_i32(2001, sky_config->arq_timeout_ms + 2000);
-	_global_time_now_ms = now_ms;
+	tick_t now = ts_base + randint_i32(2001, sky_config->arq_timeout_ticks + 2000);
+	_global_ticks_now = now;
 
 	//ARQ state
 	array->arq_state_flag = ARQ_STATE_OFF;
@@ -183,7 +183,7 @@ void arq_system_test3_cycle(){
 	}
 
 
-	sky_vc_process_content(array, pl, len_pl, ext_seq_ptr, ext_ctrl_ptr, ext_hs_ptr, ext_rr_ptr, now_ms);
+	sky_vc_process_content(array, pl, len_pl, ext_seq_ptr, ext_ctrl_ptr, ext_hs_ptr, ext_rr_ptr, now);
 
 
 	int wiped = 0;
@@ -207,8 +207,8 @@ void arq_system_test3_cycle(){
 			assert(array->rcvRing->head_sequence == head_move*1);
 			assert(array->rcvRing->tail == 0);
 			assert(array->rcvRing->head == head_move*1);
-			assert(array->last_rx_ms == now_ms);
-			assert(array->last_tx_ms == now_ms);
+			assert(array->last_rx_tick == now);
+			assert(array->last_tx_tick == now);
 			if(pl_through && (arq_seq > 0)){
 				assert(rcvRing_get_horizon_bitmap(array->rcvRing) != 0);
 			} else {
@@ -247,9 +247,9 @@ void arq_system_test3_cycle(){
 			assert(array->arq_state_flag == ARQ_STATE_IN_INIT);
 			assert(array->rcvRing->head_sequence == wrap_sequence(seq_recv0));
 			assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0));
-			assert(array->last_tx_ms == ts_send);
-			assert(array->last_rx_ms == ts_recv);
-			assert(array->last_ctrl_send == ts_last_ctrl);
+			assert(array->last_tx_tick == ts_send);
+			assert(array->last_rx_tick == ts_recv);
+			assert(array->last_ctrl_send_tick == ts_last_ctrl);
 			assert(rcvRing_get_horizon_bitmap(array->rcvRing) == 0);
 			assert(array->sendRing->resend_count == 0);
 		}
@@ -311,14 +311,14 @@ void arq_system_test3_cycle(){
 				int at_current = ctrl_peer_rx == seq_send1;
 				if((_after_tail && _before_head ) || at_current){
 					//PRINTFF(0,"H1 ");
-					assert(array->last_tx_ms == now_ms);
+					assert(array->last_tx_tick == now);
 					assert(array->sendRing->tail_sequence == ctrl_peer_rx);
 					new_seq_send0 = ctrl_peer_rx;
 					new_n_in_tail = wrap_sequence(array->sendRing->tx_sequence - new_seq_send0);
 					assert(new_n_in_tail == (n_in_tail - wrap_sequence(ctrl_peer_rx - seq_send0)));
 				} else {
 					//PRINTFF(0,"H2 ");
-					assert(array->last_tx_ms == ts_send);
+					assert(array->last_tx_tick == ts_send);
 					assert(array->sendRing->tail_sequence == seq_send0);
 				}
 
@@ -375,9 +375,9 @@ void arq_system_test3_cycle(){
 
 
 			if(last_rx_updated){
-				assert(array->last_rx_ms == now_ms);
+				assert(array->last_rx_tick == now);
 			} else {
-				assert(array->last_rx_ms == ts_recv);
+				assert(array->last_rx_tick == ts_recv);
 			}
 
 		}

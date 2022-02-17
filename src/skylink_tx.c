@@ -15,8 +15,8 @@
 
 
 
-static int _content_in_vc(SkyHandle self, int vc, int32_t now_ms){
-	int r = sky_vc_content_to_send(self->virtual_channels[vc], self->conf, now_ms, self->mac->frames_sent_in_current_window_per_vc[vc]);
+static int _content_in_vc(SkyHandle self, int vc, tick_t now){
+	int r = sky_vc_content_to_send(self->virtual_channels[vc], self->conf, now, self->mac->frames_sent_in_current_window_per_vc[vc]);
 	return r;
 }
 
@@ -76,18 +76,18 @@ static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* fram
 static void _sky_tx_advance_vc_round_robin(SkyHandle self){
 	self->mac->vc_round_robin_start = (self->mac->vc_round_robin_start + 1) % SKY_NUM_VIRTUAL_CHANNELS;
 }
-static int _sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
+static int _sky_tx_pick_vc(SkyHandle self, tick_t now){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		int vc = (self->mac->vc_round_robin_start + i) % SKY_NUM_VIRTUAL_CHANNELS;
 		if(_sky_tx_extension_needed_hmac_reset(self, vc)){
 			return vc;
 		}
-		if(_content_in_vc(self, vc, now_ms) > 0){
+		if(_content_in_vc(self, vc, now) > 0){
 			return vc;
 		}
 	}
 	// This was here to ensure that the peer advances its window through TDD gap even if there are no messages to send
-	int mac_active = abs(sky_get_tick_time() - self->mac->last_belief_update) < self->conf->mac_idle_timeout_ms;
+	int mac_active = abs(sky_get_tick_time() - self->mac->last_belief_update) < self->conf->mac_idle_timeout_ticks;
 	int idle_frame_needed = self->mac->total_frames_sent_in_current_window < self->conf->mac_idle_frames_per_window;
 	if(mac_active && idle_frame_needed){
 		return 0;
@@ -96,9 +96,9 @@ static int _sky_tx_pick_vc(SkyHandle self, int32_t now_ms){
 }
 
 
-static void _sky_tx_poll_arq_timeouts(SkyHandle self, int32_t now_ms, int32_t timeout_ms){
+static void _sky_tx_poll_arq_timeouts(SkyHandle self, tick_t now, tick_t timeout){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		sky_vc_poll_arq_state_timeout(self->virtual_channels[i], now_ms, timeout_ms);
+		sky_vc_poll_arq_state_timeout(self->virtual_channels[i], now, timeout);
 	}
 }
 
@@ -106,11 +106,14 @@ static void _sky_tx_poll_arq_timeouts(SkyHandle self, int32_t now_ms, int32_t ti
 
 /* Returns boolean value 0/1 as to if there is need to actually send something. */
 int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
-	timestamp_t now_ms = sky_get_tick_time();
-	mac_silence_shift_check(self->mac, &self->conf->mac, now_ms);
-	int can_send = mac_can_send(self->mac, now_ms);
-	_sky_tx_poll_arq_timeouts(self, now_ms, self->conf->arq_timeout_ms);
-	int vc = _sky_tx_pick_vc(self, now_ms);
+	if(frame == NULL){
+		return 0;
+	}
+	tick_t now = sky_get_tick_time();
+	mac_silence_shift_check(self->mac, &self->conf->mac, now);
+	int can_send = mac_can_send(self->mac, now);
+	_sky_tx_poll_arq_timeouts(self, now, self->conf->arq_timeout_ticks);
+	int vc = _sky_tx_pick_vc(self, now);
 	int content_to_send = (vc >= 0);
 	_sky_tx_track_tdd_state(self, can_send, content_to_send);
 
@@ -123,6 +126,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 	const SkyVCConfig* vc_conf = &self->conf->vc[vc];
 
 	/* Identity gets copied to the raw-vc from conf, and initialize other fields. */
+	sky_frame_clear(frame);
 	frame->start_byte = SKYLINK_START_BYTE;
 	memcpy(frame->identity, self->conf->identity, SKY_IDENTITY_LEN);
 	frame->vc = (uint8_t)vc;
@@ -132,7 +136,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 
 
 	/* Add TDD extension. */
-	mac_set_frame_fields(self->mac, frame, now_ms);
+	mac_set_frame_fields(self->mac, frame, now);
 
 
 	/* ARQ status. */
@@ -146,7 +150,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 
 
 	/* Add necessary extensions and a payload if one is in the ring buffer. This is a rather involved function. */
-	sky_vc_fill_frame(self->virtual_channels[vc], self->conf, frame, now_ms,
+	sky_vc_fill_frame(self->virtual_channels[vc], self->conf, frame, now,
 					  self->mac->frames_sent_in_current_window_per_vc[vc]);
 
 

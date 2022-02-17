@@ -144,7 +144,9 @@ class VCCommands:
         Get number of free bytes in the virtual channel buffer.
         """
         status = await self.get_state()
-        return status.vc[self.vc].buffer_free
+        ret = status.vc[self.vc].buffer_free
+        print("get_free returns:", ret)
+        return ret
 
 
     async def get_stats(self) -> SkyStatistics:

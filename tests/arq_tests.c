@@ -113,7 +113,7 @@ void arq_system_test2_cycle(){
 	SkyVirtualChannel* array_r = new_arq_ring(&config);
 
 	SkyConfig* sky_conf = new_vanilla_config();
-	sky_conf->arq_timeout_ms = randint_i32(4000, 25000);
+	sky_conf->arq_timeout_ticks = randint_i32(4000, 25000);
 	sky_conf->arq_idle_frames_per_window = randint_i32(0, 3);
 
 	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);			//virtual channel randomized
@@ -121,7 +121,7 @@ void arq_system_test2_cycle(){
 	int32_t ts_last_ctrl = ts_base + randint_i32(0,5000);			//random times for all timestamps
 	int32_t ts_send = ts_base + randint_i32(0,5000);
 	int32_t ts_recv = ts_base + randint_i32(0,5000);
-	array->last_ctrl_send = ts_last_ctrl;
+	array->last_ctrl_send_tick = ts_last_ctrl;
 	int seq0 = randint_i32(0, ARQ_SEQUENCE_MODULO-1);				//sequence number for send dierction
 	int seq_rcv = randint_i32(0, ARQ_SEQUENCE_MODULO-1);			//sequence number for receive direction
 	array->arq_state_flag = ARQ_STATE_OFF;								//random state.
@@ -133,9 +133,9 @@ void arq_system_test2_cycle(){
 	}
 	spin_to_seq(array, array_r, seq0, ts_send);							//spin the arrays into the sequences we want.
 	spin_to_seq(array_r, array, seq_rcv, ts_recv);
-	array->last_tx_ms = ts_send;										//spin function sets receive timestamp, but not tx
-	assert(array->last_tx_ms == ts_send);
-	assert(array->last_rx_ms == ts_recv);
+	array->last_tx_tick = ts_send;										//spin function sets receive timestamp, but not tx
+	assert(array->last_tx_tick == ts_send);
+	assert(array->last_rx_tick == ts_recv);
 
 	//n_in_tail is how much send side tail lags tx_head. These are sent but unacked packets. (packets that can be recalled)
 	int n_in_tail = randint_i32(0, ARQ_MAXIMUM_HORIZON-1);
@@ -186,7 +186,7 @@ void arq_system_test2_cycle(){
 
 	//arq handshake
 	int frames_sent_in_vc = randint_i32(0, sky_conf->arq_idle_frames_per_window + 2);
-	int now_ms = ts_base + randint_i32(sky_conf->arq_timeout_ms / 10, sky_conf->arq_timeout_ms + 1400);
+	int now_ms = ts_base + randint_i32(sky_conf->arq_timeout_ticks / 10, sky_conf->arq_timeout_ticks + 1400);
 
 	int own_recall = randint_i32(0, 10) < 4;
 	int own_recall_mask_i = randint_i32(0, 13);
@@ -194,8 +194,8 @@ void arq_system_test2_cycle(){
 	if (own_recall){
 		int s = wrap_sequence(seq_rcv + 1 + own_recall_mask_i);
 		sky_vc_push_rx_packet(array, msgs[0]->data, msgs[0]->length, s, now_ms);
-		assert(array->last_rx_ms == ts_recv);
-		assert(array->last_tx_ms == ts_send);
+		assert(array->last_rx_tick == ts_recv);
+		assert(array->last_tx_tick == ts_send);
 	}
 
 	SkyRadioFrame* frame = new_frame();
@@ -261,9 +261,9 @@ void arq_system_test2_cycle(){
 		}
 
 		int b0 = (frames_sent_in_vc < sky_conf->arq_idle_frames_per_window);
-		int b1 = wrap_time_ms(now_ms - ts_send) > sky_conf->arq_timeout_ms /4;
-		int b2 = wrap_time_ms(now_ms - ts_recv) > sky_conf->arq_timeout_ms/4;
-		int b3 = wrap_time_ms(now_ms - ts_last_ctrl) > sky_conf->arq_timeout_ms/4;
+		int b1 = wrap_time_ticks(now_ms - ts_send) > sky_conf->arq_timeout_ticks / 4;
+		int b2 = wrap_time_ticks(now_ms - ts_recv) > sky_conf->arq_timeout_ticks / 4;
+		int b3 = wrap_time_ticks(now_ms - ts_last_ctrl) > sky_conf->arq_timeout_ticks / 4;
 		if((b0 && (b1 || b2 || b3)) || (frame->flags & SKY_FLAG_HAS_PAYLOAD)){
 			assert(extArqCtrl != NULL);
 			assert(sky_ntoh16( extArqCtrl->ARQCtrl.tx_sequence ) == seq1);
@@ -275,7 +275,7 @@ void arq_system_test2_cycle(){
 			assert(sky_ntoh16( extArqCtrl->ARQCtrl.rx_sequence ) == seq_rcv);
 		} else {
 			//PRINTFF(0,"%d %d %d %d\n", b0, b1, b2, b3);
-			//PRINTFF(0,"%d %d %d\n", extArqCtrl == NULL, ts_base, MOD_TIME_MS);
+			//PRINTFF(0,"%d %d %d\n", extArqCtrl == NULL, ts_base, MOD_TIME_TICKS);
 			assert(extArqCtrl == NULL);
 		}
 

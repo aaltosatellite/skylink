@@ -42,20 +42,20 @@ SkyConfig* new_vanilla_config(){
 	config->hmac.maximum_jump 			= 30;
 	memcpy(config->hmac.key, arr_, config->hmac.key_length);
 
-	config->mac.default_gap_length 			= 600;
-	config->mac.default_tail_length 		= 86;
+	config->mac.gap_constant_ticks 			= 600;
+	config->mac.tail_constant_ticks 			= 86;
 
-	config->mac.maximum_window_length 		= 450;
-	config->mac.default_window_length 		= 320;
-	config->mac.minimum_window_length 		= 120;
+	config->mac.maximum_window_length_ticks 		= 450;
+	config->mac.default_window_length_ticks 		= 320;
+	config->mac.minimum_window_length_ticks 		= 120;
 
-	config->mac.window_adjust_increment		= 6;
+	config->mac.window_adjust_increment_ticks		= 6;
 
 	config->mac.unauthenticated_mac_updates = 0;
-	config->mac.shift_threshold_ms 			= 4000;
+	config->mac.shift_threshold_ticks 			= 4000;
 
-	config->arq_timeout_ms 					= 26000;
-	config->mac_idle_timeout_ms				= 30000;
+	config->arq_timeout_ticks 					= 26000;
+	config->mac_idle_timeout_ticks				= 30000;
 	config->arq_idle_frames_per_window		= 2;
 	config->mac_idle_frames_per_window		= 2;
 	config->mac_adjustment_period			= 2;

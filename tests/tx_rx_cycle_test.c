@@ -16,7 +16,7 @@
 #define STATE_TX		1
 
 
-extern timestamp_t _global_time_now_ms;
+extern tick_t _global_ticks_now;
 
 
 
@@ -62,7 +62,7 @@ typedef struct {
 	JobPeer peer1;
 	JobPeer peer2;
 	SkyRadioFrame frame;
-	uint64_t now_ms;
+	uint64_t now;
 	double byterate;
 	double corrupt_rate;
 	int lag_ms;
@@ -364,7 +364,7 @@ void test1_round(uint64_t NN, int print_on){
 	job.peer2.under_send = NULL;
 	job.peer1.tx_end = 0;
 	job.peer2.tx_end = 0;
-	job.now_ms = 9;
+	job.now = 9;
 	job.byterate 		= 2*1200.0; //param
 	job.lag_ms 			= 6; 		//param
 	job.peer1.pl_rate 	= 3.0; 		//param
@@ -380,12 +380,12 @@ void test1_round(uint64_t NN, int print_on){
 	job.lostFrames 		= new_eframe_list();
 	job.receivedFrames 	= new_eframe_list();
 	job.missedFrames 	= new_eframe_list();
-	sky_tick(job.now_ms);
+	sky_tick(job.now);
 	sky_vc_wipe_to_arq_init_state(handle1->virtual_channels[0]);
 
 	for (uint64_t i = 0; i < NN; ++i) {
-		job.now_ms++;
-		_global_time_now_ms = job.now_ms;
+		job.now++;
+		_global_ticks_now = job.now;
 		step_forward(1, &job);
 		step_forward(2, &job);
 		if((i % 60000 == 0) && print_on){
@@ -433,9 +433,9 @@ static void step_forward(int which, TXRXJob* job){
 
 
 	//generate new pl to send queue
-	if((job->now_ms > 10000) && roll_chance(peer->pl_rate/1000.0) && !sky_vc_send_buffer_is_full(
+	if((job->now > 10000) && roll_chance(peer->pl_rate / 1000.0) && !sky_vc_send_buffer_is_full(
 			peer->handle->virtual_channels[0])){
-		Payload* pl = new_random_payload(target, job->now_ms);
+		Payload* pl = new_random_payload(target, job->now);
 		int push_ret = sky_vc_push_packet_to_send(peer->handle->virtual_channels[0], pl->msg->data, pl->msg->length);
 		assert(push_ret != SKY_RET_RING_RING_FULL);
 		assert(push_ret != SKY_RET_RING_BUFFER_FULL);
@@ -444,11 +444,11 @@ static void step_forward(int which, TXRXJob* job){
 		payload_list_append(plList, pl);
 	}
 
-	if(job->now_ms > 15500){
+	if(job->now > 15500){
 		int state_on1 = job->peer1.handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON;
 		int state_on2 = job->peer2.handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON;
 		if(!state_on1 || !state_on2){
-			PRINTFF(0,"now:%ld   states_on:%d %d\n", job->now_ms, state_on1, state_on2);
+			PRINTFF(0, "now:%ld   states_on:%d %d\n", job->now, state_on1, state_on2);
 		}
 		assert(state_on1);
 		assert(state_on2);
@@ -474,29 +474,29 @@ static void step_forward(int which, TXRXJob* job){
 		}
 
 		assert(job->inEther->n < 60);
-		assert(eframe->tx_start <= job->now_ms);
-		assert((eframe->tx_end + job->lag_ms) >= job->now_ms);
+		assert(eframe->tx_start <= job->now);
+		assert((eframe->tx_end + job->lag_ms) >= job->now);
 		//even if not yet ready, check if device will miss this by speaking over the packet.
-		int in_reception = ((eframe->tx_start + job->lag_ms) <= job->now_ms) && ((eframe->tx_end + job->lag_ms) >= job->now_ms);
+		int in_reception = ((eframe->tx_start + job->lag_ms) <= job->now) && ((eframe->tx_end + job->lag_ms) >= job->now);
 		if(in_reception && (peer->radio_state == STATE_TX)){
 			eframe->rx_ok = 0;
 		}
 
 		//at end just now?
-		int arrives_now = (eframe->tx_end + job->lag_ms) == job->now_ms;
+		int arrives_now = (eframe->tx_end + job->lag_ms) == job->now;
 		if(!arrives_now){
 			continue;
 		}
 
 		if(eframe->rx_ok){
-			eframe->frame.rx_time_ms = job->now_ms;
+			eframe->frame.rx_time_ticks = job->now;
 			sky_rx(peer->handle, &eframe->frame, 1);
 			if(sky_vc_count_readable_rcv_packets(peer->handle->virtual_channels[0])){
 				int seq = -1;
 				int red = sky_vc_read_next_received(peer->handle->virtual_channels[0], tgt, &seq);
 				assert(red >= 0);
 				assert(seq >= 0);
-				payload_list_mark_as_received(peers_plList, tgt, red, seq, which, job->now_ms);
+				payload_list_mark_as_received(peers_plList, tgt, red, seq, which, job->now);
 			}
 			eframe_list_append(job->receivedFrames, eframe);
 			eframe_list_pop(job->inEther, i);
@@ -512,10 +512,10 @@ static void step_forward(int which, TXRXJob* job){
 	if(peer->radio_state != STATE_TX){
 		int r_tx = sky_tx(peer->handle, &job->frame, 1);
 		if(r_tx){
-			uint64_t tx_end = job->now_ms + ((job->frame.length * 1000) / job->byterate) + 1;
-			EtherFrame* eframe = new_eframe(job->frame, job->now_ms, tx_end, target);
+			uint64_t tx_end = job->now + ((job->frame.length * 1000) / job->byterate) + 1;
+			EtherFrame* eframe = new_eframe(job->frame, job->now, tx_end, target);
 			corrupt_bytearray(eframe->frame.raw, eframe->frame.length, job->corrupt_rate);
-			double loss_chance = get_loss_chance(job->now_ms, job->loss_rate0, job->spin_rate_rpm, job->silent_section, job->spin_on);
+			double loss_chance = get_loss_chance(job->now, job->loss_rate0, job->spin_rate_rpm, job->silent_section, job->spin_on);
 			int lost = roll_chance(loss_chance);
 			if(lost){
 				eframe_list_append(job->lostFrames, eframe);
@@ -529,9 +529,9 @@ static void step_forward(int which, TXRXJob* job){
 
 
 	if(peer->radio_state == STATE_TX){
-		assert(peer->tx_end >= job->now_ms);
+		assert(peer->tx_end >= job->now);
 	}
-	if((peer->radio_state == STATE_TX) && (peer->tx_end == job->now_ms)){
+	if((peer->radio_state == STATE_TX) && (peer->tx_end == job->now)){
 		peer->radio_state = STATE_RX;
 	}
 }

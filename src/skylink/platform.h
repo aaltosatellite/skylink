@@ -8,17 +8,13 @@
 #if defined(__unix__) // UNIX/POSIX
 #include <time.h>
 
-/* Timestamps in microsecond, 32 bits. (wraps around every 4295 seconds) */
-typedef int32_t timestamp_t;
-typedef int32_t timediff_t;
-typedef int32_t time_ms_t;
 
-timestamp_t get_timestamp();
+/* Tick is the time measurement primitive (often milliseconds), 32 bits. */
+typedef int32_t tick_t;
 
-#define TIMESTAMP_MS ((timestamp_t)1000)
 
 //#include "utilities.h"
-//#define SKY_MALLOC instr_malloc
+//#define SKY_MALLOC instrumented_malloc
 #include <stdlib.h>
 #define SKY_MALLOC malloc
 #define SKY_FREE free
@@ -29,12 +25,7 @@ timestamp_t get_timestamp();
 
 
 /* Timestamps in microsecond, 32 bits (wraps around every 4295 seconds) */
-typedef uint32_t timestamp_t;
-typedef int32_t timediff_t;
-
-timestamp_t get_timestamp();
-
-#define TIMESTAMP_MS ((timestamp_t)1000)
+typedef int32_t tick_t;
 
 #define SKY_MALLOC pvPortMalloc
 #define SKY_FREE pvPortFree

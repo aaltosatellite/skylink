@@ -14,7 +14,7 @@
 
 #include "vc_interface.h"
 #include "modem.h"
-
+#include "../platforms/posix/timestamp.h"
 
 
 const uint8_t hmac_key[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
@@ -111,16 +111,16 @@ int main(int argc, char *argv[])
 	/*
 	 * MAC configurations
 	 */
-	config->mac.default_gap_length           = 800; // [ms]
-	config->mac.default_tail_length          = 100; // [ms]
+	config->mac.gap_constant_ticks           = 800; // [ms]
+	config->mac.tail_constant_ticks          = 100; // [ms]
 
-	config->mac.maximum_window_length        = 350; // [ms]
-	config->mac.minimum_window_length        = 250; // [ms]
-	config->mac.default_window_length        = 280; // [ms]
+	config->mac.maximum_window_length_ticks        = 350; // [ms]
+	config->mac.minimum_window_length_ticks        = 250; // [ms]
+	config->mac.default_window_length_ticks        = 280; // [ms]
 
-	config->mac.default_tail_length          = 86;  // [ms]
+	config->mac.tail_constant_ticks          = 86;  // [ms]
 	config->mac.unauthenticated_mac_updates  = 0;
-	config->mac.shift_threshold_ms           = 4000; // [ms]
+	config->mac.shift_threshold_ticks           = 4000; // [ms]
 
 	/*
 	 * Virtual channel configurations
@@ -156,7 +156,11 @@ int main(int argc, char *argv[])
 		config->vc[3].require_authentication  = 0;
 	}
 
-	config->arq_timeout_ms                = 12000; // [ms]
+	config->arq_timeout_ticks                	= 12000; // [ms]
+	config->mac_idle_timeout_ticks				= 30000;
+	config->arq_idle_frames_per_window		= 1;
+	config->mac_idle_frames_per_window		= 1;
+	config->mac_adjustment_period			= 2;
 
 	/*
 	 * HMAC configuration

@@ -65,8 +65,8 @@ static void test1_round(){
 	int n_extensions = 0;
 
 	int extension_mac_tdd = 0;
-	int mac_length = randint_i32(0, config->mac.maximum_window_length);
-	int mac_left = randint_i32(0, config->mac.maximum_window_length); // TODO sframe->mac_window);
+	int mac_length = randint_i32(0, config->mac.maximum_window_length_ticks);
+	int mac_left = randint_i32(0, config->mac.maximum_window_length_ticks); // TODO sframe->mac_window);
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_mac_tdd = 1;
