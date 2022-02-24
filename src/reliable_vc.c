@@ -21,7 +21,7 @@ void sky_get_state(SkyHandle self, SkyState* state) {
 		vc_state->state = vc->arq_state_flag;
 		vc_state->buffer_free = sendRing_count_free_send_slots(vc->sendRing) * SKY_MAX_PAYLOAD_LEN;
 		vc_state->tx_frames = sendRing_count_packets_to_send(vc->sendRing, 1);
-		vc_state->tx_frames = rcvRing_count_readable_packets(vc->rcvRing);
+		vc_state->rx_frames = rcvRing_count_readable_packets(vc->rcvRing);
 	}
 
 }
