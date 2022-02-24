@@ -118,7 +118,7 @@ int sky_tick(tick_t time_in_ticks){
 	if(time_in_ticks != _global_ticks_now){
 		ret = 1;
 	}
-	_global_ticks_now = MAX(0, _global_ticks_now + 1);
+	_global_ticks_now = time_in_ticks;
 	return ret;
 }
 
