@@ -163,7 +163,7 @@ int modem_rx(SkyRadioFrame* sky_frame, int flags) {
 
 
 int modem_tx_active() { // Can send?
-	return (tx_active == 0) && (rx_active == 0);
+	return (tx_active == 0) && (rx_active == 1);
 }
 
 int tick() {
