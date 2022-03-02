@@ -114,56 +114,56 @@ int main(int argc, char *argv[])
 	/*
 	 * MAC configurations
 	 */
-	config->mac.gap_constant_ticks           = 800; // [ms]
-	config->mac.tail_constant_ticks          = 100; // [ms]
+	config->mac.gap_constant_ticks          = 800; // [ticks]
+	config->mac.tail_constant_ticks         = 100; // [ticks]
 
-	config->mac.maximum_window_length_ticks        = 350; // [ms]
-	config->mac.minimum_window_length_ticks        = 250; // [ms]
-	config->mac.default_window_length_ticks        = 280; // [ms]
+	config->mac.maximum_window_length_ticks = 350; // [ticks]
+	config->mac.minimum_window_length_ticks = 250; // [ticks]
+	config->mac.default_window_length_ticks = 280; // [ticks]
 
-	config->mac.tail_constant_ticks          = 86;  // [ms]
-	config->mac.unauthenticated_mac_updates  = 0;
-	config->mac.shift_threshold_ticks           = 4000; // [ms]
+	config->mac.tail_constant_ticks         = 86;  // [ticks]
+	config->mac.unauthenticated_mac_updates = 0;
+	config->mac.shift_threshold_ticks       = 4000; // [ticks]
 
 	/*
 	 * Virtual channel configurations
 	 */
-	config->vc[0].horizon_width           = 16;
-	config->vc[0].send_ring_len           = 24;
-	config->vc[0].rcv_ring_len            = 24;
-	config->vc[0].element_size            = 36;
-	config->vc[0].require_authentication  = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
+	config->vc[0].horizon_width             = 16;
+	config->vc[0].send_ring_len             = 24;
+	config->vc[0].rcv_ring_len              = 24;
+	config->vc[0].element_size              = 36;
+	config->vc[0].require_authentication    = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
 
-	config->vc[1].horizon_width           = 16;
-	config->vc[1].send_ring_len           = 24;
-	config->vc[1].rcv_ring_len            = 24;
-	config->vc[1].element_size            = 36;
-	config->vc[1].require_authentication  = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
+	config->vc[1].horizon_width             = 16;
+	config->vc[1].send_ring_len             = 24;
+	config->vc[1].rcv_ring_len              = 24;
+	config->vc[1].element_size              = 36;
+	config->vc[1].require_authentication    = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
 
-	config->vc[2].horizon_width           = 2;
-	config->vc[2].send_ring_len           = 8;
-	config->vc[2].rcv_ring_len            = 8;
-	config->vc[2].element_size            = 36;
-	config->vc[2].require_authentication  = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
+	config->vc[2].horizon_width             = 2;
+	config->vc[2].send_ring_len             = 8;
+	config->vc[2].rcv_ring_len              = 8;
+	config->vc[2].element_size              = 36;
+	config->vc[2].require_authentication    = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
 
-	config->vc[3].horizon_width           = 2;
-	config->vc[3].send_ring_len           = 8;
-	config->vc[3].rcv_ring_len            = 8;
-	config->vc[3].element_size            = 36;
-	config->vc[3].require_authentication  = 0;
+	config->vc[3].horizon_width             = 2;
+	config->vc[3].send_ring_len             = 8;
+	config->vc[3].rcv_ring_len              = 8;
+	config->vc[3].element_size              = 36;
+	config->vc[3].require_authentication    = 0;
 
 	if (mimic_satellite) {
-		config->vc[0].require_authentication  = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE | SKY_VC_FLAG_AUTHENTICATE_TX;
-		config->vc[1].require_authentication  = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE | SKY_VC_FLAG_AUTHENTICATE_TX;
-		config->vc[2].require_authentication  = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE | SKY_VC_FLAG_AUTHENTICATE_TX;
-		config->vc[3].require_authentication  = 0;
+		config->vc[0].require_authentication = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE | SKY_VC_FLAG_AUTHENTICATE_TX;
+		config->vc[1].require_authentication = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE | SKY_VC_FLAG_AUTHENTICATE_TX;
+		config->vc[2].require_authentication = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
+		config->vc[3].require_authentication = 0;
 	}
 
-	config->arq_timeout_ticks                	= 12000; // [ms]
-	config->mac_idle_timeout_ticks				= 30000;
-	config->arq_idle_frames_per_window		= 1;
-	config->mac_idle_frames_per_window		= 1;
-	config->mac_adjustment_period			= 2;
+	config->arq_timeout_ticks               = 12000; // [ticks]
+	config->mac_idle_timeout_ticks          = 30000; // [ticks]
+	config->arq_idle_frames_per_window      = 1;
+	config->mac_idle_frames_per_window      = 1;
+	config->mac_adjustment_period           = 2;
 
 	/*
 	 * HMAC configuration
@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
 			if (modem_carrier_sensed())
 				sky_mac_carrier_sensed(handle->mac, &handle->conf->mac);
 
-		 	if (modem_tx_active() == 0) {
+		 	if (modem_tx_active() == 0) { // Can we send?
 				uint64_t t = get_timestamp() + tx_ahead_time;
 
 				int ret = sky_tx(handle, &frame, 0);
@@ -233,13 +233,13 @@ int main(int argc, char *argv[])
 					modem_tx(&frame, t);
 					memset(&frame, 0, sizeof(frame));
 				}
+			}
 
-				// Print diagnostics
-				static int d = 0;
-				if (++d > 20) {
-					sky_print_link_state(handle);
-					d = 0;
-				}
+			// Print diagnostics
+			static int d = 0;
+			if (++d > 20) {
+				sky_print_link_state(handle);
+				d = 0;
 			}
 
 		}
