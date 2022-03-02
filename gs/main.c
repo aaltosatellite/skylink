@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 	config->arq_timeout_ticks               = 12000; // [ticks]
 	config->mac_idle_timeout_ticks          = 30000; // [ticks]
 	config->arq_idle_frames_per_window      = 1;
-	config->mac_idle_frames_per_window      = 1;
+	config->mac_idle_frames_per_window      = 0;
 	config->mac_adjustment_period           = 2;
 
 	/*
