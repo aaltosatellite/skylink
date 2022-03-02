@@ -92,19 +92,22 @@ int main(int argc, char *argv[])
 	config->phy.enable_scrambler = 1;
 	config->phy.enable_rs = 1;
 
+	assert(SKY_IDENTITY_LEN == 6);
 	if (mimic_satellite == 0) {
 		config->identity[0] = 'O';
 		config->identity[1] = 'H';
-		config->identity[2] = 'A';
-		config->identity[3] = 'G';
-		config->identity[4] = 'S';
+		config->identity[2] = '2';
+		config->identity[3] = 'A';
+		config->identity[4] = 'G';
+		config->identity[5] = 'S';
 	}
 	else {
 		config->identity[0] = 'O';
 		config->identity[1] = 'H';
-		config->identity[2] = 'F';
-		config->identity[3] = 'S';
+		config->identity[2] = '2';
+		config->identity[3] = 'F';
 		config->identity[4] = '1';
+		config->identity[5] = 'S';
 	}
 
 
