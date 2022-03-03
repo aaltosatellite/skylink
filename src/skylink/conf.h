@@ -50,14 +50,20 @@ typedef struct {
 
 	int16_t window_adjust_increment_ticks;
 
+	int8_t adjustment_period;
+
+	/* After this many ticks of not getting mac state update, the link is considered silent. */
+	int32_t idle_timeout_ticks;
+
+	int8_t idle_frames_per_window;
 } SkyMACConfig;
 
 
 
 /* Virtual channel authentication option flags */
-#define SKY_VC_FLAG_AUTHENTICATE_TX          0x01
-#define SKY_VC_FLAG_REQUIRE_AUTHENTICATION   0x02
-#define SKY_VC_FLAG_REQUIRE_SEQUENCE         0x04
+#define SKY_VC_FLAG_AUTHENTICATE_TX          (0b001)
+#define SKY_VC_FLAG_REQUIRE_AUTHENTICATION   (0b010)
+#define SKY_VC_FLAG_REQUIRE_SEQUENCE         (0b100)
 
 /*
  * Per virtual channel configurations
@@ -115,10 +121,7 @@ struct sky_conf {
 	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t identity[SKY_IDENTITY_LEN];
 	int32_t arq_timeout_ticks;
-	int32_t mac_idle_timeout_ticks;
 	int8_t arq_idle_frames_per_window;
-	int8_t mac_idle_frames_per_window;
-	int8_t mac_adjustment_period;
 };
 typedef struct sky_conf SkyConfig;
 
