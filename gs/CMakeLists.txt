@@ -3,7 +3,6 @@ project(gs C)
 set(CMAKE_C_STANDARD 11)
 add_compile_options(-g -Wall -Wextra)
 
-set(SUO_GIT "/home/elmore/skylink/suo/")
 find_package(SUO REQUIRED)
 
 add_executable(gs
