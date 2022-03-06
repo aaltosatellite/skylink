@@ -8,15 +8,15 @@
 #include "skylink/platform.h"
 
 /*
- * All packets start with this.
- * ("encoded" protocol + version identifier)
- */
-#define SKYLINK_START_BYTE              's'
-
-/*
  * Number of bytes in frame identity field
  */
 #define SKY_IDENTITY_LEN                6
+
+/*
+ * All packets start with this.
+ * ("encoded" protocol + version identifier)
+ */
+#define SKYLINK_START_BYTE              ((0b01100 << 3) | (0x7 & SKY_IDENTITY_LEN))
 
 /*
  * Frame header flags
@@ -27,7 +27,7 @@
 
 
 // Extensions start at this byte index. At the same time the minimum length of a healthy frame.
-#define EXTENSION_START_IDX             (SKY_IDENTITY_LEN+5)
+#define EXTENSION_START_IDX             (SKY_IDENTITY_LEN + 5)
 
 // Extension header type IDs
 #define EXTENSION_ARQ_SEQUENCE          0

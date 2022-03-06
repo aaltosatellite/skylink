@@ -65,6 +65,9 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 	if(frame->length < SKY_PLAIN_FRAME_MIN_LENGTH){
 		return SKY_RET_INVALID_PLAIN_LENGTH;
 	}
+	if (frame->start_byte != SKYLINK_START_BYTE) {
+		return SKY_RET_INVALID_START_BYTE;
+	}
 	if(frame->vc >= SKY_NUM_VIRTUAL_CHANNELS){
 		return SKY_RET_INVALID_VC;
 	}

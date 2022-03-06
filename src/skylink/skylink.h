@@ -13,6 +13,7 @@
 //RX
 #define SKY_RET_INVALID_ENCODED_LENGTH      (-2)
 #define SKY_RET_INVALID_PLAIN_LENGTH        (-3)
+#define SKY_RET_INVALID_START_BYTE          (-4)
 #define SKY_RET_INVALID_VC                  (-5)
 #define SKY_RET_INVALID_EXT_LENGTH          (-6)
 #define SKY_RET_OWN_TRANSMISSION            (-7)
