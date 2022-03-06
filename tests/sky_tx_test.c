@@ -40,7 +40,7 @@ void sky_tx_test_cycle(){
 	tick_t now = randint_i32(0, MOD_TIME_TICKS - 1);
 	_global_ticks_now = now;
 
-	int mac_shift_threshold = randint_i32(config->mac_idle_frames_per_window / 2, config->mac_idle_frames_per_window * 2);
+	int mac_shift_threshold = randint_i32(config->mac.idle_frames_per_window / 2, config->mac.idle_frames_per_window * 2);
 	config->mac.shift_threshold_ticks = mac_shift_threshold;
 
 
@@ -435,7 +435,7 @@ void sky_tx_test_cycle(){
 	}
 
 
-	if((content == 0) && (total_frames_sent < self->conf->mac_idle_frames_per_window) && ((now - mac_last_belief_update) < self->conf->mac_idle_timeout_ticks) ){
+	if((content == 0) && (total_frames_sent < self->conf->mac.idle_frames_per_window) && ((now - mac_last_belief_update) < self->conf->mac.idle_timeout_ticks) ){
 		content = 1;
 		deduced_vc = 0;
 	}
