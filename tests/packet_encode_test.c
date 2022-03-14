@@ -20,7 +20,7 @@ void packet_tests(){
 
 static void test1(){
 	PRINTFF(0,"[Packet Test 1: ENCODE-DECODE]\n");
-	for (int i = 0; i < 9500; ++i) {
+	for (int i = 0; i < 95000; ++i) {
 		test1_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
@@ -120,8 +120,9 @@ static void test1_round(){
 		sky_packet_add_extension_hmac_sequence_reset(sframe, hmac_enforcement);
 	}
 
-	assert(n_extensions <= 7);
-	if(n_extensions == 7){
+	assert(n_extensions <= 6);
+	if(n_extensions == 6){
+		//PRINTFF(0, "AS: %d\n", available_payload_space(sframe));
 		assert(available_payload_space(sframe) == SKY_MAX_PAYLOAD_LEN);
 	}
 	if(n_extensions == 0){

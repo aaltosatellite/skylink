@@ -43,8 +43,9 @@ int sky_rx(SkyHandle self, SkyRadioFrame* frame, int contains_golay) {
 		frame->length = (int32_t)coded_len & SKY_GOLAY_PAYLOAD_LENGTH_MASK;
 
 		// Remove the length header from the rest of the data
-		for (unsigned int i = 0; i < frame->length; i++)
+		for (unsigned int i = 0; i < frame->length; i++) {
 			frame->raw[i] = frame->raw[i + 3];
+		}
 	}
 
 	self->diag->rx_frames++;
@@ -64,6 +65,9 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 	if(frame->length < SKY_PLAIN_FRAME_MIN_LENGTH){
 		return SKY_RET_INVALID_PLAIN_LENGTH;
 	}
+	if (frame->start_byte != SKYLINK_START_BYTE) {
+		return SKY_RET_INVALID_START_BYTE;
+	}
 	if(frame->vc >= SKY_NUM_VIRTUAL_CHANNELS){
 		return SKY_RET_INVALID_VC;
 	}
@@ -81,8 +85,9 @@ static int sky_rx_1(SkyHandle self, SkyRadioFrame* frame){
 
 	// Check the authentication/HMAC if the virtual channel necessitates it.
 	int ret = sky_hmac_check_authentication(self, frame);
-	if (ret != SKY_RET_OK)
+	if (ret != SKY_RET_OK) {
 		return ret;
+	}
 
 
 	// Update MAC/TDD state, and check for MAC/TDD handshake extension
@@ -137,9 +142,9 @@ static void sky_rx_process_ext_hmac_sequence_reset(SkyHandle self, const SkyPack
 	}
 	uint16_t new_sequence = sky_ntoh16(ext->HMACSequenceReset.sequence);
 	if(new_sequence == HMAC_NO_SEQUENCE){
-		self->conf->vc[vc].require_authentication = 0;
+		self->conf->vc[vc].require_authentication &= ~(SKY_VC_FLAG_AUTHENTICATE_TX);;
 	} else {
-		self->conf->vc[vc].require_authentication = 1;
+		self->conf->vc[vc].require_authentication |= SKY_VC_FLAG_AUTHENTICATE_TX;
 		self->hmac->sequence_tx[vc] = wrap_hmac_sequence(new_sequence);
 	}
 }

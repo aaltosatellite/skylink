@@ -20,7 +20,7 @@ void hmac_tests(){
 
 static void test1(){
 	PRINTFF(0,"[HMAC TEST 1]\n");
-	for (int i = 0; i < 160000; ++i) {
+	for (int i = 0; i < 220000; ++i) {
 		test1_round();
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");

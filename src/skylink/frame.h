@@ -8,15 +8,15 @@
 #include "skylink/platform.h"
 
 /*
- * All packets start with this.
- * ("encoded" protocol + version identifier)
- */
-#define SKYLINK_START_BYTE              's'
-
-/*
  * Number of bytes in frame identity field
  */
 #define SKY_IDENTITY_LEN                6
+
+/*
+ * All packets start with this.
+ * ("encoded" protocol + version identifier)
+ */
+#define SKYLINK_START_BYTE              ((0b01100 << 3) | (0x7 & SKY_IDENTITY_LEN))
 
 /*
  * Frame header flags
@@ -27,7 +27,7 @@
 
 
 // Extensions start at this byte index. At the same time the minimum length of a healthy frame.
-#define EXTENSION_START_IDX             (SKY_IDENTITY_LEN+5)
+#define EXTENSION_START_IDX             (SKY_IDENTITY_LEN + 5)
 
 // Extension header type IDs
 #define EXTENSION_ARQ_SEQUENCE          0
@@ -39,7 +39,7 @@
 
 
 // The maximum payload size that fits a worst case frame with all extensions.
-#define SKY_MAX_PAYLOAD_LEN             173
+#define SKY_MAX_PAYLOAD_LEN             177
 #define SKY_PLAIN_FRAME_MIN_LENGTH      (EXTENSION_START_IDX)
 #define SKY_ENCODED_FRAME_MIN_LENGTH    (EXTENSION_START_IDX + RS_PARITYS)
 #define SKY_FRAME_MAX_LEN               (0x100)

@@ -109,7 +109,8 @@ int32_t mac_peer_window_remaining(SkyMAC* mac, tick_t now){
 
 void mac_silence_shift_check(SkyMAC* mac, SkyMACConfig* config, tick_t now){
 	if(wrap_time_ticks(now - mac->last_belief_update) > config->shift_threshold_ticks){
-		int shift = now & 0xFFF;
+		tick_t shift = ((now & 0b100) != 0) + 1;
+		shift = shift * mac->my_window_length;
 		mac_shift_windowing(mac, shift);
 		mac->last_belief_update = now;
 	}
@@ -150,6 +151,16 @@ int sky_mac_carrier_sensed(SkyMAC* mac, SkyMACConfig* config){
 	}
 	mac_update_belief(mac, config, sky_get_tick_time(), mac->peer_window_length, 1);
 	return 1;
+}
+
+
+int mac_idle_frame_needed(SkyMAC* mac, SkyMACConfig* config, tick_t now){
+	int mac_active = wrap_time_ticks(now - mac->last_belief_update) < config->idle_timeout_ticks;
+	int idle_frame_needed = mac->total_frames_sent_in_current_window < config->idle_frames_per_window;
+	if(mac_active && idle_frame_needed){
+		return 1;
+	}
+	return 0;
 }
 
 

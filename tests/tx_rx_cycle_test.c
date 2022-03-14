@@ -284,12 +284,8 @@ void payload_list_mark_as_received(PayloadList* payloadList, void* msg, int msg_
 		if(found){
 			assert(pl->ts_rcv == 0);
 		}
-		//if(!found){
-		//	assert(pl->ts_rcv > 0);
-		//}
-		if(string_same(ref_string, pl->msg) && (pl->msg->length >= 4) && (pl->ts_rcv > 0)){
-			PRINTFF(0,"PL alerady received: len:%d  s_assigned:%d, seq:%d\n",
-					pl->msg->length, pl->assigned_sequence, sequence);
+		if((!found) && (i > 0)){
+			assert(payloadList->array[i-1]->ts_rcv > 0);
 		}
 		if(pl->ts_rcv > 0){
 			continue;
@@ -301,15 +297,14 @@ void payload_list_mark_as_received(PayloadList* payloadList, void* msg, int msg_
 			assert(pl->ts_rcv == 0);
 			pl->ts_rcv = ts_now;
 			found++;
-		}
-		if(string_same(ref_string, pl->msg) && (pl->assigned_sequence != sequence) && (pl->msg->length >= 4) ){
-			PRINTFF(0,"Same pl, different sequences: len:%d  s_assigned:%d, seq:%d\n",
-					pl->msg->length, pl->assigned_sequence, sequence);
+			//PRINTFF(0, "\t%d Acked pl of len %d\n", target, msg_len);
 		}
 	}
 	destroy_string(ref_string);
+	/*
 	if(found != 1){
-		PRINTFF(0, "found: %d. Msg_len:%d. Now:%d\n",found, msg_len, ts_now);
+		PRINTFF(0,"\n%d receiving.\n", target);
+		PRINTFF(0, "found: %d. Msg_len:%d. byte0:%d byte1:%d time_now:%d\n",found, msg_len, ((uint8_t*)msg)[0], ((uint8_t*)msg)[1], ts_now);
 		int unrec = payload_list_count_unreceived(payloadList);
 		PRINTFF(0, "Peer unreceived:%d\n", unrec );
 		for (int i = 0; i < unrec; ++i) {
@@ -317,6 +312,7 @@ void payload_list_mark_as_received(PayloadList* payloadList, void* msg, int msg_
 			PRINTFF(0, "\tLen of %dth unrec:%d\n", i, nth_unrec->msg->length );
 		}
 	}
+	*/
 	assert(found == 1);
 }
 
@@ -369,8 +365,8 @@ void test1_round(uint64_t NN, int print_on){
 	job.lag_ms 			= 6; 		//param
 	job.peer1.pl_rate 	= 3.0; 		//param
 	job.peer2.pl_rate 	= 2.0; 		//param
-	job.corrupt_rate	= 0.002 * corrupt_scaler; 	//param
-	job.loss_rate0 		= 0.011 * corrupt_scaler; 	//param (0.12)
+	job.corrupt_rate	= 0.05; 	//param
+	job.loss_rate0 		= 0.12; 	//param (0.12)
 	job.spin_rate_rpm	= 6;		//param
 	job.silent_section	= 0.24;		//param
 	job.spin_on			= spin_on_glob;	//param
@@ -442,6 +438,15 @@ static void step_forward(int which, TXRXJob* job){
 		assert(push_ret >= 0);
 		pl->assigned_sequence = push_ret;
 		payload_list_append(plList, pl);
+		/*
+		PRINTFF(0, "%d Generated pl of len: %d. First bytes: ",which, pl->msg->length, pl->msg->data);
+		for (int i = 0; i < 2; ++i) {
+			if(i < pl->msg->length){
+				PRINTFF(0,"%d ", pl->msg->data[i]);
+			}
+		}
+		PRINTFF(0,"\n");
+		*/
 	}
 
 	if(job->now > 15500){

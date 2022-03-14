@@ -86,6 +86,10 @@ int mac_update_belief(SkyMAC* mac, SkyMACConfig* config, tick_t now, tick_t peer
 int sky_mac_carrier_sensed(SkyMAC* mac, SkyMACConfig* config);
 
 
+// Returns boolean 1/0 wether an idle frame should be sent to synch the peer side.
+int mac_idle_frame_needed(SkyMAC* mac, SkyMACConfig* config, tick_t now);
+
+
 // Writes out the two uint16 values to the provided spot in buffer.
 int mac_set_frame_fields(SkyMAC* mac, SkyRadioFrame* frame, tick_t now);
 
