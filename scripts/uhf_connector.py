@@ -63,6 +63,14 @@ UHF_CMD_GET_HOUSEKEEPING = 22
 
 UHF_CMD_COPY_CODE_TO_FRAM = 23
 
+UHF_CMD_GET_DYNAMIC_RADIO_CONFS = 24
+UHF_CMD_SET_DYNAMIC_RADIO_CONF  = 25
+
+UHF_CMD_SET_SIDE = 26
+
+UHF_CMD_SET_VOLATILE_TX_INHIBIT = 27
+
+
 #
 # UHF Status Responses
 #
@@ -152,6 +160,20 @@ class BusCommands:
         await self._send_command(UHF_CMD_COPY_CODE_TO_FRAM)
         print(await self._wait_control_response(UHF_STATUS))
         
+    async def get_housekeeping(self):
+        """
+        Get UHF housekeeping
+        """
+        await self._send_command(UHF_CMD_GET_HOUSEKEEPING)
+        return await self._wait_control_response(UHF_CMD_GET_HOUSEKEEPING)
+    
+    async def set_volatile_tx_inhibit(self, val: int):
+        """
+        Modify tx inhibit value
+        """
+        val_b = struct.pack(">B", val)
+        await self._send_command(UHF_CMD_SET_VOLATILE_TX_INHIBIT, val_b)
+        print(await self._wait_control_response(UHF_STATUS))
     
     async def arq_connect(self, vc: int):
         """
@@ -335,13 +357,19 @@ if __name__ == "__main__":
         vc = RTTChannel(False)
         await asyncio.sleep(1) # Wait for the ZMQ connection
 
-        await vc.copy_code_to_fram()
+        #await vc.copy_code_to_fram()
+        #service_debug_beacon_on = struct.pack(">BBB", 0xAB, 1, 10)
+        #await vc.transmit(2, service_debug_beacon_on)
+        
+        print(await vc.get_housekeeping())
+        await vc.set_volatile_tx_inhibit(1)
 
         while True:
             #print(await vc.receive(0))
             #await vc.transmit(0, b"01234567")
-            print(await vc.get_state())
-            print(await vc.get_stats())
+            #print(await vc.get_state())
+            #print(await vc.get_stats())
+            print(await vc.get_housekeeping())
             await asyncio.sleep(2)
 
     loop = asyncio.get_event_loop()
