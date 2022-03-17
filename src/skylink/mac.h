@@ -77,10 +77,14 @@ int mac_can_send(SkyMAC* mac, tick_t now);
 int mac_update_belief(SkyMAC* mac, SkyMACConfig* config, tick_t now, tick_t peer_mac_length, tick_t peer_mac_remaining);
 
 
+// Resets mac into a state where it can immediately send.
+void mac_reset(SkyMAC* mac, tick_t now);
+
+
 // If fleeting transmission is detected, but not fully received, this cues the MAC-system, and updates belief by remaining = 1 tick.
 // BE CAREFUL: mac_update_belief is generally invoked only by authenticated messages to prevent 'shut-up-attack'.
 // This function in principle gets invoked before any authentication can take place. Therefore use sparingly.
-int sky_mac_carrier_sensed(SkyMAC* mac, SkyMACConfig* config);
+int sky_mac_carrier_sensed(SkyMAC* mac, SkyMACConfig* config, tick_t now);
 
 
 // Returns boolean 1/0 wether an idle frame should be sent to synch the peer side.

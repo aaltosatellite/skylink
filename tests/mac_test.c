@@ -105,6 +105,13 @@ void tst_v1(SkyMAC* mac, SkyMACConfig* config){
 		assert(mac_time_to_own_window(mac, t4) > 0);
 		assert(mac_peer_window_remaining(mac, t4) < 0);
 	}
+
+	for (int i = 0; i < 200; ++i) {
+		int t1 = wrap_time_ticks(t0 + randint_i32(0, cycle* 100));
+		mac_reset(mac, t1);
+		assert(mac_can_send(mac, t1));
+		mac_shift_windowing(mac, randint_i32(0, 300));
+	}
 }
 
 
