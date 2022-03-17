@@ -41,8 +41,8 @@ SkyMAC* sky_mac_create(SkyMACConfig* config){
 	mac->T0 = 0;
 	mac->window_adjust_plan = 0;
 	mac->window_on = 0;
-	mac->my_window_length = config->default_window_length_ticks;
-	mac->peer_window_length = config->default_window_length_ticks;
+	mac->my_window_length = config->minimum_window_length_ticks;
+	mac->peer_window_length = config->minimum_window_length_ticks;
 	mac->gap_constant = config->gap_constant_ticks;
 	mac->tail_constant = config->tail_constant_ticks;
 	mac->last_belief_update = 0;
@@ -65,11 +65,6 @@ void mac_shift_windowing(SkyMAC* mac, tick_t t_shift){
 	mac->T0 = wrap_time_ticks(mac->T0 - t_shift);
 }
 
-
-int32_t mac_set_peer_window_length(SkyMAC* mac, tick_t new_length){
-	mac->peer_window_length = new_length;
-	return 0;
-}
 
 
 int32_t mac_expand_window(SkyMAC* mac, SkyMACConfig* config){
@@ -130,7 +125,7 @@ int mac_update_belief(SkyMAC* mac, SkyMACConfig* config, tick_t now, tick_t peer
 		return SKY_RET_INVALID_MAC_REMAINING_SIZE;
 	}
 	if(peer_mac_length != mac->peer_window_length){
-		mac_set_peer_window_length(mac, peer_mac_length);
+		mac->peer_window_length = peer_mac_length;
 	}
 	int32_t cycle = get_mac_cycle(mac);
 	int32_t implied_t0_for_me = wrap_time_ticks(now + peer_mac_remaining + mac->tail_constant - cycle);

@@ -36,25 +36,25 @@ static int compute_required_elementount(int elementsize, int total_ring_slots, i
 
 
 //===== SKYLINK VIRTUAL CHANNEL  =======================================================================================
-SkyVirtualChannel* new_arq_ring(SkyVCConfig* config){
+SkyVirtualChannel* new_virtual_channel(SkyVCConfig* config){
 	if((config->rcv_ring_len >= ARQ_SEQUENCE_MODULO) || (config->send_ring_len >= ARQ_SEQUENCE_MODULO)){
 		return NULL;
 	}
-	SkyVirtualChannel* arqRing = SKY_MALLOC(sizeof(SkyVirtualChannel));
-	arqRing->sendRing = new_send_ring(config->send_ring_len, 0);
-	SKY_ASSERT(arqRing->sendRing != NULL)
-	arqRing->rcvRing = new_rcv_ring(config->rcv_ring_len, config->horizon_width, 0);
-	SKY_ASSERT(arqRing->rcvRing != NULL)
+	SkyVirtualChannel* vchannel = SKY_MALLOC(sizeof(SkyVirtualChannel));
+	vchannel->sendRing = new_send_ring(config->send_ring_len, 0);
+	SKY_ASSERT(vchannel->sendRing != NULL)
+	vchannel->rcvRing = new_rcv_ring(config->rcv_ring_len, config->horizon_width, 0);
+	SKY_ASSERT(vchannel->rcvRing != NULL)
 	int32_t ring_slots = config->rcv_ring_len + config->send_ring_len -2;
 	int32_t optimal_element_count = compute_required_elementount(config->element_size, ring_slots, SKY_MAX_PAYLOAD_LEN);
-	arqRing->elementBuffer = new_element_buffer(config->element_size, optimal_element_count);
-	SKY_ASSERT(arqRing->elementBuffer != NULL)
-	sky_vc_wipe_to_arq_off_state(arqRing);
-	return arqRing;
+	vchannel->elementBuffer = new_element_buffer(config->element_size, optimal_element_count);
+	SKY_ASSERT(vchannel->elementBuffer != NULL)
+	sky_vc_wipe_to_arq_off_state(vchannel);
+	return vchannel;
 }
 
 
-void destroy_arq_ring(SkyVirtualChannel* vchannel){
+void destroy_virtual_channel(SkyVirtualChannel* vchannel){
 	destroy_send_ring(vchannel->sendRing);
 	destroy_rcv_ring(vchannel->rcvRing);
 	destroy_element_buffer(vchannel->elementBuffer);
@@ -81,7 +81,7 @@ int sky_vc_wipe_to_arq_init_state(SkyVirtualChannel* vchannel){
 	wipe_send_ring(vchannel->sendRing, vchannel->elementBuffer, 0);
 	vchannel->need_recall = 0;
 	vchannel->arq_state_flag = ARQ_STATE_IN_INIT;
-	vchannel->arq_session_identifier = sky_get_tick_time();
+	vchannel->arq_session_identifier = (uint32_t) sky_get_tick_time();
 	vchannel->last_tx_tick = sky_get_tick_time();
 	vchannel->last_rx_tick = sky_get_tick_time();
 	vchannel->last_ctrl_send_tick = 0;
@@ -449,9 +449,5 @@ static void sky_vc_process_content_arq_on(SkyVirtualChannel* vchannel, void* pl,
 	if (ext_rrequest){
 		uint16_t mask = sky_ntoh16(ext_rrequest->ARQReq.mask);
 		sendRing_schedule_resends_by_mask(vchannel->sendRing, sky_ntoh16(ext_rrequest->ARQReq.sequence), mask);
-		/* †
-		 * No. When unable to resend sequence requested, we send nothing. Was sich überhaupt sagen lässt, lässt
-		 * sich klar sagen; und wovon man nicht reden kann, darüber muss man schweigen.
-		 */
 	}
 }

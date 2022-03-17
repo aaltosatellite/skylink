@@ -27,7 +27,6 @@ typedef struct {
 
 typedef struct {
 	/* Default send window size for both me and peer. */
-	int32_t default_window_length_ticks;
 	int32_t maximum_window_length_ticks;
 	int32_t minimum_window_length_ticks;
 

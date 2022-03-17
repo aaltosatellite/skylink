@@ -49,7 +49,7 @@ static void test1_round(){
 	config.rcv_ring_len = 10;
 	config.horizon_width = 4;
 	config.element_size = 64;
-	SkyVirtualChannel* array = new_arq_ring(&config);
+	SkyVirtualChannel* array = new_virtual_channel(&config);
 	uint8_t* tgt = x_alloc(60000);
 	String* s0 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
 	String* s1 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
@@ -221,7 +221,7 @@ static void test1_round(){
 	assert(sky_vc_count_readable_rcv_packets(array) == 0);
 
 
-	destroy_arq_ring(array);
+	destroy_virtual_channel(array);
 	destroy_string(s0);
 	destroy_string(s1);
 	destroy_string(s2);
@@ -265,8 +265,8 @@ static void test2_round(){
 	config.rcv_ring_len = rcv_ring_len;
 	config.horizon_width = horizon;
 	config.element_size = elesize;
-	SkyVirtualChannel* array_s = new_arq_ring(&config);
-	SkyVirtualChannel* array_r = new_arq_ring(&config);
+	SkyVirtualChannel* array_s = new_virtual_channel(&config);
+	SkyVirtualChannel* array_r = new_virtual_channel(&config);
 
 	int final_tx_head1 = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
 	int lag1 = randint_i32(0,16);
@@ -284,8 +284,8 @@ static void test2_round(){
 	assert(array_r->sendRing->head_sequence == final_tx_head1);
 	assert(array_s->rcvRing->head_sequence == final_rx_head1);
 
-	destroy_arq_ring(array_r);
-	destroy_arq_ring(array_s);
+	destroy_virtual_channel(array_r);
+	destroy_virtual_channel(array_s);
 }
 //======================================================================================================================
 //======================================================================================================================
@@ -322,7 +322,7 @@ static void test3_round(){
 	config.rcv_ring_len = rcv_ring_len;
 	config.horizon_width = horizon;
 	config.element_size = elesize;
-	SkyVirtualChannel* array = new_arq_ring(&config);
+	SkyVirtualChannel* array = new_virtual_channel(&config);
 
 	uint8_t pl[2000];
 	fillrand(pl, 2000);
@@ -340,7 +340,7 @@ static void test3_round(){
 		k++;
 	}
 
-	destroy_arq_ring(array);
+	destroy_virtual_channel(array);
 }
 //======================================================================================================================
 //======================================================================================================================
@@ -394,7 +394,7 @@ static void test4_round(){
 	config.rcv_ring_len = rcv_ring_len;
 	config.horizon_width = horizon;
 	config.element_size = elesize;
-	SkyVirtualChannel* array_r = new_arq_ring(&config);
+	SkyVirtualChannel* array_r = new_virtual_channel(&config);
 	uint8_t* tgt = x_alloc(10000);
 	int next_rcv_idx = 0;						//order index of the next message to be received by FSW side
 	int next_continuous_seq = rcv_sq0;			//sequence of the next message to be pushed into vc
@@ -481,7 +481,7 @@ static void test4_round(){
 		destroy_string(messages[i]);
 	}
 	free(messages);
-	destroy_arq_ring(array_r);
+	destroy_virtual_channel(array_r);
 	free(tgt);
 	free(succesfully_given);
 }
@@ -530,7 +530,7 @@ static void test5_round(){
 	config.rcv_ring_len = rcv_ring_len;
 	config.horizon_width = horizon;
 	config.element_size = elesize;
-	SkyVirtualChannel* array = new_arq_ring(&config);
+	SkyVirtualChannel* array = new_virtual_channel(&config);
 	uint8_t* tgt = x_alloc(10000);
 	PRINTFF(0,"\t[ring length: %d] [recall depth: %d] [N_msgs: %d]\n", send_ring_len, n_recall, NMSG);
 	int next_idx_to_tx = 0;
@@ -670,7 +670,7 @@ static void test5_round(){
 		destroy_string(messages[i]);
 	}
 	free(messages);
-	destroy_arq_ring(array);
+	destroy_virtual_channel(array);
 	free(tgt);
 }
 //======================================================================================================================

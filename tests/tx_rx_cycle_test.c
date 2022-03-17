@@ -381,7 +381,7 @@ void test1_round(uint64_t NN, int print_on){
 
 	for (uint64_t i = 0; i < NN; ++i) {
 		job.now++;
-		_global_ticks_now = job.now;
+		sky_tick(job.now);
 		step_forward(1, &job);
 		step_forward(2, &job);
 		if((i % 60000 == 0) && print_on){

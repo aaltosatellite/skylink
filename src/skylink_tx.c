@@ -57,13 +57,13 @@ static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to
 
 /* Returns boolean 0/1 wether virtual channel necessitates reset of HMAC authentication sequence. */
 static int _sky_tx_extension_needed_hmac_reset(SkyHandle self, uint8_t vc){
-	return (self->hmac->vc_enfocement_need[vc] != 0) && (self->conf->vc[vc].require_authentication);
+	return (self->hmac->vc_enforcement_need[vc] != 0) && (self->conf->vc[vc].require_authentication);
 }
 static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	if(!_sky_tx_extension_needed_hmac_reset(self, vc)){
 		return 0;
 	}
-	self->hmac->vc_enfocement_need[vc] = 0;
+	self->hmac->vc_enforcement_need[vc] = 0;
 	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 3); //+3 so that immediate sends don't invalidate what we give here. Jump constant must be bigger.
 	sky_packet_add_extension_hmac_sequence_reset(frame, sequence);
 	//SKY_PRINTF(SKY_DIAG_DEBUG, "\tEnforcing AUTH sequence.\n");

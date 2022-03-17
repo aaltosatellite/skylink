@@ -35,9 +35,8 @@ void mac_test_cycle(){
 	SkyMACConfig config;
 	config.tail_constant_ticks = randint_i32(3, 1000);
 	config.gap_constant_ticks = randint_i32(3, 2000);
-	config.default_window_length_ticks = randint_i32(3, 2000);
-	config.minimum_window_length_ticks = randint_i32(3, config.default_window_length_ticks);
-	config.maximum_window_length_ticks = randint_i32(config.default_window_length_ticks, 2000);
+	config.minimum_window_length_ticks = randint_i32(3, 300);
+	config.maximum_window_length_ticks = randint_i32(config.minimum_window_length_ticks+50, config.minimum_window_length_ticks+ 2000);
 	config.shift_threshold_ticks = randint_i32(3, 100000);
 	config.unauthenticated_mac_updates = randint_i32(0,1);
 	SkyMAC* mac = sky_mac_create(&config);

@@ -19,7 +19,7 @@ struct sky_hmac {
 	int32_t key_len;
 	int32_t sequence_tx[SKY_NUM_VIRTUAL_CHANNELS];
 	int32_t sequence_rx[SKY_NUM_VIRTUAL_CHANNELS];
-	uint8_t vc_enfocement_need[SKY_NUM_VIRTUAL_CHANNELS];
+	uint8_t vc_enforcement_need[SKY_NUM_VIRTUAL_CHANNELS];
 	void* ctx;
 };
 typedef struct sky_hmac SkyHMAC;

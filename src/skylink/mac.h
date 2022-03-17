@@ -26,9 +26,6 @@ struct sky_mac_s {
 
 int mac_valid_window_length(SkyMACConfig* config, tick_t length);
 
-int32_t mac_set_peer_window_length(SkyMAC* mac, tick_t new_length);
-
-
 
 // The obvious...
 SkyMAC* sky_mac_create(SkyMACConfig* config);

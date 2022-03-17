@@ -171,7 +171,7 @@ void sky_tx_test_cycle(){
 		}
 
 		hmac_reset_need[vc] = randint_i32(1,10) <= 2;
-		self->hmac->vc_enfocement_need[vc] = hmac_reset_need[vc];
+		self->hmac->vc_enforcement_need[vc] = hmac_reset_need[vc];
 
 
 

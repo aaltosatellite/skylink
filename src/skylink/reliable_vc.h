@@ -43,8 +43,8 @@ typedef struct sky_virtual_channel SkyVirtualChannel;
 
 
 // The obvious...
-SkyVirtualChannel* new_arq_ring(SkyVCConfig* config);
-void destroy_arq_ring(SkyVirtualChannel* vchannel);
+SkyVirtualChannel* new_virtual_channel(SkyVCConfig* config);
+void destroy_virtual_channel(SkyVirtualChannel* vchannel);
 
 // Cleans the rings, deletes all the packets from buffer, and initalizes to given sequence numbers.
 void sky_vc_wipe_to_arq_off_state(SkyVirtualChannel* vchannel);

@@ -42,8 +42,8 @@ void arq_system_test3_cycle(){
 	config.rcv_ring_len = randint_i32(20,35);
 	config.element_size = randint_i32(30,80);
 	config.horizon_width = 16;
-	SkyVirtualChannel* array = new_arq_ring(&config);
-	SkyVirtualChannel* array_r = new_arq_ring(&config);
+	SkyVirtualChannel* array = new_virtual_channel(&config);
+	SkyVirtualChannel* array_r = new_virtual_channel(&config);
 
 	int32_t ts_base = randint_i32(0,100000);						//coarse timestamp
 	int32_t ts_last_ctrl = ts_base + randint_i32(0,2000);			//random times for all timestamps
@@ -391,7 +391,7 @@ void arq_system_test3_cycle(){
 	for (int i = 0; i < ARQ_MAXIMUM_HORIZON+10; ++i) {
 		destroy_string(msgs[i]);
 	}
-	destroy_arq_ring(array);
-	destroy_arq_ring(array_r);
+	destroy_virtual_channel(array);
+	destroy_virtual_channel(array_r);
 	destroy_config(sky_config);
 }

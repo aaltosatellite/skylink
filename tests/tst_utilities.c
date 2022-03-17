@@ -39,8 +39,7 @@ SkyConfig* new_vanilla_config(){
 	config->vc[3].require_authentication = 0;
 
 	config->arq_timeout_ticks 					= 26000;
-	config->arq_idle_frames_per_window			= 2;
-
+	config->arq_idle_frames_per_window			= 1;
 
 	config->hmac.key_length 			= 16;
 	config->hmac.maximum_jump 			= 32;
@@ -50,7 +49,6 @@ SkyConfig* new_vanilla_config(){
 	config->mac.gap_constant_ticks 				= 600;
 	config->mac.tail_constant_ticks 			= 86;
 	config->mac.maximum_window_length_ticks 	= 450;
-	config->mac.default_window_length_ticks 	= 320;
 	config->mac.minimum_window_length_ticks 	= 120;
 	config->mac.window_adjust_increment_ticks	= 6;
 	config->mac.adjustment_period 				= 2;
@@ -84,7 +82,7 @@ SkyHandle new_handle(SkyConfig* config){
 	handle->diag = new_diagnostics();
 
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		handle->virtual_channels[i] = new_arq_ring(&config->vc[i]);
+		handle->virtual_channels[i] = new_virtual_channel(&config->vc[i]);
 	}
 	return handle;
 }
@@ -95,7 +93,7 @@ void destroy_handle(SkyHandle self){
 	destroy_hmac(self->hmac);
 	destroy_diagnostics(self->diag);
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		destroy_arq_ring(self->virtual_channels[i]);
+		destroy_virtual_channel(self->virtual_channels[i]);
 	}
 	free(self);
 }

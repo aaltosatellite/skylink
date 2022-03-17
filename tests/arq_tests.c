@@ -40,8 +40,8 @@ void arq_system_test1_cycle(){
 	config.rcv_ring_len = randint_i32(20,35);
 	config.element_size = 90;
 	config.horizon_width = 16;
-	SkyVirtualChannel* array = new_arq_ring(&config);
-	SkyVirtualChannel* array_r = new_arq_ring(&config);
+	SkyVirtualChannel* array = new_virtual_channel(&config);
+	SkyVirtualChannel* array_r = new_virtual_channel(&config);
 
 	int32_t now_ms = randint_i32(0,100000);
 	int seq0 = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
@@ -71,8 +71,8 @@ void arq_system_test1_cycle(){
 	for (int i = 0; i < ARQ_MAXIMUM_HORIZON+10; ++i) {
 		destroy_string(msgs[i]);
 	}
-	destroy_arq_ring(array);
-	destroy_arq_ring(array_r);
+	destroy_virtual_channel(array);
+	destroy_virtual_channel(array_r);
 	free(tgt);
 }
 
@@ -109,8 +109,8 @@ void arq_system_test2_cycle(){
 	config.rcv_ring_len = randint_i32(20,35);
 	config.element_size = randint_i32(30,80);
 	config.horizon_width = 16;
-	SkyVirtualChannel* array = new_arq_ring(&config);
-	SkyVirtualChannel* array_r = new_arq_ring(&config);
+	SkyVirtualChannel* array = new_virtual_channel(&config);
+	SkyVirtualChannel* array_r = new_virtual_channel(&config);
 
 	SkyConfig* sky_conf = new_vanilla_config();
 	sky_conf->arq_timeout_ticks = randint_i32(4000, 25000);
@@ -337,8 +337,8 @@ void arq_system_test2_cycle(){
 		destroy_string(msgs[i]);
 	}
 	destroy_frame(frame);
-	destroy_arq_ring(array);
-	destroy_arq_ring(array_r);
+	destroy_virtual_channel(array);
+	destroy_virtual_channel(array_r);
 	destroy_config(sky_conf);
 	free(tgt);
 }

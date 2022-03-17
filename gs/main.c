@@ -117,7 +117,6 @@ int main(int argc, char *argv[])
 	config->mac.gap_constant_ticks 				= 600;
 	config->mac.tail_constant_ticks 			= 86;
 	config->mac.maximum_window_length_ticks 	= 450;
-	config->mac.default_window_length_ticks 	= 320;
 	config->mac.minimum_window_length_ticks 	= 120;
 	config->mac.window_adjust_increment_ticks	= 6;
 	config->mac.adjustment_period 				= 2;
@@ -178,7 +177,7 @@ int main(int argc, char *argv[])
 	handle->hmac = new_hmac_instance(&config->hmac);
 	handle->diag = new_diagnostics();
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		handle->virtual_channels[i] = new_arq_ring(&config->vc[i]);
+		handle->virtual_channels[i] = new_virtual_channel(&config->vc[i]);
 		if (handle->virtual_channels[i] == NULL) {
 			fprintf(stderr, "Failed to create virtual channel %d", i);
 			return 1;
