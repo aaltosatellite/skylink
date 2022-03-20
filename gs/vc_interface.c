@@ -2,6 +2,7 @@
 #include <zmq.h>
 #include <string.h>
 #include "skylink/skylink.h"
+#include "skylink/mac.h"
 #include "skylink/reliable_vc.h"
 #include "skylink/diag.h"
 #include "skylink/utilities.h"
@@ -305,6 +306,15 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ disconnecting\n", vc);
 		sky_vc_wipe_to_arq_off_state(handle->virtual_channels[vc]);
 		break; // No response
+	}
+
+	case VC_CTRL_MAC_RESET: {
+		/*
+		 * MAC/TDD Reset
+		 */
+		SKY_PRINTF(SKY_DIAG_MAC, "Commanded MAC reset\n");
+		mac_reset(handle->mac, sky_get_tick_time());
+		break;
 	}
 
 	default:

@@ -35,6 +35,7 @@
 #define VC_CTRL_ARQ_DISCONNECT      21
 #define VC_CTRL_ARQ_TIMEOUT         22
 
+#define VC_CTRL_MAC_RESET           30
 
 
 int vc_init(unsigned int base, bool use_push_pull);
