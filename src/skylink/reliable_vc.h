@@ -109,7 +109,7 @@ int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, void* src, int 
 int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, void* src, int length, int sequence, tick_t now);
 
 // Read next message to tgt buffer. Return number of bytes written on success, or negative error code.
-int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int* sequence);
+int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int max_length);
 
 // How many messages there are in buffer as a continuous sequence, an thus readable by sky_vc_read_next_received()
 int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* vchannel);

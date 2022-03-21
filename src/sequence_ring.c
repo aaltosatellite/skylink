@@ -96,17 +96,20 @@ static int rcvRing_rx_sequence_fits(SkyRcvRing* rcvRing, int sequence){
 }
 
 
-int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, void* tgt, int* sequence){
+int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, void* tgt, int max_length){
 	if(rcvRing_count_readable_packets(rcvRing) == 0){
 		return SKY_RET_RING_EMPTY;
 	}
 	RingItem* tail_item = &rcvRing->buff[rcvRing->tail];
-	int read = element_buffer_read(elementBuffer, tgt, tail_item->idx, SKY_MAX_PAYLOAD_LEN + 100);
-	if(read < 0){
-		SKY_ASSERT(read > 0)
-		return SKY_RET_RING_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
+	int ret = element_buffer_read(elementBuffer, tgt, tail_item->idx, max_length);
+	if(ret < 0){
+		if (ret == EBUFFER_RET_TOO_LONG_PAYLOAD){
+			ret = SKY_RET_TOO_LONG_PAYLOAD;
+		} else {
+			SKY_ASSERT(ret > 0)
+			return SKY_RET_RING_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
+		}
 	}
-	*sequence = tail_item->sequence;
 	element_buffer_delete(elementBuffer, tail_item->idx);
 	tail_item->idx = EB_NULL_IDX;
 	tail_item->sequence = 0;
@@ -114,7 +117,7 @@ int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer
 	rcvRing->tail = ring_wrap(rcvRing->tail + 1, rcvRing->length);
 	rcvRing->tail_sequence = wrap_sequence(rcvRing->tail_sequence + 1);
 	rcvRing_advance_head(rcvRing); //This nees to be performed bc: If the buffer has been so full that head advance has stalled, it needs to be advanced "manually"
-	return read;
+	return ret;
 }
 
 

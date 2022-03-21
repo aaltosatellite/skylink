@@ -218,19 +218,23 @@ void arq_system_test3_cycle(){
 	}
 
 	if(!wiped){
-
 		if(arq_state0 == ARQ_STATE_OFF){
 			if(len_pl > -1){
 				//PRINTFF(0,"B");
 				assert(array->rcvRing->head_sequence == wrap_sequence(seq_recv0 + 1));
 				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0));
 				uint8_t temp[300];
-				int _s = -1;
-				int red = sky_vc_read_next_received(array, &temp, &_s);
-				assert(red == len_pl);
-				assert(_s == seq_recv0);
-				assert(memcmp(temp, pl, len_pl) == 0);
-				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0 + 1));
+				int maxlen = randint_i32(MAX(0, len_pl-3), len_pl+15);
+				int red = sky_vc_read_next_received(array, &temp, maxlen);
+				if(maxlen >= len_pl){
+					assert(red == len_pl);
+					assert(memcmp(temp, pl, len_pl) == 0);
+					assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0 + 1));
+				} else {
+					assert(red == SKY_RET_TOO_LONG_PAYLOAD);
+					assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0 + 1));
+				}
+
 			} else {
 				//PRINTFF(0,"C");
 				assert(array->rcvRing->head_sequence == wrap_sequence(seq_recv0));
@@ -266,13 +270,18 @@ void arq_system_test3_cycle(){
 				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0));
 				last_rx_updated = 1;
 				uint8_t temp[300];
-				int _s = -1;
-				int red = rcvRing_read_next_received(array->rcvRing, array->elementBuffer, &temp, &_s);
-				assert(red == len_pl);
-				assert(_s == seq_recv0);
-				assert(memcmp(temp, pl, len_pl) == 0);
-				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0 + 1));
-				assert(rcvRing_get_horizon_bitmap(array->rcvRing) == 0);
+				int maxlen = randint_i32(MAX(0, len_pl-3), len_pl+15);
+				int red = rcvRing_read_next_received(array->rcvRing, array->elementBuffer, &temp, maxlen);
+				if(maxlen >= len_pl){
+					assert(red == len_pl);
+					assert(memcmp(temp, pl, len_pl) == 0);
+					assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0 + 1));
+					assert(rcvRing_get_horizon_bitmap(array->rcvRing) == 0);
+				} else {
+					assert(red == SKY_RET_TOO_LONG_PAYLOAD);
+					assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0 + 1));
+					assert(rcvRing_get_horizon_bitmap(array->rcvRing) == 0);
+				}
 			}
 
 
@@ -282,10 +291,9 @@ void arq_system_test3_cycle(){
 				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0));
 				assert(rcvRing_get_horizon_bitmap(array->rcvRing) == 0);
 				uint8_t temp[300];
-				int _s = -1;
-				int red = rcvRing_read_next_received(array->rcvRing, array->elementBuffer, &temp, &_s);
+				int maxlen = 500;
+				int red = rcvRing_read_next_received(array->rcvRing, array->elementBuffer, &temp, maxlen);
 				assert(red == SKY_RET_RING_EMPTY);
-				assert(_s == -1);
 			}
 
 
@@ -295,10 +303,9 @@ void arq_system_test3_cycle(){
 				assert(array->rcvRing->tail_sequence == wrap_sequence(seq_recv0));
 				assert(rcvRing_get_horizon_bitmap(array->rcvRing) != 0);
 				uint8_t temp[300];
-				int _s = -1;
-				int red = rcvRing_read_next_received(array->rcvRing, array->elementBuffer, &temp, &_s);
+				int maxlen = 500;
+				int red = rcvRing_read_next_received(array->rcvRing, array->elementBuffer, &temp, maxlen);
 				assert(red == SKY_RET_RING_EMPTY);
-				assert(_s == -1);
 			}
 
 

@@ -112,13 +112,12 @@ int vc_check_arq_states() {
 /* Check frame going out (skylink -> ZMQ) */
 int vc_check_rf_to_sys() {
 
-	int sequence;
 	uint8_t data[PACKET_RX_MAXLEN];
 
 	/* If packets appeared to some RX buffer, send them to ZMQ */
 	for (unsigned int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 
-		int ret = sky_vc_read_next_received(handle->virtual_channels[vc], data + 1, &sequence);
+		int ret = sky_vc_read_next_received(handle->virtual_channels[vc], data + 1, PACKET_RX_MAXLEN);
 		if (ret > 0) {
 			SKY_PRINTF(SKY_DIAG_DEBUG, "VC%d: Received %d bytes\n", vc, ret);
 
@@ -206,9 +205,8 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		 * Read data from buffer.
 		 */
 		unsigned int vc_to_read = cmd - VC_CTRL_RECEIVE_VC0;
-		int sequence;
 		uint8_t frame[500];
-		int read = sky_vc_read_next_received(handle->virtual_channels[vc_to_read], frame, &sequence);
+		int read = sky_vc_read_next_received(handle->virtual_channels[vc_to_read], frame, 500);
 		send_control_response(vc_to_read, VC_CTRL_RECEIVE_VC0 + vc_to_read, frame, read);
 		break;
 	}

@@ -104,7 +104,6 @@ void arq_system_test2_cycle(){
 	}
 	uint8_t* tgt = malloc(1000);
 	SkyVCConfig config;
-	int arq_idle_frames = randint_i32(0, 6);
 	config.send_ring_len = randint_i32(22,35);
 	config.rcv_ring_len = randint_i32(20,35);
 	config.element_size = randint_i32(30,80);

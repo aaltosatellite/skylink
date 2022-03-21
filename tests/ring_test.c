@@ -146,26 +146,28 @@ static void test1_round(){
 	assert(window4 == 0b01);
 
 	//receive packets 0, 1, and 2
-	int seq = 100;
-	r = sky_vc_read_next_received(array, tgt, &seq);
+	int seq = array->rcvRing->tail_sequence;
+	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
 	assert(r == s0->length);
 	assert(seq == sq0);
 	assert(sky_vc_count_readable_rcv_packets(array) == 2);
 	assert(memcmp(tgt, s0->data, s0->length) == 0);
 
-	r = sky_vc_read_next_received(array, tgt, &seq);
+	seq = array->rcvRing->tail_sequence;
+	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
 	assert(r == s1->length);
 	assert(seq == sq0+1);
 	assert(sky_vc_count_readable_rcv_packets(array) == 1);
 	assert(memcmp(tgt, s1->data, s1->length) == 0);
 
-	r = sky_vc_read_next_received(array, tgt, &seq);
+	seq = array->rcvRing->tail_sequence;
+	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
 	assert(r == s2->length);
 	assert(seq == sq0+2);
 	assert(memcmp(tgt, s2->data, s2->length) == 0);
 	assert(sky_vc_count_readable_rcv_packets(array) == 0);
 
-	r = sky_vc_read_next_received(array, tgt, &seq);
+	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
 	assert(r == SKY_RET_RING_EMPTY);
 	assert(sky_vc_count_readable_rcv_packets(array) == 0);
 
@@ -208,13 +210,15 @@ static void test1_round(){
 	assert(window9 == 0b00);
 
 	//receive all. They should be packages 3 and 4 with old sequences, and 0 and 1 in new sequencing.
-	r = sky_vc_read_next_received(array, tgt, &seq);
+	seq = array->rcvRing->tail_sequence;
+	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
 	assert(r == s0->length);
 	assert(seq == sqn);
 	assert(memcmp(tgt, s0->data, s0->length) == 0);
 	assert(sky_vc_count_readable_rcv_packets(array) == 1);
 
-	r = sky_vc_read_next_received(array, tgt, &seq);
+	seq = array->rcvRing->tail_sequence;
+	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
 	assert(r == s1->length);
 	assert(seq == sqn+1);
 	assert(memcmp(tgt, s1->data, s1->length) == 0);
@@ -455,8 +459,8 @@ static void test4_round(){
 
 		if(randint_i32(0,2) == 0){
 			while (sky_vc_count_readable_rcv_packets(array_r) > 0){
-				int seq = -1;
-				int r = sky_vc_read_next_received(array_r, tgt, &seq);
+				int seq = array_r->rcvRing->tail_sequence;
+				int r = sky_vc_read_next_received(array_r, tgt, 6000);
 				assert(seq == wrap_sequence(rcv_sq0+next_rcv_idx));
 				assert(r == messages[next_rcv_idx]->length);
 				assert(memcmp(tgt, messages[next_rcv_idx]->data, r) == 0);

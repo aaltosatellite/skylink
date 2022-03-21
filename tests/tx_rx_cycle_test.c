@@ -497,8 +497,8 @@ static void step_forward(int which, TXRXJob* job){
 			eframe->frame.rx_time_ticks = job->now;
 			sky_rx(peer->handle, &eframe->frame, 1);
 			if(sky_vc_count_readable_rcv_packets(peer->handle->virtual_channels[0])){
-				int seq = -1;
-				int red = sky_vc_read_next_received(peer->handle->virtual_channels[0], tgt, &seq);
+				int seq = peer->handle->virtual_channels[0]->rcvRing->tail_sequence;
+				int red = sky_vc_read_next_received(peer->handle->virtual_channels[0], tgt, 1000);
 				assert(red >= 0);
 				assert(seq >= 0);
 				payload_list_mark_as_received(peers_plList, tgt, red, seq, which, job->now);

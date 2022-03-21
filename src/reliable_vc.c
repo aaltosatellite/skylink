@@ -225,8 +225,8 @@ int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* vchannel){
 	return rcvRing_count_readable_packets(vchannel->rcvRing);
 }
 
-int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int* sequence){
-	return rcvRing_read_next_received(vchannel->rcvRing, vchannel->elementBuffer, tgt, sequence);
+int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int max_length){
+	return rcvRing_read_next_received(vchannel->rcvRing, vchannel->elementBuffer, tgt, max_length);
 }
 
 int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, void* src, int length){

@@ -246,13 +246,12 @@ _Noreturn void* tx_cycle(void* arg){
 // =====================================================================================================================
 void peer_packets_from_ring_to_zmq(SkylinkPeer* peer){
 	uint8_t tgt[700];
-	int sequence;
 	memcpy(tgt, &peer->ID, 4);
 	for (uint8_t vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
 		tgt[4] = vc;
 		int n = sky_vc_count_readable_rcv_packets(peer->self->virtual_channels[vc]);
 		while (n > 0){
-			int r = sky_vc_read_next_received(peer->self->virtual_channels[vc], tgt + 5, &sequence);
+			int r = sky_vc_read_next_received(peer->self->virtual_channels[vc], tgt + 5, 500);
 			zmq_send(peer->pl_read_socket, tgt, r + 5, 0);
 			PRINTFF(0,"#4 packets sent to read socket.\n");
 			n = sky_vc_count_readable_rcv_packets(peer->self->virtual_channels[vc]);

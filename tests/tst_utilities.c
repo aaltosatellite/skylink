@@ -132,7 +132,7 @@ uint16_t spin_to_seq(SkyVirtualChannel* sring, SkyVirtualChannel* rring, int tar
 
 		//assert(sring->elementBuffer->free_elements == sring->elementBuffer->element_count - element_buffer_element_requirement_for(sring->elementBuffer, s->length));
 		int head_advanced = sky_vc_push_rx_packet(rring, tgt, s->length, seq, now_ms);
-		red = sky_vc_read_next_received(rring, tgt, &seq);
+		red = sky_vc_read_next_received(rring, tgt, s->length);
 		assert(head_advanced == 1);
 		assert(red == s->length);
 		assert(sring->sendRing->tx_sequence == rring->rcvRing->head_sequence);
@@ -202,7 +202,7 @@ void populate_horizon(SkyVirtualChannel* sring, SkyVirtualChannel* rring, int fi
 		if(bol){
 			int head_advanced = sky_vc_push_rx_packet(rring, tgt, s->length, seq, now_ms);
 			assert(head_advanced == 0);
-			red = sky_vc_read_next_received(rring, tgt, &seq);
+			red = sky_vc_read_next_received(rring, tgt, 1000);
 			assert(red == SKY_RET_RING_EMPTY);
 		}
 		if(!payloads){

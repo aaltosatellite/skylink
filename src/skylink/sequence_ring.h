@@ -88,8 +88,11 @@ void wipe_rcv_ring(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, int initia
 /* Returns the amound of packets that can be red from the ring. (>=0) */
 int rcvRing_count_readable_packets(SkyRcvRing* rcvRing);
 
-/* Reads a payload from ring to address pointed by tgt and gives sequence to *sequence. Returns number of bytes read, or negative error code. */
-int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, void* tgt, int* sequence);
+/* Reads a payload from ring to address pointed by tgt, if it's length is less than max_length.
+ * Returns number of bytes read, or negative error code.
+ * If length is more than max_length, the payload is dropped.
+ */
+int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, void* tgt, int max_length);
 
 /* Pushes a payload received with "sequence". Returns how many steps the head advances (>=0) or negative error code. */
 int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, void* src, int length, int sequence);
