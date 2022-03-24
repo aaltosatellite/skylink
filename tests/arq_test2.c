@@ -2,7 +2,7 @@
 // Created by elmore on 22.11.2021.
 //
 
-#include "arq_tests2.h"
+#include "arq_test2.h"
 #include "../src/skylink/skylink.h"
 #include "../src/skylink/utilities.h"
 #include "../src/skylink/reliable_vc.h"

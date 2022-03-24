@@ -8,7 +8,7 @@ link_libraries(skylink ${ZMQ_LIBRARIES} pthread m)
 
 add_compile_options(-O2 -Wall)
 add_executable(module_test
-        module_tests.c
+        module_test.c
 
         ../src/reliable_vc.c
         ../src/diag.c
@@ -25,14 +25,14 @@ add_executable(module_test
         crc/crc_algos.c
         tools/tools.c
 
-        elebuffer_tests.c
+        elebuffer_test.c
         ring_test.c
         packet_encode_test.c
         tst_utilities.c
         fec_test.c
-        hmac_tests.c
-        arq_tests.c
-        arq_tests2.c
+        hmac_test.c
+        arq_test1.c
+        arq_test2.c
         sky_tx_test.c
         #sky_rx_test.c
         mac_test.c
@@ -62,7 +62,7 @@ add_executable(cycle_test
 
 add_compile_options(-O2 -Wall)
 add_executable(zmq_peer
-        tx_rx_zmq.c
+        tx_rx_zmq_test.c
 
         ../src/reliable_vc.c
         ../src/diag.c

@@ -3,7 +3,7 @@
  * May be used under the terms of the GNU Lesser General Public License (LGPL)
  */
 
-#ifdef DEBUG
+#ifdef REEDSOLOMON_DEBUG
 #include <stdio.h>
 #endif
 

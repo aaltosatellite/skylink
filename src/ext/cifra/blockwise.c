@@ -15,10 +15,10 @@
 #pragma GCC push_options
 #pragma GCC optimize ("O3")
 
+#include "diag.h"
 #include "blockwise.h"
 #include "bitops.h"
 #include "handy.h"
-#include "tassert.h"
 
 #include <string.h>
 
@@ -39,9 +39,9 @@ void cf_blockwise_accumulate_final(uint8_t *partial, size_t *npartial, size_t nb
                                    void *ctx)
 {
   const uint8_t *bufin = inp;
-  assert(partial && *npartial < nblock);
-  assert(inp || !nbytes);
-  assert(process && ctx);
+	SKY_ASSERT(partial && *npartial < nblock);
+	SKY_ASSERT(inp || !nbytes);
+	SKY_ASSERT(process && ctx);
 
   /* If we have partial data, copy in to buffer. */
   if (*npartial && nbytes)
@@ -72,7 +72,7 @@ void cf_blockwise_accumulate_final(uint8_t *partial, size_t *npartial, size_t nb
   while (nbytes >= nblock)
   {
     /* Partial buffer must be empty, or we're ignoring extant data */
-    assert(*npartial == 0);
+	  SKY_ASSERT(*npartial == 0);
 
     if (nbytes == nblock)
       process_final(ctx, bufin);
@@ -96,7 +96,7 @@ void cf_blockwise_accumulate_final(uint8_t *partial, size_t *npartial, size_t nb
 
     /* If we started with *npartial, we must have copied it
      * in first. */
-    assert(*npartial < nblock);
+	  SKY_ASSERT(*npartial < nblock);
   }
 }
 
@@ -107,9 +107,9 @@ void cf_blockwise_xor(uint8_t *partial, size_t *npartial, size_t nblock,
   const uint8_t *inb = inp;
   uint8_t *outb = outp;
 
-  assert(partial && *npartial < nblock);
-  assert(inp || !nbytes);
-  assert(process && ctx);
+	SKY_ASSERT(partial && *npartial < nblock);
+	SKY_ASSERT(inp || !nbytes);
+	SKY_ASSERT(process && ctx);
 
   while (nbytes)
   {

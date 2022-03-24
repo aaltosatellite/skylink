@@ -18,7 +18,7 @@
  * FCR - An integer literal or variable specifying the first consecutive root of the
  *       Reed-Solomon generator polynomial. Integer variable or literal.
  * PRIM - The primitive root of the generator poly. Integer variable or literal.
- * DEBUG - If set to 1 or more, do various internal consistency checking. Leave this
+ * REEDSOLOMON_DEBUG - If set to 1 or more, do various internal consistency checking. Leave this
  *         undefined for production code
 
  * The memset(), memmove(), and memcpy() functions are used. The appropriate header
@@ -121,7 +121,7 @@
       }
     }
 
-#if DEBUG >= 1
+#if REEDSOLOMON_DEBUG >= 1
     /* Test code that verifies the erasure locator polynomial just constructed
        Needed only for decoder debugging. */
     
@@ -149,7 +149,7 @@
       count = -1;
       goto finish;
     }
-#if DEBUG >= 2
+#if REEDSOLOMON_DEBUG >= 2
     printf("\n Erasure positions as determined by roots of Eras Loc Poly:\n");
     for (i = 0; i < count; i++)
       printf("%d ", loc[i]);
@@ -226,7 +226,7 @@
     if (q != 0)
       continue; /* Not a root */
     /* store root (index-form) and error location number */
-#if DEBUG>=2
+#if REEDSOLOMON_DEBUG >= 1
     printf("count %d root %d loc %d\n",count,i,k);
 #endif
     root[count] = i;
@@ -277,7 +277,7 @@
       if(lambda[i+1] != A0)
 	den ^= ALPHA_TO[MODNN(lambda[i+1] + i * root[j])];
     }
-#if DEBUG >= 1
+#if REEDSOLOMON_DEBUG >= 1
     if (den == 0) {
       printf("\n ERROR: denominator = 0\n");
       count = -1;

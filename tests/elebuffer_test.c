@@ -1,7 +1,7 @@
 
 #include "../src/skylink/elementbuffer.h"
 #include "tools/tools.h"
-#include "elebuffer_tests.h"
+#include "elebuffer_test.h"
 
 
 static void test1_pass(int verbose);

@@ -2,14 +2,14 @@
 // Created by elmore on 8.10.2021.
 //
 
-#include "elebuffer_tests.h"
+#include "elebuffer_test.h"
 #include "ring_test.h"
 #include "packet_encode_test.h"
-#include "hmac_tests.h"
+#include "hmac_test.h"
 #include "fec_test.h"
 #include "tools/tools.h"
-#include "arq_tests.h"
-#include "arq_tests2.h"
+#include "arq_test1.h"
+#include "arq_test2.h"
 #include "sky_tx_test.h"
 
 void mac_test(int load);

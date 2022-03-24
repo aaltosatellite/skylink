@@ -17,11 +17,10 @@
 
 #include <string.h>
 
+#include "diag.h"
 #include "sha2.h"
 #include "blockwise.h"
 #include "bitops.h"
-#include "handy.h"
-#include "tassert.h"
 
 
 static const uint32_t K[64] = {
@@ -189,7 +188,7 @@ void cf_sha256_digest_final(cf_sha256_context *ctx, uint8_t hash[CF_SHA256_HASHS
   cf_sha256_update(ctx, buf, 8);
 
   /* We ought to have got our padding calculation right! */
-  assert(ctx->npartial == 0);
+  SKY_ASSERT(ctx->npartial == 0);
 
   write32_be(ctx->H[0], hash + 0);
   write32_be(ctx->H[1], hash + 4);

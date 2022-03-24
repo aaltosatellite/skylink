@@ -6,10 +6,12 @@
 #include <stdlib.h>
 #include "skylink/platform.h"
 #include "skylink/utilities.h"
-#define DEBUG
-#ifdef DEBUG
+
+#ifdef SKY_DEBUG
 #include <assert.h>
 #endif
+
+
 // GENERAL PURPOSE =====================================================================================================
 uint16_t sky_hton16(uint16_t vh) {
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -71,7 +73,7 @@ int32_t positive_modulo_true(int32_t x, int32_t m){
 	while(x >= m){
 		x = x - m;
 	}
-#ifdef DEBUG
+#ifdef SKY_DEBUG
 	assert(x == (((x % m) + m) % m) );
 #endif
 	return x;

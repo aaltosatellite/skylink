@@ -16,11 +16,11 @@
 #pragma GCC optimize ("O3")
 
 
+#include "diag.h"
 #include "hmac.h"
 #include "chash.h"
 #include "bitops.h"
 #include "handy.h"
-#include "tassert.h"
 
 #include <string.h>
 
@@ -28,8 +28,8 @@ void cf_hmac_init(cf_hmac_ctx *ctx,
                   const cf_chash *hash,
                   const uint8_t *key, size_t nkey)
 {
-  assert(ctx);
-  assert(hash);
+  SKY_ASSERT(ctx);
+  SKY_ASSERT(hash);
 
   mem_clean(ctx, sizeof *ctx);
   ctx->hash = hash;
@@ -40,14 +40,14 @@ void cf_hmac_init(cf_hmac_ctx *ctx,
   /* Shorten long keys. */
   if (nkey > hash->blocksz)
   {
-    /* Standard doesn't cover case where blocksz < hashsz.
-     * FIPS186-1 seems to want to append a negative number of zero bytes.
-     * In any case, we only have a k buffer of CF_CHASH_MAXBLK! */
-    assert(hash->hashsz <= hash->blocksz);
+    	/* Standard doesn't cover case where blocksz < hashsz.
+     	* FIPS186-1 seems to want to append a negative number of zero bytes.
+     	* In any case, we only have a k buffer of CF_CHASH_MAXBLK! */
+		SKY_ASSERT(hash->hashsz <= hash->blocksz);
 
-    assert(0); //cf_hash(hash, key, nkey, k);
-    key = k;
-    nkey = hash->hashsz;
+	 	SKY_ASSERT(0); //cf_hash(hash, key, nkey, k);
+    	key = k;
+    	nkey = hash->hashsz;
   }
 
   /* Right zero-pad short keys. */
@@ -74,15 +74,15 @@ void cf_hmac_init(cf_hmac_ctx *ctx,
 
 void cf_hmac_update(cf_hmac_ctx *ctx, const void *data, size_t ndata)
 {
-  assert(ctx && ctx->hash);
+	SKY_ASSERT(ctx && ctx->hash);
 
   ctx->hash->update(&ctx->inner, data, ndata);
 }
 
 void cf_hmac_finish(cf_hmac_ctx *ctx, uint8_t *out)
 {
-  assert(ctx && ctx->hash);
-  assert(out);
+	SKY_ASSERT(ctx && ctx->hash);
+	SKY_ASSERT(out);
 
   uint8_t innerh[CF_MAXHASH];
   ctx->hash->digest(&ctx->inner, innerh);
@@ -100,8 +100,8 @@ void cf_hmac(const uint8_t *key, size_t nkey,
 {
   cf_hmac_ctx ctx;
 
-  assert(out);
-  assert(hash);
+	SKY_ASSERT(out);
+	SKY_ASSERT(hash);
 
   cf_hmac_init(&ctx, hash, key, nkey);
   cf_hmac_update(&ctx, msg, nmsg);

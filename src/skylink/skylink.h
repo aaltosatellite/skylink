@@ -107,7 +107,7 @@ typedef struct __attribute__((__packed__)) {
 /* A state information struct provided for higher level software stack. */
 typedef struct __attribute__((__packed__)) {
 	SkyVCState vc[SKY_NUM_VIRTUAL_CHANNELS];
-} SkyState;
+}  __attribute__ ((aligned (2))) SkyState;
 
 
 /* Struct to store pointers to all the data structures related to a protocol instance. */

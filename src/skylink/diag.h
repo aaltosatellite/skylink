@@ -2,7 +2,7 @@
 #define __SKYLINK_DIAG_H__
 
 #include <stdint.h>
-
+#include "skylink.h"
 /*
  * Diagnostics and debug tools
  */
@@ -20,51 +20,39 @@
 #define SKY_DIAG_FRAMES     0x0100
 #define SKY_DIAG_BUFFER     0x0200
 
-
-#define DEBUG
-#ifdef DEBUG
-
-#ifdef __unix__
-#include <assert.h>
-/* Assert for POSIX platforms */
-
-#define SKY_ASSERT(...)   assert(__VA_ARGS__);
-#else
-/* Assert for embedded platforms */
-#define SKY_ASSERT(...)    if ((__VA_ARGS__) == 0) while(1);
-#endif //__unix__
-
-#else //DEBUG
-/* No asserts  in release build */
-#define SKY_ASSERT(...)   do { } while(0)
-#endif //DEBUG
-
-
 /* Global define for debug print flags */
 extern unsigned int sky_diag_mask;
 
-#define DEBUG
-#ifdef DEBUG
+//#define SKY_DEBUG
 
+
+#ifdef SKY_DEBUG
+// --- DEBUG in UNIX environment ------------------------------------------------------------------
 #ifdef __unix__
+#include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
-/* printf for POSIX platforms */
+/* Assert and printf for POSIX platforms */
 #define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) == (x)) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
+#define SKY_ASSERT(...)   assert(__VA_ARGS__);
+// ------------------------------------------------------------------------------------------------
+
+
+// --- DEBUG outside UNIX environment -------------------------------------------------------------
 #else
-/* printf for embedded platforms */
-#include "SEGGER_RTT.h"
-#define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) == (x)) { SEGGER_RTT_printf(0, __VA_ARGS__); }
+/* Assert for embedded platforms */
+#define SKY_ASSERT(...)    do { } while(0);
+#define SKY_PRINTF(...);
 #endif //__unix__
+// ------------------------------------------------------------------------------------------------
 
+
+// --- no DEBUG -----------------------------------------------------------------------------------
 #else
-/* No debug prints in release build */
-#define SKY_PRINTF(...) do { } while(0)
-#endif //DEBUG
-
-
-/**/
-void sky_diag_dump_hex(uint8_t* data, unsigned int len);
+#define SKY_ASSERT(...)   do { } while(0);
+#define SKY_PRINTF(...)   do { } while(0);
+// ------------------------------------------------------------------------------------------------
+#endif //SKY_DEBUG
 
 
 

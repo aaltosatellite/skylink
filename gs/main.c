@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 	config->phy.enable_scrambler = 1;
 	config->phy.enable_rs = 1;
 
-	assert(SKY_IDENTITY_LEN == 6);
+	SKY_ASSERT(SKY_IDENTITY_LEN == 6);
 	if (mimic_satellite == 0) {
 		config->identity[0] = 'O';
 		config->identity[1] = 'H';
