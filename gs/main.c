@@ -114,16 +114,16 @@ int main(int argc, char *argv[])
 	/*
 	 * MAC configurations
 	 */
-	config->mac.gap_constant_ticks 				= 600;
-	config->mac.tail_constant_ticks 			= 86;
-	config->mac.maximum_window_length_ticks 	= 450;
-	config->mac.minimum_window_length_ticks 	= 120;
-	config->mac.window_adjust_increment_ticks	= 6;
-	config->mac.adjustment_period 				= 2;
-	config->mac.unauthenticated_mac_updates 	= 0;
-	config->mac.shift_threshold_ticks 			= 4000;
-	config->mac.idle_frames_per_window 			= 2;
-	config->mac.idle_timeout_ticks 				= 30000;
+	config->mac.gap_constant_ticks              = 500;
+	config->mac.tail_constant_ticks             = 50;
+	config->mac.maximum_window_length_ticks     = 5000;
+	config->mac.minimum_window_length_ticks     = 450;
+	config->mac.window_adjust_increment_ticks   = 210;
+	config->mac.adjustment_period               = 2;
+	config->mac.unauthenticated_mac_updates     = 0;
+	config->mac.shift_threshold_ticks           = 4000;
+	config->mac.idle_frames_per_window          = 0;
+	config->mac.idle_timeout_ticks              = 30000;
 
 	/*
 	 * Virtual channel configurations
@@ -198,10 +198,10 @@ int main(int argc, char *argv[])
 		 * Receive frames from the modem interface (blocking)
 		 */
 		if (modem_rx(&frame, 0) > 0) {
-			sky_rx(handle, &frame, 0);
-			//if (ret < 0)
-			//	SKY_PRINTF(SKY_DIAG_BUG, "sky_rx() error %d\n", ret);
-			//sky_frame_clear(frame);
+			int ret = sky_rx(handle, &frame, 0);
+			if (ret < 0)
+				SKY_PRINTF(SKY_DIAG_BUG, "sky_rx() error %d\n", ret);
+			//sky_frame_clear(&frame);
 		}
 
 		/*

@@ -92,7 +92,7 @@ typedef struct __attribute__((__packed__)) {
 
 	/*
 	 * Number of frames in the buffer waiting to be sent
-	 * In realiable mode non-acknownledged frame are included.
+	 * In reliable mode non-acknownledged frame are included.
 	 */
 	uint16_t tx_frames;
 
