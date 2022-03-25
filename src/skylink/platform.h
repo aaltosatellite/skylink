@@ -27,8 +27,10 @@ typedef int32_t tick_t;
 /* Timestamps in microsecond, 32 bits (wraps around every 4295 seconds) */
 typedef int32_t tick_t;
 
-#define SKY_MALLOC pvPortMalloc
-#define SKY_FREE pvPortFree
+#include "arena.h"
+
+#define SKY_MALLOC arena_alloc
+#define SKY_FREE arena_free
 
 
 #endif
