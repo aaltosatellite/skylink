@@ -63,12 +63,11 @@ UHF_CMD_GET_HOUSEKEEPING = 22
 
 UHF_CMD_COPY_CODE_TO_FRAM = 23
 
-UHF_CMD_GET_DYNAMIC_RADIO_CONFS = 24
-UHF_CMD_SET_DYNAMIC_RADIO_CONF  = 25
+UHF_CMD_GET_RADIO_CONFS = 24
+UHF_CMD_SET_RADIO_CONF  = 25
 
-UHF_CMD_SET_SIDE = 26
-
-UHF_CMD_SET_VOLATILE_TX_INHIBIT = 27
+UHF_CMD_SWITCH_SIDE = 26
+UHF_CMD_SWITCH_VOLATILE_TX_INHIBIT = 27
 
 
 #
@@ -82,6 +81,75 @@ UHF_STATUS_ERR_NOT_IMPLEMENTED = -1
 UHF_STATUS_ERR_UNKNOWN_COMMAND = -2
 
 UHF_SKY_RET = 96
+
+#
+# UHF Radio Confs
+#
+
+RADIO_CONF_SIDE = 0
+RADIO_CONF_TX_INHIBIT = 1
+RADIO_CONF_SYMBOL_RATE_RX = 2
+RADIO_CONF_SYMBOL_RATE_TX = 3
+
+RADIO_CONF_FREQOFF0 = 4
+RADIO_CONF_FREQOFF1 = 5
+RADIO_CONF_PA_CFG2  = 6
+
+#
+# Symbol rates
+#
+
+RADIO_GFSK_4800  = 1
+RADIO_GFSK_9600  = 2
+RADIO_GFSK_19200 = 3
+RADIO_GFSK_38400 = 4
+
+def display_radio_confs(confs: bytes):
+    confs = struct.unpack(">10B", confs)
+
+    if confs[RADIO_CONF_SIDE] == 0:
+        print("Side: A")
+    else:
+        print("Side B")
+        
+    if confs[RADIO_CONF_TX_INHIBIT] == 0:
+        print("Tx inhibit: on")
+    else:
+        print("Tx inhibit: off")
+        
+    if confs[RADIO_CONF_SYMBOL_RATE_RX] == RADIO_GFSK_4800:
+        print("RX symbol rate: GFSK 4800")
+    elif confs[RADIO_CONF_SYMBOL_RATE_RX] == RADIO_GFSK_9600:
+        print("RX symbol rate: GFSK 9600")
+    elif confs[RADIO_CONF_SYMBOL_RATE_RX] == RADIO_GFSK_19200:
+        print("RX symbol rate: GFSK 19200")
+    elif confs[RADIO_CONF_SYMBOL_RATE_RX] == RADIO_GFSK_38400:
+        print("RX symbol rate: GFSK 38400")
+    else:
+        print("Rx symbol rate: unknown..")
+
+    if confs[RADIO_CONF_SYMBOL_RATE_TX] == RADIO_GFSK_4800:
+        print("TX symbol rate: GFSK 4800")
+    elif confs[RADIO_CONF_SYMBOL_RATE_TX] == RADIO_GFSK_9600:
+        print("TX symbol rate: GFSK 9600")
+    elif confs[RADIO_CONF_SYMBOL_RATE_TX] == RADIO_GFSK_19200:
+        print("TX symbol rate: GFSK 19200")
+    elif confs[RADIO_CONF_SYMBOL_RATE_TX] == RADIO_GFSK_38400:
+        print("TX symbol rate: GFSK 38400")
+    else:
+        print("Tx symbol rate: unknown..")
+        
+    idx = RADIO_CONF_FREQOFF0
+    print("\nSide A dynamic CC1125 confs:")
+    print("    FREQOFF0: %x" % confs[idx+0])
+    print("    FREQOFF1: %x" % confs[idx+2])
+    print("    PA_CFG2:  %x" % confs[idx+4])
+
+    print("\nSide B dynamic CC1125 confs:")
+    print("    FREQOFF0: %x" % confs[idx+1])
+    print("    FREQOFF1: %x" % confs[idx+3])
+    print("    PA_CFG2:  %x" % confs[idx+5])
+
 
 class ReceptionTimeout(Exception):
     pass
@@ -166,13 +234,35 @@ class BusCommands:
         """
         await self._send_command(UHF_CMD_GET_HOUSEKEEPING)
         return await self._wait_control_response(UHF_CMD_GET_HOUSEKEEPING)
+        
+    async def get_radio_confs(self):
+        """
+        Get radio configs
+        """
+        await self._send_command(UHF_CMD_GET_RADIO_CONFS)
+        return await self._wait_control_response(UHF_CMD_GET_RADIO_CONFS)
+        
+    async def set_radio_conf(self, config: int, val: int):
+        """
+        Set radio config
+        """
+        payload = struct.pack(">2B", config, val)
+        await self._send_command(UHF_CMD_SET_RADIO_CONF, payload)
+        print(await self._wait_control_response(UHF_STATUS))
+        
     
-    async def set_volatile_tx_inhibit(self, val: int):
+    async def switch_volatile_tx_inhibit(self):
         """
-        Modify tx inhibit value
+        Switch tx inhibit on/off (nonvolatile)
         """
-        val_b = struct.pack(">B", val)
-        await self._send_command(UHF_CMD_SET_VOLATILE_TX_INHIBIT, val_b)
+        await self._send_command(UHF_CMD_SWITCH_VOLATILE_TX_INHIBIT)
+        print(await self._wait_control_response(UHF_STATUS))
+        
+    async def switch_side(self):
+        """
+    	Switch side
+        """
+        await self._send_command(UHF_CMD_SWITCH_SIDE)
         print(await self._wait_control_response(UHF_STATUS))
     
     async def arq_connect(self, vc: int):
@@ -345,7 +435,7 @@ class RTTChannel(BusCommands):
 
         try:
             while True:
-                rsp_code, rsp_data = await asyncio.wait_for(self.control_queue.get(), timeout=0.5)
+                rsp_code, rsp_data = await asyncio.wait_for(self.control_queue.get(), timeout=2)
                 if expected_rsp is None or rsp_code == expected_rsp:
                     return rsp_data
         except asyncio.TimeoutError as e:
@@ -357,12 +447,25 @@ if __name__ == "__main__":
         vc = RTTChannel(False)
         await asyncio.sleep(1) # Wait for the ZMQ connection
 
-        #await vc.copy_code_to_fram()
+        await vc.copy_code_to_fram()
         #service_debug_beacon_on = struct.pack(">BBB", 0xAB, 1, 10)
         #await vc.transmit(2, service_debug_beacon_on)
         
-        print(await vc.get_housekeeping())
-        await vc.set_volatile_tx_inhibit(1)
+        #print(await vc.get_housekeeping())
+        #await vc.switch_volatile_tx_inhibit()
+
+        display_radio_confs(await vc.get_radio_confs())
+
+        await vc.set_radio_conf(RADIO_CONF_SIDE,     1)
+        await asyncio.sleep(1)
+        await vc.set_radio_conf(RADIO_CONF_FREQOFF0, 255)
+        await asyncio.sleep(1)
+        await vc.set_radio_conf(RADIO_CONF_FREQOFF1, 1)
+        await asyncio.sleep(1)
+        await vc.set_radio_conf(RADIO_CONF_PA_CFG2,  0x43)        
+
+        await asyncio.sleep(2)
+        display_radio_confs(await vc.get_radio_confs())
 
         while True:
             #print(await vc.receive(0))

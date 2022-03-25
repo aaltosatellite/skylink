@@ -16,7 +16,7 @@
 #pragma GCC optimize ("O3")
 
 
-#include "diag.h"
+#include "skylink/diag.h"
 #include "hmac.h"
 #include "chash.h"
 #include "bitops.h"
