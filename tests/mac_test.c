@@ -65,7 +65,7 @@ void tst_v1(SkyMAC* mac, SkyMACConfig* config){
 	int t0 = randint_i32(0, MOD_TIME_TICKS - 1);
 	int peer_w = randint_i32(config->minimum_window_length_ticks, config->maximum_window_length_ticks);
 	int peer_r = randint_i32(0, peer_w);
-	mac_update_belief(mac, config, t0, peer_w, peer_r);
+	mac_update_belief(mac, t0, peer_w, peer_r);
 
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		assert(mac->frames_sent_in_current_window_per_vc[i] == 0);
@@ -113,9 +113,3 @@ void tst_v1(SkyMAC* mac, SkyMACConfig* config){
 		mac_shift_windowing(mac, randint_i32(0, 300));
 	}
 }
-
-
-
-
-
-

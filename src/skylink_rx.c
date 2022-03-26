@@ -128,7 +128,7 @@ static void sky_rx_process_extensions(SkyHandle self, const SkyRadioFrame* frame
 				break;
 
 			default:
-				//SKY_PRINTF("Unknwon extension header type %d", ext->type);
+				SKY_PRINTF(SKY_DIAG_BUG, "Unknown extension header type %d", ext->type);
 				break;
 		}
 	}
@@ -142,7 +142,7 @@ static void sky_rx_process_ext_hmac_sequence_reset(SkyHandle self, const SkyPack
 	}
 	uint16_t new_sequence = sky_ntoh16(ext->HMACSequenceReset.sequence);
 	if(new_sequence == HMAC_NO_SEQUENCE){
-		self->conf->vc[vc].require_authentication &= ~(SKY_VC_FLAG_AUTHENTICATE_TX);;
+		self->conf->vc[vc].require_authentication &= ~SKY_VC_FLAG_AUTHENTICATE_TX;
 	} else {
 		self->conf->vc[vc].require_authentication |= SKY_VC_FLAG_AUTHENTICATE_TX;
 		self->hmac->sequence_tx[vc] = wrap_hmac_sequence(new_sequence);
@@ -160,5 +160,5 @@ static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* 
 	}
 	uint16_t w = sky_ntoh16(ext->TDDControl.window);
 	uint16_t r = sky_ntoh16(ext->TDDControl.remaining);
-	mac_update_belief(self->mac, &self->conf->mac, sky_get_tick_time() , w, r);
+	mac_update_belief(self->mac, sky_get_tick_time() , w, r); // TODO: sky_get_tick_time or frame->rx_time_ticks
 }

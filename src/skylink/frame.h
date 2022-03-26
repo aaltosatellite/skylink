@@ -51,10 +51,10 @@ typedef uint16_t arq_seq_t;
 /* frames ========================================================================================== */
 struct sky_radio_frame {
 
+	// Ticks when the start of the frame was detected
 	tick_t rx_time_ticks;
 
-	//uint8_t auth_verified;
-
+	// Length of the raw frame
 	unsigned int length;
 
 	union {

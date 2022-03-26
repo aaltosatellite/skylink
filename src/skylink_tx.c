@@ -34,11 +34,11 @@ static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to
 	}
 	if(can_send && (!self->mac->window_on)){ //window is opening
 		if(self->mac->window_adjust_plan <= -self->conf->mac.adjustment_period){ //need to shrink window?
-			mac_shrink_window(self->mac, &self->conf->mac);
+			mac_shrink_window(self->mac);
 			self->mac->window_adjust_plan = 0; //reset indications.
 		}
 		if(self->mac->window_adjust_plan >= self->conf->mac.adjustment_period){ //need to grow window?
-			mac_expand_window(self->mac, &self->conf->mac);
+			mac_expand_window(self->mac);
 			self->mac->window_adjust_plan = 0; //reset indications.
 		}
 	}
@@ -87,7 +87,7 @@ static int _sky_tx_pick_vc(SkyHandle self, tick_t now){
 		}
 	}
 	// This is here to ensure that the peer advances its window through TDD gap even if there are no messages to send
-	if(mac_idle_frame_needed(self->mac, &self->conf->mac, sky_get_tick_time())){
+	if(mac_idle_frame_needed(self->mac, sky_get_tick_time())){
 		return 0;
 	}
 	return -1;
@@ -108,7 +108,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 		return 0;
 	}
 	tick_t now = sky_get_tick_time();
-	mac_silence_shift_check(self->mac, &self->conf->mac, now);
+	mac_silence_shift_check(self->mac, now);
 	int can_send = mac_can_send(self->mac, now);
 	_sky_tx_poll_arq_timeouts(self, now, self->conf->arq_timeout_ticks);
 	int vc = _sky_tx_pick_vc(self, now);
