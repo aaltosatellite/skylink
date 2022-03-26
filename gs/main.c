@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
 		if (sky_tick(time_ms)) {
 
 			if (modem_carrier_sensed())
-				sky_mac_carrier_sensed(handle->mac, &handle->conf->mac, sky_get_tick_time());
+				sky_mac_carrier_sensed(handle->mac, sky_get_tick_time());
 
 		 	if (modem_tx_active() == 0) { // Can we send?
 				uint64_t t = get_timestamp() + tx_ahead_time;
