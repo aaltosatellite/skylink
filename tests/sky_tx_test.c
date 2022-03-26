@@ -193,8 +193,6 @@ void sky_tx_test_cycle(){
 	int mac_window_adjust_plan0 = randint_i32(-3, 3);
 	self->mac->my_window_length = my_window;
 	self->mac->peer_window_length = peer_window;
-	self->mac->gap_constant = mac_gap;
-	self->mac->tail_constant = mac_tail;
 	self->mac->window_on = mac_window_on;
 	self->mac->window_adjust_plan = mac_window_adjust_plan0;
 
@@ -268,7 +266,7 @@ void sky_tx_test_cycle(){
 			PRINTFF(0,"\t%d\n", mac_silence > mac_shift_threshold);
 			PRINTFF(0,"\tnow %d\n", now);
 			PRINTFF(0,"\tt0: %d  (%d)\n", mac_t0, self->mac->T0);
-			PRINTFF(0,"\tcycle: %d   (%d)\n", mac_cycle, self->mac->gap_constant + self->mac->tail_constant + self->mac->my_window_length + self->mac->peer_window_length);
+			PRINTFF(0,"\tcycle: %d   (%d)\n", mac_cycle, self->mac->config->gap_constant_ticks + self->mac->config->tail_constant_ticks + self->mac->my_window_length + self->mac->peer_window_length);
 			PRINTFF(0,"\tmy window: %d   (%d)\n", my_window, self->mac->my_window_length);
 		}
 		assert(ret == 0);

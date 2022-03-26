@@ -14,7 +14,7 @@
  * Calculate the total length of TDD cycle in ticks
  */
 static tick_t get_mac_cycle(SkyMAC* mac){
-	return mac->my_window_length + mac->gap_constant + mac->peer_window_length + mac->tail_constant;
+	return mac->my_window_length + mac->config->gap_constant_ticks + mac->peer_window_length + mac->config->tail_constant_ticks;
 }
 
 /*
@@ -60,8 +60,6 @@ SkyMAC* sky_mac_create(SkyMACConfig* config) {
 	mac->window_on = 0;
 	mac->my_window_length = config->minimum_window_length_ticks;
 	mac->peer_window_length = config->minimum_window_length_ticks;
-	mac->gap_constant = config->gap_constant_ticks;
-	mac->tail_constant = config->tail_constant_ticks;
 	mac->last_belief_update = 0;
 	mac->total_frames_sent_in_current_window = 0;
 	mac->vc_round_robin_start = 0;
@@ -114,7 +112,7 @@ int32_t mac_own_window_remaining(SkyMAC* mac, tick_t now){
 
 
 int32_t mac_peer_window_remaining(SkyMAC* mac, tick_t now){
-	int32_t dt = wrap_tdd_cycle(mac, wrap_time_ticks(now - (mac->T0 + mac->my_window_length + mac->gap_constant)));
+	int32_t dt = wrap_tdd_cycle(mac, wrap_time_ticks(now - (mac->T0 + mac->my_window_length + mac->config->gap_constant_ticks)));
 	return mac->peer_window_length - dt;
 }
 
@@ -146,7 +144,7 @@ int mac_update_belief(SkyMAC* mac, tick_t now, tick_t peer_mac_length, tick_t pe
 	}
 
 	int32_t cycle = get_mac_cycle(mac);
-	tick_t implied_t0_for_me = wrap_time_ticks(now + peer_mac_remaining + mac->tail_constant - cycle);
+	tick_t implied_t0_for_me = wrap_time_ticks(now + peer_mac_remaining + mac->config->tail_constant_ticks - cycle);
 	mac->T0 = implied_t0_for_me;
 	mac->last_belief_update = now;
 

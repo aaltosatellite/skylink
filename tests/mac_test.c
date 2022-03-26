@@ -13,7 +13,7 @@ void tst_v1(SkyMAC* mac, SkyMACConfig* config);
 void mac_test_cycle();
 
 static int get_cycle(SkyMAC* mac){
-	return mac->my_window_length + mac->gap_constant + mac->peer_window_length + mac->tail_constant;
+	return mac->my_window_length + mac->config->gap_constant_ticks + mac->peer_window_length + mac->config->tail_constant_ticks;
 }
 
 
@@ -84,21 +84,21 @@ void tst_v1(SkyMAC* mac, SkyMACConfig* config){
 		assert(mac_time_to_own_window(mac, t1) > 0);
 		assert(mac_peer_window_remaining(mac, t1) >= 0);
 
-		s = randint_i32(peer_r, peer_r + mac->tail_constant -1);
+		s = randint_i32(peer_r, peer_r + config->tail_constant_ticks -1);
 		int t2 = wrap_time_ticks(t0 + (randint_i32(0, 2000) * cycle) + s);
 		assert(!mac_can_send(mac, t2));
 		assert(mac_own_window_remaining(mac, t2) < 0);
 		assert(mac_time_to_own_window(mac, t2) > 0);
 		assert(mac_peer_window_remaining(mac, t2) <= 0);
 
-		s = randint_i32(peer_r + mac->tail_constant, peer_r + mac->tail_constant + mac->my_window_length -1);
+		s = randint_i32(peer_r + config->tail_constant_ticks, peer_r + config->tail_constant_ticks + mac->my_window_length -1);
 		int t3 = wrap_time_ticks(t0 + (randint_i32(0, 2000) * cycle) + s);
 		assert(mac_can_send(mac, t3));
 		assert(mac_own_window_remaining(mac, t3) >= 0);
 		assert(mac_time_to_own_window(mac, t3) == 0);
 		assert(mac_peer_window_remaining(mac, t3) < 0);
 
-		s = randint_i32(peer_r + mac->tail_constant + mac->my_window_length, peer_r + mac->tail_constant + mac->my_window_length + mac->gap_constant -1);
+		s = randint_i32(peer_r + config->tail_constant_ticks + mac->my_window_length, peer_r + config->tail_constant_ticks + mac->my_window_length + config->gap_constant_ticks - 1);
 		int t4 = wrap_time_ticks(t0 + (randint_i32(0, 2000) * cycle) + s);
 		assert(!mac_can_send(mac, t4));
 		assert(mac_own_window_remaining(mac, t4) <= 0);

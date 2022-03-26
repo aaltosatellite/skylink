@@ -22,12 +22,6 @@ struct sky_mac_s {
 	// Length of the peer's transmission window. (Or our belief of what it is)
 	tick_t peer_window_length;
 
-	// Length of time spent waiting between windows, if we do not hear peer transmissions.
-	tick_t gap_constant; // TODO: Use directly the value in the config struct?
-
-	// Length of time spent waiting after peer window has ended before ours opens.
-	tick_t tail_constant; // TODO: Use directly the value in the config struct?
-
 	// Tick of last time we updated our belief of T0 (and peer window length).
 	tick_t last_belief_update;
 
