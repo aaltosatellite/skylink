@@ -14,7 +14,7 @@
  * Calculate the total length of TDD cycle in ticks
  */
 static tick_t get_mac_cycle(SkyMAC* mac){
-	return mac->my_window_length + mac->config->gap_constant_ticks + mac->peer_window_length + mac->config->tail_constant_ticks;
+	return mac->my_window_length + mac->peer_window_length + mac->config->tail_constant_ticks;
 }
 
 /*
@@ -49,14 +49,32 @@ int mac_valid_window_length(SkyMAC* mac, tick_t length){
 // === PUBLIC FUNCTIONS ================================================================================================
 SkyMAC* sky_mac_create(SkyMACConfig* config) {
 
-	if (config->minimum_window_length_ticks > config->maximum_window_length_ticks) {
+	// Make sure the min/max windows size make sense.
+	if (config->minimum_window_length_ticks > config->maximum_window_length_ticks)
 		config->maximum_window_length_ticks = config->minimum_window_length_ticks;
-	}
+
+	// Limit number of MAC idle frames
+	if (config->idle_frames_per_window > 3)
+		config->idle_frames_per_window = 3;
+
+	// Limit MAC timeout time
+	if (config->idle_timeout_ticks < 1000 || config->idle_timeout_ticks > 2000)
+		config->idle_timeout_ticks = 10000;
+
+	if (config->carrier_sense_ticks > 250)
+		config->carrier_sense_ticks = 250;
+
+	// Limit window adjusting period
+	if (config->window_adjustment_period < 1)
+		config->window_adjustment_period = 1;
+	if (config->window_adjustment_period > 4)
+		config->window_adjustment_period = 4;
+
 
 	SkyMAC* mac = SKY_MALLOC(sizeof(SkyMAC));
 	mac->config = config;
 	mac->T0 = 0;
-	mac->window_adjust_plan = 0;
+	mac->window_adjust_counter = 0;
 	mac->window_on = 0;
 	mac->my_window_length = config->minimum_window_length_ticks;
 	mac->peer_window_length = config->minimum_window_length_ticks;
@@ -70,56 +88,63 @@ SkyMAC* sky_mac_create(SkyMACConfig* config) {
 }
 
 
-void sky_mac_destroy(SkyMAC* mac){
+void sky_mac_destroy(SkyMAC* mac) {
 	SKY_FREE(mac);
 }
 
 
-void mac_shift_windowing(SkyMAC* mac, tick_t t_shift){
-	t_shift = (t_shift > 0) ? t_shift : -t_shift; //T0 should always stay behind current time. Otherwise time-deltas wrap around the wrong way.
+void mac_shift_windowing(SkyMAC* mac, tick_t t_shift) {
+	// T0 should always stay behind current time. Otherwise time-deltas wrap around the wrong way.
+	t_shift = (t_shift > 0) ? t_shift : -t_shift;
 	mac->T0 = wrap_time_ticks(mac->T0 - t_shift);
 }
 
 
 
-int32_t mac_expand_window(SkyMAC* mac) {
+void mac_expand_window(SkyMAC* mac) {
 	mac->my_window_length += mac->config->window_adjust_increment_ticks;
-	mac->my_window_length = MIN(mac->my_window_length, mac->config->maximum_window_length_ticks);
-	return 0;
+	if (mac->my_window_length < mac->config->maximum_window_length_ticks)
+		mac->my_window_length = mac->config->maximum_window_length_ticks;
 }
 
 
-int32_t mac_shrink_window(SkyMAC* mac) {
+void mac_shrink_window(SkyMAC* mac) {
 	mac->my_window_length -= mac->config->window_adjust_increment_ticks;
-	mac->my_window_length = MAX(mac->my_window_length, mac->config->minimum_window_length_ticks);
-	return 0;
+	if (mac->my_window_length > mac->config->minimum_window_length_ticks)
+		mac->my_window_length = mac->config->minimum_window_length_ticks;
 }
 
 
-int32_t mac_time_to_own_window(SkyMAC* mac, tick_t now){
+int32_t mac_time_to_own_window(SkyMAC* mac, tick_t now) {
 	int32_t dt = wrap_tdd_cycle(mac, wrap_time_ticks(now - mac->T0));
-	if(dt < mac->my_window_length){
+	if (dt < mac->my_window_length) // Our window is already open
 		return 0;
-	}
-	return get_mac_cycle(mac) - dt;
+	return get_mac_cycle(mac) - dt; // Peer's windows is open. Return time the end of window
 }
 
 
-int32_t mac_own_window_remaining(SkyMAC* mac, tick_t now){
+int32_t mac_own_window_remaining(SkyMAC* mac, tick_t now) {
 	int32_t dt = wrap_tdd_cycle(mac, wrap_time_ticks(now - mac->T0));
 	return mac->my_window_length - dt;
 }
 
 
-int32_t mac_peer_window_remaining(SkyMAC* mac, tick_t now){
-	int32_t dt = wrap_tdd_cycle(mac, wrap_time_ticks(now - (mac->T0 + mac->my_window_length + mac->config->gap_constant_ticks)));
+int32_t mac_peer_window_remaining(SkyMAC* mac, tick_t now) {
+	tick_t peer_window_starts = mac->T0 + mac->my_window_length + mac->config->gap_constant_ticks;
+	int32_t dt = wrap_tdd_cycle(mac, wrap_time_ticks(now - peer_window_starts));
 	return mac->peer_window_length - dt;
 }
 
 
-void mac_silence_shift_check(SkyMAC* mac, tick_t now){
-	if(wrap_time_ticks(now - mac->last_belief_update) > mac->config->shift_threshold_ticks){
-		tick_t shift = ((now & 0b100) != 0) + 1;
+void mac_silence_shift_check(SkyMAC* mac, tick_t now) {
+	if (mac->config->shift_threshold_ticks != 0 &&
+		wrap_time_ticks(now - mac->last_belief_update) > mac->config->shift_threshold_ticks)
+	{
+		/*
+		 * The MAC has been open too long shift the window by random
+		 * amount to make sure windows are not overlapping.
+		 */
+		tick_t shift = ((now & 0b100) != 0) + 1; // "Random" shift based on the tick count
 		shift = shift * mac->my_window_length;
 		mac_shift_windowing(mac, shift);
 		mac->last_belief_update = now;
@@ -127,26 +152,32 @@ void mac_silence_shift_check(SkyMAC* mac, tick_t now){
 }
 
 
-int mac_can_send(SkyMAC* mac, tick_t now){
+bool mac_can_send(SkyMAC* mac, tick_t now) {
 	return mac_own_window_remaining(mac, now) > 0;
 }
 
 
-int mac_update_belief(SkyMAC* mac, tick_t now, tick_t peer_mac_length, tick_t peer_mac_remaining){
-	if(!mac_valid_window_length(mac, peer_mac_length)){
-		return SKY_RET_INVALID_MAC_WINDOW_SIZE;
-	}
-	if(peer_mac_remaining > peer_mac_length){
-		return SKY_RET_INVALID_MAC_REMAINING_SIZE;
-	}
-	if(peer_mac_length != mac->peer_window_length){
-		mac->peer_window_length = peer_mac_length;
-	}
+void mac_update_belief(SkyMAC* mac, tick_t receive_time, tick_t peer_mac_length, tick_t peer_mac_remaining) {
 
-	int32_t cycle = get_mac_cycle(mac);
-	tick_t implied_t0_for_me = wrap_time_ticks(now + peer_mac_remaining + mac->config->tail_constant_ticks - cycle);
-	mac->T0 = implied_t0_for_me;
+	// Limit the window length inside limits.
+	// Don't fail completely here and incapacitate the MAC logic, because this can be a result of minor missconfiguration.
+	if (peer_mac_length < mac->config->minimum_window_length_ticks)
+		peer_mac_length = mac->config->minimum_window_length_ticks;
+	else if (peer_mac_length > mac->config->maximum_window_length_ticks)
+		peer_mac_length = mac->config->maximum_window_length_ticks;
+
+	if (peer_mac_remaining > peer_mac_length)
+		peer_mac_remaining = peer_mac_length;
+
+
+	const int32_t cycle = get_mac_cycle(mac);
+	const tick_t now = sky_get_tick_time();
+
+	tick_t implied_t0_for_me = wrap_time_ticks(receive_time + peer_mac_remaining + mac->config->tail_constant_ticks - cycle);
+	tick_t minimum_t0 = wrap_time_ticks(now + mac->config->tail_constant_ticks);
+	mac->T0 = MAX(implied_t0_for_me, minimum_t0);
 	mac->last_belief_update = now;
+	mac->peer_window_length = peer_mac_length;
 
 	SKY_PRINTF(SKY_DIAG_MAC | SKY_DIAG_DEBUG, "MAC Update belief: peer window length: %d, remaining %d, time to t0: %d",
 		peer_mac_length, peer_mac_remaining, mac_time_to_own_window(mac, sky_get_tick_time()));
@@ -156,33 +187,42 @@ int mac_update_belief(SkyMAC* mac, tick_t now, tick_t peer_mac_length, tick_t pe
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		mac->frames_sent_in_current_window_per_vc[i] = 0;
 	}
-	return 0;
+
 }
 
 
 void mac_reset(SkyMAC* mac, tick_t now) {
-	mac->T0 = wrap_time_ticks( now - get_mac_cycle(mac) );
+	mac->T0 = wrap_time_ticks(now - get_mac_cycle(mac));
+	mac->window_adjust_counter = 0;
 	mac->my_window_length = mac->config->minimum_window_length_ticks;
 }
 
 
-int sky_mac_carrier_sensed(SkyMAC* mac, tick_t now){
+void sky_mac_carrier_sensed(SkyMAC* mac, tick_t now) {
+#if 1
+	tick_t minimum_t0 = wrap_time_ticks(now + mac->config->carrier_sense_ticks);
+	if (minimum_t0 > mac->T0)
+		mac->T0 = minimum_t0;
+#else
 	int32_t peer_remaining_priori = mac_peer_window_remaining(mac, now);
-	if(peer_remaining_priori > 0){
-		return 0;
-	}
-	mac_update_belief(mac, now, mac->peer_window_length, 1);
-	return 1;
+	if(peer_remaining_priori <= 0)
+		mac_update_belief(mac, now, mac->peer_window_length, 1);
+#endif
 }
 
 
-int mac_idle_frame_needed(SkyMAC* mac, tick_t now){
-	int mac_active = wrap_time_ticks(now - mac->last_belief_update) < mac->config->idle_timeout_ticks;
-	int idle_frame_needed = mac->total_frames_sent_in_current_window < mac->config->idle_frames_per_window;
-	if(mac_active && idle_frame_needed){
-		return 1;
-	}
-	return 0;
+bool mac_idle_frame_needed(SkyMAC* mac, tick_t now) {
+
+	// Is MAC idle frame transmissions set up?
+	if (mac->config->idle_frames_per_window == 0)
+		return false;
+
+	// Is MAC logic active (not timed out)?
+	if (wrap_time_ticks(now - mac->last_belief_update) > mac->config->idle_timeout_ticks)
+		return false;
+
+	// Not enough transmission on the window.
+	return (mac->total_frames_sent_in_current_window < mac->config->idle_frames_per_window);
 }
 
 

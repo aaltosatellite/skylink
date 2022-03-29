@@ -26,20 +26,20 @@ static int _content_in_vc(SkyHandle self, int vc, tick_t now){
 static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_send){
 	if((!can_send) && self->mac->window_on) { //window is closing.
 		if(content_to_send){
-			self->mac->window_adjust_plan += 1;  //indicate need to grow window.
+			self->mac->window_adjust_counter++;  //indicate need to grow window.
 		}
 		if(!content_to_send){
-			self->mac->window_adjust_plan -= 1;  //indicate need to grow window.
+			self->mac->window_adjust_counter--;  //indicate need to grow window.
 		}
 	}
 	if(can_send && (!self->mac->window_on)){ //window is opening
-		if(self->mac->window_adjust_plan <= -self->conf->mac.adjustment_period){ //need to shrink window?
+		if(self->mac->window_adjust_counter <= -self->conf->mac.window_adjustment_period){ //need to shrink window?
 			mac_shrink_window(self->mac);
-			self->mac->window_adjust_plan = 0; //reset indications.
+			self->mac->window_adjust_counter = 0;
 		}
-		if(self->mac->window_adjust_plan >= self->conf->mac.adjustment_period){ //need to grow window?
+		if(self->mac->window_adjust_counter >= self->conf->mac.window_adjustment_period){ //need to grow window?
 			mac_expand_window(self->mac);
-			self->mac->window_adjust_plan = 0; //reset indications.
+			self->mac->window_adjust_counter = 0;
 		}
 	}
 	if(!can_send){
@@ -59,6 +59,7 @@ static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to
 static int _sky_tx_extension_needed_hmac_reset(SkyHandle self, uint8_t vc){
 	return (self->hmac->vc_enforcement_need[vc] != 0) && (self->conf->vc[vc].require_authentication);
 }
+
 static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	if(!_sky_tx_extension_needed_hmac_reset(self, vc)){
 		return 0;

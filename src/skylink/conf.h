@@ -24,9 +24,10 @@ typedef struct {
 } SkyPHYConfig;
 
 
-
+/* TDD MAC configuration struct */
 typedef struct {
-	/* Default send window size for both me and peer. */
+
+	/* Transmission window size limits for both me and peer. */
 	int32_t maximum_window_length_ticks;
 	int32_t minimum_window_length_ticks;
 
@@ -37,24 +38,33 @@ typedef struct {
 	 * the peers will take long time to send anything, and will ARQ timeout happens too easily.*/
 	int32_t gap_constant_ticks;
 
-	/* Default tail end time of the cycle. */
-	int32_t tail_constant_ticks;
+	/* Minimum time */
+	int32_t tail_constant_ticks; // TODO: Rename switch_delay_ticks;
 
 	/* Boolean toggle for wether an unauthenticated frame can update MAC state belief.
 	 * Enabling this will allow a continuous stream of unauthenticated frames to essentially block transmission:
 	 * a so called 'shut-up-attack' */
 	uint8_t unauthenticated_mac_updates;
 
+	/* Time after not hearing anything shift the MAC window by random amount
+	 * to avoid overlapping transmission. */
 	int32_t shift_threshold_ticks;
 
-	int16_t window_adjust_increment_ticks;
-
-	int8_t adjustment_period;
-
-	/* After this many ticks of not getting mac state update, the link is considered silent. */
+	/* After this many ticks of not getting MAC state updates, the link is considered idle. */
 	int32_t idle_timeout_ticks;
 
-	int8_t idle_frames_per_window;
+	/* Increment size of single windows size adjustment in tick */
+	int16_t window_adjust_increment_ticks;
+
+	/* Fallback by this many ticks when frame carrier is sensed */
+	int16_t carrier_sense_ticks;
+
+	/* How often window length can be adjusted (incremented or decremented). Count in windows. */
+	int8_t window_adjustment_period;
+
+	/* If window has less frames than the count, an idle frames are generated to fill the window. */
+	uint8_t idle_frames_per_window;
+
 } SkyMACConfig;
 
 

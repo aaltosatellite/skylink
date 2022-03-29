@@ -160,5 +160,5 @@ static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* 
 	}
 	uint16_t w = sky_ntoh16(ext->TDDControl.window);
 	uint16_t r = sky_ntoh16(ext->TDDControl.remaining);
-	mac_update_belief(self->mac, sky_get_tick_time() , w, r); // TODO: sky_get_tick_time or frame->rx_time_ticks
+	mac_update_belief(self->mac, frame->rx_time_ticks , w, r);
 }

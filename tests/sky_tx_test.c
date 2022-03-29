@@ -190,11 +190,11 @@ void sky_tx_test_cycle(){
 	int mac_tail = config->mac.tail_constant_ticks;
 	int mac_cycle = my_window + peer_window + mac_gap + mac_tail;
 	int mac_window_on = randint_i32(0, 10) < 5;
-	int mac_window_adjust_plan0 = randint_i32(-3, 3);
+	int mac_window_adjust_counter0 = randint_i32(-3, 3);
 	self->mac->my_window_length = my_window;
 	self->mac->peer_window_length = peer_window;
 	self->mac->window_on = mac_window_on;
-	self->mac->window_adjust_plan = mac_window_adjust_plan0;
+	self->mac->window_adjust_counter = mac_window_adjust_counter0;
 
 	int can_send = randint_i32(1,10) <= 7;
 	int mac_t0;
@@ -276,15 +276,15 @@ void sky_tx_test_cycle(){
 	if(can_send){
 		assert(self->mac->window_on == 1);
 		if(mac_window_on == 0){
-			if(mac_window_adjust_plan0 <= -2){
+			if(mac_window_adjust_counter0 <= -2){
 				//PRINTFF(0,"-");
 				assert(self->mac->my_window_length == MAX(config->mac.minimum_window_length_ticks, my_window - config->mac.window_adjust_increment_ticks) );
-				assert(self->mac->window_adjust_plan == 0);
+				assert(self->mac->window_adjust_counter == 0);
 			}
-			else if(mac_window_adjust_plan0 >= 2){
+			else if(mac_window_adjust_counter0 >= 2){
 				//PRINTFF(0,"+");
 				assert(self->mac->my_window_length == MIN(config->mac.maximum_window_length_ticks, my_window + config->mac.window_adjust_increment_ticks) );
-				assert(self->mac->window_adjust_plan == 0);
+				assert(self->mac->window_adjust_counter == 0);
 			} else {
 				assert(self->mac->my_window_length == my_window);
 			}
