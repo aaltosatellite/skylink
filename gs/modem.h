@@ -41,7 +41,7 @@ int modem_carrier_sensed();
 /*
  * Returns 1 if the modem is currently transmitting.
  */
-int modem_tx_active();
+int modem_can_send();
 
 /*
  * Returns 1 if a tick event has been received.

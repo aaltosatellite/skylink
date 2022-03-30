@@ -1,12 +1,16 @@
 
-#include <zmq.h>
+#include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include <zmq.h>
 
 #include "skylink/skylink.h"
 #include "skylink/reliable_vc.h"
 #include "skylink/diag.h"
+#include "skylink/hmac.h"
 #include "skylink/platform.h"
 #include "skylink/hmac.h"
 #include "skylink/mac.h"
@@ -17,11 +21,49 @@
 #include "../platforms/posix/timestamp.h"
 
 
+#ifdef EXTERNAL_SECRET
+extern const uint8_t* hmac_key;
+extern const unsigned int hmac_key_len;
+#else
 const uint8_t hmac_key[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+const unsigned int hmac_key_len = sizeof(hmac_key);
+#endif
+
 
 SkyHandle handle;
 
 void *zmq = NULL;
+
+
+
+void read_sequence_numbers_from_file(int32_t* sequences) {
+	int fd = open("sequences", O_RDWR);
+	if (fd < 0) {
+		fprintf(stderr, "No 'sequences' file found! Starting from zero.\n");
+		memset(sequences, 0, SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t));
+		return;
+	}
+	if (read(fd, sequences, SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) != SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) {
+		fprintf(stderr, "Broken 'sequences' file! Starting from zero.\n");
+		memset(sequences, 0, SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t));
+	}
+
+	close(fd);
+}
+
+void write_sequence_numbers_to_file(const int32_t* sequences) {
+	int fd = open("sequences", O_RDONLY);
+	if (fd < 1) {
+		fprintf(stderr, "Failed to open 'sequences' file for writing!\n");
+		return;
+	}
+	if (write(fd, sequences, SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) != SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) {
+		fprintf(stderr, "Failed to write 'sequences' file!\n");
+		return;
+	}
+	close(fd);
+}
+
 
 
 int main(int argc, char *argv[])
@@ -166,9 +208,9 @@ int main(int argc, char *argv[])
 	/*
 	 * HMAC configuration
 	 */
-	config->hmac.key_length                 = sizeof(hmac_key);
+	config->hmac.key_length                 = hmac_key_len;
 	config->hmac.maximum_jump               = 24;
-	memcpy(config->hmac.key, hmac_key, config->hmac.key_length);
+	memcpy(config->hmac.key, hmac_key, hmac_key_len);
 
 
 	// Kick the actual protocol implementation running
@@ -184,6 +226,14 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 	}
+
+
+	/*
+	 * Load sequence numbers
+	 */
+	int32_t sequences[SKY_NUM_VIRTUAL_CHANNELS];
+	read_sequence_numbers_from_file(sequences);
+	sky_hmac_load_sequences(handle, sequences);
 
 	/* Wait for the first timing message */
 	modem_wait_for_sync();

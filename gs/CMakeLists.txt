@@ -5,11 +5,18 @@ add_compile_options(-g -Wall -Wextra)
 
 find_package(SUO REQUIRED)
 
+
+
 add_executable(gs
     main.c
     vc_interface.c
     modem_suo.c
 )
+
+if(EXTERNAL_SECRET)
+    target_sources(gs PRIVATE secret.c)
+    target_compile_definitions(gs PRIVATE EXTERNAL_SECRET)
+endif(EXTERNAL_SECRET)
 
 
 target_include_directories( gs PUBLIC
