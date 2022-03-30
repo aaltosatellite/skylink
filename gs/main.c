@@ -22,10 +22,10 @@
 
 
 #ifdef EXTERNAL_SECRET
-extern const uint8_t* hmac_key;
+extern const uint8_t hmac_key[];
 extern const unsigned int hmac_key_len;
 #else
-const uint8_t hmac_key[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+const uint8_t hmac_key[] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
 const unsigned int hmac_key_len = sizeof(hmac_key);
 #endif
 
@@ -237,6 +237,9 @@ int main(int argc, char *argv[])
 
 	/* Wait for the first timing message */
 	modem_wait_for_sync();
+	tick_t last_sequences_stored = get_timestamp();
+	int txed = 0;
+
 
 	SkyRadioFrame frame;
 	SKY_PRINTF(SKY_DIAG_DEBUG, "Running...\n");
@@ -280,16 +283,25 @@ int main(int argc, char *argv[])
 				if (ret == 1) {
 					modem_tx(&frame, t);
 					memset(&frame, 0, sizeof(frame));
+					txed = 1;
 				}
 			}
 
 			// Print diagnostics
 			static int d = 0;
-			if (++d > 20) {
+			if (++d > 40) {
 				sky_print_link_state(handle);
 				d = 0;
 			}
 
+			// Store HMAC values on the disk every 1 second
+			if (txed && get_timestamp() - last_sequences_stored > 1000) {
+				last_sequences_stored = get_timestamp();
+				txed = 0;
+
+				sky_hmac_dump_sequences(handle, sequences);
+				write_sequence_numbers_to_file(sequences);
+			}
 		}
 
 	}
