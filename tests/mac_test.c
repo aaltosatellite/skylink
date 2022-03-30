@@ -40,6 +40,7 @@ void mac_test_cycle(){
 	config.maximum_window_length_ticks = randint_i32(config.minimum_window_length_ticks+50, config.minimum_window_length_ticks+ 2000);
 	config.shift_threshold_ticks = randint_i32(3, 100000);
 	config.unauthenticated_mac_updates = randint_i32(0,1);
+	config.carrier_sense_ticks = randint_i32(1,210);
 	SkyMAC* mac = sky_mac_create(&config);
 
 	//randomize state variables.
@@ -86,7 +87,7 @@ void tst_update_belief(SkyMAC* mac, SkyMACConfig* config){
 	assert(mac->last_belief_update == now);
 	assert(mac->peer_window_length == peer_w);
 
-	int rem = 0;
+	int rem;
 	if(peer_already_over){
 		rem = 0;
 		//PRINTFF(0,"%d  %d\n", mac->T0- now, get_cycle(mac));
@@ -147,16 +148,28 @@ void tst_update_belief(SkyMAC* mac, SkyMACConfig* config){
 void tst_cs(SkyMAC* mac, SkyMACConfig* config){
 	int now = randint_i32(0, MOD_TIME_TICKS - 1);
 	int cycle = get_cycle(mac);
-	int t00 = mac->T0;
 	int x = positive_modulo( wrap_time_ticks(now - mac->T0), cycle);
-	int a = (x >= (mac->my_window_length + mac->config->gap_constant_ticks));
-	int b = (x <= (mac->my_window_length + mac->config->gap_constant_ticks + mac->peer_window_length));
+	if (x < mac->my_window_length){
+		x = 0;
+	} else {
+		x = cycle - x;
+	}
+	int rem_to_own = mac_time_to_own_window(mac, now);
+	assert(x == rem_to_own);
+	int acts = (x < mac->config->carrier_sense_ticks);
 	sky_mac_carrier_sensed(mac, now);
 
 
-	if(a && b){
-		//PRINTFF(0,"1: %d   %d\n\n", mac_time_to_own_window(mac, now), (cycle - x));
-		assert(mac_time_to_own_window(mac, now) == (cycle - x) );
+	if(acts){
+		if(mac_time_to_own_window(mac, now) != config->carrier_sense_ticks){
+			PRINTFF(0,"car sense ticks: %d \n", config->carrier_sense_ticks);
+			PRINTFF(0,"time to own: %d\n", mac_time_to_own_window(mac, now));
+			PRINTFF(0,"x: %d\n",  x);
+			PRINTFF(0,"cycle: %d\n\n",  cycle);
+			PRINTFF(0,"my window: %d\n\n",  mac->my_window_length);
+			PRINTFF(0,"cycle: - my %d\n\n", cycle - mac->my_window_length);
+		}
+		assert(mac_time_to_own_window(mac, now) == config->carrier_sense_ticks );
 	} else {
 		//PRINTFF(0,"2: %d   %d\n", x, cycle - x);
 		//PRINTFF(0,"2: %d   %d\n", mac->my_window_length ,mac->peer_window_length);
@@ -164,6 +177,6 @@ void tst_cs(SkyMAC* mac, SkyMACConfig* config){
 		//PRINTFF(0,"2: %d   %d\n", mac_time_to_own_window(mac, now), config->tail_constant_ticks);
 		//PRINTFF(0,"2: %d \n", now);
 		//PRINTFF(0,"2: %d  %d\n\n", t00, mac->T0);
-		//assert(mac_time_to_own_window(mac, now) == config->tail_constant_ticks);
+		assert(mac_time_to_own_window(mac, now) == x);
 	}
 }

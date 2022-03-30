@@ -38,10 +38,10 @@ int main() {
 	*/
 	uint64_t t0 = real_microseconds();
 
-	//elebuffer_tests();
-	//packet_tests();
-	//fec_test();
-	//hmac_tests();
+	elebuffer_tests();
+	packet_tests();
+	fec_test();
+	hmac_tests();
 	mac_test(15);
 	ring_tests(15);
 	arq_system_test1(21);

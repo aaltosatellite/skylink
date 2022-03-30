@@ -58,11 +58,14 @@ SkyMAC* sky_mac_create(SkyMACConfig* config) {
 		config->idle_frames_per_window = 3;
 
 	// Limit MAC timeout time
-	if (config->idle_timeout_ticks < 1000 || config->idle_timeout_ticks > 2000)
+	if (config->idle_timeout_ticks < 2000 || config->idle_timeout_ticks > 20000)
 		config->idle_timeout_ticks = 10000;
 
 	if (config->carrier_sense_ticks > 250)
 		config->carrier_sense_ticks = 250;
+
+	if (config->carrier_sense_ticks >= (config->minimum_window_length_ticks + config->gap_constant_ticks))
+		config->carrier_sense_ticks = config->minimum_window_length_ticks + config->gap_constant_ticks;
 
 	// Limit window adjusting period
 	if (config->window_adjustment_period < 1)
@@ -207,17 +210,11 @@ void mac_reset(SkyMAC* mac, tick_t now) {
 
 
 void sky_mac_carrier_sensed(SkyMAC* mac, tick_t now) {
-#if 0
-	tick_t minimum_t0 = wrap_time_ticks(now + mac->config->carrier_sense_ticks);
-	if (minimum_t0 > mac->T0)
-		mac->T0 = minimum_t0;
-#else
-	int32_t peer_remaining_priori = mac_peer_window_remaining(mac, now);
-	if(peer_remaining_priori <= 0) {
+	int32_t ticks_to_own_window_priori = mac_time_to_own_window(mac, now);
+	if(ticks_to_own_window_priori <= mac->config->carrier_sense_ticks) {
 		int32_t cycle = get_mac_cycle(mac);
-		mac->T0 = wrap_time_ticks((now - cycle) + mac->config->tail_constant_ticks);
+		mac->T0 = wrap_time_ticks((now - cycle) + mac->config->carrier_sense_ticks);
 	}
-#endif
 }
 
 
