@@ -16,7 +16,13 @@
 #include "modem.h"
 
 
-static timestamp_t last_received_time;
+const int tx_transmit_delay = 10; // Minimum delay between consecutive transmissions
+const int switching_delay   = 20; // Mimimum delay when switching from RX to TX
+
+
+static timestamp_t global_tick_time;
+static timestamp_t last_rx_tick;
+static timestamp_t last_tx_tick;
 
 static int tick_received = 0;
 static int carrier_sensed = 0;
@@ -73,7 +79,7 @@ void modem_wait_for_sync() {
 			abort();
 		}
 		if (ret == 1) {
-			last_received_time = suo_frame->hdr.timestamp / 1e6; // ns -> ms
+			global_tick_time = suo_frame->hdr.timestamp / 1e6; // ns -> ms
 			break;
 		}
 		SKY_PRINTF(SKY_DIAG_INFO, ".");
@@ -129,16 +135,25 @@ int modem_rx(SkyRadioFrame* sky_frame, int flags) {
 		 */
 		//SKY_PRINTF(SKY_DIAG_FRAMES, "%20lu: Tick\n", suo_frame->hdr.timestamp);
 
-		last_received_time = suo_frame->hdr.timestamp / 1e6; // ns to ms
+		global_tick_time = suo_frame->hdr.timestamp / 1e6; // ns to ms
 		tick_received = 1;
 
 		tx_active = ((suo_frame->hdr.flags & SUO_FLAGS_TX_ACTIVE) != 0);
 		rx_active = ((suo_frame->hdr.flags & SUO_FLAGS_RX_LOCKED) != 0);
 
-		if ((suo_frame->hdr.flags & SUO_FLAGS_RX_LOCKED) != 0 && carrier_sensed == 0)
-			carrier_sensed = 1;
-		if ((suo_frame->hdr.flags & SUO_FLAGS_RX_LOCKED) == 0 && carrier_sensed != 0)
+		if (tx_active)
+			last_tx_tick = global_tick_time;
+
+		if (rx_active) {
+			last_rx_tick = global_tick_time;
+
+			if (carrier_sensed == 0)
+				carrier_sensed = 1;
+		}
+		else {
 			carrier_sensed = 0;
+		}
+
 		return 0;
 	}
 	else {
@@ -161,9 +176,16 @@ int modem_rx(SkyRadioFrame* sky_frame, int flags) {
 	return 0;
 }
 
-
-int modem_tx_active() { // Can send?
-	return (tx_active == 0) && (rx_active == 1);
+int modem_can_send() {
+	if (tx_active == 1) // TX already/still active
+		return 0;
+	if (rx_active == 1) // Receiving frame
+		return 0;
+	if (global_tick_time - last_tx_tick > tx_transmit_delay) // No too fast txing
+		return 0;
+	if (global_tick_time - last_rx_tick > switching_delay) // RX/TX switching delay
+		return 0;
+	return 1;
 }
 
 int tick() {
@@ -181,5 +203,5 @@ int modem_carrier_sensed() {
 }
 
 timestamp_t get_timestamp() {
-	return last_received_time;
+	return global_tick_time;
 }

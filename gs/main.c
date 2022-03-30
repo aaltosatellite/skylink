@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
 			if (modem_carrier_sensed())
 				sky_mac_carrier_sensed(handle->mac, sky_get_tick_time());
 
-		 	if (modem_tx_active() == 0) { // Can we send?
+		 	if (modem_can_send()) {
 				uint64_t t = get_timestamp() + tx_ahead_time;
 
 				int ret = sky_tx(handle, &frame, 0);
