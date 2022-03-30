@@ -11,7 +11,7 @@
 
 
 int32_t wrap_hmac_sequence(int32_t sequence){
-	return positive_modulo_true(sequence, HMAC_CYCLE_LENGTH);
+	return positive_modulo(sequence, HMAC_CYCLE_LENGTH);
 }
 
 

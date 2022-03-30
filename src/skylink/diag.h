@@ -23,7 +23,7 @@
 /* Global define for debug print flags */
 extern unsigned int sky_diag_mask;
 
-//#define SKY_DEBUG
+#define SKY_DEBUG
 
 
 #ifdef SKY_DEBUG
@@ -40,9 +40,12 @@ extern unsigned int sky_diag_mask;
 
 // --- DEBUG outside UNIX environment -------------------------------------------------------------
 #else
-/* Assert for embedded platforms */
-#define SKY_ASSERT(...)    do { } while(0);
-#define SKY_PRINTF(...);
+#ifndef SKY_ASSERT
+#define SKY_ASSERT(...)   do { } while(0);
+#endif
+#ifndef SKY_PRINTF
+#define SKY_PRINTF(...)    do { } while(0);
+#endif
 #endif //__unix__
 // ------------------------------------------------------------------------------------------------
 

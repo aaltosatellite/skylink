@@ -5,12 +5,16 @@
 #ifndef SKYLINK_SEQUENCE_RING_H
 #define SKYLINK_SEQUENCE_RING_H
 
+#include "diag.h"
 #include "elementbuffer.h"
 #include "conf.h"
 #include "frame.h"
 
-
-#define ARQ_SEQUENCE_MODULO 			507 //todo: should be 65000 in prod.
+#ifdef SKY_DEBUG
+#define ARQ_SEQUENCE_MODULO 			517
+#else
+#define ARQ_SEQUENCE_MODULO 			32000
+#endif
 #define ARQ_RESEND_SCHEDULE_DEPTH		16
 #define ARQ_MAXIMUM_HORIZON				16
 

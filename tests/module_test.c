@@ -32,17 +32,17 @@ int main() {
 	/*
 	for (int i = -90000000; i < 90000000; ++i) {
 		assert(__modulo(i) == posmod(i));
-		assert(__modulo(i) == positive_modulo_true(i, MODULO_NUMBER));
+		assert(__modulo(i) == positive_modulo(i, MODULO_NUMBER));
 	}
 	PRINTFF(0, "Jes! \n");
 	*/
 	uint64_t t0 = real_microseconds();
 
-	elebuffer_tests();
-	packet_tests();
-	fec_test();
-	hmac_tests();
-	mac_test(4);
+	//elebuffer_tests();
+	//packet_tests();
+	//fec_test();
+	//hmac_tests();
+	mac_test(15);
 	ring_tests(15);
 	arq_system_test1(21);
 	arq_system_test2(21);

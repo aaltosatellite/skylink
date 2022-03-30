@@ -135,7 +135,7 @@ bool mac_can_send(SkyMAC* mac, tick_t now);
  * "peer_mac_remaining" is sent by the peer, and indicates how many ticks the peer thinks is remaining of it's window.
  * With this information we can formulate a picture of the situatuion that will be reasonably accurate for several cycles.
  */
-void mac_update_belief(SkyMAC* mac, tick_t now, tick_t peer_mac_length, tick_t peer_mac_remaining);
+void mac_update_belief(SkyMAC* mac, const tick_t now, tick_t receive_time, tick_t peer_mac_length, tick_t peer_mac_remaining);
 
 
 // Resets mac into a state where it can immediately send.

@@ -29,7 +29,7 @@ int32_t sky_htoni32(int32_t vn);
 
 int positive_modulo_x(int32_t x, int32_t m);
 
-int32_t positive_modulo_true(int32_t x, int32_t m);
+int32_t positive_modulo(int32_t x, int32_t m);
 
 int x_in_u8_array(uint8_t x, const uint8_t* array, int length);
 

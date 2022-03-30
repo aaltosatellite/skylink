@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 	config->mac.maximum_window_length_ticks     = 5000;
 	config->mac.minimum_window_length_ticks     = 450;
 	config->mac.window_adjust_increment_ticks   = 210;
-	config->mac.adjustment_period               = 2;
+	config->mac.window_adjustment_period        = 2;
 	config->mac.unauthenticated_mac_updates     = 0;
 	config->mac.shift_threshold_ticks           = 4000;
 	config->mac.idle_frames_per_window          = 0;

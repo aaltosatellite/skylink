@@ -542,7 +542,7 @@ static void test5_round(){
 	int tail_seq = s_seq0;
 	int in_buffer = 0;
 	while (next_idx_to_tx < NMSG) {
-		int tail_to_tx = positive_modulo_true(array->sendRing->tx_head - array->sendRing->tail, array->sendRing->length);
+		int tail_to_tx = positive_modulo(array->sendRing->tx_head - array->sendRing->tail, array->sendRing->length);
 
 
 		if(tail_to_tx <= ARQ_MAXIMUM_HORIZON){

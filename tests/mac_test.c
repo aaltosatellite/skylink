@@ -9,7 +9,8 @@
 #include "tools/tools.h"
 #include <assert.h>
 
-void tst_v1(SkyMAC* mac, SkyMACConfig* config);
+void tst_cs(SkyMAC* mac, SkyMACConfig* config);
+void tst_update_belief(SkyMAC* mac, SkyMACConfig* config);
 void mac_test_cycle();
 
 static int get_cycle(SkyMAC* mac){
@@ -43,6 +44,7 @@ void mac_test_cycle(){
 
 	//randomize state variables.
 	mac->total_frames_sent_in_current_window = 0;
+	mac->vc_round_robin_start = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		mac->frames_sent_in_current_window_per_vc[i] = randint_i32(0,4);
 		mac->total_frames_sent_in_current_window += mac->frames_sent_in_current_window_per_vc[i];
@@ -50,9 +52,15 @@ void mac_test_cycle(){
 
 	mac->last_belief_update = randint_i32(0, MOD_TIME_TICKS - 1);
 	mac->T0 = randint_i32(0, MOD_TIME_TICKS - 1);
+	mac->my_window_length = randint_i32(config.minimum_window_length_ticks, config.maximum_window_length_ticks);
+	mac->peer_window_length = randint_i32(config.minimum_window_length_ticks, config.maximum_window_length_ticks);
 
 	for (int i = 0; i < 40; ++i) {
-		tst_v1(mac, &config);
+		tst_cs(mac, &config);
+	}
+
+	for (int i = 0; i < 40; ++i) {
+		tst_update_belief(mac, &config);
 	}
 	sky_mac_destroy(mac);
 }
@@ -61,45 +69,66 @@ void mac_test_cycle(){
 
 
 
-void tst_v1(SkyMAC* mac, SkyMACConfig* config){
-	int t0 = randint_i32(0, MOD_TIME_TICKS - 1);
+void tst_update_belief(SkyMAC* mac, SkyMACConfig* config){
+	//PRINTFF(0,".");
+	int now = randint_i32(0, MOD_TIME_TICKS - 1);
+	int rcvd = randint_i32(2,300);
+	int rcv_t = now - rcvd;
 	int peer_w = randint_i32(config->minimum_window_length_ticks, config->maximum_window_length_ticks);
 	int peer_r = randint_i32(0, peer_w);
-	mac_update_belief(mac, t0, peer_w, peer_r);
+	int peer_already_over = (rcv_t + peer_r) < now;
+	mac_update_belief(mac, now, rcv_t, peer_w, peer_r);
 
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		assert(mac->frames_sent_in_current_window_per_vc[i] == 0);
 		assert(mac->total_frames_sent_in_current_window == 0);
 	}
-
-	assert(mac->last_belief_update == t0);
+	assert(mac->last_belief_update == now);
 	assert(mac->peer_window_length == peer_w);
+
+	int rem = 0;
+	if(peer_already_over){
+		rem = 0;
+		//PRINTFF(0,"%d  %d\n", mac->T0- now, get_cycle(mac));
+		//PRINTFF(0,"%d  %d\n", mac_time_to_own_window(mac,now), config->tail_constant_ticks);
+		assert(mac_time_to_own_window(mac, now) == config->tail_constant_ticks);
+	} else {
+		rem = rcv_t + peer_r - now;
+		//PRINTFF(0,"%d  %d\n", mac_time_to_own_window(mac,now), config->tail_constant_ticks + rem);
+		assert(mac_time_to_own_window(mac, now) == (config->tail_constant_ticks + rem));
+	}
+
+
 	int cycle = get_cycle(mac);
 	for (int i = 0; i < 20; ++i) {
 
-		int s = randint_i32(0, peer_r-1);
-		int t1 = wrap_time_ticks(t0 + (randint_i32(0, 1000) * cycle) + s);
+		//In peer's window
+		int s = randint_i32(0, rem);
+		int t1 = wrap_time_ticks(now + (randint_i32(0, 1000) * cycle) + s);
 		assert(!mac_can_send(mac, t1));
 		assert(mac_own_window_remaining(mac, t1) < 0);
 		assert(mac_time_to_own_window(mac, t1) > 0);
 		assert(mac_peer_window_remaining(mac, t1) >= 0);
 
-		s = randint_i32(peer_r, peer_r + config->tail_constant_ticks -1);
-		int t2 = wrap_time_ticks(t0 + (randint_i32(0, 2000) * cycle) + s);
+		//In tail section
+		s = randint_i32(rem, rem + config->tail_constant_ticks -1);
+		int t2 = wrap_time_ticks(now + (randint_i32(0, 2000) * cycle) + s);
 		assert(!mac_can_send(mac, t2));
 		assert(mac_own_window_remaining(mac, t2) < 0);
 		assert(mac_time_to_own_window(mac, t2) > 0);
 		assert(mac_peer_window_remaining(mac, t2) <= 0);
 
-		s = randint_i32(peer_r + config->tail_constant_ticks, peer_r + config->tail_constant_ticks + mac->my_window_length -1);
-		int t3 = wrap_time_ticks(t0 + (randint_i32(0, 2000) * cycle) + s);
+		//In own window
+		s = randint_i32(rem + config->tail_constant_ticks, rem + config->tail_constant_ticks + mac->my_window_length -1);
+		int t3 = wrap_time_ticks(now + (randint_i32(0, 2000) * cycle) + s);
 		assert(mac_can_send(mac, t3));
 		assert(mac_own_window_remaining(mac, t3) >= 0);
 		assert(mac_time_to_own_window(mac, t3) == 0);
 		assert(mac_peer_window_remaining(mac, t3) < 0);
 
-		s = randint_i32(peer_r + config->tail_constant_ticks + mac->my_window_length, peer_r + config->tail_constant_ticks + mac->my_window_length + config->gap_constant_ticks - 1);
-		int t4 = wrap_time_ticks(t0 + (randint_i32(0, 2000) * cycle) + s);
+		//In gap
+		s = randint_i32(rem + config->tail_constant_ticks + mac->my_window_length, rem + config->tail_constant_ticks + mac->my_window_length + config->gap_constant_ticks - 1);
+		int t4 = wrap_time_ticks(now + (randint_i32(0, 2000) * cycle) + s);
 		assert(!mac_can_send(mac, t4));
 		assert(mac_own_window_remaining(mac, t4) <= 0);
 		assert(mac_time_to_own_window(mac, t4) > 0);
@@ -107,9 +136,34 @@ void tst_v1(SkyMAC* mac, SkyMACConfig* config){
 	}
 
 	for (int i = 0; i < 200; ++i) {
-		int t1 = wrap_time_ticks(t0 + randint_i32(0, cycle* 100));
+		int t1 = wrap_time_ticks(now + randint_i32(0, cycle* 100));
 		mac_reset(mac, t1);
 		assert(mac_can_send(mac, t1));
 		mac_shift_windowing(mac, randint_i32(0, 300));
+	}
+}
+
+
+void tst_cs(SkyMAC* mac, SkyMACConfig* config){
+	int now = randint_i32(0, MOD_TIME_TICKS - 1);
+	int cycle = get_cycle(mac);
+	int t00 = mac->T0;
+	int x = positive_modulo( wrap_time_ticks(now - mac->T0), cycle);
+	int a = (x >= (mac->my_window_length + mac->config->gap_constant_ticks));
+	int b = (x <= (mac->my_window_length + mac->config->gap_constant_ticks + mac->peer_window_length));
+	sky_mac_carrier_sensed(mac, now);
+
+
+	if(a && b){
+		//PRINTFF(0,"1: %d   %d\n\n", mac_time_to_own_window(mac, now), (cycle - x));
+		assert(mac_time_to_own_window(mac, now) == (cycle - x) );
+	} else {
+		//PRINTFF(0,"2: %d   %d\n", x, cycle - x);
+		//PRINTFF(0,"2: %d   %d\n", mac->my_window_length ,mac->peer_window_length);
+		//PRINTFF(0,"2: %d   %d\n", (mac->my_window_length + mac->config->gap_constant_ticks), (mac->my_window_length + mac->config->gap_constant_ticks + mac->peer_window_length));
+		//PRINTFF(0,"2: %d   %d\n", mac_time_to_own_window(mac, now), config->tail_constant_ticks);
+		//PRINTFF(0,"2: %d \n", now);
+		//PRINTFF(0,"2: %d  %d\n\n", t00, mac->T0);
+		//assert(mac_time_to_own_window(mac, now) == config->tail_constant_ticks);
 	}
 }

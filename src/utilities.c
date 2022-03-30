@@ -61,7 +61,7 @@ int positive_modulo_x(int32_t x, int32_t m){
 
 
 
-int32_t positive_modulo_true(int32_t x, int32_t m){
+int32_t positive_modulo(int32_t x, int32_t m){
 	//return (((x % m) + m) % m);
 	if((abs(x) > (m*12))){
 		//printf("slw.");
@@ -103,7 +103,7 @@ int x_in_u16_array(uint16_t x, const uint16_t* array, int length){
 }
 
 int32_t wrap_time_ticks(tick_t time_ticks){
-	return positive_modulo_true(time_ticks, MOD_TIME_TICKS);
+	return positive_modulo(time_ticks, MOD_TIME_TICKS);
 }
 
 
@@ -120,7 +120,8 @@ int sky_tick(tick_t time_in_ticks){
 	if(time_in_ticks != _global_ticks_now){
 		ret = 1;
 	}
-	_global_ticks_now = time_in_ticks;
+	//_global_ticks_now = time_in_ticks;
+	_global_ticks_now = positive_modulo(time_in_ticks, MOD_TIME_TICKS);
 	return ret;
 }
 

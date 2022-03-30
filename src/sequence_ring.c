@@ -12,13 +12,13 @@
 
 
 static int ring_wrap(int idx, int len){
-	return positive_modulo_true(idx, len);
+	return positive_modulo(idx, len);
 }
 
 
 
 int wrap_sequence(int sequence){
-	return positive_modulo_true(sequence, ARQ_SEQUENCE_MODULO);
+	return positive_modulo(sequence, ARQ_SEQUENCE_MODULO);
 }
 
 
