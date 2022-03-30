@@ -114,16 +114,17 @@ int main(int argc, char *argv[])
 	/*
 	 * MAC configurations
 	 */
-	config->mac.gap_constant_ticks              = 500;
-	config->mac.tail_constant_ticks             = 50;
+	config->mac.gap_constant_ticks              = 1000;
+	config->mac.tail_constant_ticks             = 60;
 	config->mac.maximum_window_length_ticks     = 5000;
-	config->mac.minimum_window_length_ticks     = 450;
-	config->mac.window_adjust_increment_ticks   = 210;
+	config->mac.minimum_window_length_ticks     = 250;
+	config->mac.window_adjust_increment_ticks   = 250;
 	config->mac.window_adjustment_period        = 2;
 	config->mac.unauthenticated_mac_updates     = 0;
-	config->mac.shift_threshold_ticks           = 4000;
+	config->mac.shift_threshold_ticks           = 10000;
 	config->mac.idle_frames_per_window          = 0;
 	config->mac.idle_timeout_ticks              = 30000;
+	config->mac.carrier_sense_ticks             = 200;
 
 	/*
 	 * Virtual channel configurations

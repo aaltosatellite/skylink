@@ -181,9 +181,9 @@ int modem_can_send() {
 		return 0;
 	if (rx_active == 1) // Receiving frame
 		return 0;
-	if (global_tick_time - last_tx_tick > tx_transmit_delay) // No too fast txing
+	if (global_tick_time - last_tx_tick < tx_transmit_delay) // No too fast txing
 		return 0;
-	if (global_tick_time - last_rx_tick > switching_delay) // RX/TX switching delay
+	if (global_tick_time - last_rx_tick < switching_delay) // RX/TX switching delay
 		return 0;
 	return 1;
 }
