@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
@@ -37,28 +38,28 @@ void *zmq = NULL;
 
 
 void read_sequence_numbers_from_file(int32_t* sequences) {
-	int fd = open("sequences", O_RDWR);
+	int fd = open("sequences", O_RDONLY);
 	if (fd < 0) {
-		fprintf(stderr, "No 'sequences' file found! Starting from zero.\n");
-		memset(sequences, 0, SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t));
+		perror("Failed to open 'sequences' file");
+		memset(sequences, 0, 2 * SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t));
 		return;
 	}
-	if (read(fd, sequences, SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) != SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) {
-		fprintf(stderr, "Broken 'sequences' file! Starting from zero.\n");
-		memset(sequences, 0, SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t));
+	if (read(fd, sequences, 2 * SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) != 2 * SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) {
+		perror("Failed to read 'sequences' file");
+		memset(sequences, 0, 2 * SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t));
 	}
 
 	close(fd);
 }
 
 void write_sequence_numbers_to_file(const int32_t* sequences) {
-	int fd = open("sequences", O_RDONLY);
-	if (fd < 1) {
-		fprintf(stderr, "Failed to open 'sequences' file for writing!\n");
+	int fd = open("sequences", O_RDWR | O_CREAT, 0777);
+	if (fd < 0) {
+		perror("Failed to open 'sequences' file for writing");
 		return;
 	}
-	if (write(fd, sequences, SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) != SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) {
-		fprintf(stderr, "Failed to write 'sequences' file!\n");
+	if (write(fd, sequences, 2 * SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) != 2 * SKY_NUM_VIRTUAL_CHANNELS * sizeof(int32_t)) {
+		perror("Failed to write 'sequences' file");
 		return;
 	}
 	close(fd);
@@ -210,6 +211,7 @@ int main(int argc, char *argv[])
 	 */
 	config->hmac.key_length                 = hmac_key_len;
 	config->hmac.maximum_jump               = 24;
+	assert(hmac_key_len <= sizeof(config->hmac.key));
 	memcpy(config->hmac.key, hmac_key, hmac_key_len);
 
 
@@ -231,7 +233,7 @@ int main(int argc, char *argv[])
 	/*
 	 * Load sequence numbers
 	 */
-	int32_t sequences[SKY_NUM_VIRTUAL_CHANNELS];
+	int32_t sequences[2 * SKY_NUM_VIRTUAL_CHANNELS];
 	read_sequence_numbers_from_file(sequences);
 	sky_hmac_load_sequences(handle, sequences);
 
