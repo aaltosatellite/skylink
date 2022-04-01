@@ -4,39 +4,40 @@ from construct import *
 from construct import Int8ub, Int16ub, Flag
 
 
-SkyExtension = Struct(
-    'ident' / BitsInteger(4),
-    'len' / BitsInteger(4),
-    'data' / Bytes(this.len),
+SkyExtensionHeader = BitStruct(
+    '_extension_len' / BitsInteger(4),
+    'extension_type' / BitsInteger(4),
+    'data' / Bytewise(Bytes(this._extension_len - 1)),
 )
 
 SkyHeaderFlags = Struct(
-    'flag3' / Flag,
-    'flag2' / Flag,
-    'flag1' / Flag,
+    Padding(2),
+    'has_payload' / Flag,
+    'arq_on' / Flag,
     'is_authenticated' / Flag
 )
 
-SkyHeader = Struct(
-    'version' / BitsInteger(4),
-    'type' / BitsInteger(4),
-    'identifier' / BitsInteger(5*8),
-    'vc' / BitsInteger(4),
+SkyHeader = BitStruct(
+    'version' / BitsInteger(5),
+    '_ident_len' / BitsInteger(3),
+    'identifier' / Bytewise(Bytes(this._ident_len)),
     'flags' / SkyHeaderFlags,
-    'sequence' / Int16ub,
-    'ext_len' / Int8ub,
-    'extensions' / Bytes(this.ext_len),
-    #'extensions' / RestreamData(Bytes(this.ext_len), GreedyRange(SkyExtension))
+    'vc' / BitsInteger(3),
+    '_extension_len' / BitsInteger(8),
+    'sequence' / BitsInteger(16),
+    'extensions' / Bytewise(Bytes(this._extension_len)),
+    #'extensions' / RestreamData(Bytewise(Bytes(this._extension_len)), GreedyRange(SkyExtensionHeader))
 )
 
 def _payload_len(ctx: Construct) -> int:
     """ Resolve payload field length. """
-    return ctx._.frame_len - len(this.header) - (8 if ctx.header.flags.is_authenticated else 0)
+    return ctx._.frame_len - 5 - ctx.header._ident_len - ctx.header._extension_len - (8 if ctx.header.flags.is_authenticated == 1 else 0)
+
 
 SkyRadioFrame = Struct(
     'header' / SkyHeader,
     'payload' / Bytes(_payload_len),
-    'auth' / If(this.header.flags.is_authenticated == 1, Bytes(8))
+    'auth' / If(this.header.flags.is_authenticated == 1, Bytes(8)),
 )
 
 
