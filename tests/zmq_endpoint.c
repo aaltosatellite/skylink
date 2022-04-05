@@ -241,11 +241,14 @@ SkylinkPeer* ep_init_peer(int32_t ID, double relspeed, int32_t baudrate, uint8_t
 		xassert(conf->vc[i].horizon_width > 1, 17);
 		xassert(conf->vc[i].element_size > 40, 18);
 	}
-	xassert(conf->arq_idle_frames_per_window < 5, 19);
-	xassert(conf->arq_timeout_ticks > 1000, 20);
-	xassert(conf->arq_timeout_ticks < 60000, 21);
-	xassert(conf->hmac.maximum_jump < 1000, 22);
-	xassert(conf->hmac.key_length == 16, 23);
+
+	xassert(conf->arq_timeout_ticks > 1000, 19);
+	xassert(conf->arq_timeout_ticks < 60000, 20);
+	xassert(conf->arq_idle_frame_threshold < conf->arq_timeout_ticks, 21);
+	xassert(conf->arq_idle_frame_threshold > 100, 22);
+	xassert(conf->arq_idle_frames_per_window < 5, 23);
+	xassert(conf->hmac.maximum_jump < 1000, 24);
+	xassert(conf->hmac.key_length == 16, 25);
 
 
 	PRINTFF(0, "Starting peer cycle with ID=%d \n",ID);

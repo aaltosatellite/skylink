@@ -30,7 +30,16 @@ sourcefiles = [
 	"../tests/tools/tools.c",
 ]
 
-extensions = [Extension("zmq_endpoint", sourcefiles, extra_compile_args=["-O3"], extra_link_args=["/lib/x86_64-linux-gnu/libzmq.so"])]
+libpath_a = "/lib/x86_64-linux-gnu/libzmq.so"
+libpath_b = "/lib/libzmq.so"
+the_libpath = None
+
+if os.path.isfile(libpath_a):
+	the_libpath = libpath_a
+if os.path.isfile(libpath_b):
+	the_libpath = libpath_b
+
+extensions = [Extension("zmq_endpoint", sourcefiles, extra_compile_args=["-O3"], extra_link_args=[the_libpath])]
 
 
 setup(

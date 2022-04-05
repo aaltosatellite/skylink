@@ -127,6 +127,7 @@ struct sky_conf {
 	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t identity[SKY_IDENTITY_LEN];
 	int32_t arq_timeout_ticks;
+	int32_t arq_idle_frame_threshold;
 	int8_t arq_idle_frames_per_window;
 };
 typedef struct sky_conf SkyConfig;

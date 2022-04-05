@@ -62,7 +62,8 @@ void print_struct_alignments(){
 	*(uint8_t*)(&conf->vc[3]) = 0x4;
 	*(uint8_t*)(&conf->identity) = 0xf;
 	*(uint8_t*)(&conf->arq_timeout_ticks) = 0xaa;
-	*(uint8_t*)(&conf->arq_idle_frames_per_window) = 0xbb;
+	*(uint8_t*)(&conf->arq_idle_frame_threshold) = 0xbb;
+	*(uint8_t*)(&conf->arq_idle_frames_per_window) = 0xcc;
 
 	for (int i = 0; i < (int)sizeof(SkyConfig); ++i) {
 		uint8_t* cp = (uint8_t*)conf;
@@ -79,7 +80,7 @@ void print_struct_alignments(){
 
 int main() {
 	reseed_random();
-	//print_struct_alignments();
+	print_struct_alignments();
 
 	uint64_t t0 = real_microseconds();
 

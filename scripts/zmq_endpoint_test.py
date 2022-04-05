@@ -23,7 +23,7 @@ def tst1():
 	#txsock, rxsock, idd_map, lista, lag, corrupt_rate, loss_rate
 	tx_record = list()
 
-	NS.TIME_RATE = 0.5
+	NS.TIME_RATE = 0.6
 	NS.DIST_LAG = 0.007
 	NS.CORRUPT_RATE = 0.01
 	NS.LOSS_RATE = 0.01
@@ -58,12 +58,12 @@ def tst1():
 	thr5.start()
 	time.sleep(0.2)
 
-	time.sleep(15)
+	time.sleep(5)
 	skylink1.push_pl(1, b"PING!")
 	skylink1.push_pl(1, b"PING!")
 	print("PING!")
 
-	time.sleep(15)
+	time.sleep(20)
 	skylink1.init_arq(0)
 	time.sleep(4)
 
@@ -159,6 +159,6 @@ def failed_arq_init_and_successful():
 
 
 if __name__ == '__main__':
-	#tst1()
-	failed_arq_init_and_successful()
+	tst1()
+	#failed_arq_init_and_successful()
 

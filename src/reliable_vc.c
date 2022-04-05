@@ -300,9 +300,9 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, tick_
 		}
 
 		int b0 = frames_sent_in_this_vc_window < config->arq_idle_frames_per_window;
-		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > (config->arq_timeout_ticks / 4);
-		int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > (config->arq_timeout_ticks / 4);
-		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > (config->arq_timeout_ticks / 4);
+		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > config->arq_idle_frame_threshold;
+		int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > config->arq_idle_frame_threshold;
+		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > config->arq_idle_frame_threshold;
 		if(b0 && (b1 || b2 || b3)){
 			return 1;
 		}
@@ -365,9 +365,9 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 
 		int payload_to_send = sendRing_count_packets_to_send(vchannel->sendRing, 1) > 0;
 		int b0 = frames_sent_in_this_vc_window < config->arq_idle_frames_per_window;
-		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > (config->arq_timeout_ticks / 4);
-		int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > (config->arq_timeout_ticks / 4);
-		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > (config->arq_timeout_ticks / 4);
+		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > config->arq_idle_frame_threshold;
+		int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > config->arq_idle_frame_threshold;
+		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > config->arq_idle_frame_threshold;
 		if((b0 && (b1 || b2 || b3)) || payload_to_send){
 			sky_packet_add_extension_arq_ctrl(frame, vchannel->sendRing->tx_sequence, vchannel->rcvRing->head_sequence);
 			vchannel->last_ctrl_send_tick = now;

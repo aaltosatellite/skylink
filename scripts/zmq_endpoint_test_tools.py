@@ -64,7 +64,7 @@ class SkyMACConfig:
 	idle_timeout_ticks = 25000
 	window_adjust_increment_ticks = 250
 	carrier_sense_ticks = 250
-	unauthenticated_mac_updates = 0
+	unauthenticated_mac_updates = 1
 	window_adjustment_period = 2
 	idle_frames_per_window = 1
 
@@ -101,6 +101,7 @@ class HMACConfig:
 class SkyConfig:
 	identity = b"\00" * 6
 	arq_timeout_ticks = 20000
+	arq_idle_frame_threshold = 20000 // 4
 	arq_idle_frames_per_window = 1
 	def __init__(self):
 		self.phy = SkyPHYConfig()
@@ -130,9 +131,12 @@ class SkyConfig:
 		b += struct.pack("i",self.arq_timeout_ticks)
 		b += b"\x00" * 0
 
+		b += struct.pack("i",self.arq_idle_frame_threshold)
+		b += b"\x00" * 0
+
 		b += struct.pack("B",self.arq_idle_frames_per_window)
 
-		b += (156-len(b)) * b"\00"
+		b += (160-len(b)) * b"\00"
 		return b
 
 

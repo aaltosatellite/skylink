@@ -45,7 +45,9 @@ void sky_tx_test_cycle(){
 
 
 	int arq_timeout = randint_i32(100,30000);
+	int arq_idle_threshold = arq_timeout/5;
 	config->arq_timeout_ticks = arq_timeout;
+	config->arq_idle_frame_threshold = arq_idle_threshold;
 
 	int auth_required[SKY_NUM_VIRTUAL_CHANNELS];
 	int array_tx_seq0[SKY_NUM_VIRTUAL_CHANNELS];
@@ -379,19 +381,19 @@ void sky_tx_test_cycle(){
 		if(arq_on[i] && (!arq_tx_timed_out[i]) && (!arq_rx_timed_out[i]) ){
 			int util_frame = frames_sent_per_vc[i] < self->conf->arq_idle_frames_per_window;
 			//assert(frame->flags & SKY_FLAG_ARQ_ON);
-			if(util_frame && (wrap_time_ticks(now - arq_tx_ts[i]) > (arq_timeout / 4)) ){
+			if(util_frame && (wrap_time_ticks(now - arq_tx_ts[i]) > arq_idle_threshold) ){
 				content = 1;
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
 				assert(ret == 1);
 			}
-			if(util_frame && (wrap_time_ticks(now - arq_rx_ts[i]) > (arq_timeout / 4)) ){
+			if(util_frame && (wrap_time_ticks(now - arq_rx_ts[i]) > arq_idle_threshold) ){
 				content = 1;
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
 				assert(ret == 1);
 			}
-			if(util_frame && (wrap_time_ticks(now - last_ctrl[i]) > (arq_timeout / 4)) ){
+			if(util_frame && (wrap_time_ticks(now - last_ctrl[i]) > arq_idle_threshold) ){
 				content = 1;
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);

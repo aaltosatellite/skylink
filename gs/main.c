@@ -204,6 +204,7 @@ int main(int argc, char *argv[])
 	}
 
 	config->arq_timeout_ticks               = 12000; // [ticks]
+	config->arq_idle_frame_threshold        = config->arq_timeout_ticks / 4; // [ticks]
 	config->arq_idle_frames_per_window      = 1;
 
 	/*

@@ -36,6 +36,7 @@ SkyConfig* new_vanilla_config(){
 	config->vc[3].require_authentication = 0;
 
 	config->arq_timeout_ticks 					= 26000;
+	config->arq_idle_frame_threshold 		    = config->arq_timeout_ticks / 4;
 	config->arq_idle_frames_per_window			= 1;
 
 	config->hmac.key_length 			= 16;

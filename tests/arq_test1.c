@@ -113,6 +113,7 @@ void arq_system_test2_cycle(){
 
 	SkyConfig* sky_conf = new_vanilla_config();
 	sky_conf->arq_timeout_ticks = randint_i32(4000, 25000);
+	sky_conf->arq_idle_frame_threshold = sky_conf->arq_timeout_ticks / randint_i32(3,5);
 	sky_conf->arq_idle_frames_per_window = randint_i32(0, 3);
 
 	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);			//virtual channel randomized
@@ -260,9 +261,9 @@ void arq_system_test2_cycle(){
 		}
 
 		int b0 = (frames_sent_in_vc < sky_conf->arq_idle_frames_per_window);
-		int b1 = wrap_time_ticks(now_ms - ts_send) > sky_conf->arq_timeout_ticks / 4;
-		int b2 = wrap_time_ticks(now_ms - ts_recv) > sky_conf->arq_timeout_ticks / 4;
-		int b3 = wrap_time_ticks(now_ms - ts_last_ctrl) > sky_conf->arq_timeout_ticks / 4;
+		int b1 = wrap_time_ticks(now_ms - ts_send) > sky_conf->arq_idle_frame_threshold;
+		int b2 = wrap_time_ticks(now_ms - ts_recv) > sky_conf->arq_idle_frame_threshold;
+		int b3 = wrap_time_ticks(now_ms - ts_last_ctrl) > sky_conf->arq_idle_frame_threshold;
 		if((b0 && (b1 || b2 || b3)) || (frame->flags & SKY_FLAG_HAS_PAYLOAD)){
 			assert(extArqCtrl != NULL);
 			assert(sky_ntoh16( extArqCtrl->ARQCtrl.tx_sequence ) == seq1);
