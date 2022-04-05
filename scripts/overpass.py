@@ -81,20 +81,22 @@ class Overpass:
 if __name__ == '__main__':
 	#print(np.pi*2*(35785e3+Re) / v_orbit(35785e3) )
 	#print(24*3600)
-	overpass = Overpass(GS_offset_deg=9, GS_lat_deg=60.188, H_orbit_m=500e3)
+	overpass = Overpass(GS_offset_deg=9, GS_lat_deg=69.188, H_orbit_m=570e3)
 	DIST_VISIBLE = []
 	DIST = []
 	T_VISIBLE = []
 	T = []
-	for t in np.linspace(-60*60*12, 60*60*12*4, 10000):
+	for t in np.linspace(0, 60*60*24*2, 10000):
 		d_ = overpass.d_at_t(t)
 		DIST.append(d_)
-		T.append(t/(60))
-		if overpass.over_horizon(t, 0):
+		T.append(t)
+		if overpass.over_horizon(t, 1):
 			DIST_VISIBLE.append(d_)
-			T_VISIBLE.append(t/(60))
+			T_VISIBLE.append(t)
 
 
+	T = np.array(T)
+	T_VISIBLE = np.array(T_VISIBLE)
 	DIST = np.array(DIST)
 	DIST_VISIBLE = np.array(DIST_VISIBLE)
 	DISTkm = DIST/1000.0
@@ -106,19 +108,19 @@ if __name__ == '__main__':
 
 	plt.subplot(211)
 	plt.title("distance")
-	plt.plot(T, DISTkm)
-	plt.scatter(T_VISIBLE, DIST_VISkm, marker=".", color="red")
+	plt.plot(T/(3600*1), DISTkm)
+	plt.scatter(T_VISIBLE/(3600*1), DIST_VISkm, marker=".", color="red")
 	plt.grid()
 	plt.ylabel("km")
-	plt.xlabel("day")
+	plt.xlabel("h")
 
 	plt.subplot(212)
 	plt.title("ping")
-	plt.plot(T, PINGms)
-	plt.scatter(T_VISIBLE, PING_VISms, marker="x", color="red")
+	plt.plot(T/60, PINGms)
+	plt.scatter(T_VISIBLE/60, PING_VISms, marker="x", color="red")
 	plt.grid()
 	plt.ylabel("ms")
-	plt.xlabel("day")
+	plt.xlabel("min")
 	plt.show()
 
 

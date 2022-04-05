@@ -3,8 +3,23 @@ import zmq
 import time
 import threading
 from realtime_plot.drawer import create_realplot
+rint = random.randint
+rng = random.random
 
 
+def get_another(i:int):
+	r = rint(0,255)
+	while r == i:
+		r = rint(0,255)
+	return r
+
+
+def corrupt(pl:bytes, chance_per_byte):
+	pl2 = bytearray(pl)
+	for i in range(len(pl2)):
+		if rng() < chance_per_byte:
+			pl2[i] = get_another(pl2[i])
+	return bytes(pl2)
 
 
 def new_subber(port, subto:list):
