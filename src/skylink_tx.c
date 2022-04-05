@@ -95,9 +95,9 @@ static int _sky_tx_pick_vc(SkyHandle self, tick_t now){
 }
 
 
-static void _sky_tx_poll_arq_timeouts(SkyHandle self, tick_t now, tick_t timeout){
+static void _sky_tx_poll_arq_timeouts(SkyHandle self, tick_t now){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		sky_vc_poll_arq_state_timeout(self->virtual_channels[i], now, timeout);
+		sky_vc_poll_arq_state_timeout(self->virtual_channels[i], now, self->conf->arq_timeout_ticks);
 	}
 }
 
@@ -111,7 +111,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 	tick_t now = sky_get_tick_time();
 	mac_silence_shift_check(self->mac, now);
 	int can_send = mac_can_send(self->mac, now);
-	_sky_tx_poll_arq_timeouts(self, now, self->conf->arq_timeout_ticks);
+	_sky_tx_poll_arq_timeouts(self, now);
 	int vc = _sky_tx_pick_vc(self, now);
 	int content_to_send = (vc >= 0);
 	_sky_tx_track_tdd_state(self, can_send, content_to_send);

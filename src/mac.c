@@ -48,7 +48,7 @@ SkyMAC* sky_mac_create(SkyMACConfig* config) {
 		config->idle_frames_per_window = 3;
 
 	// Limit MAC timeout time
-	if (config->idle_timeout_ticks < 6000 || config->idle_timeout_ticks > 50000)
+	if (config->idle_timeout_ticks < 10000 || config->idle_timeout_ticks > 60000)
 		config->idle_timeout_ticks = 25000;
 
 	if (config->carrier_sense_ticks > 250)

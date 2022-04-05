@@ -37,9 +37,14 @@ static int compute_required_elementount(int elementsize, int total_ring_slots, i
 
 //===== SKYLINK VIRTUAL CHANNEL  =======================================================================================
 SkyVirtualChannel* new_virtual_channel(SkyVCConfig* config){
-	if((config->rcv_ring_len >= ARQ_SEQUENCE_MODULO) || (config->send_ring_len >= ARQ_SEQUENCE_MODULO)){
-		return NULL;
-	}
+	if((config->rcv_ring_len < 7) || (config->rcv_ring_len > 60))
+		config->rcv_ring_len = 7;
+	if(config->horizon_width > (config->rcv_ring_len - 3))
+		config->horizon_width = config->rcv_ring_len - 3;
+	if((config->send_ring_len < 7) || (config->send_ring_len > 60))
+		config->send_ring_len = 7;
+	if((config->element_size < 12) || (config->element_size > 500))
+		config->element_size = 36;
 	SkyVirtualChannel* vchannel = SKY_MALLOC(sizeof(SkyVirtualChannel));
 	vchannel->sendRing = new_send_ring(config->send_ring_len, 0);
 	SKY_ASSERT(vchannel->sendRing != NULL)
