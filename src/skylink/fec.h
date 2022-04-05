@@ -6,7 +6,7 @@
  */
 
 #include "skylink.h"
-#include "skylink/diag.h"
+#include "diag.h"
 #include <string.h>
 
 

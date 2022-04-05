@@ -3,11 +3,14 @@
 //
 
 #include "hmac_test.h"
+#include "skylink/reliable_vc.h"
+#include "skylink/skylink.h"
 
 
 
 static void test1();
 static void test1_round();
+static void test2_round();
 
 
 void hmac_tests(){
@@ -23,6 +26,9 @@ static void test1(){
 	for (int i = 0; i < 220000; ++i) {
 		test1_round();
 	}
+	for (int i = 0; i < 100000; ++i) {
+		test2_round();
+	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
@@ -34,8 +40,8 @@ static void test1_round(){
 	SkyConfig* config1 = new_vanilla_config();
 	SkyConfig* config2 = new_vanilla_config();
 
-	fillrand(config1->hmac.key, 16);
-	memcpy(config2->hmac.key, config1->hmac.key, 16);
+	fillrand(config1->hmac.key, config1->hmac.key_length);
+	memcpy(config2->hmac.key, config1->hmac.key, config1->hmac.key_length);
 
 	SkyHandle self1 = new_handle(config1);
 	SkyHandle self2 = new_handle(config2);
@@ -155,3 +161,169 @@ static void test1_round(){
 	destroy_frame(sframe);
 	destroy_frame(rframe);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+static void test2_round(){
+	sky_tick(15);
+	SkyConfig* config1 = new_vanilla_config();
+	SkyConfig* config2 = new_vanilla_config();
+	config1->identity[0] = 1;
+	config2->identity[0] = 2;
+	config1->hmac.key_length = randint_i32(15,16);
+	config2->hmac.key_length = config1->hmac.key_length;
+
+	fillrand(config1->hmac.key, config1->hmac.key_length);
+	memcpy(config2->hmac.key, config1->hmac.key, config1->hmac.key_length);
+
+	SkyHandle self1 = new_handle(config1);
+	SkyHandle self2 = new_handle(config2);
+
+	int corrupt_key = (randint_i32(0,10) == 0);
+	if(corrupt_key){
+		fillrand(self2->hmac->key, self2->hmac->key_len);
+	}
+
+	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
+	self1->conf->vc[vc].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX * randint_i32(0,1);
+	self1->conf->vc[vc].require_authentication |= SKY_VC_FLAG_REQUIRE_AUTHENTICATION * randint_i32(0,1);
+	self1->conf->vc[vc].require_authentication |= SKY_VC_FLAG_REQUIRE_SEQUENCE * randint_i32(0,1);
+	self2->conf->vc[vc].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX * randint_i32(0,1);
+	self2->conf->vc[vc].require_authentication |= SKY_VC_FLAG_REQUIRE_AUTHENTICATION * randint_i32(0,1);
+	self2->conf->vc[vc].require_authentication |= SKY_VC_FLAG_REQUIRE_SEQUENCE * randint_i32(0,1);
+
+	self2->hmac->sequence_rx[vc] = randint_i32(0, HMAC_CYCLE_LENGTH-1);
+	self2->hmac->sequence_tx[vc] = randint_i32(0, HMAC_CYCLE_LENGTH-1);
+	assert(config1->hmac.maximum_jump == 32);
+	int shift_tx = randint_i32(0, config1->hmac.maximum_jump + 5);
+	int shift_rx = randint_i32(0, config1->hmac.maximum_jump + 5);
+	self1->hmac->sequence_rx[vc] = wrap_hmac_sequence(self2->hmac->sequence_tx[vc] + shift_rx);
+	self1->hmac->sequence_tx[vc] = wrap_hmac_sequence(self2->hmac->sequence_rx[vc] + shift_tx);
+
+	SkyRadioFrame* sframe = new_frame();
+	SkyRadioFrame* rframe = new_frame();
+
+	sky_vc_wipe_to_arq_on_state(self1->virtual_channels[vc], 10);
+	sky_vc_wipe_to_arq_on_state(self2->virtual_channels[vc], 10);
+
+	uint8_t PL[250];
+	uint8_t TGT[250];
+	fillrand(PL, 250);
+	int LEN_PL = randint_i32(0, 100);
+	sky_vc_push_packet_to_send(self1->virtual_channels[vc], PL, LEN_PL);
+	int r = sky_tx(self1, sframe, 0);
+	assert(r);
+	memcpy(rframe, sframe, sizeof(SkyRadioFrame));
+	sky_fec_decode(rframe, self2->diag);
+	assert(rframe->vc == vc);
+	assert(sky_ntoh16( rframe->auth_sequence) == wrap_hmac_sequence(self2->hmac->sequence_rx[vc] + shift_tx));
+
+
+	int rr = sky_rx(self2, sframe, 0);
+
+
+	if(
+			((config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION) == 0)
+			){
+		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 1);
+		assert(rr == 0);
+	}
+
+
+	if(
+			(!corrupt_key)
+			&& (config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION)
+			&& (config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_SEQUENCE)
+			&& (config1->vc[vc].require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX)
+			&& (shift_tx <= config1->hmac.maximum_jump)
+			){
+		assert(rr == 0);
+		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 1);
+		r = sky_vc_read_next_received(self2->virtual_channels[vc], TGT, 300);
+		assert(r == LEN_PL);
+		assert(memcmp(TGT,PL,LEN_PL) == 0);
+		assert(self2->hmac->sequence_rx[vc] == self1->hmac->sequence_tx[vc]);
+	}
+
+
+	if(
+			(!corrupt_key)
+			&& (config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION)
+			&& (!(config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_SEQUENCE))
+			&& (config1->vc[vc].require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX)
+			){
+		assert(rr == 0);
+		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 1);
+		r = sky_vc_read_next_received(self2->virtual_channels[vc], TGT, 300);
+		assert(r == LEN_PL);
+		assert(memcmp(TGT,PL,LEN_PL) == 0);
+		assert(self2->hmac->sequence_rx[vc] == self1->hmac->sequence_tx[vc]);
+	}
+
+
+	if(
+			(corrupt_key)
+			&& (config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION)
+			){
+		assert((rr == SKY_RET_AUTH_FAILED) || (rr == SKY_RET_AUTH_MISSING));
+		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 0);
+	}
+
+
+	if(
+			(!corrupt_key)
+			&& (config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION)
+			&& (config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_SEQUENCE)
+			&& (config1->vc[vc].require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX)
+			&& (shift_tx > config1->hmac.maximum_jump)
+			){
+		assert(rr == SKY_RET_EXCESSIVE_HMAC_JUMP);
+		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 0);
+		r = sky_tx(self2, sframe, 0);
+		assert(r);
+		sky_fec_decode(sframe, self2->diag);
+		SkyPacketExtension* ext = get_extension(sframe, EXTENSION_HMAC_SEQUENCE_RESET);
+		assert(ext != NULL);
+		assert(ext->type == EXTENSION_HMAC_SEQUENCE_RESET);
+		assert(sky_ntoh16(ext->HMACSequenceReset.sequence) == wrap_hmac_sequence( self2->hmac->sequence_rx[vc] + 3));
+	}
+
+
+	if(
+			(config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION)
+			&& (!(config1->vc[vc].require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX))
+			){
+		assert(rr == SKY_RET_AUTH_MISSING);
+		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 0);
+		r = sky_tx(self2, sframe, 0);
+		assert(r);
+		sky_fec_decode(sframe, self2->diag);
+		SkyPacketExtension* ext = get_extension(sframe, EXTENSION_HMAC_SEQUENCE_RESET);
+		assert(ext->type == EXTENSION_HMAC_SEQUENCE_RESET);
+		assert(sky_ntoh16( ext->HMACSequenceReset.sequence) == wrap_hmac_sequence( self2->hmac->sequence_rx[vc] + 3 ));
+	}
+
+
+
+	destroy_handle(self1);
+	destroy_handle(self2);
+	destroy_config(config1);
+	destroy_config(config2);
+	destroy_frame(sframe);
+	destroy_frame(rframe);
+}
+
+
+

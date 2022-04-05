@@ -31,16 +31,6 @@ static tick_t wrap_tdd_cycle(SkyMAC* mac, tick_t ticks) {
 }
 
 
-int mac_valid_window_length(SkyMAC* mac, tick_t length){
-	if(length < mac->config->minimum_window_length_ticks){
-		return 0;
-	}
-	if(length > mac->config->maximum_window_length_ticks){
-		return 0;
-	}
-	return 1;
-}
-
 
 
 
@@ -58,8 +48,8 @@ SkyMAC* sky_mac_create(SkyMACConfig* config) {
 		config->idle_frames_per_window = 3;
 
 	// Limit MAC timeout time
-	if (config->idle_timeout_ticks < 2000 || config->idle_timeout_ticks > 20000)
-		config->idle_timeout_ticks = 10000;
+	if (config->idle_timeout_ticks < 6000 || config->idle_timeout_ticks > 50000)
+		config->idle_timeout_ticks = 25000;
 
 	if (config->carrier_sense_ticks > 250)
 		config->carrier_sense_ticks = 250;
@@ -82,6 +72,7 @@ SkyMAC* sky_mac_create(SkyMACConfig* config) {
 	mac->my_window_length = config->minimum_window_length_ticks;
 	mac->peer_window_length = config->minimum_window_length_ticks;
 	mac->last_belief_update = 0;
+	mac->last_silent_shift = 0;
 	mac->total_frames_sent_in_current_window = 0;
 	mac->vc_round_robin_start = 0;
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
@@ -140,9 +131,12 @@ int32_t mac_peer_window_remaining(SkyMAC* mac, tick_t now) {
 
 
 void mac_silence_shift_check(SkyMAC* mac, tick_t now) {
-	if ((mac->config->shift_threshold_ticks != 0) &&
-		wrap_time_ticks(now - mac->last_belief_update) > mac->config->shift_threshold_ticks)
-	{
+	tick_t since_update = wrap_time_ticks(now - mac->last_belief_update);
+	tick_t since_shift  = wrap_time_ticks(now - mac->last_silent_shift);
+	if ( (mac->config->shift_threshold_ticks != 0) &&
+		 (since_update > mac->config->shift_threshold_ticks) &&
+		 (since_shift > mac->config->shift_threshold_ticks)
+		 ){
 		/*
 		 * The MAC has been open too long shift the window by random
 		 * amount to make sure windows are not overlapping.
@@ -150,7 +144,7 @@ void mac_silence_shift_check(SkyMAC* mac, tick_t now) {
 		tick_t shift = ((now & 0b100) != 0) + 1; // "Random" shift based on the tick count
 		shift = shift * mac->my_window_length;
 		mac_shift_windowing(mac, shift);
-		mac->last_belief_update = now;
+		mac->last_silent_shift = now;
 	}
 }
 
@@ -191,7 +185,7 @@ void mac_update_belief(SkyMAC* mac, const tick_t now, tick_t receive_time, tick_
 
 
 	SKY_PRINTF(SKY_DIAG_MAC | SKY_DIAG_DEBUG, "MAC Update belief: peer window length: %d, remaining %d, time to t0: %d",
-		peer_mac_length, peer_mac_remaining, mac_time_to_own_window(mac, now));
+		peer_mac_length, peer_mac_remaining, mac_time_to_own_window(mac, now))
 
 	// Reset frame counts
 	mac->total_frames_sent_in_current_window = 0;
@@ -205,6 +199,8 @@ void mac_update_belief(SkyMAC* mac, const tick_t now, tick_t receive_time, tick_
 void mac_reset(SkyMAC* mac, tick_t now) {
 	mac->window_adjust_counter = 0;
 	mac->my_window_length = mac->config->minimum_window_length_ticks;
+	mac->last_belief_update = now;
+	mac->last_silent_shift = now;
 	mac->T0 = wrap_time_ticks(now - get_mac_cycle(mac));
 }
 

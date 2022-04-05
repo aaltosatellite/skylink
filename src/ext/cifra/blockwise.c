@@ -15,7 +15,7 @@
 #pragma GCC push_options
 #pragma GCC optimize ("O3")
 
-#include "skylink/diag.h"
+#include "../../skylink/diag.h"
 #include "blockwise.h"
 #include "bitops.h"
 #include "handy.h"

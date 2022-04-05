@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include <time.h>
-#include "skylink/platform.h"
+#include "platform.h"
 
 #define MOD_TIME_TICKS		16777216
 
@@ -26,8 +26,6 @@ uint32_t sky_ntoh32(uint32_t vn);
 int32_t sky_ntohi32(int32_t vn);
 
 int32_t sky_htoni32(int32_t vn);
-
-int positive_modulo_x(int32_t x, int32_t m);
 
 int32_t positive_modulo(int32_t x, int32_t m);
 

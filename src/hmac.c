@@ -123,7 +123,7 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 
 	// No authentication field provided.
 	if ((frame->flags & SKY_FLAG_AUTHENTICATED) == 0) {
-		SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Authentication missing!\n");
+		SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Authentication missing!\n")
 		hmac->vc_enforcement_need[frame->vc] = 1;
 		return SKY_RET_AUTH_MISSING;
 	}
@@ -137,20 +137,20 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 	// Compare the calculated hash to received one
 	uint8_t *frame_hash = &frame->raw[frame->length - SKY_HMAC_LENGTH];
 	if (memcmp(frame_hash, calculated_hash, SKY_HMAC_LENGTH) != 0) {
-		SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Invalid authentication code!\n");
+		SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Invalid authentication code!\n")
 		hmac->vc_enforcement_need[frame->vc] = 1;
 		return SKY_RET_AUTH_FAILED;
 	}
 
 	// Correct sequence field endianess after hash calculation for later use
 	frame->auth_sequence = sky_ntoh16(frame->auth_sequence);
-	SKY_PRINTF(SKY_DIAG_DEBUG | SKY_DIAG_HMAC, "HMAC: Received sequence %d\n", frame->auth_sequence);
+	SKY_PRINTF(SKY_DIAG_DEBUG | SKY_DIAG_HMAC, "HMAC: Received sequence %d\n", frame->auth_sequence)
 
 	if (vc_conf->require_authentication & SKY_VC_FLAG_REQUIRE_SEQUENCE) {
 		// Check if the hmac sequence number is something we are expecting
 		int32_t jump = wrap_hmac_sequence( (int32_t)(frame->auth_sequence - hmac->sequence_rx[frame->vc]));
 		if (jump > self->conf->hmac.maximum_jump) {
-			SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Larger than allowed sequence jump\n");
+			SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Larger than allowed sequence jump\n")
 			hmac->vc_enforcement_need[frame->vc] = 1;
 			return SKY_RET_EXCESSIVE_HMAC_JUMP;
 		}

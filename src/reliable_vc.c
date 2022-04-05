@@ -322,10 +322,10 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 		int length = -1;
 		int sequence = -1;
 		int r = sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 0, &length, &sequence);
-		SKY_ASSERT(r >= 0);
-		SKY_ASSERT(length <= available_payload_space(frame));
+		SKY_ASSERT(r >= 0)
+		SKY_ASSERT(length <= available_payload_space(frame))
 		int read = sky_vc_read_packet_for_tx_monotonic(vchannel, frame->raw + frame->length, &sequence);
-		SKY_ASSERT(read >= 0);
+		SKY_ASSERT(read >= 0)
 		frame->length += read;
 		frame->flags |= SKY_FLAG_HAS_PAYLOAD;
 		return 1;

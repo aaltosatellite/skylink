@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #include "skylink.h"
-#include "skylink/platform.h"
+#include "platform.h"
 
 /*
  * Number of bytes in frame identity field

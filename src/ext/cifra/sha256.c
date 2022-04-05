@@ -17,7 +17,7 @@
 
 #include <string.h>
 
-#include "skylink/diag.h"
+#include "../../skylink/diag.h"
 #include "sha2.h"
 #include "blockwise.h"
 #include "bitops.h"

@@ -1,11 +1,9 @@
-import numpy as np
 from PySide2 import QtWidgets, QtGui, QtCore
-from sigfig import round as sround
 import time
 from .abstraction import XYVector, get_gridlines
 import multiprocessing, threading
 import sys, pickle
-
+import numpy as np
 
 
 POISON_PILL = "__KYS__"
@@ -24,20 +22,24 @@ dot_brush = QtGui.QBrush(QtGui.QColor(250,250,250))
 bar_brush = QtGui.QBrush(QtGui.QColor(60,60,60))
 
 line_pens = [
-	QtGui.QPen(QtGui.QColor(255, 110, 110), 1.2),
-	QtGui.QPen(QtGui.QColor(120, 255, 125), 1.2),
-	QtGui.QPen(QtGui.QColor(110, 120, 255), 1.2),
-	QtGui.QPen(QtGui.QColor(200, 200, 200), 1.2),
-	QtGui.QPen(QtGui.QColor(200, 200, 200), 1.2),
-	QtGui.QPen(QtGui.QColor(200, 200, 200), 1.2)
+	QtGui.QPen(QtGui.QColor(255, 110, 110), 1.2),	#red
+	QtGui.QPen(QtGui.QColor(120, 255, 125), 1.2),	#green
+	QtGui.QPen(QtGui.QColor(110, 120, 255), 1.2),	#blue
+	QtGui.QPen(QtGui.QColor(255, 255, 100), 1.2),	#yellow
+	QtGui.QPen(QtGui.QColor(110, 255, 255), 1.2),	#teal
+	QtGui.QPen(QtGui.QColor(255, 110, 255), 1.2),	#purple
+	QtGui.QPen(QtGui.QColor(255, 180, 000), 1.2),	#orange
+	QtGui.QPen(QtGui.QColor(150, 150, 150), 1.2)	#grey
 ]
 
-clrs = {0:"#ff5555", 1:"#55ff55", 2:"#6699ff"}
 
-def get_color_name(i:int):
-	if i in clrs:
-		return clrs[i]
-	return "#aaaaaa"
+def siground(x, sig):
+	x = float(x)
+	f = np.format_float_scientific(x, unique=False, precision=sig)
+	a,b = f.split("e")
+	ee = int(b)
+	return round(x, (-ee)+(sig-1))
+
 
 def de_singularitize_scope(scope):
 	if scope == (None,None):
@@ -182,7 +184,7 @@ class Graph2(QtWidgets.QGraphicsView):
 			yp = self.y_margin_u + self.draw_height() - (y - self.yscope[0]) * self.pix_per_y()
 			gl_item = QtWidgets.QGraphicsLineItem(0, yp, self.x_margin_l + self.draw_width(), yp)
 			gl_item.setPen(grid_pen)
-			txt_item = QtWidgets.QGraphicsSimpleTextItem(str(sround(y,2)))
+			txt_item = QtWidgets.QGraphicsSimpleTextItem(str(siground(y,2)))
 			txt_item.setParentItem(gl_item)
 			txt_item.setPos(0,yp)
 			txt_item.setPen(no_pen)
@@ -194,7 +196,7 @@ class Graph2(QtWidgets.QGraphicsView):
 			xp = self.x_margin_l + x * self.pix_per_x()
 			gl_item = QtWidgets.QGraphicsLineItem(xp, self.y_margin_u, xp, self.y_margin_u+self.draw_height())
 			gl_item.setPen(grid_pen)
-			txt_item = QtWidgets.QGraphicsSimpleTextItem(str(sround(x,2)))
+			txt_item = QtWidgets.QGraphicsSimpleTextItem(str(siground(x,2)))
 			txt_item.setParentItem(gl_item)
 			txt_item.setPos(xp , self.draw_height()+self.y_margin_u)
 			txt_item.setPen(no_pen)
@@ -241,8 +243,8 @@ class MW(QtWidgets.QWidget):
 		self.G.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
 
 		self.name_widget = QtWidgets.QWidget()
-		self.name_hbox = QtWidgets.QHBoxLayout()
-		self.name_widget.setLayout(self.name_hbox)
+		self.name_box = QtWidgets.QGridLayout()
+		self.name_widget.setLayout(self.name_box)
 
 		self.lo.addWidget(self.tools_widget, 0,0, 1,1)
 		self.lo.addWidget(self.notice_label, 1,0, 1,1)
@@ -284,7 +286,6 @@ class MW(QtWidgets.QWidget):
 
 	def keyPressEvent(self, a0: QtGui.QKeyEvent) -> None:
 		super(MW, self).keyPressEvent(a0)
-		#print("key:",a0.key())
 		if a0.key() == 32: #SPACE - pause
 			if self.timer.isActive():
 				self.timer.stop()
@@ -328,9 +329,9 @@ class MW(QtWidgets.QWidget):
 		self.latest_values.clear()
 		self.notice_label.setText("")
 		self.lo.removeWidget(self.name_widget)
-		self.name_hbox = QtWidgets.QHBoxLayout()
+		self.name_box = QtWidgets.QGridLayout()
 		self.name_widget = QtWidgets.QWidget()
-		self.name_widget.setLayout(self.name_hbox)
+		self.name_widget.setLayout(self.name_box)
 		self.lo.addWidget(self.name_widget)
 		self.data_vectors.clear()
 		self.storage_count = 0
@@ -366,16 +367,25 @@ class MW(QtWidgets.QWidget):
 				if not name in self.names:
 					self.names.add(name)
 					label = QtWidgets.QLabel(str(name)[:32])
-					color_name = get_color_name(len(self.names) -1)
-					label.setStyleSheet("background-color: {}; border: 1px solid black;".format(color_name))
-					self.name_hbox.addWidget(label)
+					color = self.G.pens[name].color()
+					rgb = (color.toRgb().red(), color.toRgb().green(), color.toRgb().blue())
+					rgbhex =  "#" + hex(rgb[2] + (rgb[1]<<8) + (rgb[0]<<16))[2:]
+					#color_name = get_color_name(len(self.names) -1)
+					label.setStyleSheet("background-color: {}; border: 1px solid black;".format(rgbhex))
+					n = len(self.names) - 1
+					r = n // 4
+					c = n % 4
+					self.name_box.addWidget(label, r, c, 1,1)
 
 
 	def _que_pull_loop(self):
 		while True:
-			k = self.addque.get()
+			try:
+				k = self.addque.get()
+			except:
+				sys.exit(0)
 			if k == POISON_PILL:
-				return
+				sys.exit(0)
 			try:
 				name, val = k
 				name = str(name)
@@ -392,19 +402,31 @@ class MW(QtWidgets.QWidget):
 
 
 
-def _mw_start(que, retention, interval_ms):
+def _mw_start(que, retention, interval_ms, tile):
 	app = QtWidgets.QApplication(sys.argv)
 	mw = MW(que, retention, interval_ms)
+
+	if tile and hasattr(tile, "__len__") and (len(tile) == 3) and (type(x) == int for x in tile):
+		print("tiling")
+		nr = tile[0]
+		nc = tile[1]
+		r = tile[2] % nc
+		c = tile[2] // nr
+		iw = 1900 // nc
+		ih = 1060 // nr
+		mw.move(c*iw +1, r*ih +1)
+		mw.resize(iw,ih)
+	else:
+		print("not tiling")
+		mw.resize(900,600)
 	mw.show()
-	mw.resize(900,600)
-	mw.resize(900,600)
 	app.exec_()
 
 
-def create_realplot(retention, interval_ms):
+def create_realplot(retention_time_s, interval_ms, tile=None):
 	mgr = multiprocessing.Manager()
 	que = mgr.Queue(1000)
-	p = multiprocessing.Process(target=_mw_start, args=(que, retention, interval_ms))
+	p = multiprocessing.Process(target=_mw_start, args=(que, retention_time_s, interval_ms, tile))
 	p.start()
 	return que
 

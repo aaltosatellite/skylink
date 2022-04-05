@@ -128,7 +128,7 @@ static void sky_rx_process_extensions(SkyHandle self, const SkyRadioFrame* frame
 				break;
 
 			default:
-				SKY_PRINTF(SKY_DIAG_BUG, "Unknown extension header type %d", ext->type);
+				SKY_PRINTF(SKY_DIAG_BUG, "Unknown extension header type %d", ext->type)
 				break;
 		}
 	}

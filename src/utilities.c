@@ -55,16 +55,8 @@ inline int32_t __attribute__ ((__const__)) sky_ntohi32(int32_t vn) {
 
 
 
-int positive_modulo_x(int32_t x, int32_t m){
-	return ((x % m) + m) % m;
-}
-
-
-
 int32_t positive_modulo(int32_t x, int32_t m){
-	//return (((x % m) + m) % m);
 	if((abs(x) > (m*12))){
-		//printf("slw.");
 		return ((x % m) + m) % m;
 	}
 	while(x < 0){

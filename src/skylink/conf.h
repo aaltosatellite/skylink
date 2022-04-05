@@ -2,7 +2,7 @@
 #define __SKYLINK_CONF_H__
 
 #include "skylink.h"
-#include "skylink/frame.h"
+#include "frame.h"
 
 
 // HMAC
@@ -41,11 +41,6 @@ typedef struct {
 	/* Minimum time */
 	int32_t tail_constant_ticks; // TODO: Rename switch_delay_ticks;
 
-	/* Boolean toggle for wether an unauthenticated frame can update MAC state belief.
-	 * Enabling this will allow a continuous stream of unauthenticated frames to essentially block transmission:
-	 * a so called 'shut-up-attack' */
-	uint8_t unauthenticated_mac_updates;
-
 	/* Time after not hearing anything shift the MAC window by random amount
 	 * to avoid overlapping transmission. */
 	int32_t shift_threshold_ticks;
@@ -58,6 +53,11 @@ typedef struct {
 
 	/* Fallback by this many ticks when frame carrier is sensed */
 	int16_t carrier_sense_ticks;
+
+	/* Boolean toggle for wether an unauthenticated frame can update MAC state belief.
+	 * Enabling this will allow a continuous stream of unauthenticated frames to essentially block transmission:
+	 * a so called 'shut-up-attack' */
+	uint8_t unauthenticated_mac_updates;
 
 	/* How often window length can be adjusted (incremented or decremented). Count in windows. */
 	int8_t window_adjustment_period;
@@ -103,14 +103,11 @@ typedef struct {
 	/* Length of the authentication key */
 	int32_t key_length;
 
-	/* Authentication key */
-	uint8_t key[16];
-
-	/* Length of the sequence cycle */
-	//int32_t cycle_length;
-
 	/* Maximum allowed forward jump in sequence count */
 	int32_t maximum_jump;
+
+	/* Authentication key */
+	uint8_t key[16];
 
 } HMACConfig;
 

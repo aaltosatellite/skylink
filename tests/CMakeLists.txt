@@ -57,29 +57,11 @@ add_executable(cycle_test
         crc/crc_algos.c
         tools/tools.c
         tst_utilities.c
+        zmq_endpoint.c
+        zmq_endpoint.h
         )
 
 
-add_compile_options(-O2 -Wall)
-add_executable(zmq_peer
-        tx_rx_zmq_test.c
-
-        ../src/reliable_vc.c
-        ../src/diag.c
-        ../src/elementbuffer.c
-        ../src/fec.c
-        ../src/frame.c
-        ../src/hmac.c
-        ../src/mac.c
-        ../src/sequence_ring.c
-        ../src/skylink_rx.c
-        ../src/skylink_tx.c
-        ../src/utilities.c
-
-        crc/crc_algos.c
-        tools/tools.c
-        tst_utilities.c
-        )
 
 
 add_compile_options(-O2 -Wall)

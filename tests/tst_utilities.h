@@ -5,12 +5,13 @@
 #ifndef SKYLINK_CMAKE_TST_UTILITIES_H
 #define SKYLINK_CMAKE_TST_UTILITIES_H
 
-#include "skylink/skylink.h"
-#include "skylink/conf.h"
-#include "skylink/mac.h"
-#include "skylink/hmac.h"
-#include "skylink/frame.h"
-
+#include "../src/skylink/skylink.h"
+#include "../src/skylink/conf.h"
+#include "../src/skylink/mac.h"
+#include "../src/skylink/hmac.h"
+#include "../src/skylink/frame.h"
+#include "../src/skylink/utilities.h"
+#include "../src/skylink/reliable_vc.h"
 #include "tools/tools.h"
 
 

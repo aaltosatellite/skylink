@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "skylink/conf.h"
-#include "skylink/skylink.h"
+#include "conf.h"
+#include "skylink.h"
 
 
 
@@ -27,6 +27,9 @@ struct sky_mac_s {
 	// Tick of last time we updated our belief of T0 (and peer window length).
 	tick_t last_belief_update;
 
+	// Tick of last time we shifted T0 due to silence. Must be separate form "belief_update".
+	tick_t last_silent_shift;
+
 	// Counter to monitor is the current window lenght too larger or small
 	int32_t window_adjust_counter;
 
@@ -44,16 +47,6 @@ struct sky_mac_s {
 };
 
 
-/*
- * Validate weather the given window length is inside the min/max limits.
- *
- * params:
- *    mac: Pointer to MAC instance
- *    length: Windows length to be validated.
- * returns:
- *    1 for valid lengths, 0 for invalid lengths
- */
-int mac_valid_window_length(SkyMAC* mac, tick_t length);
 
 
 /*
@@ -64,6 +57,7 @@ int mac_valid_window_length(SkyMAC* mac, tick_t length);
  */
 SkyMAC* sky_mac_create(SkyMACConfig* config);
 
+
 /*
  * Destroy TDD MAC instance
  *
@@ -71,6 +65,7 @@ SkyMAC* sky_mac_create(SkyMACConfig* config);
  *    mac: Pointer to MAC instance.
  */
 void sky_mac_destroy(SkyMAC* mac);
+
 
 /*
  * Moves the cycle startpoint by 't_shift' ticks.

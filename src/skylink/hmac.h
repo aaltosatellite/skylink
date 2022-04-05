@@ -2,8 +2,8 @@
 #define __SKYLINK_HMAC_H__
 
 #include <stdint.h>
-#include "skylink/skylink.h"
-#include "skylink/conf.h"
+#include "skylink.h"
+#include "conf.h"
 #include "../ext/cifra/hmac.h"
 #include "../ext/cifra/sha2.h"
 
