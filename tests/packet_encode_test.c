@@ -93,7 +93,7 @@ static void test1_round(){
 
 
 	int extension_arq_sequence = 0;
-	int arq_sequence = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
+	int arq_sequence = randint_i32(0, 65000);
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_arq_sequence = 1;
@@ -238,6 +238,13 @@ static void test1_round(){
 
 	}
 	assert(ext_remaining == 0);
+
+	assert(extension_hmac_reset == 0);
+	assert(extension_mac_tdd == 0);
+	assert(extension_arq_sequence == 0);
+	assert(extension_arq_rrequest == 0);
+	assert(extension_arq_handshake == 0);
+	assert(extension_arq_ctrl == 0);
 
 
 	//compare payloads

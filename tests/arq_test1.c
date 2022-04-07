@@ -131,9 +131,9 @@ void arq_system_test2_cycle(){
 			array->arq_state_flag = ARQ_STATE_IN_INIT;
 		}
 	}
-	spin_to_seq(array, array_r, seq0, ts_send);							//spin the arrays into the sequences we want.
+	spin_to_seq(array, array_r, seq0, ts_send);		//spin the arrays into the sequences we want.
 	spin_to_seq(array_r, array, seq_rcv, ts_recv);
-	array->last_tx_tick = ts_send;										//spin function sets receive timestamp, but not tx
+	array->last_tx_tick = ts_send;														//spin function sets receive timestamp, but not tx
 	assert(array->last_tx_tick == ts_send);
 	assert(array->last_rx_tick == ts_recv);
 
@@ -258,6 +258,10 @@ void arq_system_test2_cycle(){
 			} else {
 				assert(sky_ntoh16( extArqSeq->ARQSeq.sequence ) == new_pl_seq);
 			}
+		}
+
+		if(own_recall){
+			assert(extArqCtrl != NULL);
 		}
 
 		int b0 = (frames_sent_in_vc < sky_conf->arq_idle_frames_per_window);

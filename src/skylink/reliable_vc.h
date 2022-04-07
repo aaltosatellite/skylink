@@ -32,6 +32,7 @@ struct sky_virtual_channel {
 	tick_t last_tx_tick;				// Tick of last time peer confirmed new payloads received, or being in sync with us.
 	tick_t last_rx_tick;				// Tick of last time a new continuous payloads was received, or we confirmed sync with peer.
 	tick_t last_ctrl_send_tick;		// Tick of last time a control extension was transmitted.
+	int16_t unconfirmed_payloads;
 };
 typedef struct sky_virtual_channel SkyVirtualChannel;
 // *1 In the case where a received control extension reveals that the latest received payload is not the latest

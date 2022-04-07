@@ -31,7 +31,6 @@ int sky_rx(SkyHandle self, SkyRadioFrame* frame, int contains_golay) {
 
 		ret = decode_golay24(&coded_len);
 		if (ret < 0) {
-			// TODO: log the number of corrected bits?
 			self->diag->rx_fec_fail++;
 			return SKY_RET_GOLAY_FAILED;
 		}

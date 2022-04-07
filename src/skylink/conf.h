@@ -78,14 +78,13 @@ typedef struct {
  * Per virtual channel configurations
  */
 typedef struct {
-
 	/* Size of single element in the element buffer*/
 	int element_size;
 
-	/**/
+	/* Size of the ring buffer for reception */
 	int rcv_ring_len;
 
-	/* */
+	/* How many payloads VC can receive before the next in line. */
 	int horizon_width;
 
 	/* Length of the ARQ sequence ring.  */
@@ -126,8 +125,15 @@ struct sky_conf {
 	HMACConfig	hmac;
 	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t identity[SKY_IDENTITY_LEN];
+
+	/* If continuous packet transmission or reception has not advanced in arq_timeout_ticks time, arq drops off. */
 	int32_t arq_timeout_ticks;
+
+	/* If continuous packet transmission or reception has not advanced in arq_idle_frame_threshold time,
+	 * frames are being created even if there are no payloads. This is to keep status fresh. */
 	int32_t arq_idle_frame_threshold;
+
+	/* How many idle frames are created per window per virtual channel where ARQ is active. */
 	int8_t arq_idle_frames_per_window;
 };
 typedef struct sky_conf SkyConfig;

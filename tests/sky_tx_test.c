@@ -57,6 +57,7 @@ void sky_tx_test_cycle(){
 	int has_recall[SKY_NUM_VIRTUAL_CHANNELS];
 	int n_recalled_pl[SKY_NUM_VIRTUAL_CHANNELS];
 	int stuff_in_horizon[SKY_NUM_VIRTUAL_CHANNELS];
+	int unconfirmed_payloads[SKY_NUM_VIRTUAL_CHANNELS];
 	int rr_need_on[SKY_NUM_VIRTUAL_CHANNELS];
 	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; ++vc) {
 		auth_required[vc] = randint_i32(1,10) <= 5;
@@ -150,6 +151,7 @@ void sky_tx_test_cycle(){
 		last_ctrl[vc] = wrap_time_ticks(now - randint_i32(1, arq_timeout / 2));
 		self->virtual_channels[vc]->last_ctrl_send_tick = last_ctrl[vc];
 
+		unconfirmed_payloads[vc] = 0;
 		if(arq_on[vc]){
 			stuff_in_horizon[vc] = 0;
 			if(randint_i32(1, 10) <= 3){
@@ -164,7 +166,14 @@ void sky_tx_test_cycle(){
 				//PRINTFF(0,"seq0(%d) _seq(%d) h(%d)\n", array_rx_seq0[vc], _seq, self->virtual_channels[vc]->rcvRing->head_sequence);
 				assert(rcvRing_get_horizon_bitmap(self->virtual_channels[vc]->rcvRing) != 0);
 			}
+			self->virtual_channels[vc]->unconfirmed_payloads = 0;
+			if(randint_i32(1,10) < 3){
+				unconfirmed_payloads[vc] = 1;
+				self->virtual_channels[vc]->unconfirmed_payloads = 1;
+			}
 		}
+
+
 
 		rr_need_on[vc] = 0;
 		if(randint_i32(1, 10) <= 2){
@@ -394,6 +403,12 @@ void sky_tx_test_cycle(){
 				assert(ret == 1);
 			}
 			if(util_frame && (wrap_time_ticks(now - last_ctrl[i]) > arq_idle_threshold) ){
+				content = 1;
+				ctrl_ext = 1;
+				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
+				assert(ret == 1);
+			}
+			if(util_frame && unconfirmed_payloads[i] ){
 				content = 1;
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);

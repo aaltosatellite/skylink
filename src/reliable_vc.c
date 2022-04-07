@@ -37,12 +37,12 @@ static int compute_required_elementount(int elementsize, int total_ring_slots, i
 
 //===== SKYLINK VIRTUAL CHANNEL  =======================================================================================
 SkyVirtualChannel* new_virtual_channel(SkyVCConfig* config){
-	if((config->rcv_ring_len < 7) || (config->rcv_ring_len > 60))
-		config->rcv_ring_len = 7;
+	if((config->rcv_ring_len < 6) || (config->rcv_ring_len > 250))
+		config->rcv_ring_len = 32;
 	if(config->horizon_width > (config->rcv_ring_len - 3))
 		config->horizon_width = config->rcv_ring_len - 3;
-	if((config->send_ring_len < 7) || (config->send_ring_len > 60))
-		config->send_ring_len = 7;
+	if((config->send_ring_len < 6) || (config->send_ring_len > 250))
+		config->send_ring_len = 32;
 	if((config->element_size < 12) || (config->element_size > 500))
 		config->element_size = 36;
 	SkyVirtualChannel* vchannel = SKY_MALLOC(sizeof(SkyVirtualChannel));
@@ -77,6 +77,7 @@ void sky_vc_wipe_to_arq_off_state(SkyVirtualChannel* vchannel){
 	vchannel->last_tx_tick = 0;
 	vchannel->last_rx_tick = 0;
 	vchannel->last_ctrl_send_tick = 0;
+	vchannel->unconfirmed_payloads = 0;
 	vchannel->handshake_send = 0;
 }
 
@@ -90,6 +91,7 @@ int sky_vc_wipe_to_arq_init_state(SkyVirtualChannel* vchannel){
 	vchannel->last_tx_tick = sky_get_tick_time();
 	vchannel->last_rx_tick = sky_get_tick_time();
 	vchannel->last_ctrl_send_tick = 0;
+	vchannel->unconfirmed_payloads = 0;
 	vchannel->handshake_send = 0;
 	return 0;
 }
@@ -104,6 +106,7 @@ void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* vchannel, uint32_t identifie
 	vchannel->last_tx_tick = sky_get_tick_time();
 	vchannel->last_rx_tick = sky_get_tick_time();
 	vchannel->last_ctrl_send_tick = 0;
+	vchannel->unconfirmed_payloads = 0;
 	vchannel->handshake_send = 1;
 }
 
@@ -154,10 +157,10 @@ void sky_vc_poll_arq_state_timeout(SkyVirtualChannel* vchannel, tick_t now, tick
 		return;
 	}
 	if(wrap_time_ticks(now - vchannel->last_tx_tick) > timeout ){
-		sky_vc_wipe_to_arq_off_state(vchannel); //todo: notify up in stack?
+		sky_vc_wipe_to_arq_off_state(vchannel);
 	}
 	if(wrap_time_ticks(now - vchannel->last_rx_tick) > timeout ){
-		sky_vc_wipe_to_arq_off_state(vchannel); //todo: notify up in stack?
+		sky_vc_wipe_to_arq_off_state(vchannel);
 	}
 }
 //===== SKYLINK VIRTUAL CHANNEL ========================================================================================
@@ -244,6 +247,7 @@ int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, void* src, int length, in
 	if(r > 0){ //head advanced at least by 1
 		vchannel->last_rx_tick = now;
 	}
+	vchannel->unconfirmed_payloads++;
 	return r;
 }
 
@@ -303,7 +307,8 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, tick_
 		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > config->arq_idle_frame_threshold;
 		int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > config->arq_idle_frame_threshold;
 		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > config->arq_idle_frame_threshold;
-		if(b0 && (b1 || b2 || b3)){
+		int b4 = vchannel->unconfirmed_payloads > 0;
+		if(b0 && (b1 || b2 || b3 || b4)){
 			return 1;
 		}
 	}
@@ -368,9 +373,11 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > config->arq_idle_frame_threshold;
 		int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > config->arq_idle_frame_threshold;
 		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > config->arq_idle_frame_threshold;
-		if((b0 && (b1 || b2 || b3)) || payload_to_send){
+		int b4 = vchannel->unconfirmed_payloads > 0;
+		if((b0 && (b1 || b2 || b3 || b4)) || payload_to_send){
 			sky_packet_add_extension_arq_ctrl(frame, vchannel->sendRing->tx_sequence, vchannel->rcvRing->head_sequence);
 			vchannel->last_ctrl_send_tick = now;
+			vchannel->unconfirmed_payloads = 0;
 			ret = 1;
 		}
 

@@ -9,46 +9,6 @@ ctypedef stdint.int32_t int32_t
 ctypedef stdint.int16_t int16_t
 ctypedef stdint.int8_t int8_t
 
-"""
-cdef extern from "../src/skylink/conf.h":
-	ctypedef struct SkyPHYConfig:
-		uint8_t enable_scrambler;
-		uint8_t enable_rs;
-
-	ctypedef struct SkyMACConfig:
-		int32_t maximum_window_length_ticks;
-		int32_t minimum_window_length_ticks;
-		int32_t gap_constant_ticks;
-		int32_t tail_constant_ticks;
-		uint8_t unauthenticated_mac_updates;
-		int32_t shift_threshold_ticks;
-		int32_t idle_timeout_ticks;
-		int16_t window_adjust_increment_ticks;
-		int16_t carrier_sense_ticks;
-		int8_t window_adjustment_period;
-		uint8_t idle_frames_per_window;
-
-	ctypedef struct SkyVCConfig:
-		int element_size;
-		int rcv_ring_len;
-		int horizon_width;
-		int send_ring_len;
-		uint8_t require_authentication;
-
-	ctypedef struct HMACConfig:
-		int32_t key_length;
-		uint8_t key[16];
-		int32_t maximum_jump;
-
-	ctypedef struct SkyConfig:
-		SkyPHYConfig phy;
-		SkyMACConfig mac;
-		HMACConfig	hmac;
-		SkyVCConfig vc[4];
-		uint8_t identity[6];
-		int32_t arq_timeout_ticks;
-		int8_t arq_idle_frames_per_window;
-"""
 
 cdef extern from "../tests/zmq_endpoint.h":
 

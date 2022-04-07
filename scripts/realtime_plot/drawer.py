@@ -253,17 +253,18 @@ class MW(QtWidgets.QWidget):
 		self.names    		= set()
 		self.latest_values 	= dict()
 		self.data_vectors   = dict()
-
-		self.pull_loop = threading.Thread(target=self._que_pull_loop, args=tuple(), daemon=True)
-		self.pull_loop.start()
-
 		self.loopcount = 0
 		self.storage_on = False
 		self.storage_count = 0
 		self.starttime = time.perf_counter()
+
+		self.pull_loop = threading.Thread(target=self._que_pull_loop, args=tuple(), daemon=True)
+
 		self.timer = QtCore.QTimer()
 		self.timer.setInterval(interval_ms)
 		self.timer.timeout.connect(self._loop)
+
+		self.pull_loop.start()
 		self.timer.start()
 
 

@@ -14,7 +14,7 @@ rint = random.randint
 rng = random.random
 
 NS = SimpleNamespace()
-NS.TIME_RATE    = 0.7
+NS.TIME_RATE    = 1.0
 NS.CORRUPT_RATE = 0.01
 NS.LOSS_RATE    = 0.01
 NS.DIST_LAG     = 0.010
@@ -56,15 +56,15 @@ class SkyPHYConfig:
 		return k
 
 class SkyMACConfig:
-	maximum_window_length_ticks = 1000
+	maximum_window_length_ticks = 2500
 	minimum_window_length_ticks = 250
 	gap_constant_ticks = 500
-	tail_constant_ticks = 80
+	tail_constant_ticks = 65
 	shift_threshold_ticks = 5000
 	idle_timeout_ticks = 25000
 	window_adjust_increment_ticks = 250
 	carrier_sense_ticks = 250
-	unauthenticated_mac_updates = 1
+	unauthenticated_mac_updates = 0
 	window_adjustment_period = 2
 	idle_frames_per_window = 1
 
@@ -78,10 +78,10 @@ class SkyMACConfig:
 
 
 class SkyVCConfig:
-	element_size = 300
-	rcv_ring_len = 30
-	horizon_width = 8
-	send_ring_len = 30
+	element_size = 400
+	rcv_ring_len = 36
+	horizon_width = 24
+	send_ring_len = 36
 	require_authentication = 0b110
 
 	def dump(self):
@@ -100,8 +100,8 @@ class HMACConfig:
 
 class SkyConfig:
 	identity = b"\00" * 6
-	arq_timeout_ticks = 20000
-	arq_idle_frame_threshold = 20000 // 4
+	arq_timeout_ticks = 15000
+	arq_idle_frame_threshold = 15000 // 4
 	arq_idle_frames_per_window = 1
 	def __init__(self):
 		self.phy = SkyPHYConfig()
@@ -187,15 +187,23 @@ def transfer_loop(txsock, rxsock, idd_map, lista, lag, corrupt_rate, loss_rate):
 		th.start()
 
 
-
+#=== PLOTTING LOOPS ===============================================================================================
 def plot_txrx(skylink1:SkyLink, skylink2:SkyLink):
 	plot_que = create_realplot(14, 24, (2,2,0))
+	rs1_ex = skylink1.get_status().radio_state
+	rs2_ex = skylink2.get_status().radio_state
+	plot_que.put( ("1-tx", rs1_ex) )
+	plot_que.put( ("2-tx", rs2_ex) )
 	while True:
 		status1 = skylink1.get_status()
 		status2 = skylink2.get_status()
-		plot_que.put( ("1-tx", status1.radio_state) )
-		plot_que.put( ("2-tx", status2.radio_state) )
-		time.sleep(0.05)
+		if status1.radio_state != rs1_ex:
+			plot_que.put( ("1-tx", status1.radio_state) )
+			rs1_ex = status1.radio_state
+		if status2.radio_state != rs2_ex:
+			plot_que.put( ("2-tx", status2.radio_state) )
+			rs2_ex = status2.radio_state
+		time.sleep(0.02)
 
 
 
@@ -209,7 +217,7 @@ def plot_remaining(skylink1:SkyLink, skylink2:SkyLink):
 		plot_que.put( ("SL1 own remaining", rem1) )
 		plot_que.put( ("SL2 own remaining", rem2) )
 		plot_que.put( ("SL1 window", status1.my_window) )
-		plot_que.put( ("SL2 window", status1.my_window) )
+		plot_que.put( ("SL2 window", status2.my_window) )
 		plot_que.put( ("SL1 since last update", status1.tick - status1.last_mac_update) )
 		plot_que.put( ("SL2 since last update", status2.tick - status2.last_mac_update) )
 		plot_que.put( ("SL1 window_discrepancy", status1.peer_window - status2.my_window) )
@@ -239,14 +247,69 @@ def plot_arq(skylink1:SkyLink, skylink2:SkyLink):
 		status1 = skylink1.get_status()
 		status2 = skylink2.get_status()
 		plot_que.put( ("SL1 VC0 ARQ", status1.vcs[0].arq_state ) )
-		plot_que.put( ("SL1 VC1 ARQ", status1.vcs[1].arq_state ) )
-		plot_que.put( ("SL1 VC2 ARQ", status1.vcs[2].arq_state ) )
-		plot_que.put( ("SL1 VC3 ARQ", status1.vcs[3].arq_state ) )
+		plot_que.put( ("SL1 VC1 ARQ", status1.vcs[1].arq_state +0.1) )
+		plot_que.put( ("SL1 VC2 ARQ", status1.vcs[2].arq_state +0.2) )
+		plot_que.put( ("SL1 VC3 ARQ", status1.vcs[3].arq_state +0.3) )
 		plot_que.put( ("SL2 VC0 ARQ", status2.vcs[0].arq_state +10) )
-		plot_que.put( ("SL2 VC1 ARQ", status2.vcs[1].arq_state +10) )
-		plot_que.put( ("SL2 VC2 ARQ", status2.vcs[2].arq_state +10) )
-		plot_que.put( ("SL2 VC3 ARQ", status2.vcs[3].arq_state +10) )
-		time.sleep(0.10)
+		plot_que.put( ("SL2 VC1 ARQ", status2.vcs[1].arq_state +10.1) )
+		plot_que.put( ("SL2 VC2 ARQ", status2.vcs[2].arq_state +10.2) )
+		plot_que.put( ("SL2 VC3 ARQ", status2.vcs[3].arq_state +10.3) )
+		time.sleep(0.12)
+
+
+
+def plain_generate_payloads(skylink1:SkyLink, skylink2:SkyLink, vc, rate10, rate20, length):
+	plot_que = create_realplot(14,24)
+	sent1 = set()
+	sent2 = set()
+	t = rtime()
+	rate1 = rate10 * NS.TIME_RATE + 1e-6
+	rate2 = rate20 * NS.TIME_RATE + 1e-6
+	sleep1 = 1 / rate1
+	sleep2 = 1 / rate2
+	next1 = t + sleep1
+	next2 = t + sleep2
+	t_end = rtime() + length
+	while rtime() < (t_end + 15):
+		plot_que.put(("unreceived by 2", len(sent1)))
+		plot_que.put(("unreceived by 1", len(sent2)))
+		st = max(0, min(next1,next2) - rtime())
+		rsleep(min(0.15, st))
+		t = rtime()
+		if t < t_end:
+			if t > next1:
+				next1 = t + sleep1
+				pl = os.urandom(random.randint(16,110))
+				r = skylink1.push_pl(vc, pl)
+				if (r < 0) and (r != -54):
+					raise AssertionError("Skylink1 push error:{}".format(r))
+				if r >= 0:
+					sent1.add(pl)
+			if t > next2:
+				next2 = t + sleep2
+				pl = os.urandom(random.randint(16,110))
+				r = skylink2.push_pl(vc, pl)
+				if (r < 0) and (r != -54):
+					raise AssertionError("Skylink2 push error:{}".format(r))
+				if r >= 0:
+					sent2.add(pl)
+		while True:
+			rcv = skylink1.read_pl(vc)
+			if rcv is None:
+				break
+			if not rcv in sent2:
+				raise AssertionError("Received unsent package")
+			sent2.remove(rcv)
+		while True:
+			rcv = skylink2.read_pl(vc)
+			if rcv is None:
+				break
+			if not rcv in sent1:
+				raise AssertionError("Received unsent package")
+			sent1.remove(rcv)
+	print("===========================")
+	print("Generation over!")
+	print("===========================")
 
 
 
@@ -269,40 +332,33 @@ def generate_payloads(skylink1:SkyLink, skylink2:SkyLink, vc, rate10, rate20, le
 	sleep2 = getsleeptime(rate2)
 	next1 = t + sleep1
 	next2 = t + sleep2
-	silence = False
 	t_end = rtime() + length
-	while rtime() < t_end:
-		if (not silence) and ((rtime() // 20) % 3 == 0):
-			print("silence")
-		if silence and ((rtime() // 20) % 3 != 0):
-			print("go!")
-		silence = (rtime() // 20) % 3 == 0
-
+	while rtime() < (t_end + 15):
 		if plot_unreceived:
-			plot_que.put(("unreceived by 2", len(sent1)))
-			plot_que.put(("unreceived by 1", len(sent2)))
-			plot_que.put(("tx-1", skylink1.get_status().radio_state))
-			plot_que.put(("tx-2", skylink2.get_status().radio_state))
+			plot_que.put(("unreceived by 2 (vc:{})".format(vc), len(sent1)))
+			plot_que.put(("unreceived by 1 (vc:{})".format(vc), len(sent2)))
 
 		st = max(0, min(next1,next2) - rtime())
-		rsleep(min(0.15, st))
+		rsleep(min(0.25, st))
 		t = rtime()
-		if t > next1 and (not silence):
-			next1 = t + getsleeptime(rate1)
-			pl = os.urandom(random.randint(6,110))
-			r = skylink1.push_pl(vc, pl)
-			if (r < 0) and (r != -54):
-				raise AssertionError("Skylink1 push error:{}".format(r))
-			if r >= 0:
-				sent1.add(pl)
-		if t > next2 and (not silence):
-			next2 = t + getsleeptime(rate2)
-			pl = os.urandom(random.randint(6,110))
-			r = skylink2.push_pl(vc, pl)
-			if (r < 0) and (r != -54):
-				raise AssertionError("Skylink2 push error:{}".format(r))
-			if r >= 0:
-				sent2.add(pl)
+		if t < t_end:
+			if t > next1:
+				next1 = t + getsleeptime(rate1)
+				pl = os.urandom(random.randint(6,110))
+				r = skylink1.push_pl(vc, pl)
+				if (r < 0) and (r != -54):
+					raise AssertionError("Skylink1 push error:{}".format(r))
+				if r >= 0:
+					sent1.add(pl)
+			if t > next2:
+				next2 = t + getsleeptime(rate2)
+				pl = os.urandom(random.randint(6,110))
+				r = skylink2.push_pl(vc, pl)
+				if (r < 0) and (r != -54):
+					raise AssertionError("Skylink2 push error:{}".format(r))
+				if r >= 0:
+					sent2.add(pl)
+
 		while True:
 			rcv = skylink1.read_pl(vc)
 			if rcv is None:
@@ -320,6 +376,10 @@ def generate_payloads(skylink1:SkyLink, skylink2:SkyLink, vc, rate10, rate20, le
 	print("======================")
 	print("Generation over!")
 	print("======================")
+#=== PLOTTING LOOPS ===============================================================================================
+
+
+
 
 
 

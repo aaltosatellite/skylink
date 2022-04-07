@@ -23,27 +23,31 @@ static int _content_in_vc(SkyHandle self, int vc, tick_t now){
 
 
 /* This zeroes the tracking of how many frames have been sent in current window. */
-static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_send){
+static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_send, tick_t now){
+	if(can_send && (!content_to_send)){
+		self->mac->unused_window_time = true; //We can send, but there is nothing to send.
+	}
 	if((!can_send) && self->mac->window_on) { //window is closing.
-		if(content_to_send){
-			self->mac->window_adjust_counter++;  //indicate need to grow window.
+		if(self->mac->unused_window_time){
+			self->mac->window_adjust_counter--;  //indicate need to shrink window.
 		}
-		if(!content_to_send){
-			self->mac->window_adjust_counter--;  //indicate need to grow window.
+		else{
+			self->mac->window_adjust_counter++;  //indicate need to grow window.
 		}
 	}
 	if(can_send && (!self->mac->window_on)){ //window is opening
 		if(self->mac->window_adjust_counter <= -self->conf->mac.window_adjustment_period){ //need to shrink window?
-			mac_shrink_window(self->mac);
+			mac_shrink_window(self->mac, now);
 			self->mac->window_adjust_counter = 0;
 		}
 		if(self->mac->window_adjust_counter >= self->conf->mac.window_adjustment_period){ //need to grow window?
-			mac_expand_window(self->mac);
+			mac_expand_window(self->mac, now);
 			self->mac->window_adjust_counter = 0;
 		}
 	}
 	if(!can_send){
 		self->mac->window_on = 0;
+		self->mac->unused_window_time = false;
 		for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 			self->mac->frames_sent_in_current_window_per_vc[i] = 0;
 		}
@@ -60,6 +64,7 @@ static int _sky_tx_extension_needed_hmac_reset(SkyHandle self, uint8_t vc){
 	return (self->hmac->vc_enforcement_need[vc] != 0) && (self->conf->vc[vc].require_authentication);
 }
 
+
 static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
 	if(!_sky_tx_extension_needed_hmac_reset(self, vc)){
 		return 0;
@@ -67,16 +72,15 @@ static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* fram
 	self->hmac->vc_enforcement_need[vc] = 0;
 	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 3); //+3 so that immediate sends don't invalidate what we give here. Jump constant must be bigger.
 	sky_packet_add_extension_hmac_sequence_reset(frame, sequence);
-	//SKY_PRINTF(SKY_DIAG_DEBUG, "\tEnforcing AUTH sequence.\n");
 	return 1;
 }
-
-
 
 
 static void _sky_tx_advance_vc_round_robin(SkyHandle self){
 	self->mac->vc_round_robin_start = (self->mac->vc_round_robin_start + 1) % SKY_NUM_VIRTUAL_CHANNELS;
 }
+
+
 static int _sky_tx_pick_vc(SkyHandle self, tick_t now){
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		int vc = (self->mac->vc_round_robin_start + i) % SKY_NUM_VIRTUAL_CHANNELS;
@@ -88,7 +92,7 @@ static int _sky_tx_pick_vc(SkyHandle self, tick_t now){
 		}
 	}
 	// This is here to ensure that the peer advances its window through TDD gap even if there are no messages to send
-	if(mac_idle_frame_needed(self->mac, sky_get_tick_time())){
+	if(mac_idle_frame_needed(self->mac, now)){
 		return 0;
 	}
 	return -1;
@@ -114,7 +118,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 	_sky_tx_poll_arq_timeouts(self, now);
 	int vc = _sky_tx_pick_vc(self, now);
 	int content_to_send = (vc >= 0);
-	_sky_tx_track_tdd_state(self, can_send, content_to_send);
+	_sky_tx_track_tdd_state(self, can_send, content_to_send, now);
 
 	if ((!can_send) || (vc < 0)){
 		return 0;  //This is supposed to return 0, Not "-1": sky_tx returns a boolean value as to if there is need to send somethign.

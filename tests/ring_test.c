@@ -18,8 +18,8 @@ void ring_tests(int load){
 	test1(1000*load +1);
 	test2(500*load +1);
 	test3(1000*load+1);
-	test4_rcv(load);
-	test5_send(load);
+	test4_rcv(load*4);
+	test5_send(load*6);
 }
 
 
@@ -256,7 +256,7 @@ static void test2(int count){
 }
 
 static void test2_round(){
-	int elesize = randint_i32(44,85);
+	int elesize = randint_i32(32,320);
 	int rcv_ring_len = randint_i32(20,35);
 	int send_ring_len = randint_i32(20,35);
 	int horizon = 16;
@@ -315,10 +315,10 @@ static void test3(int count){
 }
 
 static void test3_round(){
-	int elesize = randint_i32(24,120);
+	int elesize = randint_i32(24,320);
 	int rcv_ring_len = randint_i32(20,35);
 	int send_ring_len = randint_i32(20,35);
-	int horizon = randint_i32(2,rcv_ring_len-3);
+	int horizon = randint_i32(0,rcv_ring_len-3);
 
 	//initialize
 	SkyVCConfig config;
@@ -328,21 +328,45 @@ static void test3_round(){
 	config.element_size = elesize;
 	SkyVirtualChannel* array = new_virtual_channel(&config);
 
-	uint8_t pl[2000];
-	fillrand(pl, 2000);
+	uint8_t* sent_pls[send_ring_len+1];
+	uint8_t* received_pls[rcv_ring_len+1];
 	int k = 0;
 	for (int i = 0; i < send_ring_len - 1; ++i) {
-		int r = sky_vc_push_packet_to_send(array, pl + k, SKY_MAX_PAYLOAD_LEN);
+		uint8_t* pl = malloc(SKY_MAX_PAYLOAD_LEN);
+		fillrand(pl, SKY_MAX_PAYLOAD_LEN);
+		sent_pls[i] = pl;
+		int r = sky_vc_push_packet_to_send(array, pl, SKY_MAX_PAYLOAD_LEN);
 		assert(r >= 0);
 		k++;
 	}
 	int h = array->rcvRing->head_sequence;
 	for (int i = 0; i < rcv_ring_len - 1; ++i) {
-		int r = sky_vc_push_rx_packet(array, pl + k, SKY_MAX_PAYLOAD_LEN, h, 10);
+		uint8_t* pl = malloc(SKY_MAX_PAYLOAD_LEN);
+		fillrand(pl, SKY_MAX_PAYLOAD_LEN);
+		received_pls[i] = pl;
+		int r = sky_vc_push_rx_packet(array, pl, SKY_MAX_PAYLOAD_LEN, h, 10);
 		h++;
 		assert(r >= 0);
 		k++;
 	}
+
+
+	int s = 0;
+	for (int i = 0; i < send_ring_len - 1; ++i) {
+		uint8_t tgt[SKY_MAX_PAYLOAD_LEN];
+		int r = sky_vc_read_packet_for_tx(array, tgt, &s, 1);
+		assert(r >= 0);
+		assert(memcmp(tgt, sent_pls[i], r) == 0);
+		free(sent_pls[i]);
+	}
+	for (int i = 0; i < rcv_ring_len - 1; ++i) {
+		uint8_t tgt[SKY_MAX_PAYLOAD_LEN];
+		int r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN+1);
+		assert(r >= 0);
+		assert(memcmp(tgt, received_pls[i], r) == 0);
+		free(received_pls[i]);
+	}
+
 
 	destroy_virtual_channel(array);
 }
@@ -374,12 +398,12 @@ static void test4_rcv(int count){
 
 static void test4_round(){
 	//randomize operational parameters
-	int elesize = randint_i32(64,85);
-	int rcv_ring_len = randint_i32(20,35);
-	int send_ring_len = randint_i32(20,35);
-	int horizon = randint_i32(0, 16);
+	int elesize = randint_i32(26,385);
+	int rcv_ring_len = randint_i32(12,65);
+	int send_ring_len = randint_i32(12,65);
+	int horizon = randint_i32(0, rcv_ring_len - 3);
 	int NMSG = randint_i32(3000, 6000);
-	if(randint_i32(0, 6) == 0){
+	if(randint_i32(0, 4) == 0){
 		NMSG = ARQ_SEQUENCE_MODULO+1000;
 	}
 	int n_strings = NMSG+500;
@@ -512,13 +536,12 @@ static void test5_send(int count){
 }
 
 static void test5_round(){
-	int elesize = randint_i32(64,85);
-	int rcv_ring_len = randint_i32(20,35);
-	int send_ring_len = randint_i32(38,39);
-	int horizon = randint_i32(0, 16);
-	int n_recall = horizon;
-	int NMSG = randint_i32(3000, 9000);
-	if(randint_i32(0,6) == 0){
+	int elesize = randint_i32(24,385);
+	int rcv_ring_len = randint_i32(12,64);
+	int send_ring_len = randint_i32(12,64);
+	int horizon = randint_i32(0, rcv_ring_len-3);
+	int NMSG = randint_i32(5000, 16000);
+	if(randint_i32(0,4) == 0){
 		NMSG = ARQ_SEQUENCE_MODULO+1000;
 	}
 	int n_strings = NMSG+500;
@@ -536,11 +559,13 @@ static void test5_round(){
 	config.element_size = elesize;
 	SkyVirtualChannel* array = new_virtual_channel(&config);
 	uint8_t* tgt = x_alloc(10000);
-	PRINTFF(0,"\t[ring length: %d] [recall depth: %d] [N_msgs: %d]\n", send_ring_len, n_recall, NMSG);
+	PRINTFF(0,"\t[ring length: %d] [N_msgs: %d]\n", send_ring_len, NMSG);
 	int next_idx_to_tx = 0;
+	int next_seq_to_tx = 0;
 	int next_idx_to_push = 0;
 	int tail_seq = s_seq0;
 	int in_buffer = 0;
+	int in_recall = 0;
 	while (next_idx_to_tx < NMSG) {
 		int tail_to_tx = positive_modulo(array->sendRing->tx_head - array->sendRing->tail, array->sendRing->length);
 
@@ -553,7 +578,10 @@ static void test5_round(){
 
 
 		assert(tail_seq == array->sendRing->tail_sequence);
+		assert(next_seq_to_tx == array->sendRing->tx_sequence);
 		assert(wrap_sequence(s_seq0+next_idx_to_push) == array->sendRing->head_sequence);
+		assert(in_buffer == wrap_sequence(array->sendRing->head_sequence - array->sendRing->tail_sequence));
+		assert(in_recall == wrap_sequence(array->sendRing->tx_sequence - array->sendRing->tail_sequence));
 
 		if ((randint_i32(0, 10000) % 7) == 0) { //PUSH
 			if(next_idx_to_push == NMSG){
@@ -584,7 +612,7 @@ static void test5_round(){
 			sky_vc_peek_next_tx_size_and_sequence(array, 1, &peeked_leng1, &peeked_seq1);
 			int r = sky_vc_read_packet_for_tx(array, tgt, &sq_tx, randint_i32(0, 1));
 
-			if(in_buffer == 0) {
+			if(in_buffer == in_recall) {
 				assert(peeked_leng0 == -1);
 				assert(peeked_leng1 == -1);
 				assert(peeked_seq0 == -1);
@@ -594,32 +622,47 @@ static void test5_round(){
 				assert(r == SKY_RET_RING_EMPTY);
 				assert(sq_tx == -1);
 			} else {
-				sendRing_clean_tail_up_to(array->sendRing, array->elementBuffer,wrap_sequence(array->sendRing->tx_sequence - n_recall));
 				assert(peeked_leng1 == r);
 				assert(peeked_seq1 == sq_tx);
 				assert(r >= 0);
+				assert(sq_tx == next_seq_to_tx);
 				assert(sq_tx == wrap_sequence(s_seq0+next_idx_to_tx));
 				assert(r == messages[next_idx_to_tx]->length);
 				assert(memcmp(tgt, messages[next_idx_to_tx]->data, messages[next_idx_to_tx]->length) == 0);
 				next_idx_to_tx++;
-				in_buffer--;
-				if(wrap_sequence(wrap_sequence(s_seq0+next_idx_to_tx) - tail_seq) > n_recall){
-					tail_seq = wrap_sequence(tail_seq + 1);
-					assert(tail_seq == array->sendRing->tail_sequence);
-				}
+				in_recall++;
+				next_seq_to_tx = wrap_sequence(s_seq0 + next_idx_to_tx);
+				assert(array->sendRing->tx_sequence == next_seq_to_tx);
 			}
 		}
 
+		if((randint_i32(0, 10000) % 9) == 0){ // Clean tail up
+			int n_to_ack = randint_i32(0, in_recall + 4);
+			assert(tail_seq == array->sendRing->tail_sequence);
+			int up_to = wrap_sequence(array->sendRing->tail_sequence + n_to_ack);
+			int r = sendRing_clean_tail_up_to(array->sendRing, array->elementBuffer, up_to);
+			if(n_to_ack <= in_recall){
+				assert(r == n_to_ack);
+				in_buffer = in_buffer - n_to_ack;
+				in_recall = in_recall - n_to_ack;
+				tail_seq = wrap_sequence(tail_seq + n_to_ack);
+				assert(tail_seq == array->sendRing->tail_sequence);
+			} else {
+				assert(r < 0);
+				assert(tail_seq == array->sendRing->tail_sequence);
+			}
+		}
+
+
 		if ((randint_i32(0, 10000) % 7) == 0) { //RECALL
 			for (int i = 0; i < 10; ++i) {
-				int next_seq_to_tx = wrap_sequence(s_seq0 + next_idx_to_tx);
 				int tail_idx = next_idx_to_tx - wrap_sequence(next_seq_to_tx - tail_seq);
 				int n_successful_schedules = 0;
 				int successful_scheduled_indexes[35];
 				//int successful_scheduled_sequences[35];
 				int n_schedule_trials = randint_i32(1, 35);
 				for (int j = 0; j < n_schedule_trials; ++j) {
-					int seq_shift = randint_i32(-2, n_recall+2);
+					int seq_shift = randint_i32(-2, in_recall+2);
 					int seq = wrap_sequence(tail_seq + seq_shift);
 					int idx = tail_idx + seq_shift;
 					if (idx < 0){
@@ -629,6 +672,8 @@ static void test5_round(){
 					int r2 = sky_vc_schedule_resend(array, seq);
 					if( wrap_sequence(seq - tail_seq) < wrap_sequence(next_seq_to_tx - tail_seq) ){
 						assert(r1 == 1);
+						assert(seq_shift >= 0);
+						assert(seq_shift < in_recall);
 						if(n_successful_schedules < 16){
 							assert(r2 == 0);
 							assert(array->sendRing->resend_count <= 16);

@@ -54,7 +54,7 @@ SkyRcvRing* new_rcv_ring(int length, int horizon_width, int initial_sequence){
 	memset(ring, 0, sizeof(RingItem)*length);
 	rcvRing->length = length;
 	rcvRing->buff = ring;
-	rcvRing->horizon_width =  (horizon_width <= ARQ_MAXIMUM_HORIZON) ? horizon_width : ARQ_MAXIMUM_HORIZON; //todo: Maybe we should allow larger horizons, despire recall-mask recalling 16 at time.
+	rcvRing->horizon_width = (horizon_width <= ARQ_MAXIMUM_HORIZON) ? horizon_width : ARQ_MAXIMUM_HORIZON;
 	wipe_rcv_ring(rcvRing, NULL, wrap_sequence(initial_sequence) );
 	return rcvRing;
 }
@@ -107,7 +107,7 @@ int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer
 			ret = SKY_RET_TOO_LONG_PAYLOAD;
 		} else {
 			SKY_ASSERT(ret > 0)
-			return SKY_RET_RING_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
+			return SKY_RET_RING_ELEMENTBUFFER_FAULT;
 		}
 	}
 	element_buffer_delete(elementBuffer, tail_item->idx);
@@ -296,12 +296,6 @@ int sendRing_count_free_send_slots(SkySendRing* sendRing){
 
 int sendRing_count_packets_to_send(SkySendRing* sendRing, int include_resend){
 	int n = ring_wrap(sendRing->head - sendRing->tx_head, sendRing->length);
-
-	/* Do not overstep over maximum horizon of what the peer has acked  */
-	if(ring_wrap(sendRing->tx_head - sendRing->tail, sendRing->length) > ARQ_MAXIMUM_HORIZON){
-		n = 0;
-	}
-
 	if(include_resend){
 		n = n + sendRing->resend_count;
 	}
@@ -333,7 +327,7 @@ static int sendRing_read_new_packet_to_tx_(SkySendRing* sendRing, ElementBuffer*
 	int read = element_buffer_read(elementBuffer, tgt, item->idx, SKY_MAX_PAYLOAD_LEN + 100);
 	if(read < 0){
 		SKY_ASSERT(read > 0)
-		return SKY_RET_RING_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
+		return SKY_RET_RING_ELEMENTBUFFER_FAULT;
 	}
 	*sequence = sendRing->tx_sequence;
 	sendRing->tx_head = ring_wrap(sendRing->tx_head+1, sendRing->length);
@@ -356,7 +350,7 @@ static int sendRing_read_recall_packet_to_tx_(SkySendRing* sendRing, ElementBuff
 	int read = element_buffer_read(elementBuffer, tgt, item->idx, SKY_MAX_PAYLOAD_LEN + 100);
 	if(read < 0){
 		SKY_ASSERT(read > 0)
-		return SKY_RET_RING_ELEMENTBUFFER_FAULT; //todo: Should never occur. Grounds for full wipe in order to recover.
+		return SKY_RET_RING_ELEMENTBUFFER_FAULT;
 	}
 	*sequence = recall_seq;
 	return read;

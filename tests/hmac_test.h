@@ -13,6 +13,6 @@
 #include "tst_utilities.h"
 #include "tools/tools.h"
 
-void hmac_tests();
+void hmac_tests(int load);
 
 #endif //SKYLINK_CMAKE_HMAC_TESTS_H

@@ -87,12 +87,12 @@ int main() {
 	elebuffer_tests();
 	packet_tests();
 	fec_test();
-	hmac_tests();
+	hmac_tests(15);
 	mac_test(15);
 	ring_tests(15);
-	arq_system_test1(21);
-	arq_system_test2(21);
-	arq_system_test3(21);
+	//arq_system_test1(21);
+	//arq_system_test2(21);
+	//arq_system_test3(21);
 	sky_tx_test(21);
 
 	uint64_t t1 = real_microseconds();

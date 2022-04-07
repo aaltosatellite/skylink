@@ -16,7 +16,7 @@
 #define ARQ_SEQUENCE_MODULO 			32000
 #endif
 #define ARQ_RESEND_SCHEDULE_DEPTH		16
-#define ARQ_MAXIMUM_HORIZON				16
+#define ARQ_MAXIMUM_HORIZON				128
 
 
 //todo: define sequences as a new type (uint16 probably?) This would save 2*lots of bytes

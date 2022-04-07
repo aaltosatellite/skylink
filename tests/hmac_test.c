@@ -8,26 +8,27 @@
 
 
 
-static void test1();
+static void test1(int load);
 static void test1_round();
 static void test2_round();
 
 
-void hmac_tests(){
-	test1();
+void hmac_tests(int load){
+	test1(load);
 }
 
 
 
 
 
-static void test1(){
+static void test1(int load){
 	PRINTFF(0,"[HMAC TEST 1]\n");
-	for (int i = 0; i < 220000; ++i) {
+	for (int i = 0; i < load*1000+1; ++i) {
 		test1_round();
-	}
-	for (int i = 0; i < 100000; ++i) {
 		test2_round();
+		if(i % 1000 == 0){
+			PRINTFF(0,"\ti=%d\n", i);
+		}
 	}
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
