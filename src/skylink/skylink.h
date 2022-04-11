@@ -86,9 +86,9 @@ typedef struct __attribute__((__packed__)) {
 	uint16_t state;
 
 	/*
-	 * Amount of free space in bytes in shared element buffer
+	 * Number of free slots in send ring.
 	 */
-	uint16_t buffer_free;
+	uint16_t free_tx_slots;
 
 	/*
 	 * Number of frames in the buffer waiting to be sent
