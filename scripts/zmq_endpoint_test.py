@@ -156,13 +156,13 @@ def failed_arq_init_and_successful():
 
 
 def full_throttle():
-	NS.TIME_RATE = 0.7
+	NS.TIME_RATE = 0.6
 	NS.DIST_LAG = 0.011
-	NS.CORRUPT_RATE = 0.00
-	NS.LOSS_RATE = 0.00
+	NS.CORRUPT_RATE = 0.02
+	NS.LOSS_RATE = 0.02
 	NS.USE_GLOBALS  = True
 
-	# == zmq sockets and transfer loop ===============================================
+	# == zmq sockets and transfer loop =============================================
 	zmq_ctx = zmq.Context()
 	tx_sock = zmq_ctx.socket(zmq.SUB)
 	tx_sock.bind("tcp://127.0.0.1:3300")
@@ -176,10 +176,10 @@ def full_throttle():
 	thr1 = threading.Thread(target=transfer_loop, args=transfer_arguments)
 	thr1.start()
 	time.sleep(1)
-	# == zmq sockets and transfer loop ===============================================
+	# == zmq sockets and transfer loop =============================================
 
 
-	# == SkyLink ===============================================
+	# == SkyLink ===================================================================
 	co1 = SkyConfig()
 	co2 = SkyConfig()
 	conf1 = co1.dump()
@@ -188,7 +188,7 @@ def full_throttle():
 	skylink2 = SkyLink(2, NS.TIME_RATE, 9600, 0, 0, conf2, len(conf2))
 	print("Skylinks started.", flush=True)
 	time.sleep(0.5)
-	# == SkyLink ===============================================
+	# == SkyLink ===================================================================
 
 
 	# == plots =====================================================================
@@ -215,9 +215,8 @@ def full_throttle():
 	time.sleep(8)
 
 	print("Some payloads")
-	thr6 = threading.Thread(target=plain_generate_payloads, args=(skylink1, skylink2, 0, 30.0, 0.0, 30))
+	thr6 = threading.Thread(target=plain_generate_payloads, args=(skylink1, skylink2, 0, 30.0, 10.0, 40))
 	thr6.start()
-	time.sleep(20)
 
 
 
@@ -230,7 +229,7 @@ def many_channels():
 	NS.LOSS_RATE = 0.03
 	NS.USE_GLOBALS  = True
 
-	# == zmq sockets and transfer loop ===============================================
+	# == zmq sockets and transfer loop =============================================
 	zmq_ctx = zmq.Context()
 	tx_sock = zmq_ctx.socket(zmq.SUB)
 	tx_sock.bind("tcp://127.0.0.1:3300")
@@ -244,10 +243,10 @@ def many_channels():
 	thr1 = threading.Thread(target=transfer_loop, args=transfer_arguments)
 	thr1.start()
 	time.sleep(1)
-	# == zmq sockets and transfer loop ===============================================
+	# == zmq sockets and transfer loop =============================================
 
 
-	# == SkyLink ===============================================
+	# == SkyLink ===================================================================
 	co1 = SkyConfig()
 	co2 = SkyConfig()
 	conf1 = co1.dump()
@@ -256,7 +255,7 @@ def many_channels():
 	skylink2 = SkyLink(2, NS.TIME_RATE, 2*9600, 0, 0, conf2, len(conf2))
 	print("Skylinks started.", flush=True)
 	time.sleep(0.5)
-	# == SkyLink ===============================================
+	# == SkyLink ===================================================================
 
 
 	# == plots =====================================================================
@@ -302,6 +301,7 @@ def many_channels():
 	time.sleep(100)
 
 
+
 def mac_stops():
 	NS.TIME_RATE = 0.6
 	NS.DIST_LAG = 0.011
@@ -309,7 +309,7 @@ def mac_stops():
 	NS.LOSS_RATE = 0.03
 	NS.USE_GLOBALS  = True
 
-	# == zmq sockets and transfer loop ===============================================
+	# == zmq sockets and transfer loop =============================================
 	zmq_ctx = zmq.Context()
 	tx_sock = zmq_ctx.socket(zmq.SUB)
 	tx_sock.bind("tcp://127.0.0.1:3300")
@@ -323,10 +323,10 @@ def mac_stops():
 	thr1 = threading.Thread(target=transfer_loop, args=transfer_arguments)
 	thr1.start()
 	time.sleep(1)
-	# == zmq sockets and transfer loop ===============================================
+	# == zmq sockets and transfer loop =============================================
 
 
-	# == SkyLink ===============================================
+	# == SkyLink ===================================================================
 	co1 = SkyConfig()
 	co2 = SkyConfig()
 	conf1 = co1.dump()
@@ -335,7 +335,7 @@ def mac_stops():
 	skylink2 = SkyLink(2, NS.TIME_RATE, 2*9600, 0, 0, conf2, len(conf2))
 	print("Skylinks started.", flush=True)
 	time.sleep(0.5)
-	# == SkyLink ===============================================
+	# == SkyLink ===================================================================
 
 
 	# == plots =====================================================================
@@ -370,9 +370,12 @@ def mac_stops():
 
 	time.sleep(100)
 
+
+
+
 if __name__ == '__main__':
 	#tst1()
 	#failed_arq_init_and_successful()
-	#full_throttle()
+	full_throttle()
 	#many_channels()
-	mac_stops()
+	#mac_stops()

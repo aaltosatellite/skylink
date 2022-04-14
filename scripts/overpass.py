@@ -81,12 +81,13 @@ class Overpass:
 if __name__ == '__main__':
 	#print(np.pi*2*(35785e3+Re) / v_orbit(35785e3) )
 	#print(24*3600)
-	overpass = Overpass(GS_offset_deg=9, GS_lat_deg=69.188, H_orbit_m=570e3)
+	overpass = Overpass(GS_offset_deg=4.78, GS_lat_deg=60.189, H_orbit_m=535e3)
+	#overpass = Overpass(GS_offset_deg=9, GS_lat_deg=69.189, H_orbit_m=535e3)
 	DIST_VISIBLE = []
 	DIST = []
 	T_VISIBLE = []
 	T = []
-	for t in np.linspace(0, 60*60*24*2, 10000):
+	for t in np.linspace(-9*60, 9*60, 10000):
 		d_ = overpass.d_at_t(t)
 		DIST.append(d_)
 		T.append(t)
