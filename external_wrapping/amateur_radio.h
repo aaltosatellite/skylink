@@ -13,7 +13,7 @@
 #include "../src/skylink/utilities.h"
 
 
-int skylink_encode_amateur_pl(uint8_t* identity, uint8_t* pl, int32_t pl_len, uint8_t* tgt);
+int skylink_encode_amateur_pl(uint8_t* identity, uint8_t* pl, int32_t pl_len, uint8_t* tgt, int insert_golay);
 
 
 #endif //SKYLINK_AMATEUR_RADIO_H

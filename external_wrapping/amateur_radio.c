@@ -5,7 +5,7 @@
 #include "amateur_radio.h"
 
 
-int skylink_encode_amateur_pl(uint8_t* identity, uint8_t* pl, int32_t pl_len, uint8_t* tgt){
+int skylink_encode_amateur_pl(uint8_t* identity, uint8_t* pl, int32_t pl_len, uint8_t* tgt, int insert_golay){
 	if(pl_len > SKY_MAX_PAYLOAD_LEN){
 		return -1;
 	}
@@ -38,17 +38,18 @@ int skylink_encode_amateur_pl(uint8_t* identity, uint8_t* pl, int32_t pl_len, ui
 
 
 	/* Encode length field. Golay. */
-	/* Move the data by 3 bytes to make room for the PHY header */
-	for (unsigned int i = frame->length; i != 0; i--){
-		frame->raw[i + 3] = frame->raw[i];
+	if(insert_golay) {
+		/* Move the data by 3 bytes to make room for the PHY header */
+		for (unsigned int i = frame->length; i != 0; i--) {
+			frame->raw[i + 3] = frame->raw[i];
+		}
+		uint32_t phy_header = frame->length | SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED;
+		encode_golay24(&phy_header);
+		frame->raw[0] = 0xff & (phy_header >> 16);
+		frame->raw[1] = 0xff & (phy_header >> 8);
+		frame->raw[2] = 0xff & (phy_header >> 0);
+		frame->length += 3;
 	}
-	uint32_t phy_header = frame->length | SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED;
-	encode_golay24(&phy_header);
-	frame->raw[0] = 0xff & (phy_header >> 16);
-	frame->raw[1] = 0xff & (phy_header >> 8);
-	frame->raw[2] = 0xff & (phy_header >> 0);
-	frame->length += 3;
-
 
 	memcpy(tgt, frame->raw, frame->length);
 	return frame->length; //Returns 1, not 0.  1 is a boolean TRUE value.
