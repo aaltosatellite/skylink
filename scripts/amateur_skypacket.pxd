@@ -34,5 +34,5 @@ cdef extern from "../external_wrapping/amateur_radio.h":
 		VCStatus vcs[4];
 
 
-	int skylink_encode_amateur_pl(uint8_t* identity, uint8_t* pl, int32_t pl_len, uint8_t* tgt);
+	int skylink_encode_amateur_pl(uint8_t* identity, uint8_t* pl, int32_t pl_len, uint8_t* tgt, int insert_golay);
 

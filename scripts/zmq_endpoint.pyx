@@ -1,7 +1,6 @@
 import struct
 
 cimport zmq_endpoint
-from libc.stdlib cimport free
 import cython
 
 class VCStat():

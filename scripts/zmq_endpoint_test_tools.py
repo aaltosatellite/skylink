@@ -108,6 +108,8 @@ class SkyConfig:
 		self.mac = SkyMACConfig()
 		self.hmac = HMACConfig()
 		self.vc = [SkyVCConfig(),SkyVCConfig(),SkyVCConfig(),SkyVCConfig()]
+		self.vc[2].require_authentication = 0
+		self.vc[3].require_authentication = 0
 
 	def dump(self):
 		b = b""
