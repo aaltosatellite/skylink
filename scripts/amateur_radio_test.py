@@ -47,17 +47,13 @@ def tst1():
 	time.sleep(1)
 
 	print("Sending packet")
-	pl = compile_packet(b"MARKUS", b"FOOBAR!", 0)
+	pl = compile_packet(b"MARKUS", b"FOOBAR!", 1)[3:]
 	pl = struct.pack("i", 2) + pl
 	for i in range(16):
 		rx_sock.send( pl )
 		time.sleep(0.15)
 
 	print("Receiving...")
-	print(skylink1.read_pl(3))
-	print(skylink2.read_pl(0))
-	print(skylink2.read_pl(1))
-	print(skylink2.read_pl(2))
 	print(skylink2.read_pl(3))
 
 	time.sleep(60)
@@ -72,6 +68,11 @@ def tst1():
 
 A = compile_packet(b"MARKUS", b"12345", 0)
 B = compile_packet(b"MARKUS", b"12345", 1)
+assert (len(A) == (len(B)-3))
+assert (A[1:] == B[4:])
+print(A)
+print(B[3:])
+
 C = compile_packet(b"MARKUS", os.urandom(179), 1)
 print("A:",A)
 print("B:",B)

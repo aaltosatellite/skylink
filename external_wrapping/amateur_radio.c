@@ -22,7 +22,7 @@ int skylink_encode_amateur_pl(uint8_t* identity, uint8_t* pl, int32_t pl_len, ui
 
 
 	/* Add TDD extension. */
-	sky_packet_add_extension_mac_tdd_control(frame, 250, 250);
+	//sky_packet_add_extension_mac_tdd_control(frame, 250, 250);
 
 
 	/* Add necessary extensions and a payload if one is in the ring buffer. This is a rather involved function. */
