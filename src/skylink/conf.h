@@ -39,11 +39,10 @@ typedef struct {
 	int32_t gap_constant_ticks;
 
 	/* Minimum time */
-	int32_t tail_constant_ticks; // TODO: Rename switch_delay_ticks;
+	int32_t tail_constant_ticks; // TODO: Rename switch_delay_ticks.
 
-	/* Time after not hearing anything shift the MAC window by random amount
-	 * to avoid overlapping transmission. */
-	int32_t shift_threshold_ticks;
+	/* Deprecated configuration value for shifting window to avoid MAC collision. Instead, adjust gap length. */
+	int32_t shift_threshold_ticks; //TODO: Remove in the future.
 
 	/* After this many ticks of not getting MAC state updates, the link is considered idle. */
 	int32_t idle_timeout_ticks;

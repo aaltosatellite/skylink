@@ -71,6 +71,8 @@ B = compile_packet(b"MARKUS", b"12345", 1)
 assert (len(A) == (len(B)-3))
 assert (A[1:] == B[4:])
 print(A)
+print(A)
+print(B[3:])
 print(B[3:])
 
 C = compile_packet(b"MARKUS", os.urandom(179), 1)
@@ -80,7 +82,7 @@ print("C:",C)
 print("C:",b"b"[:-1])
 
 
-tst1()
+#tst1()
 
 
 

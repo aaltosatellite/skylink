@@ -80,7 +80,7 @@ void print_struct_alignments(){
 
 int main() {
 	reseed_random();
-	print_struct_alignments();
+	//print_struct_alignments();
 
 	uint64_t t0 = real_microseconds();
 

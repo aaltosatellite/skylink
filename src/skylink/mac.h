@@ -9,7 +9,9 @@
 
 
 
-/* TDD MAC state structure */
+/*
+ * TDD MAC state structure
+ */
 struct sky_mac_s {
 
 	// Pointer to original configuration struct
@@ -26,9 +28,6 @@ struct sky_mac_s {
 
 	// Tick of last time we updated our belief of T0 (and peer window length).
 	tick_t last_belief_update;
-
-	// Tick of last time we shifted T0 due to silence. Must be separate form "belief_update".
-	tick_t last_silent_shift;
 
 	// Counter to monitor is the current window lenght too larger or small
 	int32_t window_adjust_counter;
@@ -112,20 +111,18 @@ int32_t mac_time_to_own_window(SkyMAC* mac, tick_t now);
 int32_t mac_own_window_remaining(SkyMAC* mac, tick_t now);
 
 
-// Returns positive integer number of ticks of peer transmit window remaining,
-// or negative integer signaling the number of ticks past the window closure.
+/*
+ * Returns positive integer number of ticks of peer transmit window remaining,
+ * or negative integer signaling the number of ticks past the window closure.
+ */
 int32_t mac_peer_window_remaining(SkyMAC* mac, tick_t now);
-
-
-// Checks if time elapsed since last mac belief update exceeds a configured value.
-// If so, shifts the windowing by random step. This is used to break out of equal sync situation.
-void mac_silence_shift_check(SkyMAC* mac, tick_t now);
 
 
 /*
  * Returns true whether MAC thinks it is our time to speak at now.
  */
 bool mac_can_send(SkyMAC* mac, tick_t now);
+
 
 /*
  * Updates the MAC-system's belief of the current status of the windowing:
@@ -136,21 +133,29 @@ bool mac_can_send(SkyMAC* mac, tick_t now);
 void mac_update_belief(SkyMAC* mac, const tick_t now, tick_t receive_time, tick_t peer_mac_length, tick_t peer_mac_remaining);
 
 
-// Resets mac into a state where it can immediately send.
+/*
+ * Resets mac into a state where it can immediately send.
+ */
 void mac_reset(SkyMAC* mac, tick_t now);
 
 
-// If fleeting transmission is detected, but not fully received, this cues the MAC-system, and updates belief by remaining = 1 tick.
-// BE CAREFUL: mac_update_belief is generally invoked only by authenticated messages to prevent 'shut-up-attack'.
-// This function in principle gets invoked before any authentication can take place. Therefore use sparingly.
+/*
+ * If fleeting transmission is detected, but not fully received, this cues the MAC-system, and updates belief by remaining = 1 tick.
+ * BE CAREFUL: mac_update_belief is generally invoked only by authenticated messages to prevent 'shut-up-attack'.
+ * This function in principle gets invoked before any authentication can take place. Therefore use sparingly.
+ */
 void sky_mac_carrier_sensed(SkyMAC* mac, tick_t now);
 
 
-// Returns boolean 1/0 wether an idle frame should be sent to synch the peer side.
+/*
+ * Returns boolean 1/0 wether an idle frame should be sent to synch the peer side.
+ */
 bool mac_idle_frame_needed(SkyMAC* mac, tick_t now);
 
 
-// Writes out the two uint16 values to the provided spot in buffer.
+/*
+ * Writes out the two uint16 values to the provided spot in buffer.
+ */
 int mac_set_frame_fields(SkyMAC* mac, SkyRadioFrame* frame, tick_t now);
 
 #endif // __SKYLINK_MAC_H__

@@ -174,6 +174,9 @@ void sky_vc_poll_arq_state_timeout(SkyVirtualChannel* vchannel, tick_t now, tick
 //=== SEND =============================================================================================================
 //======================================================================================================================
 int sky_vc_push_packet_to_send(SkyVirtualChannel* vchannel, void* payload, int length){
+	if(length > SKY_MAX_PAYLOAD_LEN){
+		return SKY_RET_TOO_LONG_PAYLOAD;
+	}
 	return sendRing_push_packet_to_send(vchannel->sendRing, vchannel->elementBuffer, payload, length);
 }
 
@@ -393,7 +396,12 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 				frame->length += read;
 				frame->flags |= SKY_FLAG_HAS_PAYLOAD;
 				ret = 1;
+			} else {
+				/* If the payload for some reason is too large, remove is nonetheless. */
+				uint8_t tmp_tgt[300];
+				sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tmp_tgt, &sequence, 1);
 			}
+
 		}
 		return ret;
 	}

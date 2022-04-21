@@ -113,7 +113,6 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 		return 0;
 	}
 	tick_t now = sky_get_tick_time();
-	mac_silence_shift_check(self->mac, now);
 	int can_send = mac_can_send(self->mac, now);
 	_sky_tx_poll_arq_timeouts(self, now);
 	int vc = _sky_tx_pick_vc(self, now);
