@@ -70,7 +70,7 @@ SkyMAC* sky_mac_create(SkyMACConfig* config) {
 	mac->unused_window_time = 0;
 	mac->my_window_length = config->minimum_window_length_ticks;
 	mac->peer_window_length = config->minimum_window_length_ticks;
-	mac->last_belief_update = MOD_TIME_TICKS-2;
+	mac->last_belief_update = MOD_TIME_TICKS - 300000;
 	mac->total_frames_sent_in_current_window = 0;
 	mac->vc_round_robin_start = 0;
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {

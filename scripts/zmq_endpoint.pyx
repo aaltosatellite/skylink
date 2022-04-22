@@ -53,11 +53,11 @@ SIZE_VCSTATUS = 4*8
 
 cdef class SkyLink:
 	cdef zmq_endpoint.SkylinkPeer* Peer
-	def __init__(self, ID, relspeed, baudrate, pipe_up, pipe_down, cfg, cfg_len):
+	def __init__(self, ID, relspeed, baudrate, pipe_up, pipe_down, cfg, cfg_len, localtime0):
 		pass
 
-	def __cinit__(self, int32_t ID, double relspeed, int32_t baudrate, uint8_t pipe_up, uint8_t pipe_down, uint8_t* cfg, int32_t cfg_len):
-		self.Peer = zmq_endpoint.ep_init_peer(ID, relspeed, baudrate, pipe_up, pipe_down, cfg, cfg_len)
+	def __cinit__(self, int32_t ID, double relspeed, int32_t baudrate, uint8_t pipe_up, uint8_t pipe_down, uint8_t* cfg, int32_t cfg_len, int32_t localtime0):
+		self.Peer = zmq_endpoint.ep_init_peer(ID, relspeed, baudrate, pipe_up, pipe_down, cfg, cfg_len, localtime0)
 		if self.Peer is NULL:
 			raise MemoryError()
 

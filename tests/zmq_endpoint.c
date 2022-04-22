@@ -6,9 +6,10 @@
 
 
 
-int32_t local_time0 = 0;
-double relative_time_speed = 0.25;
-int tx_baudrate = 9600*2;
+//int32_t local_time0 = 0;
+//double relative_time_speed = 0.25;
+//int tx_baudrate = 9600*2;
+//int64_t first_microseconds = 0;
 
 static void xassert(int x, int errcode){
 	if(!x){
@@ -17,24 +18,23 @@ static void xassert(int x, int errcode){
 }
 
 
-static int32_t rget_time_ms(){
-	int64_t X = real_microseconds();
+static int32_t rget_time_ms(SkylinkPeer* peer){
+	int64_t X = ((int64_t)real_microseconds()) - peer->first_microseconds;
 	double ms = (double)(X / 1000);
-	ms = ms + (double)local_time0;
-	ms = ms * relative_time_speed;
+	ms = ms * peer->relative_time_speed;
+	ms = ms + (double)peer->local_time0;
 	X = (int64_t) ms;
-	X = X % 60000000;
+	X = X % MOD_TIME_TICKS;
 	int32_t rms = (int32_t) X;
-	rms = rms % MOD_TIME_TICKS;
 	return rms;
 }
 
-static int rel_sky_tick(){
-	int32_t rnow = rget_time_ms();
+static int rel_sky_tick(SkylinkPeer* peer){
+	int32_t rnow = rget_time_ms(peer);
 	return sky_tick(rnow);
 }
 
-static void rsleep_us(double us){
+static void rsleep_us(double us, double relative_time_speed){
 	us = us / relative_time_speed;
 	us = (int64_t)us;
 	sleepus(us);
@@ -43,12 +43,11 @@ static void rsleep_us(double us){
 
 
 
-static SkylinkPeer* new_peer(int ID, SkyConfig* config){
+static SkylinkPeer* new_peer(int ID, SkyConfig* config, int32_t localtime0, double relative_time_speed, int tx_baudrate){
 	char url[64];
 	SkylinkPeer* peer = malloc(sizeof(SkylinkPeer));
 	peer->on = 1;
 	pthread_mutex_init(&peer->mutex, NULL);
-	peer->failed_send_pushes = 0;
 	peer->ID = ID;
 	peer->rcvFrame = new_frame();
 	peer->sendFrame = new_frame();
@@ -60,8 +59,12 @@ static SkylinkPeer* new_peer(int ID, SkyConfig* config){
 	peer->pl_read_socket = zmq_socket(peer->zmq_context, ZMQ_PUB);
 	peer->physical_state = STATE_RX;
 
-	mac_shift_windowing(peer->self->mac, randint_i32(100, 10000) );
-	peer->self->mac->last_belief_update = sky_get_tick_time();
+	peer->local_time0 = localtime0;
+	peer->relative_time_speed = relative_time_speed;
+	peer->tx_baudrate = tx_baudrate;
+	peer->first_microseconds = real_microseconds();
+
+	mac_shift_windowing(peer->self->mac, randint_i32(10, 10000) );
 
 	sprintf(url, "tcp://127.0.0.1:%d", PL_WRITE_PORT);
 	zmq_connect(peer->pl_write_socket, url);
@@ -99,7 +102,7 @@ static void* rx_cycle(void* arg){
 			continue;
 		}
 		double x = (double)(r-4);
-		x = 1000000.0 * x * 8.0 / (double)tx_baudrate;
+		x = 1000000.0 * x * 8.0 / ((double) peer->tx_baudrate);
 
 
 		int ok = 1;
@@ -107,7 +110,7 @@ static void* rx_cycle(void* arg){
 			ok = 0;
 		}
 		for (int i = 0; i < 4; ++i) {
-			rsleep_us(x/4 - 10);
+			rsleep_us(x/4 - 10, peer->relative_time_speed);
 			if(peer->physical_state != STATE_RX){
 				ok = 0;
 			}
@@ -117,7 +120,7 @@ static void* rx_cycle(void* arg){
 			continue;
 		}
 		pthread_mutex_lock(&peer->mutex);
-		rel_sky_tick();
+		rel_sky_tick(peer);
 		memcpy(peer->rcvFrame->raw, tgt+4, r-4);
 		peer->rcvFrame->length = r - 4;
 		peer->rcvFrame->rx_time_ticks = sky_get_tick_time();
@@ -148,11 +151,11 @@ static void* tx_cycle(void* arg){
 	zmq_setsockopt(peer->rx_socket, ZMQ_RCVTIMEO, &timeo, 4);
 	int slp = 10;
 	while (peer->on){
-		rsleep_us(slp * 1000);
+		rsleep_us(slp * 1000, peer->relative_time_speed);
 		slp = 10;
 
 		pthread_mutex_lock(&peer->mutex);
-		rel_sky_tick();
+		rel_sky_tick(peer);
 		tick_t now = sky_get_tick_time();
 		int r = sky_tx(peer->self, peer->sendFrame, 0);
 		if(r){
@@ -160,8 +163,8 @@ static void* tx_cycle(void* arg){
 			pthread_mutex_unlock(&peer->mutex);
 
 			double x = peer->sendFrame->length;
-			x = 1000000.0 * x * 8.0 / (double)tx_baudrate;
-			rsleep_us(x);
+			x = 1000000.0 * x * 8.0 / ((double)peer->tx_baudrate);
+			rsleep_us(x, peer->relative_time_speed);
 			memcpy(tgt, &peer->ID, 4);
 			memcpy(tgt+4, peer->sendFrame->raw, peer->sendFrame->length);
 			zmq_send(peer->tx_socket, tgt, 4 + peer->sendFrame->length, 0);
@@ -170,7 +173,7 @@ static void* tx_cycle(void* arg){
 			peer->physical_state = STATE_RX;
 
 		}
-		rel_sky_tick();
+		rel_sky_tick(peer);
 		tick_t time_to = mac_time_to_own_window(peer->self->mac, now);
 		if(time_to < 10){
 			slp = (time_to + 2);
@@ -206,16 +209,12 @@ static void* pl_up_cycle(void* arg){
 
 
 
-SkylinkPeer* ep_init_peer(int32_t ID, double relspeed, int32_t baudrate, uint8_t pipe_up, uint8_t pipe_down, uint8_t* cfg, int32_t cfg_len){
-	local_time0 = randint_i32(0, 9000000);
+SkylinkPeer* ep_init_peer(int32_t ID, double relspeed, int32_t baudrate, uint8_t pipe_up, uint8_t pipe_down, uint8_t* cfg, int32_t cfg_len, int32_t localtime0){
+	xassert(relspeed > 0.01, 1);
+	xassert(relspeed < 3.0, 2);
 
-	relative_time_speed = relspeed;
-	xassert(relative_time_speed > 0.01, 1);
-	xassert(relative_time_speed < 3.0, 2);
-
-	tx_baudrate = baudrate;
-	xassert(tx_baudrate > 6000, 3);
-	xassert(tx_baudrate < 500000, 4);
+	xassert(baudrate > 6000, 3);
+	xassert(baudrate < 500000, 4);
 
 	xassert(pipe_up < 2, 5);
 	xassert(pipe_down < 2, 6);
@@ -259,7 +258,7 @@ SkylinkPeer* ep_init_peer(int32_t ID, double relspeed, int32_t baudrate, uint8_t
 
 
 	PRINTFF(0, "Starting peer cycle with ID=%d \n",ID);
-	SkylinkPeer* peer = new_peer(ID, conf);
+	SkylinkPeer* peer = new_peer(ID, conf, localtime0, relspeed, baudrate);
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		peer->self->hmac->sequence_tx[i] = randint_i32(0, HMAC_CYCLE_LENGTH-10);
 		peer->self->hmac->sequence_rx[i] = randint_i32(0, HMAC_CYCLE_LENGTH-10);

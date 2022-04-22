@@ -45,7 +45,10 @@ typedef struct skylink_peer {
 	void* pl_write_socket;
 	void* pl_read_socket;
 
-	int failed_send_pushes;
+	int32_t local_time0;
+	double relative_time_speed;
+	int tx_baudrate;
+	int64_t first_microseconds;
 } SkylinkPeer;
 
 
@@ -76,7 +79,7 @@ typedef struct skylink_status {
 
 
 
-SkylinkPeer* ep_init_peer(int32_t ID, double relspeed, int baudrate, uint8_t pipe_up, uint8_t pipe_down, uint8_t* cfg, int32_t cfg_len);
+SkylinkPeer* ep_init_peer(int32_t ID, double relspeed, int32_t baudrate, uint8_t pipe_up, uint8_t pipe_down, uint8_t* cfg, int32_t cfg_len, int32_t localtime0);
 
 void ep_close(SkylinkPeer* peer);
 

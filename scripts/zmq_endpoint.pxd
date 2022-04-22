@@ -34,7 +34,7 @@ cdef extern from "../tests/zmq_endpoint.h":
 		VCStatus vcs[4];
 
 
-	SkylinkPeer* ep_init_peer(int32_t ID, double relspeed, int32_t baudrate, uint8_t pipe_up, uint8_t pipe_down, uint8_t* cfg, int32_t cfg_len);
+	SkylinkPeer* ep_init_peer(int32_t ID, double relspeed, int32_t baudrate, uint8_t pipe_up, uint8_t pipe_down, uint8_t* cfg, int32_t cfg_len, int32_t localtime0);
 
 	void ep_close(SkylinkPeer* peer);
 
