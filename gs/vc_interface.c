@@ -11,7 +11,7 @@
 
 
 int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len);
-
+int sky_set_config(SkyHandle handle, const char* parameter,  const char *value);
 
 struct zmq_vc {
 	void *zmq_tx;
@@ -267,9 +267,16 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 		/*
 		 * Set Skylink Configuration
 		 */
-		//unsigned int cfg = msg[0]; // TODO: Correct byte-lengths
-		//unsigned int val = msg[1];
-		//sky_set_config(handle, cfg, val);
+		char parameter[64], value[64];
+		msg[msg_len] = '\0';
+		msg[msg_len+1] = '\0';
+
+		strncpy(parameter, (char*)&msg[0], 64);
+		parameter[63] = '\0';
+		strncpy(value, (char*)&msg[strlen(parameter) + 1], 64);
+		value[63] = '\0';
+
+		sky_set_config(handle, parameter, value);
 		break; // No response
 	}
 
@@ -320,4 +327,29 @@ int handle_control_message(int vc, int cmd, uint8_t* msg, unsigned int msg_len) 
 	}
 
 	return 0;
+}
+
+
+
+int sky_set_config(SkyHandle handle, const char* parameter,  const char *value) {
+
+#define CONFIG_I(param) if (strcmp(parameter, #param) == 0) { handle->conf->param = atoll(value); return 0; }
+
+	CONFIG_I(mac.maximum_window_length_ticks);
+	CONFIG_I(mac.minimum_window_length_ticks);
+	CONFIG_I(mac.gap_constant_ticks);
+	CONFIG_I(mac.tail_constant_ticks);
+	CONFIG_I(mac.shift_threshold_ticks);
+	CONFIG_I(mac.idle_timeout_ticks);
+	CONFIG_I(mac.window_adjust_increment_ticks);
+	CONFIG_I(mac.carrier_sense_ticks);
+	CONFIG_I(mac.unauthenticated_mac_updates);
+	CONFIG_I(mac.window_adjustment_period);
+	CONFIG_I(mac.idle_frames_per_window);
+
+	CONFIG_I(arq_timeout_ticks);
+	CONFIG_I(arq_idle_frame_threshold);
+	CONFIG_I(arq_idle_frames_per_window);
+
+	return -1;
 }
