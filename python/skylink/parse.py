@@ -36,7 +36,7 @@ def _payload_len(ctx: Construct) -> int:
 
 SkyRadioFrame = Struct(
     'header' / SkyHeader,
-    'payload' / Bytes(_payload_len),
+    'payload' / If(this.header.flags.has_payload, Bytes(_payload_len)),
     'auth' / If(this.header.flags.is_authenticated == 1, Bytes(8)),
 )
 
