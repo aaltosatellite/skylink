@@ -26,7 +26,6 @@ SkyHeader = BitStruct(
     '_extension_len' / BitsInteger(8),
     'sequence' / BitsInteger(16),
     'extensions' / Bytewise(Bytes(this._extension_len)),
-    #'extensions' / RestreamData(Bytewise(Bytes(this._extension_len)), GreedyRange(SkyExtensionHeader))
 )
 
 def _payload_len(ctx: Construct) -> int:
@@ -41,5 +40,5 @@ SkyRadioFrame = Struct(
 )
 
 
-def parse(frame: bytes) -> SkyRadioFrame:
+def parse_struct(frame: bytes) -> SkyRadioFrame:
     return SkyRadioFrame.parse(frame, frame_len=len(frame))

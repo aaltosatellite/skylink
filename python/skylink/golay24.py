@@ -2,6 +2,7 @@
 """
 
 import struct
+from .fec import SkylinkError
 
 __all__ = [
     "encode_golay24",
@@ -48,10 +49,10 @@ def encode_golay24(data: int) -> int:
     return ((0xFFF & s) << N) | data
 
 
-class GolayUncorrectable(Exception):
+class GolayUncorrectable(SkylinkError):
     pass
 
-class Step8(Exception):
+class Step8(SkylinkError):
     pass
 
 
@@ -109,10 +110,12 @@ def decode_golay24(data: int) -> int:
 
 
 def encode_golay24_bytes(v: int) -> bytes:
+    """ Encode integer using Golay24 coding and return it as bytes """
     return struct.pack(">I", encode_golay24(v))[1:]
 
 def decode_golay24_bytes(b: bytes) -> int:
-    return decode_golay24(struct.unpack(">I", b"\x00" + b)[0])
+    """ Decode Golay24 coded bytes and return it as integer. """
+    return decode_golay24(struct.unpack(">I", b"\x00" + b[:3])[0])
 
 
 if __name__ == "__main__":

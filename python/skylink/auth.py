@@ -1,24 +1,52 @@
-
-
 import hashlib
 import hmac
 
-def check_authentication(frame: bytes, key: bytes, required: bool=False) -> bool:
+from .fec import SkylinkError
+
+class HMACError(SkylinkError):
+    pass
+
+
+HMAC_LENGTH = 8
+
+
+def hmac_verify(data: bytes, key: bytes) -> bytes:
     """
     Check frame authentication
 
     Args:
         frame: Frame to be authenticated
-        key: Authentication
-        required: Is authentication required for passing the check
+        key: Authentication key
 
     Returns:
-        True if the frame passed the authentication check.
+        Truncated frame without the authentication key.
+
+    Raises:
+        `HMACError` if authentication check fails.
     """
 
-    if (frame[43] & 0x10) == 0: # TODO
-        return not required # Not authenticated
+    calculated = hmac.new(key, data[:-HMAC_LENGTH], hashlib.sha256).digest()[:HMAC_LENGTH]
+    received = data[-HMAC_LENGTH:]
 
-    calculated = hmac.new(key, msg=frame[:-8], digestmod=hashlib.sha256).digest()
+    if calculated != received:
+        raise HMACError("HMAC does not match expected value!")
 
-    return calculated[:8] == frame[-8:]
+    return data[:-HMAC_LENGTH]
+
+
+def hmac_append(data: bytes, key: bytes) -> bytes:
+    """
+    Append authentication trailer to frame.
+
+    Args:
+        frame: Frame to be authenticated
+        key: Authentication key
+
+    Returns:
+        An authenticated frame as bytes.
+    """
+
+    size = len(data) - HMAC_LENGTH
+    hmkey = hmac.new(key, data[:size], hashlib.sha256).digest()[:HMAC_LENGTH]
+
+    return data + hmkey
