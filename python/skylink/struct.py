@@ -14,7 +14,7 @@ SkyHeaderFlags = Struct(
     Padding(2),
     'has_payload' / Flag,
     'arq_on' / Flag,
-    'is_authenticated' / Flag
+    'is_authenticated' / Flag,
 )
 
 SkyHeader = BitStruct(
@@ -25,7 +25,8 @@ SkyHeader = BitStruct(
     'vc' / BitsInteger(3),
     '_extension_len' / BitsInteger(8),
     'sequence' / BitsInteger(16),
-    'extensions' / Bytewise(Bytes(this._extension_len)),
+    'extensions' / Bytewise(Bytes(this._extension_len))
+    #'extensions' / RestreamData(Bytewise(Bytes(this._extension_len)), GreedyRange(SkyExtensionHeader))
 )
 
 def _payload_len(ctx: Construct) -> int:

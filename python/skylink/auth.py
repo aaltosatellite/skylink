@@ -25,6 +25,9 @@ def hmac_verify(data: bytes, key: bytes) -> bytes:
         `HMACError` if authentication check fails.
     """
 
+    if len(data) < HMAC_LENGTH:
+        raise HMACError("Too short frame")
+
     calculated = hmac.new(key, data[:-HMAC_LENGTH], hashlib.sha256).digest()[:HMAC_LENGTH]
     received = data[-HMAC_LENGTH:]
 
@@ -46,7 +49,5 @@ def hmac_append(data: bytes, key: bytes) -> bytes:
         An authenticated frame as bytes.
     """
 
-    size = len(data) - HMAC_LENGTH
-    hmkey = hmac.new(key, data[:size], hashlib.sha256).digest()[:HMAC_LENGTH]
-
+    hmkey = hmac.new(key, data, hashlib.sha256).digest()[:HMAC_LENGTH]
     return data + hmkey

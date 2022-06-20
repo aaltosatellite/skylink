@@ -37,9 +37,9 @@ def parse(raw: bytes, includes_golay: bool=False, includes_fec: bool=False, hmac
 
         if (decoded & 0x200) != 0: # RS Enabled
             includes_fec = True
-        if (decoded & 0x400) != 0:  # Randomizer enabled
+        if (decoded & 0x400) != 0: # Randomizer enabled
             randomizer = True
-        if (decoded & 0x800) != 0: # Virerbi enabled
+        if (decoded & 0x800) != 0: # Viterbi enabled
             raise SkylinkError("Viterbi not supported")
 
     if includes_fec:
@@ -47,7 +47,7 @@ def parse(raw: bytes, includes_golay: bool=False, includes_fec: bool=False, hmac
         raw, bytes_corrected = decode_rs(raw)
 
     frame = parse_struct(raw)
-    if hmac_key is not None and frame.header.authenticated:
+    if hmac_key is not None and frame.header.flags.is_authenticated:
         hmac_verify(raw, hmac_key)
 
     return frame
@@ -75,7 +75,7 @@ def construct(identity: bytes, sequence: int, vc: int, payload: bytes, append_go
         raise ValueError("Invalid config")
 
     header: bytes = SkyHeader.build({
-        "version": 11,
+        "version": 12,
         "_ident_len": len(identity),
         "identifier": identity,
         "flags": {

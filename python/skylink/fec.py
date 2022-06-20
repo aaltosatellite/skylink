@@ -118,7 +118,7 @@ def decode_rs(data: bytes) -> Tuple[bytes, int]:
     if bits_corrected < 0:
         raise FECError(f"Reed-Solomon decoding error {bits_corrected}")
 
-    return data_mutable[:-RS_LENGTH], bits_corrected
+    return data_mutable[:len(data) - RS_LENGTH], bits_corrected
 
 
 def encode_rs(data: bytes) -> bytes:
