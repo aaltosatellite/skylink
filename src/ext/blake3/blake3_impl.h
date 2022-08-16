@@ -28,6 +28,7 @@ enum blake3_flags {
 #define INLINE static inline __attribute__((always_inline))
 #endif
 
+#if 0 /* Skylink modification: disable X86 SIMD accelerations to simplify building. */ 
 #if defined(__x86_64__) || defined(_M_X64) 
 #define IS_X86
 #define IS_X86_64
@@ -40,6 +41,7 @@ enum blake3_flags {
 
 #if defined(__aarch64__) || defined(_M_ARM64)
 #define IS_AARCH64
+#endif
 #endif
 
 #if defined(IS_X86)
