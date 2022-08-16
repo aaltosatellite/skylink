@@ -105,7 +105,7 @@ typedef struct {
 	int32_t maximum_jump;
 
 	/* Authentication key */
-	uint8_t key[16];
+	uint8_t key[32];
 
 } HMACConfig;
 

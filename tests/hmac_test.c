@@ -183,7 +183,7 @@ static void test2_round(){
 	SkyConfig* config2 = new_vanilla_config();
 	config1->identity[0] = 1;
 	config2->identity[0] = 2;
-	config1->hmac.key_length = randint_i32(15,16);
+	config1->hmac.key_length = 32; // randint_i32(15,16);
 	config2->hmac.key_length = config1->hmac.key_length;
 
 	fillrand(config1->hmac.key, config1->hmac.key_length);
