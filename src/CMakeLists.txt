@@ -20,6 +20,9 @@ add_library(skylink SHARED
         skylink_tx.c
         utilities.c
         ext/gr-satellites/golay24.c
+        ext/blake3/blake3.c
+        ext/blake3/blake3_dispatch.c
+        ext/blake3/blake3_portable.c
         ext/libfec/ccsds_tab.c
         ext/libfec/decode_rs_8.c
         ext/libfec/encode_rs_8.c

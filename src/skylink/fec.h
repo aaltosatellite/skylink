@@ -58,26 +58,20 @@ int sky_fec_encode(SkyRadioFrame *frame);
 
 
 
-#define SKY_INCLUDE_DEPENDENCIES
+//#define SKY_INCLUDE_DEPENDENCIES
 
 #ifdef SKY_INCLUDE_DEPENDENCIES
 
 #include "../ext/libfec/fec.h"
-#include "../ext/cifra/sha2.h"
-#include "../ext/cifra/hmac.h"
+#include "../ext/blake3/blake3.h"
 #include "../ext/gr-satellites/golay24.h"
 
-#define SKY_HMAC_CTX_SIZE  (sizeof(cf_hmac_ctx))
-
 #else
-
 
 #include <stdint.h>
 #include <stddef.h>
 
 typedef uint8_t data_t;
-//typedef struct  cf_hmac_ctx;
-//typedef int cf_chash;
 
 /*
  */
@@ -85,32 +79,18 @@ int decode_golay24(uint32_t* data);
 int encode_golay24(uint32_t* data);
 
 
-
 int decode_rs_8(data_t *data, int *eras_pos, int no_eras, int pad);
 void encode_rs_8(data_t *data, data_t *parity, int pad);
 
 
-#define SKY_HMAC_CTX_SIZE  (768)
+#define BLAKE3_KEY_LEN 32
+#define BLAKE3_OUT_LEN 32
 
+typedef void blake3_hasher;
 
-typedef void cf_hmac_ctx;
-typedef void cf_chash;
-
-extern cf_chash cf_sha256;
-
-/* Set up ctx for computing a HMAC using the given hash and key. */
-void cf_hmac_init(cf_hmac_ctx *ctx,
-                 const cf_chash *hash,
-                 const uint8_t *key, size_t nkey);
-
-/* Input data. */
-void cf_hmac_update(cf_hmac_ctx *ctx,
-                   const void *data, size_t ndata);
-
-/* Finish and compute HMAC.
- * `ctx->hash->hashsz` bytes are written to `out`. */
-void cf_hmac_finish(cf_hmac_ctx *ctx, uint8_t *out);
-
+void blake3_hasher_init_keyed(blake3_hasher *self, const uint8_t key[BLAKE3_KEY_LEN]);
+void blake3_hasher_update(blake3_hasher *self, const void *input, size_t input_len);
+void blake3_hasher_finalize(const blake3_hasher *self, uint8_t *out, size_t out_len);
 
 #endif
 
