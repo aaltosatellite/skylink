@@ -142,9 +142,17 @@ INLINE uint32_t counter_high(uint64_t counter) {
 }
 
 INLINE uint32_t load32(const void *src) {
-  const uint8_t *p = (const uint8_t *)src;
-  return ((uint32_t)(p[0]) << 0) | ((uint32_t)(p[1]) << 8) |
-         ((uint32_t)(p[2]) << 16) | ((uint32_t)(p[3]) << 24);
+#if defined(NATIVE_LITTLE_ENDIAN)
+  uint32_t w;
+  memcpy(&w, __builtin_assume_aligned(src, 4), sizeof w);
+  return w;
+#else
+  const uint8_t *p = ( const uint8_t * )src;
+  return (( uint32_t )( p[0] ) <<  0) |
+         (( uint32_t )( p[1] ) <<  8) |
+         (( uint32_t )( p[2] ) << 16) |
+         (( uint32_t )( p[3] ) << 24) ;
+#endif
 }
 
 INLINE void load_key_words(const uint8_t key[BLAKE3_KEY_LEN],
@@ -159,12 +167,16 @@ INLINE void load_key_words(const uint8_t key[BLAKE3_KEY_LEN],
   key_words[7] = load32(&key[7 * 4]);
 }
 
-INLINE void store32(void *dst, uint32_t w) {
-  uint8_t *p = (uint8_t *)dst;
-  p[0] = (uint8_t)(w >> 0);
-  p[1] = (uint8_t)(w >> 8);
+INLINE void store32(void * dst, uint32_t w) {
+#if defined(NATIVE_LITTLE_ENDIAN)
+  memcpy(__builtin_assume_aligned(dst, 4), &w, sizeof w);
+#else
+  uint8_t *p = ( uint8_t * )dst;
+  p[0] = (uint8_t)(w >>  0);
+  p[1] = (uint8_t)(w >>  8);
   p[2] = (uint8_t)(w >> 16);
   p[3] = (uint8_t)(w >> 24);
+#endif
 }
 
 INLINE void store_cv_words(uint8_t bytes_out[32], uint32_t cv_words[8]) {
