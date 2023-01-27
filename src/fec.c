@@ -3,6 +3,7 @@
  */
 
 
+#define SKY_INCLUDE_DEPENDENCIES
 #include "skylink/fec.h"
 #include "skylink/diag.h"
 #include "skylink/skylink.h"

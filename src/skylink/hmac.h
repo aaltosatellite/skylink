@@ -4,11 +4,8 @@
 #include <stdint.h>
 #include "skylink.h"
 #include "conf.h"
-#include "../ext/cifra/hmac.h"
-#include "../ext/cifra/sha2.h"
 
 
-#define SKY_HMAC_CTX_SIZE  (sizeof(cf_hmac_ctx))
 #define HMAC_CYCLE_LENGTH	65000
 #define HMAC_NO_SEQUENCE	65010
 

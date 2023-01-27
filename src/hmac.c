@@ -1,13 +1,18 @@
 
 #include <stdlib.h>
 #include <string.h>
+
+#define SKY_INCLUDE_DEPENDENCIES
 #include "skylink/hmac.h"
 #include "skylink/diag.h"
 #include "skylink/platform.h"
 #include "skylink/conf.h"
 #include "skylink/frame.h"
 #include "skylink/utilities.h"
+#include "skylink/fec.h"
 
+
+const unsigned int SKY_HMAC_CTX_SIZE = sizeof(blake3_hasher);
 
 
 int32_t wrap_hmac_sequence(int32_t sequence){
@@ -84,14 +89,13 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame) {
 	}
 	frame->flags |= SKY_FLAG_AUTHENTICATED;
 
-	// Calculate SHA256 hash
-	uint8_t full_hash[32];
-	cf_hmac_init(hmac->ctx, &cf_sha256, hmac->key, hmac->key_len);
-	cf_hmac_update(hmac->ctx, frame->raw, frame->length);
-	cf_hmac_finish(hmac->ctx, full_hash);
+	// Calculate blake3 hash
+	blake3_hasher* hasher = (blake3_hasher*)hmac->ctx;
+	blake3_hasher_init_keyed(hasher, hmac->key);
+	blake3_hasher_update(hasher, frame->raw, frame->length);
 
-	//Copy truncated hash to the end of the frame.
-	memcpy(&frame->raw[frame->length], full_hash, SKY_HMAC_LENGTH);
+	// Copy truncated hash to the end of the frame.
+	blake3_hasher_finalize(hasher, &frame->raw[frame->length], SKY_HMAC_LENGTH);
 	frame->length += SKY_HMAC_LENGTH;
 
 	return SKY_RET_OK;
@@ -129,10 +133,11 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame) {
 	}
 
 	// Calculate the hash for the frame
-	uint8_t calculated_hash[32];
-	cf_hmac_init(hmac->ctx, &cf_sha256, hmac->key, hmac->key_len);
-	cf_hmac_update(hmac->ctx, frame->raw, frame->length - SKY_HMAC_LENGTH);
-	cf_hmac_finish(hmac->ctx, calculated_hash);
+	uint8_t calculated_hash[SKY_HMAC_LENGTH];
+	blake3_hasher* hasher = (blake3_hasher*)hmac->ctx;
+	blake3_hasher_init_keyed(hasher, hmac->key);
+	blake3_hasher_update(hasher, frame->raw, frame->length - SKY_HMAC_LENGTH);
+	blake3_hasher_finalize(hasher, calculated_hash, SKY_HMAC_LENGTH);
 
 	// Compare the calculated hash to received one
 	uint8_t *frame_hash = &frame->raw[frame->length - SKY_HMAC_LENGTH];

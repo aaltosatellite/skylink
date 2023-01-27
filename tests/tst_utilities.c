@@ -6,7 +6,7 @@
 
 
 
-uint8_t arr_[16] = {83, 101, 105, 122, 101, 32, 84, 104, 101, 32, 78, 105, 103, 104, 116, 33};
+uint8_t arr_[32] = { 209, 20, 248, 100, 175, 77, 5, 118, 38, 204, 144, 17, 56, 109, 2, 158, 41, 177, 86, 7, 46, 17, 190, 165, 110, 32, 139, 229, 74, 13, 111, 179 };
 
 SkyConfig* new_vanilla_config(){
 	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
@@ -39,7 +39,7 @@ SkyConfig* new_vanilla_config(){
 	config->arq_idle_frame_threshold 		    = config->arq_timeout_ticks / 4;
 	config->arq_idle_frames_per_window			= 1;
 
-	config->hmac.key_length 			= 16;
+	config->hmac.key_length 			= 32;
 	config->hmac.maximum_jump 			= 32;
 	memcpy(config->hmac.key, arr_, config->hmac.key_length);
 
