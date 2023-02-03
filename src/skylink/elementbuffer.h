@@ -58,7 +58,7 @@ int element_buffer_element_requirement_for(ElementBuffer* buffer, int32_t length
 int element_buffer_get_data_length(ElementBuffer* buffer, idx_t idx);
 
 /* Stores bytes pointed by 'data' to the buffer, and returns the index address, or negative error if no space. */
-int element_buffer_store(ElementBuffer* buffer, uint8_t* data, pl_len_t length);
+int element_buffer_store(ElementBuffer* buffer, const uint8_t* data, pl_len_t length);
 
 /* Reads a payload from address index 'idx' that was previously returned by store function.
  * Or returns error if there is no payload or it is too long */

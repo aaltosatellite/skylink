@@ -104,10 +104,10 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 //=== RECEIVE ==========================================================================================================
 //======================================================================================================================
 // Pushes latest radio received message in without ARQ. Fills in the next sequence.
-int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, void* src, int length);
+int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, const void* src, int length);
 
 // Pushes a radio received message of particular sequence to buffer.
-int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, void* src, int length, int sequence, tick_t now);
+int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, const void* src, int length, int sequence, tick_t now);
 
 // Read next message to tgt buffer. Return number of bytes written on success, or negative error code.
 int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int max_length);

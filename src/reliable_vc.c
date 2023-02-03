@@ -240,12 +240,12 @@ int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int max_le
 	return rcvRing_read_next_received(vchannel->rcvRing, vchannel->elementBuffer, tgt, max_length);
 }
 
-int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, void* src, int length){
+int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, const void* src, int length){
 	int sequence = vchannel->rcvRing->head_sequence;
 	return rcvRing_push_rx_packet(vchannel->rcvRing, vchannel->elementBuffer, src, length, sequence);
 }
 
-int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, void* src, int length, int sequence, tick_t now){
+int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, const void* src, int length, int sequence, tick_t now){
 	int r = rcvRing_push_rx_packet(vchannel->rcvRing, vchannel->elementBuffer, src, length, sequence);
 	if(r > 0){ //head advanced at least by 1
 		vchannel->last_rx_tick = now;

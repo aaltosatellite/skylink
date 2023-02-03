@@ -99,7 +99,7 @@ int rcvRing_count_readable_packets(SkyRcvRing* rcvRing);
 int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, void* tgt, int max_length);
 
 /* Pushes a payload received with "sequence". Returns how many steps the head advances (>=0) or negative error code. */
-int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, void* src, int length, int sequence);
+int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, const void* src, int length, int sequence);
 
 /* Constructs a bitmap of horizon where 0 represents a missing packet, and 1 a packet that is present in the horizon. So perfectly clear state is 0 */
 int rcvRing_get_horizon_bitmap(SkyRcvRing* rcvRing);

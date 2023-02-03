@@ -205,7 +205,7 @@ int element_buffer_element_requirement_for(ElementBuffer* buffer, int32_t length
 }
 
 
-int element_buffer_store(ElementBuffer* buffer, uint8_t* data, pl_len_t length){
+int element_buffer_store(ElementBuffer* buffer, const uint8_t* data, pl_len_t length){
 	//calculate number of elements required.
 	int32_t n_required = element_buffer_element_requirement_for(buffer, length); //A fast ceil-division.
 	if(n_required > buffer->free_elements){

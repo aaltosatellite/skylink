@@ -121,7 +121,7 @@ int rcvRing_read_next_received(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer
 }
 
 
-int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, void* src, int length, int sequence){
+int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, ElementBuffer* elementBuffer, const void* src, int length, int sequence){
 	if(!rcvRing_rx_sequence_fits(rcvRing, sequence)){
 		return SKY_RET_RING_INVALID_SEQUENCE;
 	}
