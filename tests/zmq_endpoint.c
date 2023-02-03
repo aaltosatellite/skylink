@@ -124,7 +124,7 @@ static void* rx_cycle(void* arg){
 		memcpy(peer->rcvFrame->raw, tgt+4, r-4);
 		peer->rcvFrame->length = r - 4;
 		peer->rcvFrame->rx_time_ticks = sky_get_tick_time();
-		int rr = sky_rx(peer->self, peer->rcvFrame, 0);
+		int rr = sky_rx_with_fec(peer->self, peer->rcvFrame);
 		//PRINTFF(0,"(%d RCV-got: %d)\n", peer->ID, rr);
 		if(peer->pipe_down){
 			for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
@@ -157,7 +157,7 @@ static void* tx_cycle(void* arg){
 		pthread_mutex_lock(&peer->mutex);
 		rel_sky_tick(peer);
 		tick_t now = sky_get_tick_time();
-		int r = sky_tx(peer->self, peer->sendFrame, 0);
+		int r = sky_tx_with_fec(peer->self, peer->sendFrame);
 		if(r){
 			peer->physical_state = STATE_TX;
 			pthread_mutex_unlock(&peer->mutex);

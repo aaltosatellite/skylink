@@ -119,13 +119,10 @@ int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* vchannel);
 void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequence_by_ctrl, tick_t now);
 
 // Processes the content
-void sky_vc_process_content(SkyVirtualChannel* vchannel,
-							void* pl,
-							int len_pl,
-							SkyPacketExtension* ext_seq,
-							SkyPacketExtension* ext_ctrl,
-							SkyPacketExtension* ext_handshake,
-							SkyPacketExtension* ext_rrequest,
+int sky_vc_process_content(SkyVirtualChannel *vchannel,
+							const uint8_t *payload,
+							int payload_len,
+							SkyParsedExtensions *exts,
 							tick_t now);
 //======================================================================================================================
 //======================================================================================================================

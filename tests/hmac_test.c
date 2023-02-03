@@ -117,7 +117,7 @@ static void test1_round(){
 	memcpy(rframe, sframe, sizeof(SkyRadioFrame));
 	int rlength0 = rframe->length;
 	int too_short = (int)rframe->length < (SKY_PLAIN_FRAME_MIN_LENGTH + SKY_HMAC_LENGTH*flag_in_place);
-	int r1 = sky_hmac_check_authentication(self2, rframe);
+	int r1 = sky_hmac_check_authentication(self2, rframe, NULL);
 
 
 	if((!req_auth)){
@@ -224,7 +224,7 @@ static void test2_round(){
 	fillrand(PL, 250);
 	int LEN_PL = randint_i32(0, 100);
 	sky_vc_push_packet_to_send(self1->virtual_channels[vc], PL, LEN_PL);
-	int r = sky_tx(self1, sframe, 0);
+	int r = sky_tx_with_fec(self1, sframe);
 	assert(r);
 	memcpy(rframe, sframe, sizeof(SkyRadioFrame));
 	sky_fec_decode(rframe, self2->diag);
@@ -232,7 +232,7 @@ static void test2_round(){
 	assert(sky_ntoh16( rframe->auth_sequence) == wrap_hmac_sequence(self2->hmac->sequence_rx[vc] + shift_tx));
 
 
-	int rr = sky_rx(self2, sframe, 0);
+	int rr = sky_rx_with_fec(self2, sframe);
 
 
 	if(
@@ -292,7 +292,7 @@ static void test2_round(){
 			){
 		assert(rr == SKY_RET_EXCESSIVE_HMAC_JUMP);
 		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 0);
-		r = sky_tx(self2, sframe, 0);
+		r = sky_tx_with_fec(self2, sframe);
 		assert(r);
 		sky_fec_decode(sframe, self2->diag);
 		SkyPacketExtension* ext = get_extension(sframe, EXTENSION_HMAC_SEQUENCE_RESET);
@@ -308,7 +308,7 @@ static void test2_round(){
 			){
 		assert(rr == SKY_RET_AUTH_MISSING);
 		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 0);
-		r = sky_tx(self2, sframe, 0);
+		r = sky_tx_with_fec(self2, sframe);
 		assert(r);
 		sky_fec_decode(sframe, self2->diag);
 		SkyPacketExtension* ext = get_extension(sframe, EXTENSION_HMAC_SEQUENCE_RESET);

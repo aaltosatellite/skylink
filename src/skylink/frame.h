@@ -125,6 +125,16 @@ typedef struct __attribute__((__packed__)) {
 	};
 } SkyPacketExtension; // SkyHeaderExtension
 
+/* Struct to hold pointers to parsed */
+typedef struct {
+	SkyPacketExtension* arq_sequence;
+	SkyPacketExtension* arq_request;
+	SkyPacketExtension* arq_ctrl;
+	SkyPacketExtension* arq_handshake;
+	SkyPacketExtension *mac_tdd;
+	SkyPacketExtension *hmac_reset;
+} SkyParsedExtensions;
+
 /* extensions ====================================================================================== */
 
 
@@ -165,9 +175,6 @@ int available_payload_space(SkyRadioFrame* radioFrame);
 int sky_packet_extend_with_payload(SkyRadioFrame* frame, void* pl, int32_t length);
 // encoding ============================================================================================================
 
-SkyPacketExtension* sky_rx_get_extension(const SkyRadioFrame* frame, uint8_t this_type);
-
-
-
+int sky_frame_parse_extension_headers(const SkyRadioFrame *frame, SkyParsedExtensions *exts);
 
 #endif // __SKYLINK_FRAME_H__

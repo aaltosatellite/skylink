@@ -106,12 +106,10 @@ static void _sky_tx_poll_arq_timeouts(SkyHandle self, tick_t now){
 }
 
 
+int sky_tx(SkyHandle self, SkyRadioFrame* frame) {
 
-/* Returns boolean value 0/1 as to if there is need to actually send something. */
-int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
-	if(frame == NULL){
-		return 0;
-	}
+	SKY_ASSERT(frame != NULL);
+
 	tick_t now = sky_get_tick_time();
 	int can_send = mac_can_send(self->mac, now);
 	_sky_tx_poll_arq_timeouts(self, now);
@@ -157,7 +155,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 
 
 	/* Set HMAC state and sequence */
-	frame->auth_sequence = sky_hmac_get_next_hmac_tx_sequence_and_advance(self, vc);
+	frame->auth_sequence = sky_hmac_get_next_tx_sequence(self, vc);
 	frame->auth_sequence = sky_hton16(frame->auth_sequence);
 
 	/* Authenticate the frame. Ie. appends a hash digest to the end of the frame. */
@@ -166,18 +164,39 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 	}
 
 
-
-	/* Apply Forward Error Correction (FEC) coding */
-	sky_fec_encode(frame);
-
 	self->diag->tx_bytes += frame->length;
 
-	/* Encode length field. */
-	if(insert_golay){
+	++self->mac->total_frames_sent_in_current_window;
+	++self->mac->frames_sent_in_current_window_per_vc[vc];
+	++self->diag->tx_frames;
+
+	return 1; // Return 1 to indicate that a new frame was created.
+}
+
+
+int sky_tx_with_fec(SkyHandle self, SkyRadioFrame *frame) {
+
+	int ret = sky_tx(self, frame);
+	if (ret == 1) {
+		SKY_ASSERT(frame->length + RS_PARITYS <= sizeof(frame->raw));
+
+		/* Apply Forward Error Correction (FEC) coding */
+		sky_fec_encode(frame);
+	}
+	return ret;
+}
+
+
+int sky_tx_with_golay(SkyHandle self, SkyRadioFrame* frame) {
+	
+	int ret = sky_tx_with_fec(self, frame);
+	if (ret == 1) {
+		SKY_ASSERT(frame->length + 3 <= sizeof(frame->raw));
+
 		/* Move the data by 3 bytes to make room for the PHY header */
-		for (unsigned int i = frame->length; i != 0; i--){
+		for (unsigned int i = frame->length; i != 0; i--)
 			frame->raw[i + 3] = frame->raw[i];
-		}
+		
 		uint32_t phy_header = frame->length | SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED;
 		encode_golay24(&phy_header);
 		frame->raw[0] = 0xff & (phy_header >> 16);
@@ -186,8 +205,5 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay){
 		frame->length += 3;
 	}
 
-	++self->mac->total_frames_sent_in_current_window;
-	++self->mac->frames_sent_in_current_window_per_vc[vc];
-	++self->diag->tx_frames;
-	return 1; //Returns 1, not 0.  1 is a boolean TRUE value.
+	return ret;
 }

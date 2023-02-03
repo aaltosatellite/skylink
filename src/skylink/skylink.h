@@ -39,6 +39,7 @@
 #define SKY_RET_NO_SPACE_FOR_PAYLOAD        (-40)
 #define SKY_RET_UNKNOWN_EXTENSION           (-41)
 #define SKY_RET_EXT_DECODE_FAIL             (-42)
+#define SKY_RET_INVALID_EXT_TYPE            (-43)
 
 // SEQUENCE RING
 #define SKY_RET_RING_EMPTY                  (-50)
@@ -59,7 +60,7 @@
 #define SKY_RET_MALLOC_FAILED               (-70)
 
 
-#define SKY_NUM_VIRTUAL_CHANNELS            4
+#define SKY_NUM_VIRTUAL_CHANNELS            (4)
 
 
 //============ STRUCTS ===========================================================================================================
@@ -129,9 +130,45 @@ typedef struct sky_all* SkyHandle;
  */
 void sky_get_state(SkyHandle self, SkyState* state);
 
-int sky_tx(SkyHandle self, SkyRadioFrame* frame, int insert_golay);
+/* 
+ * Generate a new frame to be sent. The frame won't hae
+ *
+ * Returns:
+ *    <0 if there was an error.
+ *    0 if there's nothing to be sent. 
+ *    1 if there's something to be sent and the frame was written to given frame structure.
+ */
+int sky_tx(SkyHandle self, SkyRadioFrame *frame);
+int sky_tx_with_fec(SkyHandle self, SkyRadioFrame *frame);
+int sky_tx_with_golay(SkyHandle self, SkyRadioFrame *frame);
 
-int sky_rx(SkyHandle self, SkyRadioFrame* frame, int contains_golay);
+/*
+ * Generate a new frame to be sent.
+ * The frame will have the FEC included.
+ *
+ * Returns:
+ *    <0 if there was an error.
+ *    0 if there's nothing to be sent.
+ *    1 if there's something to be sent and the frame was written to given frame structure.
+ */
+int sky_tx_with_fec(SkyHandle self, SkyRadioFrame *frame);
+
+/*
+ * Pass received frame to logic.
+ * The frame doensn't have FEC or Golay included.
+ *
+ * Args:
+ *    self: Skylink handle
+ *    frame: 
+ * Returns:
+ *    <0 if there was an error.
+ *    0 if there was no error while processing the frame.
+ */
+int sky_rx(SkyHandle self, SkyRadioFrame* frame);
+
+int sky_rx_with_fec(SkyHandle self, SkyRadioFrame *frame);
+int sky_rx_with_golay(SkyHandle self, SkyRadioFrame *frame);
+
 
 //int sky_transmission_queue_full(SkyHandle self, int vc);
 

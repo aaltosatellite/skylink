@@ -153,37 +153,40 @@ void arq_system_test3_cycle(){
 		len_pl = -1;
 	}
 
-	SkyPacketExtension 			ext_seq;
-	SkyPacketExtension* 		ext_seq_ptr = NULL;
-	SkyPacketExtension 			ext_ctrl;
-	SkyPacketExtension* 		ext_ctrl_ptr = NULL;
-	SkyPacketExtension 			ext_hs;
-	SkyPacketExtension* 		ext_hs_ptr = NULL;
-	SkyPacketExtension 			ext_rr;
-	SkyPacketExtension* 		ext_rr_ptr = NULL;
+	
+	SkyParsedExtensions exts;
+	memset(&exts, 0, sizeof(SkyParsedExtensions));
+	SkyPacketExtension ext_arq_seq, ext_arq_ctrl, ext_arq_handshake, ext_arq_request;
 
 	if(seq_on){
-		ext_seq_ptr = &ext_seq;
-		ext_seq.ARQSeq.sequence = sky_hton16(arq_seq);
+		exts.arq_sequence = &ext_arq_seq;
+		ext_arq_seq.type = EXTENSION_ARQ_SEQUENCE;
+		ext_arq_seq.length = sizeof(ExtARQSeq) + 1;
+		ext_arq_seq.ARQSeq.sequence = sky_hton16(arq_seq);
 	}
 	if(ctrl_on){
-		ext_ctrl_ptr = &ext_ctrl;
-		ext_ctrl_ptr->ARQCtrl.tx_sequence = sky_hton16(ctrl_peer_tx);
-		ext_ctrl_ptr->ARQCtrl.rx_sequence = sky_hton16(ctrl_peer_rx);
+		exts.arq_ctrl  = &ext_arq_ctrl;
+		ext_arq_ctrl.type = EXTENSION_ARQ_CTRL;
+		ext_arq_ctrl.length = sizeof(ExtARQCtrl) + 1;
+		ext_arq_ctrl.ARQCtrl.tx_sequence = sky_hton16(ctrl_peer_tx);
+		ext_arq_ctrl.ARQCtrl.rx_sequence = sky_hton16(ctrl_peer_rx);
 	}
 	if(hs){
-		ext_hs_ptr = &ext_hs;
-		ext_hs_ptr->ARQHandshake.peer_state = hs_state;
-		ext_hs_ptr->ARQHandshake.identifier = sky_hton32(hs_identifier);
+		exts.arq_handshake = &ext_arq_handshake;
+		ext_arq_handshake.type = EXTENSION_ARQ_HANDSHAKE;
+		ext_arq_handshake.length = sizeof(ExtARQHandshake) + 1;
+		ext_arq_handshake.ARQHandshake.peer_state = hs_state;
+		ext_arq_handshake.ARQHandshake.identifier = sky_hton32(hs_identifier);
 	}
 	if(recall){
-		ext_rr_ptr = &ext_rr;
-		ext_rr_ptr->ARQReq.sequence = sky_hton16(recall_seq);
-		ext_rr_ptr->ARQReq.mask 	= sky_hton16(recall_mask);
+		exts.arq_request = &ext_arq_request;
+		ext_arq_request.type = EXTENSION_ARQ_REQUEST;
+		ext_arq_request.length = sizeof(ExtARQReq) + 1;
+		ext_arq_request.ARQReq.sequence = sky_hton16(recall_seq);
+		ext_arq_request.ARQReq.mask 	= sky_hton16(recall_mask);
 	}
 
-
-	sky_vc_process_content(array, pl, len_pl, ext_seq_ptr, ext_ctrl_ptr, ext_hs_ptr, ext_rr_ptr, now);
+	sky_vc_process_content(array, pl, len_pl, &exts, now);
 
 
 	int wiped = 0;

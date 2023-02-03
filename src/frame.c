@@ -122,28 +122,74 @@ int sky_packet_extend_with_payload(SkyRadioFrame* frame, void* pl, int32_t lengt
 
 
 
-SkyPacketExtension* sky_rx_get_extension(const SkyRadioFrame* frame, uint8_t this_type){
-	if((int)(frame->ext_length + EXTENSION_START_IDX) > (int)frame->length) {
-		return NULL; //todo error: too short packet.
-	}
-	if(frame->ext_length <= 1){
-		return NULL; //no extensions.
-	}
+int sky_frame_parse_extension_headers(const SkyRadioFrame* frame, SkyParsedExtensions* exts) {
 
+	memset(exts, 0, sizeof(SkyParsedExtensions));
+
+	// Validate field
+	if ((unsigned int)frame->ext_length < 2)
+		return SKY_RET_INVALID_EXT_LENGTH;
+	if ((unsigned int)frame->ext_length + EXTENSION_START_IDX > frame->length)
+		return SKY_RET_INVALID_EXT_LENGTH;
+
+	// Iterate all extension headers 
 	unsigned int cursor = 0;
 	while (cursor < frame->ext_length) {
-		SkyPacketExtension* ext = (SkyPacketExtension*)&frame->raw[EXTENSION_START_IDX + cursor]; //Magic happens here.
+
+		// Cast a pointer to cursor position
+		SkyPacketExtension* ext = (SkyPacketExtension*)&frame->raw[EXTENSION_START_IDX + cursor];		
+
+		// Check possible cursor overflow
 		if (cursor + ext->length >= frame->length)
-			return NULL;
-		if(ext->length == 0){
-			return NULL;
+			return SKY_RET_INVALID_EXT_LENGTH;
+		if(ext->length == 0)
+			return SKY_RET_INVALID_EXT_LENGTH;
+		
+		// Validate header field lenght and store the pointer to the results structr.
+		switch (ext->type)
+		{
+		case EXTENSION_ARQ_SEQUENCE:
+			if (ext->length != sizeof(ExtARQSeq) + 1)
+				return SKY_RET_INVALID_EXT_LENGTH;
+			exts->arq_sequence = ext;
+			break;
+
+		case EXTENSION_ARQ_REQUEST:
+			if (ext->length != sizeof(ExtARQReq) + 1)
+				return SKY_RET_INVALID_EXT_LENGTH;
+			exts->arq_request = ext;
+			break;
+
+		case EXTENSION_ARQ_CTRL:
+			if (ext->length != sizeof(ExtARQCtrl) + 1)
+				return SKY_RET_INVALID_EXT_LENGTH;
+			exts->arq_ctrl = ext;
+			break;
+
+		case EXTENSION_ARQ_HANDSHAKE:
+			if (ext->length != sizeof(ExtARQHandshake) + 1)
+				return SKY_RET_INVALID_EXT_LENGTH;
+			exts->arq_handshake = ext;
+			break;
+
+		case EXTENSION_MAC_TDD_CONTROL:
+			if (ext->length != sizeof(ExtTDDControl) + 1)
+				return SKY_RET_INVALID_EXT_LENGTH;
+			exts->mac_tdd = ext;
+			break;
+
+		case EXTENSION_HMAC_SEQUENCE_RESET:
+			if (ext->length != sizeof(ExtHMACSequenceReset) + 1)
+				return SKY_RET_INVALID_EXT_LENGTH;
+			exts->hmac_reset = ext;
+			break;
+
+		default:
+			return SKY_RET_INVALID_EXT_TYPE;
 		}
+
 		cursor += ext->length;
-
-		if(this_type == ext->type){
-			return ext;
-		}
-
 	}
-	return NULL;
+
+	return SKY_RET_OK;
 }

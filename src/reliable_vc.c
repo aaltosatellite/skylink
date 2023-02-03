@@ -409,65 +409,59 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 	return 0;
 }
 
+static void sky_vc_process_content_arq_off(SkyVirtualChannel *vchannel, const uint8_t *pl, int len_pl);
+static void sky_vc_process_content_arq_on(SkyVirtualChannel *vchannel, const uint8_t *pl, int len_pl, SkyParsedExtensions *exts, tick_t now);
 
-static void sky_vc_process_content_arq_off(SkyVirtualChannel* vchannel, void* pl, int len_pl);
-static void sky_vc_process_content_arq_on(SkyVirtualChannel* vchannel, void* pl, int len_pl, SkyPacketExtension** exts, tick_t now);
-void sky_vc_process_content(SkyVirtualChannel* vchannel,
-							void* pl,
-							int len_pl,
-							SkyPacketExtension* ext_seq,
-							SkyPacketExtension* ext_ctrl,
-							SkyPacketExtension* ext_handshake,
-							SkyPacketExtension* ext_rrequest,
-							tick_t now){
-	if (ext_handshake){
-		uint8_t peer_state = ext_handshake->ARQHandshake.peer_state;
-		uint32_t identifier = sky_ntoh32(ext_handshake->ARQHandshake.identifier);
-		sky_vc_handle_handshake(vchannel, peer_state, identifier);
+int sky_vc_process_content(SkyVirtualChannel *vchannel,
+						   const uint8_t *payload,
+						   int payload_len,
+						   SkyParsedExtensions *exts,
+						   tick_t now)
+{
+	if (exts->arq_handshake != NULL) {
+		const ExtARQHandshake *handshake = &exts->arq_handshake->ARQHandshake;
+		sky_vc_handle_handshake(vchannel, handshake->peer_state, handshake->identifier);
+		// return ????
 	}
 
-	SkyPacketExtension* exts[3] = {ext_seq, ext_ctrl, ext_rrequest};
 	uint8_t state0 = vchannel->arq_state_flag;
 	if(state0 == ARQ_STATE_OFF){
-		sky_vc_process_content_arq_off(vchannel, pl, len_pl);
+		sky_vc_process_content_arq_off(vchannel, payload, payload_len);
 	}
 	if(state0 == ARQ_STATE_ON){
-		sky_vc_process_content_arq_on(vchannel, pl, len_pl, exts, now);
+		sky_vc_process_content_arq_on(vchannel, payload, payload_len, exts, now);
 	}
-
+	return 0;
 }
 
-static void sky_vc_process_content_arq_off(SkyVirtualChannel* vchannel, void* pl, int len_pl){
-	if (len_pl >= 0){
-		sky_vc_push_rx_packet_monotonic(vchannel, pl, len_pl);
+static void sky_vc_process_content_arq_off(SkyVirtualChannel *vchannel, const uint8_t *payload, int payload_len)
+{
+	if (payload_len < 0)
 		return;
-	}
+	sky_vc_push_rx_packet_monotonic(vchannel, payload, payload_len);
 }
 
-
-static void sky_vc_process_content_arq_on(SkyVirtualChannel* vchannel, void* pl, int len_pl, SkyPacketExtension** exts, tick_t now){
-	SkyPacketExtension* ext_seq = exts[0];
-	SkyPacketExtension* ext_ctrl = exts[1];
-	SkyPacketExtension* ext_rrequest = exts[2];
+static void sky_vc_process_content_arq_on(SkyVirtualChannel *vchannel, const uint8_t *payload, int payload_len, SkyParsedExtensions *exts, tick_t now)
+{
 	int seq = -1;
-	if (ext_seq){
-		seq = sky_ntoh16(ext_seq->ARQSeq.sequence);
+	if (exts->arq_sequence) {
+		seq = sky_ntoh16(exts->arq_sequence->ARQSeq.sequence);
 	}
 
-	if (ext_ctrl){
-		sky_vc_update_tx_sync(vchannel, sky_ntoh16(ext_ctrl->ARQCtrl.rx_sequence), now);
-		sky_vc_update_rx_sync(vchannel, sky_ntoh16(ext_ctrl->ARQCtrl.tx_sequence), now);
+	if (exts->arq_ctrl) {
+		sky_vc_update_tx_sync(vchannel, sky_ntoh16(exts->arq_ctrl->ARQCtrl.rx_sequence), now);
+		sky_vc_update_rx_sync(vchannel, sky_ntoh16(exts->arq_ctrl->ARQCtrl.tx_sequence), now);
 	}
 
-	if ( (seq > -1) && (len_pl >= 0) ){
-		sky_vc_push_rx_packet(vchannel, pl, len_pl, seq, now);
+	if ( (seq > -1) && (payload_len >= 0) ){
+		sky_vc_push_rx_packet(vchannel, payload, payload_len, seq, now);
 	}
-	if ( (seq == -1) && (len_pl >= 0) ){
+	if ( (seq == -1) && (payload_len >= 0) ){
 		//break arq?
 	}
 
-	if (ext_rrequest){
-		uint16_t mask = sky_ntoh16(ext_rrequest->ARQReq.mask);
-		sendRing_schedule_resends_by_mask(vchannel->sendRing, sky_ntoh16(ext_rrequest->ARQReq.sequence), mask);
+	if (exts->arq_request){
+		uint16_t mask = sky_ntoh16(exts->arq_request->ARQReq.mask);
+		sendRing_schedule_resends_by_mask(vchannel->sendRing, sky_ntoh16(exts->arq_request->ARQReq.sequence), mask);
 	}
 }

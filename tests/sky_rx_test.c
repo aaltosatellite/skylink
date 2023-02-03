@@ -59,7 +59,7 @@ void sky_rx_test_cycle(){
 
 
 
-	sky_rx(self, frame, golay_on);
+	sky_rx(self, frame);//, golay_on);
 
 
 	destroy_frame(frame);

@@ -495,7 +495,7 @@ static void step_forward(int which, TXRXJob* job){
 
 		if(eframe->rx_ok){
 			eframe->frame.rx_time_ticks = job->now;
-			sky_rx(peer->handle, &eframe->frame, 1);
+			sky_rx_with_golay(peer->handle, &eframe->frame);
 			if(sky_vc_count_readable_rcv_packets(peer->handle->virtual_channels[0])){
 				int seq = peer->handle->virtual_channels[0]->rcvRing->tail_sequence;
 				int red = sky_vc_read_next_received(peer->handle->virtual_channels[0], tgt, 1000);
@@ -515,7 +515,7 @@ static void step_forward(int which, TXRXJob* job){
 
 	//transmit new packet if sky_tx says so. Also corrup and maybe lose entirely.
 	if(peer->radio_state != STATE_TX){
-		int r_tx = sky_tx(peer->handle, &job->frame, 1);
+		int r_tx = sky_tx_with_golay(peer->handle, &job->frame);
 		if(r_tx){
 			uint64_t tx_end = job->now + ((job->frame.length * 1000) / job->byterate) + 1;
 			EtherFrame* eframe = new_eframe(job->frame, job->now, tx_end, target);
