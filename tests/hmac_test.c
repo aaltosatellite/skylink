@@ -85,7 +85,7 @@ static void test1_round(){
 	sframe->vc = vc;
 
 
-	int hmac_seq = sky_hmac_get_next_hmac_tx_sequence_and_advance(self1, vc);
+	int hmac_seq = sky_hmac_get_next_tx_sequence(self1, vc);
 	assert(hmac_seq == wrap_hmac_sequence(self1->hmac->sequence_tx[vc]-1));
 	sframe->auth_sequence = hmac_seq;
 	sframe->auth_sequence = sky_hton16(sframe->auth_sequence);

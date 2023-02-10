@@ -74,10 +74,16 @@ struct sky_diag {
 };
 typedef struct sky_diag SkyDiagnostics;
 
-SkyDiagnostics* new_diagnostics();
+/* Allocate and initialize a new diagnostics object */
+SkyDiagnostics* sky_diag_create();
 
-void destroy_diagnostics(SkyDiagnostics* diag);
+/* Destroy and free the diagnostics object */
+void sky_diag_destroy(SkyDiagnostics* diag);
 
+/* Clear the given diagnostics object */
+void sky_diag_clear(SkyDiagnostics *diag);
+
+/* Print out the link state to debug print. */
 void sky_print_link_state(SkyHandle self);
 
 #endif /* __SKYLINK_DIAG_H__ */

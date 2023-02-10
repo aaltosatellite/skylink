@@ -42,7 +42,7 @@ void test1(){
 
 static int test1_round(){
 	SkyRadioFrame* frame = new_frame();
-	SkyDiagnostics* diag = new_diagnostics();
+	SkyDiagnostics* diag = sky_diag_create();
 
 	int length = randint_i32(16+8, RS_MSGLEN);
 	int n_corrupt_bytes = randint_i32(0, 16); //16 seems like the highest with 100% success rate
@@ -110,7 +110,7 @@ static int test1_round(){
 
 
 	destroy_frame(frame);
-	destroy_diagnostics(diag);
+	sky_diag_destroy(diag);
 	free(corrupt_indexes);
 	free(encoded_ref);
 	free(ref);

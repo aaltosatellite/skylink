@@ -77,8 +77,8 @@ SkyHandle new_handle(SkyConfig* config){
 	SkyHandle handle = SKY_MALLOC(sizeof(struct sky_all));
 	handle->conf = config;
 	handle->mac = sky_mac_create(&config->mac);
-	handle->hmac = new_hmac_instance(&config->hmac);
-	handle->diag = new_diagnostics();
+	handle->hmac = sky_hmac_create(&config->hmac);
+	handle->diag = sky_diag_create();
 
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		handle->virtual_channels[i] = new_virtual_channel(&config->vc[i]);
@@ -89,8 +89,8 @@ SkyHandle new_handle(SkyConfig* config){
 
 void destroy_handle(SkyHandle self){
 	sky_mac_destroy(self->mac);
-	destroy_hmac(self->hmac);
-	destroy_diagnostics(self->diag);
+	sky_hmac_destroy(self->hmac);
+	sky_diag_destroy(self->diag);
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		destroy_virtual_channel(self->virtual_channels[i]);
 	}

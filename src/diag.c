@@ -5,24 +5,26 @@
 
 unsigned int sky_diag_mask;
 
-SkyDiagnostics* new_diagnostics(){
+SkyDiagnostics* sky_diag_create(){
 	SkyDiagnostics* diag = SKY_MALLOC(sizeof(SkyDiagnostics));
+	SKY_ASSERT(diag != NULL);
 	memset(diag, 0, sizeof(SkyDiagnostics));
 	return diag;
 }
 
-void destroy_diagnostics(SkyDiagnostics* diag){
+void sky_diag_destroy(SkyDiagnostics* diag){
 	SKY_FREE(diag);
 }
 
-
+void sky_diag_clear(SkyDiagnostics* diag) {
+	memset(diag, 0, sizeof(SkyDiagnostics));
+}
 
 void sky_print_link_state(SkyHandle self) {
 
 	if ((sky_diag_mask & SKY_DIAG_LINK_STATE) == 0)
 		return;
 
-	SkyDiagnostics* diag = self->diag;
 
 	SKY_PRINTF(SKY_DIAG_LINK_STATE, "\033[H\033[2J"); // Clear screen
 

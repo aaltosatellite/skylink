@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 #include "skylink.h"
+#include "frame.h"
 #include "conf.h"
-
 
 #define HMAC_CYCLE_LENGTH	65000
 #define HMAC_NO_SEQUENCE	65010
@@ -19,30 +19,27 @@ struct sky_hmac {
 	uint8_t vc_enforcement_need[SKY_NUM_VIRTUAL_CHANNELS];
 	void* ctx;
 };
-typedef struct sky_hmac SkyHMAC;
-
-
 
 
 
 /* Allocate and initialize HMAC state instance */
-SkyHMAC* new_hmac_instance(HMACConfig* config);
+SkyHMAC *sky_hmac_create(HMACConfig *config);
 
 /* Free HMAC resources */
-void destroy_hmac(SkyHMAC* hmac);
-
+void sky_hmac_destroy(SkyHMAC *hmac);
 
 /* Get next sequence number from transmit counter and advance it by one (and wrap modulo cycle) */
-int32_t sky_hmac_get_next_hmac_tx_sequence_and_advance(SkyHandle self, uint8_t vc);
-
+int32_t sky_hmac_get_next_tx_sequence(SkyHandle self, unsigned int vc);
 
 /* Authenticate a frame. */
 int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame);
 
 
 /* Check the frame authentication and sequence number if required for the virtual channel.
- * Also, corrects sequence number field endianess and removes the HMAC extension from the frame if provided. */
-int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame* frame);
+ * Also, corrects sequence number field endianess and removes the HMAC extension from the frame if provided.
+ * HMAC trailer is removed from the end of the frame.
+ */
+int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame *frame, const SkyPacketExtension *ext_hmac_reset);
 
 /* Positive modulo by max hmac sequence */
 int32_t wrap_hmac_sequence(int32_t sequence);
