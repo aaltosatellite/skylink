@@ -8,6 +8,9 @@
 #include <frame-io/zmq_interface.hpp>
 #include <framing/golay_framer.hpp>
 #include <framing/golay_deframer.hpp>
+#ifdef USE_PORTHOUSE_TRACKER
+#include <misc/porthouse_tracker.hpp>
+#endif
 
 #include "vc_interface.hpp"
 #include <SoapySDR/Device.hpp>
@@ -54,7 +57,7 @@ private:
 	VCInterface* vc_interface;
 
 #ifdef USE_PORTHOUSE_TRACKER
-		suo::PorthouseTracker *tracker;
+	suo::PorthouseTracker *tracker;
 #endif
 };
 

@@ -10,7 +10,10 @@ using namespace suo;
 
 
 
-SkyModem::SkyModem()
+SkyModem::SkyModem() :
+	sdr(nullptr),
+	zmq_output(nullptr),
+	vc_interface(nullptr)
 {
 
 	/* -------------------------
@@ -120,20 +123,7 @@ SkyModem::SkyModem()
 
 	try {
 
-#ifdef USE_PORTHOUSE_TRACKER
-		/*
-		 * Setup porthouse tracker
-		 */
-		PorthouseTracker::Config tracker_conf;
-		tracker_conf.amqp_url = "amqp://guest:guest@localhost/";
-		tracker_conf.target_name = "Foresail-1";
-		tracker_conf.center_frequency = 437.775e6; // [Hz]
-
-		tracker = new PorthouseTracker(tracker_conf);
-		// tracker.setUplinkFrequency.connect_member(&modulator, &GMSKModulator::setFrequency);
-		// tracker.setDownlinkFrequency.connect_member(&demodulator, &GMSKContinousDemodulator::setFrequency);
-		sdr->sinkTicks.connect_member(&tracker, &PorthouseTracker::tick);
-#endif
+		const float center_frequency = 437.125e6; // [Hz]
 
 		/*
 		 * SDR
@@ -154,7 +144,7 @@ SkyModem::SkyModem()
 		sdr_conf.args["driver"] = "uhd";
 
 		sdr_conf.rx_centerfreq = 437.00e6;
-		sdr_conf.tx_centerfreq = 437.00e6;
+		sdr_conf.tx_centerfreq = sdr_conf.rx_centerfreq;
 
 		sdr_conf.rx_gain = 30;
 		sdr_conf.tx_gain = 60;
@@ -171,23 +161,28 @@ SkyModem::SkyModem()
 		 */
 		GMSKContinousDemodulator::Config receiver_conf;
 		receiver_conf.sample_rate = sdr_conf.samplerate;
-		receiver_conf.center_frequency = 125.0e3;
+		receiver_conf.center_frequency = center_frequency - sdr_conf.rx_centerfreq;
 
 		/*
 		 * Setup frame decoder
 		 */
 		GolayDeframer::Config deframer_conf;
-		deframer_conf.sync_word = 0x1ACFFC1D;
-		deframer_conf.sync_len = 32;
+		deframer_conf.syncword = 0x1ACFFC1D;
+		deframer_conf.syncword_len = 32; // [symbols/bits]
 		deframer_conf.sync_threshold = 3;
+		deframer_conf.use_viterbi = false;
+		deframer_conf.use_randomizer = true;
+		deframer_conf.use_rs = true;
+
 
 		/* For 9600 baud */
 		receiver_conf.symbol_rate = 9600;
 		receiver_9k6 = new GMSKContinousDemodulator(receiver_conf);
 		deframer_9k6 = new GolayDeframer(deframer_conf);
 		receiver_9k6->sinkSymbol.connect_member(deframer_9k6, &GolayDeframer::sinkSymbol);
+		receiver_9k6->setMetadata.connect_member(deframer_9k6, &GolayDeframer::setMetadata);
 
-		deframer_9k6->syncDetected.connect( [&](bool locked, Timestamp now) {
+		deframer_9k6->syncDetected.connect( [&] (bool locked, Timestamp now) {
 			receiver_9k6->lockReceiver(locked, now);
 		});
 
@@ -198,7 +193,8 @@ SkyModem::SkyModem()
 		receiver_conf.symbol_rate = 19200;
 		receiver_19k2 = new GMSKContinousDemodulator(receiver_conf);
 		deframer_19k2 = new GolayDeframer(deframer_conf);
-		receiver_19k62->sinkSymbol.connect_member(deframer_19k2, &GolayDeframer::sinkSymbol);
+		receiver_19k2->sinkSymbol.connect_member(deframer_19k2, &GolayDeframer::sinkSymbol);
+		receiver_19k2->setMetadata.connect_member(deframer_19k2, &GolayDeframer::setMetadata);
 		sdr->sinkSamples.connect_member(receiver_19k2, &FSKMatchedFilterDemodulator::sinkSamples);
 
 		/* For 36400 baud */
@@ -206,6 +202,7 @@ SkyModem::SkyModem()
 		receiver_36k4 = new GMSKContinousDemodulator(receiver_conf);
 		deframer_36k4 = new GolayDeframer(deframer_conf);
 		receiver_36k4->sinkSymbol.connect_member(deframer_36k4, &GolayDeframer::sinkSymbol);
+		receiver_36k4->setMetadata.connect_member(deframer_36k4, &GolayDeframer::setMetadata);
 		sdr->sinkSamples.connect_member(receiver_36k4, &FSKMatchedFilterDemodulator::sinkSamples);
 
 		deframer_9k6->syncDetected.connect( [&](bool locked, Timestamp now) {
@@ -238,13 +235,6 @@ SkyModem::SkyModem()
 			frame_received(locked, now);
 		});
 
-#ifdef USE_PORTHOUSE_TRACKER
-		tracker->setDownlinkFrequency.connect( [&] (float center_frequency) {
-			receiver_9k6->setFrequency(center_frequency);
-			receiver_19k2->setFrequency(center_frequency);
-			receiver_36k4->setFrequency(center_frequency);
-		});
-#endif
 #else
 		deframer_9k6->syncDetected.connect( [&] (bool locked, Timestamp now) {
 			receiver_locked(locked, now);
@@ -255,11 +245,6 @@ SkyModem::SkyModem()
 			frame_received(frame, now);
 		});
 
-#ifdef USE_PORTHOUSE_TRACKER
-		tracker->setDownlinkFrequency.connect( [&] (float frequency) {
-			receiver_9k6->set_frequency(frequency);
-		});
-#endif
 #endif
 
 
@@ -279,32 +264,58 @@ SkyModem::SkyModem()
 		GMSKModulator::Config modulator_conf;
 		modulator_conf.sample_rate = sdr_conf.samplerate;
 		modulator_conf.symbol_rate = 9600;
-		modulator_conf.center_frequency = 125.0e3;
+		modulator_conf.center_frequency = center_frequency - sdr_conf.tx_centerfreq;
 		modulator_conf.bt = 0.5;
 		modulator_conf.ramp_up_duration = 2;
 		modulator_conf.ramp_down_duration = 2;
 
 		modulator = new GMSKModulator(modulator_conf);
-#ifdef USE_PORTHOUSE_TRACKER
-		tracker->setUplinkFrequency.connect_member(modulator, &GMSKModulator::setFrequency);
-#endif
+
 		/*
 		 * Setup framer
 		 */
 		GolayFramer::Config framer_conf;
-		framer_conf.sync_word = 0x1ACFFC1D;
-		framer_conf.sync_len = 32;
-		framer_conf.preamble_len = 12 * 8;
+		framer_conf.syncword = deframer_conf.syncword;
+		framer_conf.syncword_len = deframer_conf.syncword_len;
+		framer_conf.preamble_len = 12 * 8; // [symbols/bits]
 		framer_conf.use_viterbi = false;
 		framer_conf.use_randomizer = true;
 		framer_conf.use_rs = true;
 
 		framer = new GolayFramer(framer_conf);
 		framer->sourceFrame.connect_member(this, &SkyModem::frame_transmit);
-		modulator->sourceSymbols.connect_member(framer, &GolayFramer::sourceSymbols);
-		sdr->sourceSamples.connect_member(modulator, &GMSKModulator::sourceSamples);
+		modulator->generateSymbols.connect_member(framer, &GolayFramer::generateSymbols);
+		sdr->generateSamples.connect_member(modulator, &GMSKModulator::generateSamples);
 
 
+#ifdef USE_PORTHOUSE_TRACKER
+		/*
+		 * Setup porthouse tracker
+		 */
+		PorthouseTracker::Config tracker_conf;
+		tracker_conf.amqp_url = "amqp://guest:guest@localhost/";
+		tracker_conf.target_name = "Foresail-1";
+		tracker_conf.center_frequency = center_frequency;
+
+		tracker = new PorthouseTracker(tracker_conf);
+		sdr->sinkTicks.connect_member(tracker, &PorthouseTracker::tick);
+
+#ifdef MULTIMODE
+		tracker->setDownlinkFrequency.connect( [ center_frequency, this ] (float frequency) {
+			receiver_9k6->setFrequencyOffset(frequency - center_frequency);
+			receiver_19k2->setFrequencyOffset(frequency - center_frequency);
+			receiver_36k4->setFrequencyOffset(frequency - center_frequency);
+		});
+#else
+		tracker->setDownlinkFrequency.connect( [ center_frequency, this ] (float frequency) {
+			receiver_9k6->setFrequencyOffset(frequency - center_frequency);
+		});
+#endif
+		tracker->setUplinkFrequency.connect([ center_frequency, this ] (float frequency) {
+			modulator->setFrequencyOffset(frequency - center_frequency);
+		});
+#endif
+		
 	}
 	catch (const SuoError& e)
 	{
@@ -319,6 +330,16 @@ SkyModem::SkyModem()
 
 SkyModem::~SkyModem()
 {
+	if (sdr != nullptr)
+		delete sdr;
+	if (zmq_output != nullptr)
+		delete zmq_output;
+	if (vc_interface != nullptr)
+		delete vc_interface;
+#ifdef USE_PORTHOUSE_TRACKER
+	if (tracker != nullptr)
+		delete tracker;
+#endif
 }
 
 
@@ -378,22 +399,23 @@ void SkyModem::frame_transmit(Frame &frame, Timestamp now)
 		frame.data.resize(sky_frame.length);
 		memcpy(&frame.data[0], sky_frame.raw, sky_frame.length);
 
-		cout << getISOCurrentTimestamp() << ": Frame transmit " << endl;
-		cout << frame(Frame::PrintData);
-
 		// Pass the raw frame also to ZMQ sink
 		frame.setMetadata("mode", 9600);
 		frame.setMetadata("packet_type", "uplink_raw");
-		zmq_output->sinkFrame(frame, now);
-		// TODO: Insert somethow ISO timestamp to the frame. SDr timestamp is not needed.
+		frame.setMetadata("utc_timestamp", getISOCurrentTimestamp());
 
+		cout << getISOCurrentTimestamp() << ": Frame transmit";
+		cout << frame(Frame::PrintData | Frame::PrintMetadata | Frame::PrintColored | Frame::PrintAltColor);
+
+		zmq_output->sinkFrame(frame, now);
+		// TODO: Insert somethow ISO timestamp to the frame. SDR timestamp is not needed.
 	}
 }
 
 void SkyModem::frame_received(Frame &frame, Timestamp now)
 {
-	cout << getISOCurrentTimestamp() << ": Frame received " << endl;
-	cout << frame(Frame::PrintData | Frame::PrintMetadata | Frame::PrintAltColor);
+	cout << getISOCurrentTimestamp() << ": Frame received ";
+	cout << frame(Frame::PrintData | Frame::PrintMetadata | Frame::PrintColored);
 
 	// Copy data from suo's frame structure to Skylink's frame structure
 	SkyRadioFrame sky_frame;
@@ -408,6 +430,7 @@ void SkyModem::frame_received(Frame &frame, Timestamp now)
 
 	// Pass the raw frame also to ZMQ sink
 	frame.setMetadata("packet_type", "downlink_raw");
+	frame.setMetadata("utc_timestamp", getISOCurrentTimestamp());
 	zmq_output->sinkFrame(frame, now);
 }
 

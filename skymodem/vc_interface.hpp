@@ -28,6 +28,9 @@ public:
 	/* */
 	VCInterface(SkyHandle protocol_handle, unsigned int base);
 
+	/* Flush possible queued frames */
+	void flush();
+
 	/* */
 	void tick(suo::Timestamp now);
 

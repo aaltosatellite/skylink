@@ -40,6 +40,23 @@ VCInterface::VCInterface(SkyHandle protocol_handle, unsigned int vc_base)
 		vc.subscribe_socket.bind(uri);
 		vc.subscribe_socket.set(zmq::sockopt::subscribe, "");
 	}
+	flush();
+}
+
+
+void VCInterface::flush() 
+{
+	for (VirtualChannelInterface &vc : vcs)
+	{
+		zmq::message_t msg;
+		vc.subscribe_socket.set(zmq::sockopt::rcvtimeo, 250); // [ms]
+		while (1)
+		{
+			auto res = vc.subscribe_socket.recv(msg);
+			if (res.has_value() == false)
+				break;
+		}
+	}
 }
 
 
@@ -194,7 +211,7 @@ void VCInterface::VirtualChannelInterface::check()
 		SKY_PRINTF(SKY_DIAG_DEBUG, "CTRL MSG vc: %d len: msg_len %d\n", vc_index, msg.size());
 
 		// Received frame didn't contain any data so try to read a 
-		json control_dict = json::object();
+		json control_dict = frame_dict["metadata"];
 		if (control_dict.is_object() == false)
 			throw SuoError("asaa");
 
