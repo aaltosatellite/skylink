@@ -19,13 +19,13 @@ find_library( SUO_LIBRARY
 )
 
 find_path( SUO_INCLUDE_DIR
-    suo.h
+    suo.hpp
     HINTS ${SUO_GIT}/libsuo
     HINTS ${PROJECT_BINARY_DIR}/prebuilt/ ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 set(SUO_INCLUDE_DIRS ${SUO_INCLUDE_DIR})
-set(SUO_LIBRARIES ${SUO_LIBRARY} liquid zmq )
+set(SUO_LIBRARIES ${SUO_LIBRARY} liquid zmq SoapySDR )
 #set(SUO_DEPENDENCIES liquid zmq)
 
 
@@ -33,6 +33,4 @@ include ( FindPackageHandleStandardArgs )
 
 # handle the QUIETLY and REQUIRED arguments and set SUO_FOUND to TRUE
 # if all listed variables are TRUE
-find_package_handle_standard_args(  SUO DEFAULT_MSG
-    SUO_LIBRARIES
-    SUO_INCLUDE_DIRS )
+find_package_handle_standard_args( SUO DEFAULT_MSG SUO_LIBRARIES SUO_INCLUDE_DIRS )
