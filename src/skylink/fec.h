@@ -21,9 +21,9 @@
  *   These follow the Mode-5 definitions.
  */
 #define SKY_GOLAY_PAYLOAD_LENGTH_MASK  0x0FF
-#define SKY_GOLAY_VITERBI_ENABLED      0x800
-#define SKY_GOLAY_RANDOMIZER_ENABLED   0x400
-#define SKY_GOLAY_RS_ENABLED           0x200
+//#define SKY_GOLAY_VITERBI_ENABLED      0x800
+//#define SKY_GOLAY_RANDOMIZER_ENABLED   0x400
+//#define SKY_GOLAY_RS_ENABLED           0x200
 
 
 /*

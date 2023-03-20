@@ -197,7 +197,7 @@ int sky_tx_with_golay(SkyHandle self, SkyRadioFrame* frame) {
 		for (unsigned int i = frame->length; i != 0; i--)
 			frame->raw[i + 3] = frame->raw[i];
 		
-		uint32_t phy_header = frame->length | SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED;
+		uint32_t phy_header = frame->length;
 		encode_golay24(&phy_header);
 		frame->raw[0] = 0xff & (phy_header >> 16);
 		frame->raw[1] = 0xff & (phy_header >> 8);

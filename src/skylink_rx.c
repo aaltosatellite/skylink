@@ -22,12 +22,6 @@ int sky_rx_with_golay(SkyHandle self, SkyRadioFrame* frame) {
 		return SKY_RET_GOLAY_FAILED;
 	}
 
-	// Validate golay option flags 
-	if ((coded_len & 0xF00) != (SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED)) {
-		SKY_PRINTF(SKY_DIAG_FEC, "\x1B[31m" "Invalid Golay flags 0x%x" "\x1B[0m\n", coded_len);
-		return SKY_RET_GOLAY_MISCONFIGURED;
-	}
-
 	frame->length = (int32_t)coded_len & SKY_GOLAY_PAYLOAD_LENGTH_MASK;
 	if (frame->length > sizeof(frame->raw))
 		return SKY_RET_INVALID_ENCODED_LENGTH;
@@ -44,7 +38,7 @@ int sky_rx_with_fec(SkyHandle self, SkyRadioFrame* frame) {
 
 	self->diag->rx_frames++;
 
-	if (frame->length <  EXTENSION_START_IDX + RS_PARITYS) {
+	if (frame->length < EXTENSION_START_IDX + RS_PARITYS) {
 		SKY_PRINTF(SKY_DIAG_FRAMES, "\x1B[31m" "Too short frame" "\x1B[0m\n");
 		return SKY_RET_INVALID_ENCODED_LENGTH;
 	}

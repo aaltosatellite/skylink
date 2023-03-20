@@ -236,7 +236,6 @@ void sky_tx_test_cycle(){
 			uint32_t coded_len = (frame->raw[0] << 16) | (frame->raw[1] << 8) | frame->raw[2];
 			int _golay_ret = decode_golay24(&coded_len);
 			assert(_golay_ret >= 0);
-			assert((coded_len & 0xF00) == (SKY_GOLAY_RS_ENABLED | SKY_GOLAY_RANDOMIZER_ENABLED));
 			frame->length = (int32_t)coded_len & SKY_GOLAY_PAYLOAD_LENGTH_MASK;
 			for (unsigned int i = 0; i < frame->length; i++)
 				frame->raw[i] = frame->raw[i + 3];
