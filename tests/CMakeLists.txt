@@ -9,14 +9,12 @@ add_compile_options(-O2 -Wall -Wextra)
 
 add_executable(module_test
     module_test.c
-    
-    crc/crc_algos.c
     tools/tools.c
+    tst_utilities.c
     
     elebuffer_test.c
     ring_test.c
     packet_encode_test.c
-    tst_utilities.c
     fec_test.c
     hmac_test.c
     arq_test1.c
@@ -28,11 +26,10 @@ add_executable(module_test
 
 add_executable(cycle_test
     tx_rx_cycle_test.c
-    crc/crc_algos.c
     tools/tools.c
     tst_utilities.c
     zmq_endpoint.c
     zmq_endpoint.h
 )
 
-#add_subdirectory(memusage)
+add_subdirectory(memusage)
