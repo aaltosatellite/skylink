@@ -1,12 +1,8 @@
-//
-// Created by elmore on 21.11.2021.
-//
+#include "units.h"
 
-#include "arq_test1.h"
-#include "../src/skylink/skylink.h"
-#include "../src/skylink/utilities.h"
-#include "../src/skylink/reliable_vc.h"
-#include "tst_utilities.h"
+#include "skylink/skylink.h"
+#include "skylink/utilities.h"
+#include "skylink/reliable_vc.h"
 
 
 void arq_system_test1(int load);
@@ -346,18 +342,5 @@ void arq_system_test2_cycle(){
 	destroy_config(sky_conf);
 	free(tgt);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

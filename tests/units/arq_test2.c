@@ -1,12 +1,9 @@
-//
-// Created by elmore on 22.11.2021.
-//
+#include "units.h"
 
-#include "arq_test2.h"
-#include "../src/skylink/skylink.h"
-#include "../src/skylink/utilities.h"
-#include "../src/skylink/reliable_vc.h"
-#include "tst_utilities.h"
+#include "skylink/skylink.h"
+#include "skylink/utilities.h"
+#include "skylink/reliable_vc.h"
+
 
 extern tick_t _global_ticks_now;
 

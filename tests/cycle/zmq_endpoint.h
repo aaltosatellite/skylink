@@ -5,15 +5,17 @@
 #ifndef SKYLINK_ZMQ_ENDPOINT_H
 #define SKYLINK_ZMQ_ENDPOINT_H
 
-#include "../src/skylink/conf.h"
-#include "../src/skylink/diag.h"
-#include "../src/skylink/frame.h"
-#include "../src/skylink/mac.h"
-#include "../src/skylink/utilities.h"
-#include "../src/skylink/reliable_vc.h"
-#include "../src/skylink/skylink.h"
-#include "tools/tools.h"
+#include "skylink/conf.h"
+#include "skylink/diag.h"
+#include "skylink/frame.h"
+#include "skylink/mac.h"
+#include "skylink/utilities.h"
+#include "skylink/reliable_vc.h"
+#include "skylink/skylink.h"
+
+#include "tools.h"
 #include "tst_utilities.h"
+
 #include <zmq.h>
 
 

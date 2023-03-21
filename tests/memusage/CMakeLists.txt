@@ -23,10 +23,10 @@ add_executable(test_memusage
     ${CMAKE_SOURCE_DIR}/src/ext/libfec/encode_rs_8.c
 
     test_memusage.c
-    ../tools/tools.c
-    ../tst_utilities.c
+    ../utils/tools.c
+    ../utils/tst_utilities.c
 )
 
 include_directories( test_memusage . )
+include_directories( test_memusage ../utils )
 include_directories( test_memusage ${CMAKE_SOURCE_DIR}/src/ )
-include_directories( test_memusage ${CMAKE_SOURCE_DIR}/tests/ )

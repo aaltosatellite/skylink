@@ -1,16 +1,17 @@
-//
-// Created by elmore on 2.11.2021.
-//
 
-
-#include "../src/skylink/elementbuffer.h"
-#include "../src/skylink/reliable_vc.h"
-#include "../src/skylink/skylink.h"
-#include "../src/skylink/utilities.h"
-#include "tst_utilities.h"
-#include "tools/tools.h"
 #include <math.h>
-#include <stdio.h>
+
+#include "tools.h"
+#include "tst_utilities.h"
+
+#include "skylink/skylink.h"
+#include "skylink/elementbuffer.h"
+#include "skylink/hmac.h"
+#include "skylink/mac.h"
+#include "skylink/reliable_vc.h"
+#include "skylink/utilities.h"
+
+
 
 #define STATE_RX		0
 #define STATE_TX		1

@@ -1,15 +1,10 @@
-//
-// Created by elmore on 27.11.2021.
-//
+#include "units.h"
 
-#include "sky_tx_test.h"
-#include "../src/skylink/skylink.h"
-#include "../src/skylink/utilities.h"
-#include "../src/skylink/reliable_vc.h"
-#include "../src/skylink/fec.h"
-#include "tst_utilities.h"
-#include "tools/tools.h"
-#include <assert.h>
+#include "skylink/skylink.h"
+#include "skylink/utilities.h"
+#include "skylink/reliable_vc.h"
+#include "skylink/fec.h"
+
 
 void sky_tx_test_cycle();
 

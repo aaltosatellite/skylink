@@ -1,20 +1,16 @@
-//
-// Created by elmore on 28.10.2021.
-//
+#ifndef __SKYLINK_TEST_UTILITIES_H__
+#define __SKYLINK_TEST_UTILITIES_H__
 
-#ifndef SKYLINK_CMAKE_TST_UTILITIES_H
-#define SKYLINK_CMAKE_TST_UTILITIES_H
+#include "skylink/skylink.h"
+#include "skylink/conf.h"
+#include "skylink/mac.h"
+#include "skylink/hmac.h"
+#include "skylink/frame.h"
+#include "skylink/utilities.h"
+#include "skylink/reliable_vc.h"
+#include "skylink/diag.h"
 
-#include "../src/skylink/skylink.h"
-#include "../src/skylink/conf.h"
-#include "../src/skylink/mac.h"
-#include "../src/skylink/hmac.h"
-#include "../src/skylink/frame.h"
-#include "../src/skylink/utilities.h"
-#include "../src/skylink/reliable_vc.h"
-#include "tools/tools.h"
-
-
+#include "tools.h"
 
 SkyConfig* new_vanilla_config();
 
@@ -38,4 +34,4 @@ void corrupt_bytearray(uint8_t* arr, int length, double ratio);
 
 void tst_randoms(double chance1, double chance2, int NN);
 
-#endif //SKYLINK_CMAKE_TST_UTILITIES_H
+#endif /* __SKYLINK_TEST_UTILITIES_H__ */

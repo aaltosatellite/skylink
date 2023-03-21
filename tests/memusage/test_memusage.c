@@ -1,6 +1,6 @@
 
 #include "tst_utilities.h"
-#include "tools/tools.h"
+#include "tools.h"
 #include "skylink/utilities.h"
 #include "sky_platform.h"
 
@@ -19,7 +19,7 @@ void *instrumented_malloc(const char *where, size_t size)
 
 void instrumented_free(const char *where, void *ptr)
 {
-	printf("  (free %x)\n", (unsigned int)(uintptr_t)ptr);
+	printf("  %s freeing 0x%x\n", where, (unsigned int)(uintptr_t)ptr);
 	fflush(stdout);
 }
 

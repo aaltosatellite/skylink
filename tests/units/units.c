@@ -1,18 +1,7 @@
-//
-// Created by elmore on 8.10.2021.
-//
+#include "units.h"
 
-#include "elebuffer_test.h"
-#include "ring_test.h"
-#include "packet_encode_test.h"
-#include "hmac_test.h"
-#include "fec_test.h"
-#include "tools/tools.h"
-#include "arq_test1.h"
-#include "arq_test2.h"
-#include "sky_tx_test.h"
+#include "skylink/conf.h"
 
-void mac_test(int load);
 
 #define MODULO_NUMBER 4096
 

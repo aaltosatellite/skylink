@@ -1,9 +1,8 @@
-//
-// Created by elmore on 29.10.2021.
-//
+#include "units.h"
 
-#include "fec_test.h"
-
+#include "skylink/fec.h"
+#include "skylink/diag.h"
+#include "skylink/frame.h"
 
 static void test1();
 static int test1_round();

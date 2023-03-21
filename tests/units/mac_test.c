@@ -1,13 +1,10 @@
-//
-// Created by elmore on 29.11.2021.
-//
+#include "units.h"
 
-#include "../src/skylink/mac.h"
-#include "../src/skylink/skylink.h"
-#include "../src/skylink/conf.h"
-#include "../src/skylink/utilities.h"
-#include "tools/tools.h"
-#include <assert.h>
+#include "skylink/mac.h"
+#include "skylink/skylink.h"
+#include "skylink/conf.h"
+#include "skylink/utilities.h"
+
 
 void tst_carrier_sense(SkyMAC* mac, SkyMACConfig* config);
 void tst_update_belief(SkyMAC* mac, SkyMACConfig* config);
