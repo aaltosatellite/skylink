@@ -117,9 +117,9 @@ SkyModem::SkyModem() :
 
 
 	/* 
-	* Initialize
+	 * Initialize
 	 */
-	vc_interface = new VCInterface(handle, 5000);
+	vc_interface = new VCInterface(handle, 7100);
 
 	try {
 
@@ -249,10 +249,10 @@ SkyModem::SkyModem() :
 
 
 		/*
-		 * ZMQ output
+		 * ZMQ output for raw frames
 		 */
 		ZMQPublisher::Config zmq_output_conf;
-		zmq_output_conf.bind = "tcp://127.0.0.1:4000";
+		zmq_output_conf.bind = "tcp://127.0.0.1:7200";
 		zmq_output_conf.msg_format = ZMQMessageFormat::JSON;
 
 		zmq_output = new ZMQPublisher(zmq_output_conf);
