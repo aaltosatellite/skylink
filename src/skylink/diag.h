@@ -3,11 +3,10 @@
 
 #include <stdint.h>
 #include "skylink.h"
+
 /*
  * Diagnostics and debug tools
  */
-
-// TODO: Defines which prints are enabled
 
 #define SKY_DIAG_INFO       0x0001
 #define SKY_DIAG_DEBUG      0x0002

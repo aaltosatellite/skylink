@@ -3,7 +3,7 @@
 #include "skylink/diag.h"
 #include "skylink/reliable_vc.h"
 
-unsigned int sky_diag_mask;
+unsigned int sky_diag_mask = SKY_DIAG_INFO | SKY_DIAG_BUG;
 
 SkyDiagnostics* sky_diag_create(){
 	SkyDiagnostics* diag = SKY_MALLOC(sizeof(SkyDiagnostics));
@@ -21,11 +21,12 @@ void sky_diag_clear(SkyDiagnostics* diag) {
 }
 
 void sky_print_link_state(SkyHandle self) {
+#ifndef SKY_DEBUG
+	(void)self;
+#else
+	if ((sky_diag_mask & SKY_DIAG_LINK_STATE) == 0) return;
 
-	if ((sky_diag_mask & SKY_DIAG_LINK_STATE) == 0)
-		return;
-
-
+	const SkyDiagnostics* diag = self->diag;
 	SKY_PRINTF(SKY_DIAG_LINK_STATE, "\033[H\033[2J"); // Clear screen
 
 	SKY_PRINTF(SKY_DIAG_LINK_STATE, "Received frames: %5u total, %5u OK, %5u failed. FEC corrected octets %5u/%u\n",
@@ -69,6 +70,5 @@ void sky_print_link_state(SkyHandle self) {
 
 	}
 
-
-
+#endif /* SKY_DEBUG */
 }
