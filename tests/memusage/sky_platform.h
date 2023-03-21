@@ -12,11 +12,11 @@ typedef int32_t tick_t;
 
 
 /* */
-void *instrumented_malloc(size_t n);
-void instrumented_free(void* ptr);
+void *instrumented_malloc(const char* where, size_t n);
+void instrumented_free(const char *where, void *ptr);
 
-#define SKY_MALLOC(size)    instrumented_malloc(size)
-#define SKY_FREE(ptr)       instrumented_free(ptr)
+#define SKY_MALLOC(size)    instrumented_malloc(__FUNCTION__, size)
+#define SKY_FREE(ptr)       instrumented_free(__FUNCTION__, ptr)
 
 /* Assert and printf for POSIX platforms */
 #define SKY_PRINTF(x, ...)            \

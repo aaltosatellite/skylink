@@ -1,8 +1,4 @@
 
-include_directories( ${CMAKE_SOURCE_DIR}/src/ )
-include_directories( ${CMAKE_SOURCE_DIR}/tests/ )
-
-
 add_executable(test_memusage
 
     # Recompile the whole skylink with different malloc definition
@@ -18,7 +14,19 @@ add_executable(test_memusage
     ${CMAKE_SOURCE_DIR}/src/skylink_tx.c
     ${CMAKE_SOURCE_DIR}/src/utilities.c
 
+    ${CMAKE_SOURCE_DIR}/src/ext/gr-satellites/golay24.c
+    ${CMAKE_SOURCE_DIR}/src/ext/blake3/blake3.c
+    ${CMAKE_SOURCE_DIR}/src/ext/blake3/blake3_dispatch.c
+    ${CMAKE_SOURCE_DIR}/src/ext/blake3/blake3_portable.c
+    ${CMAKE_SOURCE_DIR}/src/ext/libfec/ccsds_tab.c
+    ${CMAKE_SOURCE_DIR}/src/ext/libfec/decode_rs_8.c
+    ${CMAKE_SOURCE_DIR}/src/ext/libfec/encode_rs_8.c
+
     test_memusage.c
     ../tools/tools.c
     ../tst_utilities.c
 )
+
+include_directories( test_memusage . )
+include_directories( test_memusage ${CMAKE_SOURCE_DIR}/src/ )
+include_directories( test_memusage ${CMAKE_SOURCE_DIR}/tests/ )
