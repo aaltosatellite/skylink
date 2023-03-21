@@ -2,7 +2,6 @@
 #define __SKYLINK_H__
 
 #include <stdint.h>
-//#include "skylink/frame.h"
 
 
 /*
@@ -139,8 +138,6 @@ void sky_get_state(SkyHandle self, SkyState* state);
  *    1 if there's something to be sent and the frame was written to given frame structure.
  */
 int sky_tx(SkyHandle self, SkyRadioFrame *frame);
-int sky_tx_with_fec(SkyHandle self, SkyRadioFrame *frame);
-int sky_tx_with_golay(SkyHandle self, SkyRadioFrame *frame);
 
 /*
  * Generate a new frame to be sent.
@@ -154,7 +151,18 @@ int sky_tx_with_golay(SkyHandle self, SkyRadioFrame *frame);
 int sky_tx_with_fec(SkyHandle self, SkyRadioFrame *frame);
 
 /*
- * Pass received frame to logic.
+ * Generate a new frame to be sent.
+ * The frame will have the FEC and Golay header included.
+ *
+ * Returns:
+ *    <0 if there was an error.
+ *    0 if there's nothing to be sent.
+ *    1 if there's something to be sent and the frame was written to given frame structure.
+ */
+int sky_tx_with_golay(SkyHandle self, SkyRadioFrame *frame);
+
+/*
+ * Pass received frame for the protocol logic.
  * The frame doensn't have FEC or Golay included.
  *
  * Args:
@@ -166,17 +174,36 @@ int sky_tx_with_fec(SkyHandle self, SkyRadioFrame *frame);
  */
 int sky_rx(SkyHandle self, SkyRadioFrame* frame);
 
+/*
+ * Pass received frame for the protocol logic.
+ * The frame has FEC included but no Golay header.
+ *
+ * Args:
+ *    self: Skylink handle
+ *    frame:
+ * Returns:
+ *    <0 if there was an error.
+ *    0 if there was no error while processing the frame.
+ */
 int sky_rx_with_fec(SkyHandle self, SkyRadioFrame *frame);
+
+/*
+ * Pass received frame for the protocol logic.
+ * The frame doensn't have FEC or Golay included.
+ *
+ * Args:
+ *    self: Skylink handle
+ *    frame:
+ * Returns:
+ *    <0 if there was an error.
+ *    0 if there was no error while processing the frame.
+ */
 int sky_rx_with_golay(SkyHandle self, SkyRadioFrame *frame);
 
 
 //int sky_transmission_queue_full(SkyHandle self, int vc);
 
-//int sky_push_transmission(SkyHandle self, int vc, uint8_t* paylaod, int length);
-
 //int sky_receive_queue_lengt(SkyHandle self, int vc);
-
-//int sky_receive_transmission(SkyHandle self, int vc, uint8_t* tgt, arq_seq_t* sequence);
 
 //int sky_vc_arq_status(SkyHandle self, int vc);
 

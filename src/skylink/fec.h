@@ -5,8 +5,8 @@
  * Skylink protocol Forward Error Correction (FEC) defines.
  */
 
-#include "skylink.h"
-#include "diag.h"
+#include "skylink/skylink.h"
+#include "skylink/diag.h"
 #include <string.h>
 
 
@@ -58,9 +58,7 @@ int sky_fec_encode(SkyRadioFrame *frame);
 
 
 
-//#define SKY_INCLUDE_DEPENDENCIES
-
-#ifdef SKY_INCLUDE_DEPENDENCIES
+#ifdef SKY_INCLUDE_EXTERNAL_DEPENDENCIES
 
 #include "../ext/libfec/fec.h"
 #include "../ext/blake3/blake3.h"

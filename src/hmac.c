@@ -2,14 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SKY_INCLUDE_DEPENDENCIES
+#define SKY_INCLUDE_EXTERNAL_DEPENDENCIES
 #include "skylink/hmac.h"
 #include "skylink/diag.h"
-#include "skylink/platform.h"
 #include "skylink/conf.h"
 #include "skylink/frame.h"
 #include "skylink/utilities.h"
 #include "skylink/fec.h"
+
+#include "sky_platform.h"
 
 
 const unsigned int SKY_HMAC_CTX_SIZE = sizeof(blake3_hasher);

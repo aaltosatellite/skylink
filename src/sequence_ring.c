@@ -1,14 +1,11 @@
-//
-// Created by elmore on 20.11.2021.
-//
 
 #include "skylink/sequence_ring.h"
-#include "skylink/platform.h"
 #include "skylink/skylink.h"
 #include "skylink/utilities.h"
 #include "skylink/frame.h"
 #include "skylink/diag.h"
 
+#include "sky_platform.h"
 
 
 static int ring_wrap(int idx, int len){

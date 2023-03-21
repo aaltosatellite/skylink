@@ -1,8 +1,8 @@
 #ifndef __SKYLINK_CONF_H__
 #define __SKYLINK_CONF_H__
 
-#include "skylink.h"
-#include "frame.h"
+#include "skylink/skylink.h"
+#include "skylink/frame.h"
 
 
 // HMAC

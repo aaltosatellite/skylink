@@ -23,41 +23,6 @@
 /* Global define for debug print flags */
 extern unsigned int sky_diag_mask;
 
-//#define SKY_DEBUG
-
-
-#ifdef SKY_DEBUG
-// --- DEBUG in UNIX environment ------------------------------------------------------------------
-#ifdef __unix__
-#include <assert.h>
-#include <stdio.h>
-#include <stdint.h>
-/* Assert and printf for POSIX platforms */
-#define SKY_PRINTF(x, ...) if ((sky_diag_mask & (x)) == (x)) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
-#define SKY_ASSERT(...)   assert(__VA_ARGS__);
-// ------------------------------------------------------------------------------------------------
-
-
-// --- DEBUG outside UNIX environment -------------------------------------------------------------
-#else
-#ifndef SKY_ASSERT
-#define SKY_ASSERT(...)   do { } while(0);
-#endif
-#ifndef SKY_PRINTF
-#define SKY_PRINTF(...)    do { } while(0);
-#endif
-#endif //__unix__
-// ------------------------------------------------------------------------------------------------
-
-
-// --- no DEBUG -----------------------------------------------------------------------------------
-#else
-#define SKY_ASSERT(...)   do { } while(0);
-#define SKY_PRINTF(...)   do { } while(0);
-// ------------------------------------------------------------------------------------------------
-#endif //SKY_DEBUG
-
-
 
 /*
  * Protocol diagnostic information.

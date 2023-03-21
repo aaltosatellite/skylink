@@ -1,15 +1,7 @@
-//
-// Created by elmore on 25.10.2021.
-//
 
-#include <stdio.h>
-#include <stdlib.h>
-#include "skylink/platform.h"
 #include "skylink/utilities.h"
 
-#ifdef SKY_DEBUG
-#include <assert.h>
-#endif
+#include "sky_platform.h"
 
 
 // GENERAL PURPOSE =====================================================================================================
@@ -65,9 +57,7 @@ int32_t positive_modulo(int32_t x, int32_t m){
 	while(x >= m){
 		x = x - m;
 	}
-#ifdef SKY_DEBUG
-	assert(x == (((x % m) + m) % m) );
-#endif
+	//SKY_ASSERT(x == (((x % m) + m) % m) );
 	return x;
 }
 
@@ -122,42 +112,3 @@ tick_t sky_get_tick_time(){
 }
 // GLOBAL TIME =====================================================================================================
 
-
-
-
-
-// UNIX ================================================================================================================
-#ifdef __unix__
-static size_t allocated = 0;
-static int allocations = 0;
-
-
-
-void* instrumented_malloc(size_t n){
-	printf("  (allocating %ld)\n", n); fflush(stdout);
-	allocated += n;
-	allocations++;
-	return malloc(n);
-}
-
-void report_allocation(){
-	printf("=====================\n"); fflush(stdout);
-	printf("%ld bytes allocated.\n", allocated); fflush(stdout);
-	printf("%d allocations.\n", allocations); fflush(stdout);
-	printf("=====================\n"); fflush(stdout);
-}
-
-
-#endif
-// UNIX ================================================================================================================
-
-
-
-
-
-
-// ARM =================================================================================================================
-#ifdef __arm__
-
-#endif
-// ARM =================================================================================================================

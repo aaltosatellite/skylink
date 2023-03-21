@@ -4,9 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "conf.h"
-#include "skylink.h"
-
+#include "skylink/skylink.h"
+#include "skylink/conf.h"
 
 
 /*

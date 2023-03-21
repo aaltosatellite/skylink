@@ -1,6 +1,3 @@
-//
-// Created by elmore on 29.10.2021.
-//
 
 #include "skylink/skylink.h"
 #include "skylink/conf.h"

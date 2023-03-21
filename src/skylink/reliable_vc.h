@@ -1,15 +1,11 @@
-//
-// Created by elmore on 12.11.2021.
-//
-
-#ifndef SKYLINK_RELIABLE_VC_H
-#define SKYLINK_RELIABLE_VC_H
+#ifndef __SKYLINK_RELIABLE_VC_H__
+#define __SKYLINK_RELIABLE_VC_H__
 
 
-#include "elementbuffer.h"
-#include "conf.h"
-#include "frame.h"
-#include "sequence_ring.h"
+#include "skylink/elementbuffer.h"
+#include "skylink/conf.h"
+#include "skylink/frame.h"
+#include "skylink/sequence_ring.h"
 
 
 
@@ -128,4 +124,4 @@ int sky_vc_process_content(SkyVirtualChannel *vchannel,
 //======================================================================================================================
 
 
-#endif //SKYLINK_RELIABLE_VC_H
+#endif //__SKYLINK_RELIABLE_VC_H__

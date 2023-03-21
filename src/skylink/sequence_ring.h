@@ -1,14 +1,9 @@
-//
-// Created by elmore on 20.11.2021.
-//
+#ifndef __SKYLINK_SEQUENCE_RING_H__
+#define __SKYLINK_SEQUENCE_RING_H__
 
-#ifndef SKYLINK_SEQUENCE_RING_H
-#define SKYLINK_SEQUENCE_RING_H
-
-#include "diag.h"
-#include "elementbuffer.h"
-#include "conf.h"
-#include "frame.h"
+#include "skylink/conf.h"
+#include "skylink/frame.h"
+#include "skylink/elementbuffer.h"
 
 #ifdef SKY_DEBUG
 #define ARQ_SEQUENCE_MODULO 			517
@@ -151,6 +146,6 @@ int sendRing_clean_tail_up_to(SkySendRing* sendRing, ElementBuffer* elementBuffe
 
 
 
-#endif //SKYLINK_SEQUENCE_RING_H
+#endif //__SKYLINK_SEQUENCE_RING_H__
 
 

@@ -1,16 +1,12 @@
-//
-// Created by elmore on 12.11.2021.
-//
 
-#include "skylink/sequence_ring.h"
-#include "skylink/reliable_vc.h"
-#include "skylink/platform.h"
 #include "skylink/skylink.h"
+#include "skylink/reliable_vc.h"
+#include "skylink/sequence_ring.h"
 #include "skylink/utilities.h"
 #include "skylink/frame.h"
 #include "skylink/diag.h"
 
-
+#include "sky_platform.h"
 
 void sky_get_state(SkyHandle self, SkyState* state) {
 

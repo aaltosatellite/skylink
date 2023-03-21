@@ -4,8 +4,8 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "skylink.h"
-#include "platform.h"
+#include "skylink/skylink.h"
+#include "sky_platform.h"
 
 /*
  * Number of bytes in frame identity field
@@ -72,8 +72,6 @@ struct sky_radio_frame {
 	};
 };
 /* frames ========================================================================================== */
-
-
 
 
 /* ARQ Sequence */

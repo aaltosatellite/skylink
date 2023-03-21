@@ -1,11 +1,8 @@
-//
-// Created by elmore on 7.10.2021.
-//
-
 #include "skylink/elementbuffer.h"
-#include "skylink/platform.h"
 #include "skylink/utilities.h"
 
+#include "sky_platform.h"
+#include <string.h>
 
 
 static int32_t min_i32(int32_t a, int32_t b){

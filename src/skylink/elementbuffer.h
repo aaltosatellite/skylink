@@ -1,13 +1,8 @@
-//
-// Created by elmore on 8.10.2021.
-//
 
-#ifndef SKYLINK_SLOTBUFFER_H
-#define SKYLINK_SLOTBUFFER_H
+#ifndef __SKYLINK_ELEMENT_BUFFER_H__
+#define __SKYLINK_ELEMENT_BUFFER_H__
 
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 
 
 typedef uint16_t idx_t;
@@ -77,4 +72,4 @@ int element_buffer_entire_buffer_is_ok(ElementBuffer* buffer);
 
 
 
-#endif //SKYLINK_SLOTBUFFER_H
+#endif //__SKYLINK_ELEMENT_BUFFER_H__

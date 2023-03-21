@@ -1,13 +1,9 @@
-//
-// Created by elmore on 25.10.2021.
-//
-
-#ifndef SKYLINK_CMAKE_UTILITIES_H
-#define SKYLINK_CMAKE_UTILITIES_H
+#ifndef __SKYLINK_UTILITIES_H__
+#define __SKYLINK_UTILITIES_H__
 
 #include <stdint.h>
-#include <time.h>
-#include "platform.h"
+#include "sky_platform.h"
+
 
 #define MOD_TIME_TICKS		16777216
 
@@ -45,14 +41,4 @@ tick_t sky_get_tick_time();
 
 
 
-// == unix =============================================================================================================
-void* instrumented_malloc(size_t n);
-void report_allocation();
-// == unix =============================================================================================================
-
-
-
-
-
-
-#endif //SKYLINK_CMAKE_UTILITIES_H
+#endif //__SKYLINK_UTILITIES_H__

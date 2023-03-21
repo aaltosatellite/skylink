@@ -2,7 +2,6 @@ project(skylink C)
 
 set(CMAKE_C_STANDARD 11)
 
-include_directories(skylink) # Shall be removed
 include_directories(../platforms/posix)
 
 add_compile_options(-O2 -Wall)
@@ -29,3 +28,4 @@ add_library(skylink STATIC
 )
 
 target_include_directories( skylink PUBLIC ${PROJECT_SOURCE_DIR} )
+target_include_directories( skylink PUBLIC ${CMAKE_SOURCE_DIR}/platforms/linux/ )

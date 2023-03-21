@@ -1,12 +1,9 @@
-//
-// Created by elmore on 16.10.2021.
-//
-
 #include "skylink/frame.h"
 #include "skylink/fec.h"
 #include "skylink/hmac.h"
 #include "skylink/utilities.h"
-#include "skylink/platform.h"
+
+#include "sky_platform.h"
 
 
 
