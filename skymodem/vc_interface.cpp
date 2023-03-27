@@ -135,7 +135,7 @@ void VCInterface::VirtualChannelInterface::check()
 
 		SKY_PRINTF(SKY_DIAG_DEBUG, "VC%d: Received %d bytes\n", vc, data_len);
 
-		// Output the frame in porthouse's 
+		// Output the frame in porthouse's (frame format?)
 		json frame_dict = json::object();
 		frame_dict["packet_type"] = "downlink";
 		frame_dict["timestamp"] = getISOCurrentTimestamp();
@@ -174,6 +174,7 @@ void VCInterface::VirtualChannelInterface::check()
 	// Try to parse received message as JSON dictionary 
 	json frame_dict;
 	try {
+		// TODO: Check that the packet meets basic Skylink JSON requirements??
 		frame_dict = json::parse(msg.to_string());
 		if (frame_dict.is_object() == false)
 			throw SuoError("Received JSON string was not a dict/object. %s", msg.to_string());
@@ -186,7 +187,8 @@ void VCInterface::VirtualChannelInterface::check()
 	if (frame_dict.contains("data") && frame_dict["data"].is_null() == false)
 	{
 		if (frame_dict["packet_type"] != "uplink")
-			cerr << "TODO" << frame_dict["packet_type"] << endl;
+			// TODO: display different error if "packet_type" key is not present
+			cerr << "TODO: handle unknown packet type -> " << frame_dict["packet_type"] << endl;
 
 		// Parse ASCII hexadecimal string to bytes
 		string hex_string = frame_dict["data"];
@@ -209,10 +211,10 @@ void VCInterface::VirtualChannelInterface::check()
 
 		SKY_PRINTF(SKY_DIAG_DEBUG, "CTRL MSG vc: %d len: msg_len %d\n", vc_index, msg.size());
 
-		// Received frame didn't contain any data so try to read a 
+		// Received frame didn't contain any data so try to read the metadata
 		json control_dict = frame_dict["metadata"];
 		if (control_dict.is_object() == false)
-			throw SuoError("asaa");
+			throw SuoError("asaa (control_dict is not an object)");
 
 
 		json response_dict = json::object();
@@ -265,7 +267,7 @@ void VCInterface::VirtualChannelInterface::check()
 
 			// Dump suo statistics
 			json suo_stats_dict = json::object();
-			// TODO
+			// TODO: Implement stats dump for suo
 
 			response_dict["rsp"] = "stats";
 			response_dict["skylink"] = sky_stats_dict;
@@ -299,7 +301,7 @@ void VCInterface::VirtualChannelInterface::check()
 			 */
 			string config_name = control_dict["config"];
 
-			// TODO
+			// TODO: Give correct config value for requested config
 			json config_value = 3;
 
 			response_dict["rsp"] = "config";
@@ -315,7 +317,7 @@ void VCInterface::VirtualChannelInterface::check()
 			sky_vc_wipe_to_arq_init_state(vc_handle);
 			// No response
 		}
-		else if (ctrl_command == "arq_connect")
+		else if (ctrl_command == "arq_connect")	// TODO: Fix typo?? could be arq_disconnect
 		{
 			/*
 			 * ARQ disconnect

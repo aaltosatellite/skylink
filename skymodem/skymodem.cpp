@@ -70,7 +70,7 @@ SkyModem::SkyModem() :
 	config.vc[2].send_ring_len = 8;
 	config.vc[2].rcv_ring_len = 8;
 	config.vc[2].element_size = 36;
-	config.vc[2].require_authentication = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
+	config.vc[2].require_authentication = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;	// TODO: remove authentication?? or sequence number as they say
 
 	config.vc[3].horizon_width = 2;
 	config.vc[3].send_ring_len = 8;
