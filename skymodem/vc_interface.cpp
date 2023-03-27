@@ -4,10 +4,9 @@
 #include <iostream>
 #include <string>
 
-#include "json.hpp"
-#include "nlohmann/json.hpp"
-
+#include <json.hpp> // nlohmann JSON library stolen from suo library
 #include <frame-io/zmq_interface.hpp> // To use same zmq_ctx as suo
+
 
 using namespace std;
 using namespace suo;
