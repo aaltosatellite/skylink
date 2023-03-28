@@ -20,7 +20,7 @@ SkyModem::SkyModem() :
 	 * Initialize protocol
 	 * ------------------------- */
 
-	sky_diag_mask = SKY_DIAG_INFO | SKY_DIAG_LINK_STATE;
+	sky_diag_mask = SKY_DIAG_INFO | SKY_DIAG_FRAMES | SKY_DIAG_ARQ | SKY_DIAG_BUG;
 
 	/*
 	 * PHY configurations
@@ -29,12 +29,13 @@ SkyModem::SkyModem() :
 	config.phy.enable_rs = 0;
 
 	SKY_ASSERT(SKY_IDENTITY_LEN == 6);
-	config.identity[0] = 'O';
-	config.identity[1] = 'H';
-	config.identity[2] = '2';
-	config.identity[3] = 'A';
-	config.identity[4] = 'G';
-	config.identity[5] = 'S';
+	config.identity[0] = 'D';
+	config.identity[1] = 'e';
+	config.identity[2] = 'f';
+	config.identity[3] = 'a';
+	config.identity[4] = 'u';
+	config.identity[5] = 'l';
+	//config.identity[6] = 't';
 
 	/*
 	 * MAC configurations

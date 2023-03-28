@@ -27,13 +27,13 @@ VCInterface::VCInterface(SkyHandle protocol_handle, unsigned int vc_base)
 		vc.protocol_handle = protocol_handle;
 
 		// Create ZMQ publish sockets to data received by Skylink
-		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%u", vc_base + vc_index);
+		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%u", vc_base + 10 * vc_index);
 		SKY_PRINTF(SKY_DIAG_INFO, "VC %d RX binding %s\n", vc_index, uri);
 		vc.publish_socket = zmq::socket_t(zmq_ctx, zmq::socket_type::pub);
 		vc.publish_socket.bind(uri);
 
 		// Create ZMQ subscribe sockets to
-		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%u", vc_base + 100 + vc_index);
+		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%u", vc_base + 10 * vc_index + 1);
 		SKY_PRINTF(SKY_DIAG_INFO, "VC %d TX binding %s\n", vc_index, uri);
 		vc.subscribe_socket = zmq::socket_t(zmq_ctx, zmq::socket_type::sub);
 		vc.subscribe_socket.bind(uri);
@@ -82,7 +82,7 @@ void VCInterface::VirtualChannelInterface::check()
 		if (vc_handle->arq_state_flag == ARQ_STATE_OFF) {
 			arq_expected_state = ARQ_STATE_OFF;
 
-			SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ has disconnected!\n", vc);
+			SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ has disconnected!\n", vc_index);
 
 			/* Send ARQ disconnected message */
 			json metadata_dict = json::object();
@@ -133,7 +133,7 @@ void VCInterface::VirtualChannelInterface::check()
 	if (ret > 0) {
 		const size_t data_len = (size_t)ret;
 
-		SKY_PRINTF(SKY_DIAG_DEBUG, "VC%d: Received %d bytes\n", vc, data_len);
+		SKY_PRINTF(SKY_DIAG_INFO | SKY_DIAG_FRAMES, "VC%u: Received %lu bytes\n", vc_index, data_len);
 
 		// Output the frame in porthouse's (frame format?)
 		json frame_dict = json::object();
@@ -141,7 +141,7 @@ void VCInterface::VirtualChannelInterface::check()
 		frame_dict["timestamp"] = getISOCurrentTimestamp();
 		frame_dict["vc"] = vc_index;
 
-		/* Format binary data to hexadecimal string */
+		// Format binary data to hexadecimal string
 		stringstream hexa_stream;
 		hexa_stream << setfill('0') << hex;
 		for (size_t i = 0; i < data_len; i++)
@@ -149,8 +149,10 @@ void VCInterface::VirtualChannelInterface::check()
 		frame_dict["data"] = hexa_stream.str();
 
 		// Metadata
-		//json meta_dict = json::object();
-		//frame_dict["metadata"] = meta_dict;
+		json meta_dict = json::object();
+		meta_dict["vc"] = vc_index;
+		// Something more?
+		frame_dict["metadata"] = meta_dict;
 
 		// Serialize dict and send it socket
 		string frame_str(frame_dict.dump());
@@ -195,21 +197,25 @@ void VCInterface::VirtualChannelInterface::check()
 		if (hex_string.size() % 2 != 0)
 			throw SuoError("JSON data field has odd number of characters!");
 
+		unsigned int tx_vc = frame_dict.value("vc", vc_index);
+		if (tx_vc >= SKY_NUM_VIRTUAL_CHANNELS) 
+			throw SuoError("Invalid virtual channel index!", tx_vc);
+
 		size_t frame_len = hex_string.size() / 2;
 		ByteVector data(frame_len);
 		for (size_t i = 0; i < frame_len; i++)
 			data[i] = stoul(hex_string.substr(2 * i, 2), nullptr, 16);
 
 		// Write data to skylink buffer
-		SKY_PRINTF(SKY_DIAG_FRAMES, "VC%d: Sending %d bytes\n", vc_index, data.size());
-		int ret = sky_vc_push_packet_to_send(vc_handle, &data[0], data.size());
+		SkyVirtualChannel * tx_vc_handle = protocol_handle->virtual_channels[tx_vc];
+		SKY_PRINTF(SKY_DIAG_INFO | SKY_DIAG_FRAMES, "VC%u: Sending %lu bytes\n", tx_vc, data.size());
+		int ret = sky_vc_push_packet_to_send(tx_vc_handle, &data[0], data.size());
 		if (ret < 0)
-			SKY_PRINTF(SKY_DIAG_BUG, "VC%d: Failed to push new frame! %d\n", vc, ret);
-
+			SKY_PRINTF(SKY_DIAG_BUG, "VC%u: Failed to push new frame! %u\n", tx_vc, ret);
 	}
 	else {
 
-		SKY_PRINTF(SKY_DIAG_DEBUG, "CTRL MSG vc: %d len: msg_len %d\n", vc_index, msg.size());
+		SKY_PRINTF(SKY_DIAG_DEBUG, "CTRL MSG vc: %u len: msg_len %lu\n", vc_index, msg.size());
 
 		// Received frame didn't contain any data so try to read the metadata
 		json control_dict = frame_dict["metadata"];
@@ -313,7 +319,7 @@ void VCInterface::VirtualChannelInterface::check()
 			/*
 			 * ARQ connect
 			 */
-			cout << "VC%d ARQ connecting" << endl;
+			SKY_PRINTF(SKY_DIAG_ARQ, "VC%u ARQ connecting\n", vc_index);
 			sky_vc_wipe_to_arq_init_state(vc_handle);
 			// No response
 		}
@@ -322,7 +328,7 @@ void VCInterface::VirtualChannelInterface::check()
 			/*
 			 * ARQ disconnect
 			 */
-			SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ disconnecting\n", vc);
+			SKY_PRINTF(SKY_DIAG_ARQ, "VC%u ARQ disconnecting\n", vc_index);
 			sky_vc_wipe_to_arq_off_state(vc_handle);
 			// No response
 		}

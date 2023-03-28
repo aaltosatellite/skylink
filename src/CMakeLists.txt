@@ -29,3 +29,6 @@ add_library(skylink STATIC
 
 target_include_directories( skylink PUBLIC ${PROJECT_SOURCE_DIR} )
 target_include_directories( skylink PUBLIC ${CMAKE_SOURCE_DIR}/platforms/linux/ )
+
+target_compile_definitions( skylink PUBLIC SKY_DEBUG )
+
