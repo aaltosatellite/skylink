@@ -2,6 +2,6 @@
 
 ```
 $ pip3 install construct
-$ pyhton3 setup.py install
+$ python3 setup.py develop --user
 ```
 
