@@ -188,9 +188,10 @@ void VCInterface::VirtualChannelInterface::check()
 	// If the frame has some data, pass it to Skylink 
 	if (frame_dict.contains("data") && frame_dict["data"].is_null() == false)
 	{
-		if (frame_dict["packet_type"] != "uplink")
-			// TODO: display different error if "packet_type" key is not present
-			cerr << "TODO: handle unknown packet type -> " << frame_dict["packet_type"] << endl;
+		// Check packet type
+		//string packet_type = frame_dict.value("packet_type", "None");
+		//if (packet_type != "tc")
+		//	cerr << "TODO: handle unknown packet type -> " << packet_type << endl;
 
 		// Parse ASCII hexadecimal string to bytes
 		string hex_string = frame_dict["data"];

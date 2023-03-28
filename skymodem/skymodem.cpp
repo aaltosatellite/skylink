@@ -9,6 +9,10 @@ using namespace std;
 using namespace suo;
 
 
+constexpr sky_tick_t convert_to_ticks(Timestamp now) {
+	return now / 1000000; // Convert nanoseconds to milliseconds
+}
+
 
 SkyModem::SkyModem() :
 	sdr(nullptr),
@@ -71,7 +75,7 @@ SkyModem::SkyModem() :
 	config.vc[2].send_ring_len = 8;
 	config.vc[2].rcv_ring_len = 8;
 	config.vc[2].element_size = 36;
-	config.vc[2].require_authentication = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;	// TODO: remove authentication?? or sequence number as they say
+	config.vc[2].require_authentication = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
 
 	config.vc[3].horizon_width = 2;
 	config.vc[3].send_ring_len = 8;
@@ -362,11 +366,9 @@ int SkyModem::run()
 	return 1;
 }
 
-
-
 void SkyModem::tick(Timestamp now)
 {
-	sky_tick(now / 1000);
+	sky_tick(convert_to_ticks(now));
 }
 
 
@@ -375,9 +377,8 @@ void SkyModem::receiver_locked(bool locked, Timestamp now)
 	//sdr->lock_tx(locked);
 
 	if (locked) {
-		sky_mac_carrier_sensed(handle->mac, now);
-		cout << getISOCurrentTimestamp() << ": Sync detected: " << endl;
-
+		sky_mac_carrier_sensed(handle->mac, convert_to_ticks(now));
+		//cout << getISOCurrentTimestamp() << ": Sync detected: " << (locked ? "true": "false") << endl;
 	}
 	else {
 
@@ -420,7 +421,7 @@ void SkyModem::frame_received(Frame &frame, Timestamp now)
 
 	// Copy data from suo's frame structure to Skylink's frame structure
 	SkyRadioFrame sky_frame;
-	sky_frame.rx_time_ticks = frame.timestamp / 1000;
+	sky_frame.rx_time_ticks = convert_to_ticks(frame.timestamp);
 	sky_frame.length = frame.size();
 	memcpy(sky_frame.raw, &frame.data[0], frame.size());
 
