@@ -324,7 +324,7 @@ void VCInterface::VirtualChannelInterface::check()
 			sky_vc_wipe_to_arq_init_state(vc_handle);
 			// No response
 		}
-		else if (ctrl_command == "arq_connect")	// TODO: Fix typo?? could be arq_disconnect
+		else if (ctrl_command == "arq_disconnect")	// TODO: Fix typo?? could be arq_disconnect
 		{
 			/*
 			 * ARQ disconnect
@@ -348,6 +348,7 @@ void VCInterface::VirtualChannelInterface::check()
 
 		// Send response back to publisher socket
 		if (response_dict.empty() == false) {
+			SKY_PRINTF(SKY_DIAG_FRAMES, "Replying to %s on VC %d\n", ctrl_command, vc_index);
 
 			json frame_dict = json::object();
 			frame_dict["type"] = "control";
