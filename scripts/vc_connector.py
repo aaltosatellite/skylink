@@ -142,6 +142,8 @@ class VCCommands:
         else:
             raise Exception(f"Unsupported data type {type(frame)}")
 
+        print(f"Sending data: {frame}")
+
         await self._send_json({"data": frame})
 
 
@@ -523,20 +525,48 @@ def connect_to_vc(host: str="127.0.0.1", port: int=7100, rtt: bool=False, vc: in
 
 
 if __name__ == "__main__":
-    async def testing():
+    async def test_skymodem():
 
         #vc = RTTChannel(vc=0)
         vc = ZMQChannel("127.0.0.1", 7100, vc=0)
         await asyncio.sleep(1) # Wait for the ZMQ connection
 
         #await vc.arq_connect()
+        def pretty(data: bytes) -> str:
+            return json.dumps(json.loads(data),indent=4)
+
+        def pprint(data: bytes) -> None:
+            p = pretty(data)
+            w = [len(l) for l in p.split('\n')]
+            w = max(w)
+            print(f"{' Incoming Data ':{'='}^{w}}",
+                    pretty(data),
+                    f"{'':{'='}^{w}}",
+                    "",
+                    sep='\n')
 
         #while True:
         if 1:
             #await vc.transmit(b"Hello world")
-            print(await vc.get_stats())
-            print(await vc.get_state())
+            stats = await vc.get_stats()
+            state = await vc.get_state()
+            
+            pprint(stats)
+            pprint(state)
             await asyncio.sleep(1)
 
+    async def test_tx_to_uhf():
+
+        vc = ZMQChannel("127.0.0.1", 7120, vc=0)
+        await asyncio.sleep(1) # Wait for the ZMQ connection
+
+        # flags, cmd, payload (uint8_t)
+        packet = [0xAB, 0x19, ]
+
+        for i in range(10):
+            await vc.transmit(b'\xAB\x21')  # UHF_CMD_ECHO
+            await asyncio.sleep(1)
+
+
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(testing())
+    loop.run_until_complete(test_tx_to_uhf())
