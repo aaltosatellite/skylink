@@ -30,5 +30,8 @@ TEMPLATE_RESPONSE_FRAME = {
     }
 }
 
+import skylink
+s = "66 4f 48 32 41 53 33 2a 05 04 23 54 00 fa 00 f7 ab 21 62 52 23 6d d6 be a0 b2"     # Skymodem received packet
+print(skylink.parse(bytes.fromhex(s)))
 
 

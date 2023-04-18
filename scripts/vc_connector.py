@@ -12,6 +12,7 @@ from typing import Optional, Tuple, Union
 
 import zmq
 import zmq.asyncio
+import traceback
 
 #from skylink import SkyState, SkyStatistics, parse_state, parse_stats
 
@@ -142,7 +143,7 @@ class VCCommands:
         else:
             raise Exception(f"Unsupported data type {type(frame)}")
 
-        print(f"Sending data: {frame}")
+        print(f"Sending  data: {frame}")
 
         await self._send_json({"data": frame})
 
@@ -163,6 +164,7 @@ class VCCommands:
 
         try:
             frame = await asyncio.wait_for(self.frame_queue.get(), timeout)
+            # frame = self.dl.recv()
         except asyncio.TimeoutError as e:
             raise ReceptionTimeout() from e
 
@@ -419,15 +421,15 @@ class ZMQChannel(VCCommands):
         self.control_queue = asyncio.Queue()
 
         # Open downlink socket
-        self.dl = ctx.socket(zmq.constants.PULL if pp else zmq.constants.SUB)
+        self.dl = ctx.socket(zmq.PULL if pp else zmq.SUB)
         self.dl.connect((dl_port := f"tcp://{host}:{port + vc*10}"))
         if not pp:
-            self.dl.setsockopt(zmq.constants.SUBSCRIBE, b"")
+            self.dl.setsockopt(zmq.SUBSCRIBE, b"")
 
         # Open uplink socket
-        self.ul = ctx.socket(zmq.constants.PUSH if pp else zmq.constants.PUB)
+        self.ul = ctx.socket(zmq.constants.PUSH if pp else zmq.PUB)
         self.ul.connect((ul_port := f"tcp://{host}:{port + vc*10 + 1}"))
-        self.ul.setsockopt(zmq.constants.SNDHWM, 10) # Set high water mark for outbound messages
+        self.ul.setsockopt(zmq.SNDHWM, 10) # Set high water mark for outbound messages
 
         print(f"Connected to VC {vc} via ZMQ Channel")
         print(f"uplink:   {ul_port}", f"downlink: {dl_port}", sep="\n")
@@ -444,36 +446,42 @@ class ZMQChannel(VCCommands):
         """
         Background task runs receiver.
         """
+        print("Started receiver task")
+        try:
+            while True:
+                # Wait for message from the ZMQ PUB
+                raw_msg: bytes = await self.dl.recv()
+                msg = json.loads(raw_msg.decode())
+                meta = msg.get("metadata", {})
+                cmd = meta.get("cmd", None)
+                rsp = meta.get("rsp", None)
 
-        while True:
-            # Wait for message from the ZMQ PUB
-            raw_msg: bytes = await self.dl.recv()
-            msg = json.loads(raw_msg.decode())
-            meta = msg.get("metadata", {})
-            cmd = meta.get("cmd", None)
-            rsp = meta.get("rsp", None)
+                #print(raw_msg, msg, sep='\n')
 
 
-            if "data" in msg:
-                # TODO: Parse data to nicer printable format?
-                # (fs1p_gs/egse/interfaces/utils.py)
-                # (fs1p_gs/egse/interfaces/skylink_bus.py)
-                print("Receiced data:", (data := msg["data"].hex()))
+                if "data" in msg:
+                    # TODO: Parse data to nicer printable format?
+                    # (fs1p_gs/egse/interfaces/utils.py)
+                    # (fs1p_gs/egse/interfaces/skylink_bus.py)
+                    print("Received data:", (data := msg["data"]))
 
-                await self.frame_queue.put_nowait(data)
+                    self.frame_queue.put_nowait(data)
 
-            elif rsp == VCResponseMessage.arq_timeout.name:
-                await self.frame_queue.put(ARQTimeout())
+                elif rsp == VCResponseMessage.arq_timeout.name:
+                    await self.frame_queue.put(ARQTimeout())
 
-            elif rsp is not None:
-                await self.control_queue.put((rsp, raw_msg))
+                elif rsp is not None:
+                    await self.control_queue.put((rsp, raw_msg))
 
-            elif cmd is not None:
-                await self.control_queue.put((cmd, raw_msg))
+                elif cmd is not None:
+                    await self.control_queue.put((cmd, raw_msg))
 
-            else:
-                # Received nothing
-                pass
+                else:
+                    # Received nothing
+                    pass
+        except:
+            traceback.print_exc()
+            raise Exception('Receiver go CrAsHeDy cRaSh')
 
 
     async def _send_json(self, json_dict: Union[dict, VCControlMessage]) -> None:
@@ -557,7 +565,7 @@ if __name__ == "__main__":
 
     async def test_tx_to_uhf():
 
-        vc = ZMQChannel("127.0.0.1", 7120, vc=0)
+        vc = ZMQChannel("127.0.0.1", 7100, vc=2)
         await asyncio.sleep(1) # Wait for the ZMQ connection
 
         # flags, cmd, payload (uint8_t)
@@ -568,5 +576,23 @@ if __name__ == "__main__":
             await asyncio.sleep(1)
 
 
+    async def test_trx_to_uhf():
+
+        vc = ZMQChannel("127.0.0.1", 7100, vc=2)
+        await asyncio.sleep(1) # Wait for the ZMQ connection
+
+        # flags, cmd, payload (uint8_t)
+        packet = [0xAB, 0x19, ]
+
+        for i in range(30):
+            await vc.transmit(b'\xAB\x21')  # UHF_CMD_ECHO
+            try:
+                await vc.receive(1)
+            except ReceptionTimeout:
+                print('RX timed out!')
+
+            await asyncio.sleep(0.5)
+
+
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(test_tx_to_uhf())
+    loop.run_until_complete(test_trx_to_uhf())
