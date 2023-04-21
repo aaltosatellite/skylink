@@ -356,7 +356,7 @@ if __name__ == "__main__":
         #await uhf.copy_code_to_fram()
 
         for i in range(500):
-            await uhf.sky_tx(2, b'hellos'+ bytes(f'{i:03}'))
+            await uhf.sky_tx(2, b'hellos'+ bytes(f'{i:03}', 'utf-8'))
             await asyncio.sleep(0.1)
 
 
