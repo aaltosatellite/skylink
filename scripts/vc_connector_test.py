@@ -3,6 +3,9 @@
 
 import datetime
 import json
+import struct
+from typing import NamedTuple
+import numpy as np
 import zmq
 import zmq.asyncio
 
@@ -32,7 +35,7 @@ async def spam_test(sock):
 
     await wait_a_bit(5)
 
-    base_pkt = {"data":"test",
+    base_pkt = {"data":"hellos",
                 "metadata":{"vc":2},
                 "packet_type":"downlink",
                 "timestamp": None,
@@ -41,15 +44,14 @@ async def spam_test(sock):
 
     for i in range(50):
         ts = datetime.datetime.now().isoformat()
-        base_pkt['data'] = f'test{i:03}'
-        base_pkt["timestamp"] = ts
-        pkt = bytes(json.dumps(base_pkt), 'utf-8')
+        base_pkt['data'] = (b'hellos'+ struct.pack('>H', i)).hex()
+        base_pkt["timestamp"] = ts+'Z'
+        pkt = bytes(json.dumps(base_pkt), 'ascii')
 
-        await send_pkt(ul, pkt)
+        await send_pkt(sock, pkt)
         await asyncio.sleep(0.2)
 
-
-if __name__ == '__main__':
+def spam_test_full():
     ctx = zmq.asyncio.Context()
     host = "127.0.0.1"
     port = 7100
@@ -63,3 +65,98 @@ if __name__ == '__main__':
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(spam_test(ul))
+
+
+async def test_suo_skylink():
+    from vc_connector import ZMQChannel, ReceptionTimeout     # pylint: disable=import-outside-toplevel
+    from uhf_connector import test_skylink  # pylint: disable=import-outside-toplevel
+
+    pkt_count = 500
+
+
+    rx = ZMQChannel("127.0.0.1", 7100, vc=2)
+    rx.config['show_delay'] = True
+
+    await test_skylink(pkt_count, 0.2)
+
+    class TestPacket(NamedTuple):
+        number: int
+        delay: int
+
+    rx_packets: list[TestPacket] = []
+
+    try:
+        while (pkt := await rx.receive(0.5)) is not None:
+            rx_packets.append(TestPacket(*struct.unpack('>6xHI', pkt)))
+    except ReceptionTimeout:
+        pass
+
+    if len(rx_packets) != 0:
+        data = np.array(rx_packets).transpose()
+
+        print(f'received count: {len(data[0])}/{pkt_count}')
+        print(f'avg delay:      {np.mean(data[1])}')
+    else:
+        print('No packets received')
+
+
+if __name__ == '__main__':
+    
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(test_suo_skylink())
+
+
+"""
+------------------------------------------------------
+
+Setup:
+Direct connection UHF <-> B200
+UHF tx power        minimum/default 
+Skymodem rx gain    60 dB
+
+Attenuation         90 dB
+gqrx gain           50 dB
+UHF Txr            -50 dB
+
+Notes:
+Corrupt messages only until PA reaches ~28 degrees
+
+------------------------------------------------------
+
+Setup:
+Direct connection UHF <-> B200
+UHF tx power        minimum/default 
+Skymodem rx gain    40 dB
+
+Attenuation         60 dB
+gqrx gain           15 dB
+UHF Txr            -50 dB
+
+Notes:
+All messages corrupt regardless of PA temp
+
+
+------------------------------------------------------
+
+Setup:
+Direct connection UHF <-> B200
+UHF tx power        minimum/default 
+Skymodem rx gain    40 dB
+
+Attenuation         80 dB
+gqrx gain           40 dB
+UHF Txr            -50 dB
+
+Notes:
+This seems to be the link budget (power-attenuation-gain) sweetspot.
+Messages are still coming corrupted but many more get through
+At first, many messages get through, and later this starts to decay.
+
+Testing starting all tests at once
+ - Start skymodem
+ - Start vc_connector.py:test_skylink_rx()
+ - Start uhf_connector.py:test_skylink()
+
+We can now get results from this script... MAKE PLOTS!?
+
+"""

@@ -116,6 +116,7 @@ class VCCommands:
     vc: int
     frame_queue: asyncio.Queue[bytes]
     control_queue: asyncio.Queue[Tuple[int, bytes]]
+    config: dict[str, Union[bool, int]]
 
     async def get_state(self) -> dict:
         """
@@ -284,6 +285,7 @@ class RTTChannel(VCCommands):
     """
     Connect to embedded Skylink implementation via Segger RTT.
     """
+    # TODO: add terminal logging capability
 
     def __init__(self, vc: int = 0, rtt_init: bool=False, device: SkylinkDevice = SkylinkDevice.radio_dev):
         """
@@ -328,7 +330,7 @@ class RTTChannel(VCCommands):
             self.task.cancel()
         self.task = None
 
-    def _get_pkt_header(self, len_data) -> bytes:
+    def _get_pkt_header_no_cmd(self, len_data) -> bytes:
         if self.device == SkylinkDevice.radio_dev:
             return struct.pack("BBH", 0xAB, 0xBA, len_data)
 
@@ -428,8 +430,9 @@ class RTTChannel(VCCommands):
         elif isinstance(json_dict, VCControlMessage):
             raise NotImplementedError('RTTChannel cannot send JSON packets')
 
-        hdr = self._get_pkt_header(len(data))
-        self.jlink.rtt_write(1, hdr + data)   # self.vc + 1 for STM32
+        hdr = self._get_pkt_header_no_cmd(len(data))
+        #print('RTT_SEND_JSON:',hdr.hex(sep='-'), data.hex(sep='-'))
+        self.jlink.rtt_write(1, hdr + data + b'\x00')   # self.vc + 1 for STM32
 
         await asyncio.sleep(0) # For the function to behave as a couroutine
 
@@ -455,6 +458,7 @@ class ZMQChannel(VCCommands):
 
         self.frame_queue = asyncio.Queue()
         self.control_queue = asyncio.Queue()
+        self.config: dict[str, Union[bool, int]] = {}
 
         # Open downlink socket
         self.dl = ctx.socket(zmq.PULL if pp else zmq.SUB)
@@ -508,12 +512,16 @@ class ZMQChannel(VCCommands):
                     from textwrap import wrap
                     data = msg['data']
                     data = bytes([int(i,16) for i in wrap(data,2)])
+
+                    if self.config.get("show_delay", None) is True:
+                        data = data + struct.pack("I", delay.microseconds)
                     self.frame_queue.put_nowait(data)
 
-                    print("Received data:", data)
+                    #print("Received data:", data)
 
                     if ts is not None:
-                        print("    delay (us): ", delay.microseconds)
+                        #print("    delay (us): ", delay.microseconds)
+                        pass
 
                 elif rsp == VCResponseMessage.arq_timeout.name:
                     await self.frame_queue.put(ARQTimeout())
@@ -662,6 +670,7 @@ if __name__ == "__main__":
 
         for _ in range(5000):
             await asyncio.sleep(1)
+    
 
 
 

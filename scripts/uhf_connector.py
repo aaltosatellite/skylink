@@ -19,7 +19,8 @@ except:
 __all__ = [
     "RTTChannel",
     "ZMQChannel",
-    "connect_to_vc"
+    "connect_to_vc",
+    "test_skylink"
 ]
 
 
@@ -312,53 +313,54 @@ class UHFBusCommands:
         return await self.channel.receive_ctrl(expected_rsp)
 
 
+async def testing():
+    channel = connect_to_vc(vc=2, rtt=True, device=SkylinkDevice.FS1p_UHF)
+    vc = UHFBusCommands(channel)
+    await asyncio.sleep(1) # Wait for connection
+
+    await vc.copy_code_to_fram()
+    #service_debug_beacon_on = struct.pack(">BBB", 0xAB, 1, 10)
+    #await vc.transmit(2, service_debug_beacon_on)
+    
+    #print(await vc.get_housekeeping())
+    #await vc.switch_volatile_tx_inhibit()
+
+    display_radio_confs((c:=await vc.get_radio_confs()))
+
+    await vc.set_radio_conf(RADIO_CONF_SIDE,     1)
+    await asyncio.sleep(1)
+    await vc.set_radio_conf(RADIO_CONF_FREQOFF0, 255)
+    await asyncio.sleep(1)
+    await vc.set_radio_conf(RADIO_CONF_FREQOFF1, 1)
+    await asyncio.sleep(1)
+    await vc.set_radio_conf(RADIO_CONF_PA_CFG2,  0x43)
+
+    await asyncio.sleep(2)
+    display_radio_confs(await vc.get_radio_confs())
+
+    while True:
+        #print(await vc.receive(0))
+        #await vc.transmit(0, b"01234567")
+        #print(await vc.get_state())
+        #print(await vc.get_stats())
+        print(await vc.get_housekeeping())
+        await asyncio.sleep(2)
+
+
+async def test_skylink(msg_count: int, sleep: float = 0.1):
+    channel = connect_to_vc(vc=2, rtt=True, rtt_init=False, device=SkylinkDevice.FS1p_UHF)
+    uhf = UHFBusCommands(channel)
+    await asyncio.sleep(1) # Wait for the connection
+
+    #await uhf.arq_connect(vc=2)
+    #await uhf.copy_code_to_fram()
+
+    for i in range(msg_count):
+        await uhf.sky_tx(2, b'hellos'+ struct.pack('>H', i))
+        await asyncio.sleep(sleep)
+
 
 if __name__ == "__main__":
-    async def testing():
-        channel = connect_to_vc(vc=2, rtt=True, device=SkylinkDevice.FS1p_UHF)
-        vc = UHFBusCommands(channel)
-        await asyncio.sleep(1) # Wait for connection
-
-        await vc.copy_code_to_fram()
-        #service_debug_beacon_on = struct.pack(">BBB", 0xAB, 1, 10)
-        #await vc.transmit(2, service_debug_beacon_on)
-        
-        #print(await vc.get_housekeeping())
-        #await vc.switch_volatile_tx_inhibit()
-
-        display_radio_confs((c:=await vc.get_radio_confs()))
-
-        await vc.set_radio_conf(RADIO_CONF_SIDE,     1)
-        await asyncio.sleep(1)
-        await vc.set_radio_conf(RADIO_CONF_FREQOFF0, 255)
-        await asyncio.sleep(1)
-        await vc.set_radio_conf(RADIO_CONF_FREQOFF1, 1)
-        await asyncio.sleep(1)
-        await vc.set_radio_conf(RADIO_CONF_PA_CFG2,  0x43)
-
-        await asyncio.sleep(2)
-        display_radio_confs(await vc.get_radio_confs())
-
-        while True:
-            #print(await vc.receive(0))
-            #await vc.transmit(0, b"01234567")
-            #print(await vc.get_state())
-            #print(await vc.get_stats())
-            print(await vc.get_housekeeping())
-            await asyncio.sleep(2)
-
-    async def test_skylink():
-        channel = connect_to_vc(vc=2, rtt=True, rtt_init=False, device=SkylinkDevice.FS1p_UHF)
-        uhf = UHFBusCommands(channel)
-        await asyncio.sleep(1) # Wait for the connection
-
-        #await uhf.arq_connect(vc=2)
-        #await uhf.copy_code_to_fram()
-
-        for i in range(500):
-            await uhf.sky_tx(2, b'hellos'+ bytes(f'{i:03}', 'utf-8'))
-            await asyncio.sleep(0.1)
-
-
+    
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(test_skylink())
+    loop.run_until_complete(test_skylink(500))
