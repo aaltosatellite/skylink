@@ -1,6 +1,8 @@
 # Test script for VC_connector.py
 # Spam message to test if it can be received properly
 
+import datetime
+import json
 import zmq
 import zmq.asyncio
 
@@ -23,7 +25,6 @@ async def send_pkt(socket: zmq.asyncio.Context, data) -> None:
     print("sending packet:", data)
 
     await socket.send(data)
-    await asyncio.sleep(0.3)
 
 
 async def spam_test(sock):
@@ -31,10 +32,21 @@ async def spam_test(sock):
 
     await wait_a_bit(5)
 
-    pkt = b'{"data":"d0ab","metadata":{"vc":2},"packet_type":"downlink","timestamp":"2023-04-18T11:34:35.850Z","vc":2}'
+    base_pkt = {"data":"test",
+                "metadata":{"vc":2},
+                "packet_type":"downlink",
+                "timestamp": None,
+                "vc":2
+                }
 
-    for _ in range(100):
+    for i in range(50):
+        ts = datetime.datetime.now().isoformat()
+        base_pkt['data'] = f'test{i:03}'
+        base_pkt["timestamp"] = ts
+        pkt = bytes(json.dumps(base_pkt), 'utf-8')
+
         await send_pkt(ul, pkt)
+        await asyncio.sleep(0.2)
 
 
 if __name__ == '__main__':
