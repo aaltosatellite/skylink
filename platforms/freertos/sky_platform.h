@@ -4,7 +4,8 @@
 
 #include <stdint.h>
 #include "arena.h"
-#include "segger_rtt.h"
+#include "SEGGER_RTT.h"
+#include "platform.h"
 
 
 /* Timestamps in millisecond, 32 bits (wraps around every 4295 seconds) */
@@ -23,7 +24,7 @@ typedef int32_t tick_t;
     if ((sky_diag_mask & (x)) == (x))           \
         SEGGER_RTT_printf(0, __VA_ARGS__);
 
-#define SKY_ASSERT(...) assert(__VA_ARGS__);
+#define SKY_ASSERT(...) debugassert(__VA_ARGS__);
 
 
 #else
