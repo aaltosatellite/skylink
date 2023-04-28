@@ -34,6 +34,11 @@ __all__ = [
     "SkylinkDevice"
 ]
 
+class SkylinkDevice(Enum):
+    radio_dev: str = "STM32F446RE"
+    FS1p_UHF: str = "VA10820"
+
+
 
 # Datastructure idea from https://stackoverflow.com/questions/35567724/how-to-define-custom-properties-in-enumeration-in-python-javascript-like/35567824#35567824
 # VCMessage = namedtuple('VCMessage', ['control_msg', 'response_msg'])
@@ -72,31 +77,31 @@ class VCControlMessage(Enum):
 #
 # Skylink Binary protocol codes
 #
-VC_CTRL_TRANSMIT_VC0      = 0
-VC_CTRL_TRANSMIT_VC1      = 1
-VC_CTRL_TRANSMIT_VC2      = 2
-VC_CTRL_TRANSMIT_VC3      = 3
+RDEV_CMD_WRITE_VC0      = 0
+RDEV_CMD_WRITE_VC1      = 1
+RDEV_CMD_WRITE_VC2      = 2
+RDEV_CMD_WRITE_VC3      = 3
 
-VC_CTRL_RECEIVE_VC0       = 4
-VC_CTRL_RECEIVE_VC1       = 5
-VC_CTRL_RECEIVE_VC2       = 6
-VC_CTRL_RECEIVE_VC3       = 7
+RDEV_CMD_READ_VC0       = 4
+RDEV_CMD_READ_VC1       = 5
+RDEV_CMD_READ_VC2       = 6
+RDEV_CMD_READ_VC3       = 7
 
-VC_CTRL_GET_STATE         = 10
-VC_CTRL_STATE_RSP         = 11
-VC_CTRL_FLUSH_BUFFERS     = 12
+RDEV_CMD_GET_STATE         = 10
+RDEV_CMD_STATE_RSP         = 11
+RDEV_CMD_FLUSH_BUFFERS     = 12
 
-VC_CTRL_GET_STATS         = 13
-VC_CTRL_STATS_RSP         = 14
-VC_CTRL_CLEAR_STATS       = 15
+RDEV_CMD_GET_STATS         = 13
+RDEV_CMD_STATS_RSP         = 14
+RDEV_CMD_CLEAR_STATS       = 15
 
-VC_CTRL_SET_CONFIG        = 16
-VC_CTRL_GET_CONFIG        = 17
-VC_CTRL_CONFIG_RSP        = 18
+RDEV_CMD_SET_CONFIG        = 16
+RDEV_CMD_GET_CONFIG        = 17
+RDEV_CMD_CONFIG_RSP        = 18
 
-VC_CTRL_ARQ_CONNECT       = 20
-VC_CTRL_ARQ_DISCONNECT    = 21
-VC_CTRL_ARQ_TIMEOUT       = 22
+RDEV_CMD_ARQ_CONNECT       = 20
+RDEV_CMD_ARQ_DISCONNECT    = 21
+RDEV_CMD_ARQ_TIMEOUT       = 22
 
 
 class ReceptionTimeout(Exception):
@@ -117,6 +122,7 @@ class VCCommands:
     frame_queue: asyncio.Queue[bytes]
     control_queue: asyncio.Queue[Tuple[int, bytes]]
     config: dict[str, Union[bool, int]]
+    print_trx: bool
 
     async def get_state(self) -> dict:
         """
@@ -148,7 +154,8 @@ class VCCommands:
         else:
             raise Exception(f"Unsupported data type {type(frame)}")
 
-        print(f"\033[0;36mSending  data\033[0m: {frame.hex(sep='-')}")
+        if self.print_trx:
+            print(f"\033[0;36mSending  data\033[0m: {frame.hex(sep='-')}")
 
         await self._send_json({"data": frame})
 
@@ -179,7 +186,9 @@ class VCCommands:
         return frame
 
     async def receive_ctrl(self, expected_rsp: Union[VCResponseMessage, int]):
-        print(f"\033[0;32mRX ctrl reply:\033[0m {(reply := await self._wait_cmd_reply(expected_rsp)).hex(sep='-')}")
+        reply = await self._wait_cmd_reply(expected_rsp)
+        if self.print_trx:
+            print(f"\033[0;32mRX ctrl reply:\033[0m {reply.hex(sep='-')}")
         return reply
 
 
@@ -276,10 +285,6 @@ class VCCommands:
         raise NotImplementedError()
 
 
-class SkylinkDevice(Enum):
-    radio_dev: str = "STM32F446RE"
-    FS1p_UHF: str = "VA10820"
-
 
 class RTTChannel(VCCommands):
     """
@@ -287,7 +292,7 @@ class RTTChannel(VCCommands):
     """
     # TODO: add terminal logging capability
 
-    def __init__(self, vc: int = 0, rtt_init: bool=False, device: SkylinkDevice = SkylinkDevice.radio_dev):
+    def __init__(self, vc: int = 0, rtt_init: bool=False, device: SkylinkDevice = SkylinkDevice.radio_dev, print_trx: bool=True):
         """
         Initialize J-Link RTT server's Telnet connection.
 
@@ -298,15 +303,18 @@ class RTTChannel(VCCommands):
         self.vc = vc
         self.frame_queue = asyncio.Queue()
         self.control_queue = asyncio.Queue()
+        self.print_trx = print_trx
 
         self.device = device
 
         if device == SkylinkDevice.radio_dev:
             self.syncword_A = b'\xAB'  # For Radio_dev protocol (directly speak to skylink) 
             self.syncword_B = b'\xBA'
+            self.rtt_VC = self.vc + 1
         elif device == SkylinkDevice.FS1p_UHF:
             self.syncword_A = b'\x5A'   # \xAB  # For Radio_dev protocol (directly speak to skylink) 
             self.syncword_B = b'\xCE'   # \xBA
+            self.rtt_VC = 1
         else:
             raise Exception(f'Device syncword not specified! {device}')
 
@@ -332,11 +340,11 @@ class RTTChannel(VCCommands):
 
     def _get_pkt_header_no_cmd(self, len_data) -> bytes:
         if self.device == SkylinkDevice.radio_dev:
-            return struct.pack("BBH", 0xAB, 0xBA, len_data)
+            return struct.pack("BBB", 0xAB, 0xBA, len_data)
 
         elif self.device == SkylinkDevice.FS1p_UHF:            # src , UHD_bus_ID
             assert 0 < len_data
-            return struct.pack(">BBHBB", 0x5A, 0xCE, len_data-1, 0x69, 0x03)
+            return struct.pack(">BBHBB", 0x5A, 0xCE, len_data, 0x69, 0x03)    # Since cmd is included in the data, +1
 
     async def _rtt_parse(self) -> Tuple[bytes, bytes]:
         if self.device == SkylinkDevice.radio_dev:
@@ -359,7 +367,7 @@ class RTTChannel(VCCommands):
         """
         buf: bytes = b""
         while len(buf) < num:
-            ret: bytes = self.jlink.rtt_read(1, num - len(buf)) # TODO: self.vc + 1 for STM32
+            ret: bytes = self.jlink.rtt_read(self.rtt_VC, num - len(buf)) # TODO: self.vc + 1 for STM32
             if len(ret) == 0:
                 await asyncio.sleep(0.01)
             else:
@@ -394,11 +402,11 @@ class RTTChannel(VCCommands):
                     # Sync received, receive rest of the frame
                     cmd, data = await self._rtt_parse()
 
-                    #print(f'RX Task | cmd: {cmd} - {data}')
+                    # print(f'RX Task | cmd: {cmd} - {data}')
 
-                    if VC_CTRL_RECEIVE_VC0 <= cmd <= VC_CTRL_RECEIVE_VC3:
+                    if RDEV_CMD_READ_VC0 <= cmd <= RDEV_CMD_READ_VC3:
                         await self.frame_queue.put(data)
-                    elif cmd == VC_CTRL_ARQ_TIMEOUT:
+                    elif cmd == RDEV_CMD_ARQ_TIMEOUT:
                         await self.frame_queue.put(ARQTimeout())
                     else:
                         await self.control_queue.put((cmd, data))
@@ -431,8 +439,10 @@ class RTTChannel(VCCommands):
             raise NotImplementedError('RTTChannel cannot send JSON packets')
 
         hdr = self._get_pkt_header_no_cmd(len(data))
+        snt_data = hdr + data + b'\x00'
         #print('RTT_SEND_JSON:',hdr.hex(sep='-'), data.hex(sep='-'))
-        self.jlink.rtt_write(1, hdr + data + b'\x00')   # self.vc + 1 for STM32
+        #print("written to RTT:", snt_data, f"({len(snt_data)} bytes)")
+        self.jlink.rtt_write(self.rtt_VC, snt_data)   # self.vc + 1 for STM32
 
         await asyncio.sleep(0) # For the function to behave as a couroutine
 
@@ -450,7 +460,7 @@ class ZMQChannel(VCCommands):
     Connect to Skylink implementation over ZeroMQ
     """
 
-    def __init__(self, host: str, port: int, vc: int, ctx=None, pp: bool=False):
+    def __init__(self, host: str, port: int, vc: int, ctx=None, pp: bool=False, print_trx: bool=True):
         """ Initialize ZMQ connection. """
         self.vc = vc
         if ctx is None:
@@ -459,6 +469,7 @@ class ZMQChannel(VCCommands):
         self.frame_queue = asyncio.Queue()
         self.control_queue = asyncio.Queue()
         self.config: dict[str, Union[bool, int]] = {}
+        self.print_trx = print_trx
 
         # Open downlink socket
         self.dl = ctx.socket(zmq.PULL if pp else zmq.SUB)
@@ -511,26 +522,28 @@ class ZMQChannel(VCCommands):
                 if "data" in msg:
                     from textwrap import wrap
                     data = msg['data']
+                    print('ZMQ received', data)
                     data = bytes([int(i,16) for i in wrap(data,2)])
+                    print('now', data)
 
                     if self.config.get("show_delay", None) is True:
-                        data = data + struct.pack("I", delay.microseconds)
+                        data = data + struct.pack(">I", delay.microseconds)
                     self.frame_queue.put_nowait(data)
 
                     #print("Received data:", data)
 
                     if ts is not None:
-                        #print("    delay (us): ", delay.microseconds)
+                        print("    delay (us): ", delay.microseconds)
                         pass
 
                 elif rsp == VCResponseMessage.arq_timeout.name:
                     await self.frame_queue.put(ARQTimeout())
 
                 elif rsp is not None:
-                    await self.control_queue.put((rsp, raw_msg))
+                    await self.control_queue.put((rsp, msg))
 
                 elif cmd is not None:
-                    await self.control_queue.put((cmd, raw_msg))
+                    await self.control_queue.put((cmd, msg))
 
                 else:
                     # Received nothing
@@ -557,122 +570,124 @@ class ZMQChannel(VCCommands):
         if isinstance(json_dict, VCControlMessage):
             json_dict = json_dict.value
 
+        if isinstance(( data := json_dict.get('data', None)), bytes):
+            json_dict['data'] = data.hex()
+
         await self.ul.send(json.dumps(json_dict).encode())
 
 
 
 
-def connect_to_vc(host: str="127.0.0.1", port: int=7100, vc: int=0, rtt: bool=False, rtt_init: bool=False, **kwargs):
+def connect_to_vc(host: str="127.0.0.1", port: int=7100, vc: int=0, rtt: bool=False, rtt_init: bool=False, print_trx:bool = True, **kwargs):
     """
     Connect to Skylink implementation over ZMQ or RTT
     """
     if not rtt:
-        return ZMQChannel(host, port, vc)
+        return ZMQChannel(host=host, port=port, vc=vc, print_trx=print_trx)
     else:
-        return RTTChannel(vc, rtt_init, kwargs['device'])
+        return RTTChannel(vc=vc, rtt_init=rtt_init, device=kwargs['device'], print_trx=print_trx)
+
+
+async def test_skymodem():
+
+    #vc = RTTChannel(vc=0)
+    vc = ZMQChannel("127.0.0.1", 7100, vc=0)
+    await asyncio.sleep(1) # Wait for the ZMQ connection
+
+    #await vc.arq_connect()
+    def pretty(data: bytes) -> str:
+        return json.dumps(json.loads(data),indent=4)
+
+    def pprint(data: bytes) -> None:
+        p = pretty(data)
+        w = [len(l) for l in p.split('\n')]
+        w = max(w)
+        print(f"{' Incoming Data ':{'='}^{w}}",
+                pretty(data),
+                f"{'':{'='}^{w}}",
+                "",
+                sep='\n')
+
+    #while True:
+    if 1:
+        #await vc.transmit(b"Hello world")
+        stats = await vc.get_stats()
+        state = await vc.get_state()
+        
+        pprint(stats)
+        pprint(state)
+        await asyncio.sleep(1)
+
+# Service packet
+# flag      = '\xAB'
+# cmd       = []
+# payload   = []
+
+UHF_SERVICE_ECHO = b'\xAB\x21'
+UHF_SERVICE_GET_SKY_CONFIG = b'\xAB\x13'
+UHF_SERVICE_COPY_TO_FRAM = b'\xAB\x18'
+
+UHF_CMD_PING = b'\x15'
+
+async def test_tx_to_uhf():
+    vc = ZMQChannel("127.0.0.1", 7100, vc=2)
+    await asyncio.sleep(1) # Wait for the ZMQ connection
+
+    for i in range(10):
+        await vc.transmit(UHF_SERVICE_ECHO)
+        await asyncio.sleep(1)
+
+
+async def test_trx_to_uhf():
+    vc = ZMQChannel("127.0.0.1", 7100, vc=2)
+    await asyncio.sleep(1) # Wait for the ZMQ connection
+
+    for i in range(30):
+        await vc.transmit(UHF_SERVICE_GET_SKY_CONFIG)
+        try:
+            await vc.receive(1)
+        except ReceptionTimeout:
+            print('RX timed out!')
+
+        await asyncio.sleep(0.5)
+
+
+async def test_zmq_rx():
+    duration = 12
+    print(f"Starting rx ({duration}s)")
+
+    vc = ZMQChannel("127.0.0.1", 7100, vc=2)
+    await asyncio.sleep(1) # Wait for the ZMQ connection
+
+    t_s = time.time()
+    t_f = t_s + duration
+    
+    while time.time() < t_f:
+        try:
+            await vc.receive(1)
+        except ReceptionTimeout:
+            print('RX timed out!')
+
+        await asyncio.sleep(0.1)
+    
+
+async def test_rtt():
+    vc = RTTChannel(2, False, device=SkylinkDevice.FS1p_UHF)
+    await asyncio.sleep(1)
+
+    for _ in range(1):
+        await vc.transmit(UHF_CMD_PING)
+        await vc.receive_ctrl(UHF_CMD_PING)
+        await asyncio.sleep(0.1)
+
+async def test_skylink_rx():
+    vc = ZMQChannel("127.0.0.1", 7100, vc=2)
+
+    for _ in range(5000):
+        await asyncio.sleep(1)
 
 
 if __name__ == "__main__":
-    async def test_skymodem():
-
-        #vc = RTTChannel(vc=0)
-        vc = ZMQChannel("127.0.0.1", 7100, vc=0)
-        await asyncio.sleep(1) # Wait for the ZMQ connection
-
-        #await vc.arq_connect()
-        def pretty(data: bytes) -> str:
-            return json.dumps(json.loads(data),indent=4)
-
-        def pprint(data: bytes) -> None:
-            p = pretty(data)
-            w = [len(l) for l in p.split('\n')]
-            w = max(w)
-            print(f"{' Incoming Data ':{'='}^{w}}",
-                    pretty(data),
-                    f"{'':{'='}^{w}}",
-                    "",
-                    sep='\n')
-
-        #while True:
-        if 1:
-            #await vc.transmit(b"Hello world")
-            stats = await vc.get_stats()
-            state = await vc.get_state()
-            
-            pprint(stats)
-            pprint(state)
-            await asyncio.sleep(1)
-
-    # Service packet
-    # flag      = '\xAB'
-    # cmd       = []
-    # payload   = []
-
-    UHF_SERVICE_ECHO = b'\xAB\x21'
-    UHF_SERVICE_GET_SKY_CONFIG = b'\xAB\x13'
-    UHF_SERVICE_COPY_TO_FRAM = b'\xAB\x18'
-
-    UHF_CMD_PING = b'\x15'
-
-    async def test_tx_to_uhf():
-        vc = ZMQChannel("127.0.0.1", 7100, vc=2)
-        await asyncio.sleep(1) # Wait for the ZMQ connection
-
-        for i in range(10):
-            await vc.transmit(UHF_SERVICE_ECHO)
-            await asyncio.sleep(1)
-
-
-    async def test_trx_to_uhf():
-        vc = ZMQChannel("127.0.0.1", 7100, vc=2)
-        await asyncio.sleep(1) # Wait for the ZMQ connection
-
-        for i in range(30):
-            await vc.transmit(UHF_SERVICE_GET_SKY_CONFIG)
-            try:
-                await vc.receive(1)
-            except ReceptionTimeout:
-                print('RX timed out!')
-
-            await asyncio.sleep(0.5)
-
-
-    async def test_zmq_rx():
-        duration = 12
-        print(f"Starting rx ({duration}s)")
-
-        vc = ZMQChannel("127.0.0.1", 7100, vc=2)
-        await asyncio.sleep(1) # Wait for the ZMQ connection
-
-        t_s = time.time()
-        t_f = t_s + duration
-        
-        while time.time() < t_f:
-            try:
-                await vc.receive(1)
-            except ReceptionTimeout:
-                print('RX timed out!')
-
-            await asyncio.sleep(0.1)
-        
-
-    async def test_rtt():
-        vc = RTTChannel(2, False, device=SkylinkDevice.FS1p_UHF)
-        await asyncio.sleep(1)
-
-        for _ in range(1):
-            await vc.transmit(UHF_CMD_PING)
-            await vc.receive_ctrl(UHF_CMD_PING)
-            await asyncio.sleep(0.1)
-
-    async def test_skylink_rx():
-        vc = ZMQChannel("127.0.0.1", 7100, vc=2)
-
-        for _ in range(5000):
-            await asyncio.sleep(1)
-    
-
-
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(test_skylink_rx())
+    loop.run_until_complete(test_tx_to_uhf())
