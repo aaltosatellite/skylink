@@ -33,28 +33,28 @@ SkyModem::SkyModem() :
 	config.phy.enable_rs = 0;
 
 	SKY_ASSERT(SKY_IDENTITY_LEN == 6);
-	config.identity[0] = 'D';
-	config.identity[1] = 'e';
-	config.identity[2] = 'f';
-	config.identity[3] = 'a';
-	config.identity[4] = 'u';
-	config.identity[5] = 'l';
+	config.identity[0] = 'S';
+	config.identity[1] = 'K';
+	config.identity[2] = 'Y';
+	config.identity[3] = 'M';
+	config.identity[4] = 'O';
+	config.identity[5] = 'D';
 	//config.identity[6] = 't';
 
 	/*
 	 * MAC configurations
 	 */
-	config.mac.gap_constant_ticks = 350;
-	config.mac.tail_constant_ticks = 60;
-	config.mac.maximum_window_length_ticks = 5000;
-	config.mac.minimum_window_length_ticks = 250;
-	config.mac.window_adjust_increment_ticks = 250;
-	config.mac.window_adjustment_period = 2;
-	config.mac.unauthenticated_mac_updates = 0;
-	config.mac.shift_threshold_ticks = 10000;
-	config.mac.idle_frames_per_window = 1;
-	config.mac.idle_timeout_ticks = 10000;
-	config.mac.carrier_sense_ticks = 200;
+	config.mac.maximum_window_length_ticks 		= 5000;
+	config.mac.minimum_window_length_ticks 		= 250;
+	config.mac.gap_constant_ticks 				= 350;
+	config.mac.tail_constant_ticks 				= 60;
+	config.mac.shift_threshold_ticks 			= 10000;
+	config.mac.idle_timeout_ticks 				= 10000;
+	config.mac.window_adjust_increment_ticks 	= 250;
+	config.mac.carrier_sense_ticks 				= 200;
+	config.mac.unauthenticated_mac_updates 		= 0;
+	config.mac.window_adjustment_period 		= 2;
+	config.mac.idle_frames_per_window 			= 0;
 
 	/*
 	 * Virtual channel configurations
@@ -95,7 +95,12 @@ SkyModem::SkyModem() :
 #ifdef EXTERNAL_SECRET
 #include "secret.hpp"
 #else
-	const uint8_t hmac_key[32] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x69};
+	const uint8_t hmac_key[32] = {
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x69,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x69,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x69,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x69
+		};
 	const unsigned int hmac_key_len = sizeof(hmac_key);
 #endif
 	config.hmac.key_length = hmac_key_len;
@@ -128,7 +133,7 @@ SkyModem::SkyModem() :
 
 	try {
 
-		const float center_frequency = 437.125e6; // [Hz]
+		const float center_frequency = 437.125e6; // [Hz]  
 
 		/*
 		 * SDR
@@ -146,13 +151,13 @@ SkyModem::SkyModem() :
 		sdr_conf.tx_latency = 0; // [samples]
 		sdr_conf.buffer = 2 * (sdr_conf.samplerate / 1000); // buffer length in milliseconds
 
-		sdr_conf.args["driver"] = "uhd";
+		sdr_conf.args["driver"] = "uhd";	// "uhd" / "leecher"
 
-		sdr_conf.rx_centerfreq = 437.00e6;
+		sdr_conf.rx_centerfreq = 437.000e6;
 		sdr_conf.tx_centerfreq = sdr_conf.rx_centerfreq;
 
-		sdr_conf.rx_gain = 30;
-		sdr_conf.tx_gain = 60;
+		sdr_conf.rx_gain = 0;
+		sdr_conf.tx_gain = 30;
 
 		sdr_conf.rx_antenna = "TX/RX";
 		sdr_conf.tx_antenna = "TX/RX";
