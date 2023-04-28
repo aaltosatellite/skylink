@@ -1,3 +1,4 @@
+
 # Test script for VC_connector.py
 # Spam message to test if it can be received properly
 
@@ -5,11 +6,18 @@ import datetime
 import json
 import struct
 from typing import NamedTuple
-import numpy as np
 import zmq
 import zmq.asyncio
 
+import numpy as np
+from matplotlib import pyplot
+from pandas import DataFrame
+
 import asyncio
+
+
+from vc_connector import RTTChannel, SkylinkDevice, ZMQChannel, ReceptionTimeout       # pylint: disable=import-outside-toplevel
+from uhf_connector import suo_rx_skylink, suo_tx_skylink                      # pylint: disable=import-outside-toplevel
 
 zmq.asyncio.Context()
 
@@ -67,9 +75,7 @@ def spam_test_full():
     loop.run_until_complete(spam_test(ul))
 
 
-async def test_suo_skylink():
-    from vc_connector import ZMQChannel, ReceptionTimeout     # pylint: disable=import-outside-toplevel
-    from uhf_connector import test_skylink  # pylint: disable=import-outside-toplevel
+async def test_suo_rx_skylink():
 
     pkt_count = 500
 
@@ -77,7 +83,7 @@ async def test_suo_skylink():
     rx = ZMQChannel("127.0.0.1", 7100, vc=2)
     rx.config['show_delay'] = True
 
-    await test_skylink(pkt_count, 0.2)
+    await suo_rx_skylink(pkt_count)
 
     class TestPacket(NamedTuple):
         number: int
@@ -86,24 +92,44 @@ async def test_suo_skylink():
     rx_packets: list[TestPacket] = []
 
     try:
-        while (pkt := await rx.receive(0.5)) is not None:
-            rx_packets.append(TestPacket(*struct.unpack('>6xHI', pkt)))
+        while (pkt := await rx.receive(2)) is not None:
+            print(pkt)
+            print((rx_tup := struct.unpack('>7xHxI', pkt)))
+            rx_packets.append(TestPacket(*rx_tup))
     except ReceptionTimeout:
+        print('Reception timed out')
         pass
 
-    if len(rx_packets) != 0:
-        data = np.array(rx_packets).transpose()
+    data = DataFrame(rx_packets, columns=['pkt_num', 'delay'])
+    fn = f"vc_connector_tests/vc_connector_test-{datetime.datetime.now().isoformat()}.txt"
+    data.to_csv(fn, index=False)
 
-        print(f'received count: {len(data[0])}/{pkt_count}')
-        print(f'avg delay:      {np.mean(data[1])}')
+    if len(rx_packets) != 0:
+
+        print(f'received count: {len(data["pkt_num"])}/{pkt_count}')
+        print(f'mean   delay:   {data["delay"].mean()}')
+        print(f'median delay:   {data["delay"].median()}')
+
+        
+        data.plot(x='pkt_num',y='delay')
     else:
         print('No packets received')
+
+
+async def test_suo_tx_skylink():
+    #uhf = RTTChannel(2, device=SkylinkDevice.FS1p_UHF, print_trx=True)
+    #uhf.config['show_delay'] = True
+
+    pkt_count = 10
+
+    await suo_tx_skylink(pkt_count, arq=False)
+
 
 
 if __name__ == '__main__':
     
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(test_suo_skylink())
+    loop.run_until_complete(test_suo_tx_skylink())
 
 
 """

@@ -8,7 +8,7 @@ import asyncio
 from typing import Any, Dict, Optional, Tuple, Union
 
 from vc_connector import RTTChannel, ZMQChannel, SkylinkDevice, connect_to_vc
-from skylink import SkyState, SkyStatistics, parse_state, parse_stats
+from scripts_skylink import SkyState, SkyStatistics, parse_state, parse_stats
 
 try:
     import pylink
@@ -16,12 +16,13 @@ except:
     pass # Allow starting without pylink installed
 
 
-__all__ = [
-    "RTTChannel",
-    "ZMQChannel",
-    "connect_to_vc",
-    "test_skylink"
-]
+# __all__ = [
+#     "RTTChannel",
+#     "ZMQChannel",
+#     "connect_to_vc",
+#     "suo_rx_skylink",
+#     "suo_tx_skylink"
+# ]
 
 
 #
@@ -32,27 +33,33 @@ UHF_CMD_READ_VC0                = 0
 UHF_CMD_READ_VC1                = 1
 UHF_CMD_READ_VC2                = 2
 UHF_CMD_READ_VC3                = 3
+
 UHF_CMD_WRITE_VC0               = 4
 UHF_CMD_WRITE_VC1               = 5
 UHF_CMD_WRITE_VC2               = 6
 UHF_CMD_WRITE_VC3               = 7
+
 UHF_CMD_ARQ_CONNECT_VC0         = 8
 UHF_CMD_ARQ_CONNECT_VC1         = 9
 UHF_CMD_ARQ_CONNECT_VC2         = 10
 UHF_CMD_ARQ_CONNECT_VC3         = 11
+
 UHF_CMD_ARQ_DISCONNECT_VC0      = 12
 UHF_CMD_ARQ_DISCONNECT_VC1      = 13
 UHF_CMD_ARQ_DISCONNECT_VC2      = 14
 UHF_CMD_ARQ_DISCONNECT_VC3      = 15
+
 UHF_CMD_GET_SKY_STATE           = 16
 UHF_CMD_GET_SKY_STATS           = 17
 UHF_CMD_CLEAR_SKY_STATS         = 18
 UHF_CMD_GET_SKY_CONFIGS         = 19
 UHF_CMD_SET_SKY_CONFIG          = 20 # NOTE: Changes to sky config will apply only after reboot
+
 UHF_CMD_PING                    = 21
 UHF_CMD_GET_HOUSEKEEPING        = 22
 UHF_CMD_CLEAR_STATS             = 23
 UHF_CMD_COPY_CODE_TO_FRAM       = 24
+
 UHF_CMD_GET_RADIO_CONFS         = 25
 UHF_CMD_SET_RADIO_CONF          = 26
 UHF_CMD_SWITCH_SIDE             = 27
@@ -219,7 +226,7 @@ class UHFBusCommands:
         Copy code to FRAM
         """
         await self._send_command(UHF_CMD_COPY_CODE_TO_FRAM)
-        print(await self._wait_control_response(UHF_STATUS))
+        await self._wait_control_response(UHF_STATUS)
         
     async def get_housekeeping(self):
         """
@@ -234,8 +241,11 @@ class UHFBusCommands:
         """
         await self._send_command(UHF_CMD_GET_RADIO_CONFS)
         rep = await self._wait_control_response(UHF_CMD_GET_RADIO_CONFS)
-        print(rep)
         return rep
+
+    async def get_sky_config(self):
+        await self._send_command(UHF_CMD_GET_SKY_CONFIGS)
+        return await self._wait_control_response(UHF_CMD_GET_SKY_CONFIGS)
         
     async def set_radio_conf(self, config: int, val: int):
         """
@@ -347,20 +357,93 @@ async def testing():
         await asyncio.sleep(2)
 
 
-async def test_skylink(msg_count: int, sleep: float = 0.1):
+async def suo_rx_skylink(msg_count: int, sleep: float = 2.0, arq:bool = False):
+    channel = connect_to_vc(vc=2, rtt=True, rtt_init=False, device=SkylinkDevice.FS1p_UHF, print_trx=False)
+    uhf = UHFBusCommands(channel)
+    await asyncio.sleep(1) # Wait for the connection
+    print('SUO RX Skylink')
+
+    await uhf.copy_code_to_fram()
+    await asyncio.sleep(1)
+
+    if arq:
+        print('Sending ARQ')
+        await uhf.arq_connect(vc=2)
+        await asyncio.sleep(1)
+
+        print('Waiting for ARQ', end='')
+        while (await uhf.get_state()).vc[2].state != 2:
+            print('.', end='')
+            await asyncio.sleep(1)
+        print('ARQ connected')
+
+    sent_count = 0
+    while sent_count < msg_count:
+        while (await uhf.get_state()).vc[2].buffer_free > 0:
+            pkt =  b'hellos'+ struct.pack('>H', sent_count) + b'e'
+            print(f'TX {len(pkt)} bytes')
+            await uhf.sky_tx(2,pkt)
+            sent_count += 1
+        print('TX Buffer full')
+        await asyncio.sleep(sleep)
+
+
+async def suo_tx_skylink(msg_count: int, sleep: float = 2.0, arq:bool = False):
+    suo = connect_to_vc(vc=2, print_trx=True)
+    uhf = UHFBusCommands(suo)
+    await asyncio.sleep(1) # Wait for the connection
+    print('SUO TX Skylink')
+
+    if arq:
+        print('Sending ARQ')
+        await uhf.get_sky_config()
+        await asyncio.sleep(1)
+
+        print('Waiting for ARQ', end='')
+        await suo.get_state()
+        # while ().vc[2].state != 2:
+        #     print('.', end='')
+        #     await asyncio.sleep(1)
+        #print('ARQ connected')
+
+    sent_count = 0
+    while sent_count < msg_count:
+        for _ in range(8):
+            #pkt =  b'hellos'+ struct.pack('>H', sent_count) + b'e'
+            #print(f'TX {len(pkt)} bytes')
+            #await uhf.sky_tx(2,pkt)
+            uhf.channel.transmit(UHF_CMD_SERVICE_ECHO)
+            sent_count += 1
+            await asyncio.sleep(0.1)
+        print('TX Buffer full')
+        await asyncio.sleep(sleep)
+
+
+
+async def config_uhf():
     channel = connect_to_vc(vc=2, rtt=True, rtt_init=False, device=SkylinkDevice.FS1p_UHF)
     uhf = UHFBusCommands(channel)
     await asyncio.sleep(1) # Wait for the connection
 
-    #await uhf.arq_connect(vc=2)
-    #await uhf.copy_code_to_fram()
+    await uhf.copy_code_to_fram()
+    await uhf.get_radio_confs()
+    await uhf.get_state()
+    await uhf.get_sky_config()
+    
 
-    for i in range(msg_count):
-        await uhf.sky_tx(2, b'hellos'+ struct.pack('>H', i))
-        await asyncio.sleep(sleep)
+async def config_radiodev():
+    channel = connect_to_vc(vc=2, rtt=True, rtt_init=False, device=SkylinkDevice.radio_dev)
+    uhf = UHFBusCommands(channel)
+    await asyncio.sleep(1) # Wait for the connection
+
+    print(await uhf.get_state())
+    print(await uhf.get_sky_config())
+
 
 
 if __name__ == "__main__":
     
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(test_skylink(500))
+    loop.run_until_complete(suo_tx_skylink(10))
+    #loop.run_until_complete(config_uhf())
+    #loop.run_until_complete(config_radiodev())
