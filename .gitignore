@@ -13,3 +13,8 @@ cmake-build-debug/
 __pycache__/
 */__pycache__/
 */.idea/
+
+# Compiled python
+*.py[cod]
+__pycache__
+*.egg-info
