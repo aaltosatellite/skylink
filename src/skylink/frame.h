@@ -1,9 +1,6 @@
 #ifndef __SKYLINK_FRAME_H__
 #define __SKYLINK_FRAME_H__
 
-#include <string.h>
-#include <stdint.h>
-
 #include "skylink/skylink.h"
 #include "sky_platform.h"
 
@@ -45,14 +42,12 @@
 #define SKY_FRAME_MAX_LEN               (0x100)
 
 
-typedef uint16_t arq_seq_t;
-
 
 /* frames ========================================================================================== */
 struct sky_radio_frame {
 
 	// Ticks when the start of the frame was detected
-	tick_t rx_time_ticks;
+	sky_tick_t rx_time_ticks;
 
 	// Length of the raw frame
 	unsigned int length;
@@ -76,19 +71,19 @@ struct sky_radio_frame {
 
 /* ARQ Sequence */
 typedef struct __attribute__((__packed__)) {
-	arq_seq_t sequence;
+	sky_arq_sequence_t sequence;
 } ExtARQSeq;
 
 /* ARQ Retransmit Request */
 typedef struct __attribute__((__packed__)) {
-	arq_seq_t sequence;
+	sky_arq_sequence_t sequence;
 	uint16_t mask;
 } ExtARQReq;
 
 /* ARQ control sequence */
 typedef struct __attribute__((__packed__)) {
-	arq_seq_t tx_sequence;
-	arq_seq_t rx_sequence;
+	sky_arq_sequence_t tx_sequence;
+	sky_arq_sequence_t rx_sequence;
 } ExtARQCtrl;
 
 /* ARQ state initializer */
@@ -121,16 +116,16 @@ typedef struct __attribute__((__packed__)) {
 		ExtTDDControl TDDControl;
 		ExtHMACSequenceReset HMACSequenceReset;
 	};
-} SkyPacketExtension; // SkyHeaderExtension
+} SkyHeaderExtension;
 
-/* Struct to hold pointers to parsed */
+/* Struct to hold pointers to parsed header extensions. */
 typedef struct {
-	SkyPacketExtension* arq_sequence;
-	SkyPacketExtension* arq_request;
-	SkyPacketExtension* arq_ctrl;
-	SkyPacketExtension* arq_handshake;
-	SkyPacketExtension *mac_tdd;
-	SkyPacketExtension *hmac_reset;
+	SkyHeaderExtension* arq_sequence;
+	SkyHeaderExtension* arq_request;
+	SkyHeaderExtension* arq_ctrl;
+	SkyHeaderExtension* arq_handshake;
+	SkyHeaderExtension* mac_tdd;
+	SkyHeaderExtension* hmac_reset;
 } SkyParsedExtensions;
 
 /* extensions ====================================================================================== */
@@ -138,41 +133,65 @@ typedef struct {
 
 
 
-
-
-
-
 /*
  * Allocate a new radio frame object
  */
-SkyRadioFrame* new_frame();
+SkyRadioFrame* sky_frame_create();
 
-void destroy_frame(SkyRadioFrame* frame);
+/*
+ * Destroy frame
+ */
+void sky_frame_destroy(SkyRadioFrame* frame);
 
 /*
  * Clear the radio frame
  */
 void sky_frame_clear(SkyRadioFrame* frame);
 
+/*
+ * Add ARQ sequence number to the frame.
+ */
+int sky_frame_add_extension_arq_sequence(SkyRadioFrame* frame, sky_arq_sequence_t sequence);
 
-// encoding ============================================================================================================
-int sky_packet_add_extension_arq_sequence(SkyRadioFrame* frame, arq_seq_t sequence);
+/*
+ * Add ARQ Retransmit Request header to the frame.
+ */
+int sky_frame_add_extension_arq_request(SkyRadioFrame* frame, sky_arq_sequence_t sequence, uint16_t mask);
 
-int sky_packet_add_extension_arq_request(SkyRadioFrame* frame, arq_seq_t sequence, uint16_t mask);
+/*
+ * Add ARQ Control header to the frame.
+ */
+int sky_frame_add_extension_arq_ctrl(SkyRadioFrame* frame, sky_arq_sequence_t tx_head_sequence, sky_arq_sequence_t rx_head_sequence);
 
-int sky_packet_add_extension_arq_ctrl(SkyRadioFrame* frame, arq_seq_t tx_head_sequence, arq_seq_t rx_head_sequence);
+/*
+ * Add ARQ Handshake header to the frame.
+ */
+int sky_frame_add_extension_arq_handshake(SkyRadioFrame* frame, uint8_t state_flag, uint32_t identifier);
 
-int sky_packet_add_extension_arq_handshake(SkyRadioFrame* frame, uint8_t state_flag, uint32_t identifier);
+/*
+ * Add MAC TDD control header to the frame.
+ */
+int sky_frame_add_extension_mac_tdd_control(SkyRadioFrame* frame, uint16_t window, uint16_t remaining);
 
-int sky_packet_add_extension_mac_tdd_control(SkyRadioFrame* frame, uint16_t window, uint16_t remaining);
+/*
+ * Add HMAC sequence reset header to the frame.
+ */
+int sky_frame_add_extension_hmac_sequence_reset(SkyRadioFrame* frame, uint16_t sequence);
 
-int sky_packet_add_extension_hmac_sequence_reset(SkyRadioFrame* frame, uint16_t sequence);
+/* 
+ * Fill the rest of the frame with given payload data.
+ */
+int sky_frame_extend_with_payload(SkyRadioFrame *frame, void *pl, unsigned int length);
 
-int available_payload_space(SkyRadioFrame* radioFrame);
+/*
+ * Get number of bytes left in the frame.
+ */
+int sky_frame_get_space_left(const SkyRadioFrame* radioFrame);
 
-int sky_packet_extend_with_payload(SkyRadioFrame* frame, void* pl, int32_t length);
-// encoding ============================================================================================================
-
+/*
+ * Parse and validate all header extensions inside the frame.
+ */
 int sky_frame_parse_extension_headers(const SkyRadioFrame *frame, SkyParsedExtensions *exts);
+
 
 #endif // __SKYLINK_FRAME_H__

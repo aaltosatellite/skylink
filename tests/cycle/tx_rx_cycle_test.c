@@ -5,7 +5,7 @@
 #include "tst_utilities.h"
 
 #include "skylink/skylink.h"
-#include "skylink/elementbuffer.h"
+#include "skylink/element_buffer.h"
 #include "skylink/hmac.h"
 #include "skylink/mac.h"
 #include "skylink/reliable_vc.h"
@@ -17,7 +17,7 @@
 #define STATE_TX		1
 
 
-extern tick_t _global_ticks_now;
+extern sky_tick_t _global_ticks_now;
 
 
 
@@ -341,8 +341,8 @@ void test1_round(uint64_t NN, int print_on){
 	config1->identity[0] = 1;
 	config2->identity[0] = 2;
 
-	SkyHandle handle1 = new_handle(config1);
-	SkyHandle handle2 = new_handle(config2);
+	SkyHandle handle1 = sky_create(config1);
+	SkyHandle handle2 = sky_create(config2);
 
 	mac_shift_windowing(handle1->mac, rand()%3200);
 	mac_shift_windowing(handle2->mac, rand()%3200);
@@ -403,10 +403,10 @@ void test1_round(uint64_t NN, int print_on){
 	destroy_eframe_list(job.receivedFrames);
 	destroy_eframe_list(job.missedFrames);
 
-	destroy_config(config1);
-	destroy_config(config2);
-	destroy_handle(handle1);
-	destroy_handle(handle2);
+	free(config1);
+	free(config2);
+	sky_destroy(handle1);
+	sky_destroy(handle2);
 }
 
 

@@ -1,7 +1,64 @@
 
 #include "skylink/utilities.h"
+#include "skylink/skylink.h"
+#include "skylink/conf.h"
+
+#include "skylink/diag.h"
+#include "skylink/mac.h"
+#include "skylink/reliable_vc.h"
+#include "skylink/hmac.h"
 
 #include "sky_platform.h"
+
+#include <string.h> // memset, memcpy
+
+SkyHandle sky_create(SkyConfig *config)
+{
+
+	// Sanity check ARQ parameters (TODO: find a better place)
+	SkyARQConfig *arq_conf = &config->arq;
+	if (arq_conf->timeout_ticks < 1000 || arq_conf->timeout_ticks > 30000)
+		arq_conf->timeout_ticks = 10000;
+	if (arq_conf->idle_frame_threshold < 100 || arq_conf->idle_frame_threshold > 10000)
+		arq_conf->idle_frame_threshold = 1000;
+	if (arq_conf->idle_frames_per_window < 1 || arq_conf->idle_frames_per_window > 4)
+		arq_conf->idle_frames_per_window = 1;
+
+
+	SkyHandle handle = SKY_MALLOC(sizeof(struct sky_all));
+	SKY_ASSERT(handle != NULL);
+	memset(handle, 0, sizeof(struct sky_all));
+
+	handle->conf = config;
+	
+	handle->diag = sky_diag_create();
+	SKY_ASSERT(handle != NULL);
+	
+	handle->mac = sky_mac_create(&config->mac);
+	SKY_ASSERT(handle->mac != NULL);
+
+	handle->hmac = sky_hmac_create(&config->hmac);
+	SKY_ASSERT(handle->hmac != NULL);
+
+
+	for (unsigned int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i)
+	{
+		handle->virtual_channels[i] = sky_vc_create(&config->vc[i]);
+		SKY_ASSERT(handle->hmac != NULL);
+	}
+
+	return handle;
+}
+
+void sky_destroy(SkyHandle handle)
+{
+	sky_diag_destroy(handle->diag);
+	sky_mac_destroy(handle->mac);
+	sky_hmac_destroy(handle->hmac);
+	for (unsigned int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i)
+		sky_vc_destroy(handle->virtual_channels[i]);
+	SKY_FREE(handle);
+}
 
 
 // GENERAL PURPOSE =====================================================================================================
@@ -84,7 +141,7 @@ int x_in_u16_array(uint16_t x, const uint16_t* array, int length){
 	return -1;
 }
 
-int32_t wrap_time_ticks(tick_t time_ticks){
+int32_t wrap_time_ticks(sky_tick_t time_ticks){
 	return positive_modulo(time_ticks, MOD_TIME_TICKS);
 }
 
@@ -95,9 +152,11 @@ int32_t wrap_time_ticks(tick_t time_ticks){
 
 
 // GLOBAL TIME =====================================================================================================
-tick_t _global_ticks_now = 0;
 
-int sky_tick(tick_t time_in_ticks){
+sky_tick_t _global_ticks_now = 0;
+
+int sky_tick(sky_tick_t time_in_ticks)
+{
 	int ret = 0;
 	if(time_in_ticks != _global_ticks_now){
 		ret = 1;
@@ -107,8 +166,10 @@ int sky_tick(tick_t time_in_ticks){
 	return ret;
 }
 
-tick_t sky_get_tick_time(){
+sky_tick_t sky_get_tick_time()
+{
 	return _global_ticks_now;
 }
+
 // GLOBAL TIME =====================================================================================================
 

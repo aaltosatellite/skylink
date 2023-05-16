@@ -7,6 +7,8 @@
 #include "skylink/hmac.h"
 #include "skylink/frame.h"
 #include "skylink/utilities.h"
+#include "skylink/element_buffer.h"
+#include "skylink/sequence_ring.h"
 #include "skylink/reliable_vc.h"
 #include "skylink/diag.h"
 
@@ -24,7 +26,9 @@ uint16_t spin_to_seq(SkyVirtualChannel* sring, SkyVirtualChannel* rring, int tar
 
 void populate_horizon(SkyVirtualChannel* sring, SkyVirtualChannel* rring, int final_tx_head_seq, int final_rx_head_seq, uint16_t target_mask, int32_t now_ms, String** payloads);
 
-SkyPacketExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_type);
+SkyHeaderExtension* get_extension(SkyRadioFrame *frame, unsigned int extension_type);
+
+//int sky_vc_wipe_to_arq_on_state(SkyVirtualChannel *vchannel);
 
 int roll_chance(double const chance);
 

@@ -1,10 +1,9 @@
 #ifndef __SKYLINK_HMAC_H__
 #define __SKYLINK_HMAC_H__
 
-#include <stdint.h>
-#include "skylink.h"
-#include "frame.h"
-#include "conf.h"
+
+#include "skylink/skylink.h"
+#include "skylink/conf.h"
 
 #define HMAC_CYCLE_LENGTH	65000
 #define HMAC_NO_SEQUENCE	65010
@@ -23,7 +22,7 @@ struct sky_hmac {
 
 
 /* Allocate and initialize HMAC state instance */
-SkyHMAC *sky_hmac_create(HMACConfig *config);
+SkyHMAC *sky_hmac_create(SkyHMACConfig *config);
 
 /* Free HMAC resources */
 void sky_hmac_destroy(SkyHMAC *hmac);
@@ -39,7 +38,7 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame);
  * Also, corrects sequence number field endianess and removes the HMAC extension from the frame if provided.
  * HMAC trailer is removed from the end of the frame.
  */
-int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame *frame, const SkyPacketExtension *ext_hmac_reset);
+int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame *frame, const SkyHeaderExtension* ext_hmac_reset);
 
 /* Positive modulo by max hmac sequence */
 int32_t wrap_hmac_sequence(int32_t sequence);

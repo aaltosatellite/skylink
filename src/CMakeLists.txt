@@ -4,12 +4,12 @@ set(CMAKE_C_STANDARD 11)
 
 include_directories(../platforms/posix)
 
-add_compile_options(-O2 -Wall)
+add_compile_options(-O2 -Wall -Wextra )
 
 add_library(skylink STATIC
     reliable_vc.c
     diag.c
-    elementbuffer.c
+    element_buffer.c
     fec.c
     frame.c
     hmac.c

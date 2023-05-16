@@ -1,5 +1,6 @@
 
 #include "skylink/skylink.h"
+#include "skylink/diag.h"
 #include "skylink/conf.h"
 #include "skylink/fec.h"
 #include "skylink/reliable_vc.h"
@@ -8,11 +9,13 @@
 #include "skylink/hmac.h"
 #include "skylink/utilities.h"
 
+#include "ext/gr-satellites/golay24.h"
+
+#include <string.h> // memset, memcpy
 
 
-
-
-static int _content_in_vc(SkyHandle self, int vc, tick_t now){
+static int _content_in_vc(SkyHandle self, int vc, sky_tick_t now)
+{
 	int r = sky_vc_content_to_send(self->virtual_channels[vc], self->conf, now, self->mac->frames_sent_in_current_window_per_vc[vc]);
 	return r;
 }
@@ -20,7 +23,8 @@ static int _content_in_vc(SkyHandle self, int vc, tick_t now){
 
 
 /* This zeroes the tracking of how many frames have been sent in current window. */
-static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_send, tick_t now){
+static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_send, sky_tick_t now)
+{
 	if(can_send && (!content_to_send)){
 		self->mac->unused_window_time = true; //We can send, but there is nothing to send.
 	}
@@ -54,31 +58,34 @@ static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to
 	}
 }
 
-
-
 /* Returns boolean 0/1 wether virtual channel necessitates reset of HMAC authentication sequence. */
-static int _sky_tx_extension_needed_hmac_reset(SkyHandle self, uint8_t vc){
+static int _sky_tx_extension_needed_hmac_reset(SkyHandle self, uint8_t vc)
+{
 	return (self->hmac->vc_enforcement_need[vc] != 0) && (self->conf->vc[vc].require_authentication);
 }
 
 
-static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* frame, uint8_t vc){
-	if(!_sky_tx_extension_needed_hmac_reset(self, vc)){
+static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* frame, uint8_t vc)
+{
+	if (_sky_tx_extension_needed_hmac_reset(self, vc) == 0)
 		return 0;
-	}
 	self->hmac->vc_enforcement_need[vc] = 0;
-	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 3); //+3 so that immediate sends don't invalidate what we give here. Jump constant must be bigger.
-	sky_packet_add_extension_hmac_sequence_reset(frame, sequence);
+
+	// +3 so that immediate sends don't invalidate what we give here. Jump constant must be bigger.
+	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 3); 
+	sky_frame_add_extension_hmac_sequence_reset(frame, sequence);
 	return 1;
 }
 
 
-static void _sky_tx_advance_vc_round_robin(SkyHandle self){
+static void _sky_tx_advance_vc_round_robin(SkyHandle self)
+{
 	self->mac->vc_round_robin_start = (self->mac->vc_round_robin_start + 1) % SKY_NUM_VIRTUAL_CHANNELS;
 }
 
 
-static int _sky_tx_pick_vc(SkyHandle self, tick_t now){
+static int _sky_tx_pick_vc(SkyHandle self, sky_tick_t now)
+{
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		int vc = (self->mac->vc_round_robin_start + i) % SKY_NUM_VIRTUAL_CHANNELS;
 		if(_sky_tx_extension_needed_hmac_reset(self, vc)){
@@ -96,20 +103,20 @@ static int _sky_tx_pick_vc(SkyHandle self, tick_t now){
 }
 
 
-static void _sky_tx_poll_arq_timeouts(SkyHandle self, tick_t now){
-	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		sky_vc_poll_arq_state_timeout(self->virtual_channels[i], now, self->conf->arq_timeout_ticks);
-	}
-}
-
-
-int sky_tx(SkyHandle self, SkyRadioFrame* frame) {
-
+int sky_tx(SkyHandle self, SkyRadioFrame* frame)
+{
+	SKY_ASSERT(self != NULL);
 	SKY_ASSERT(frame != NULL);
 
-	tick_t now = sky_get_tick_time();
+	sky_tick_t now = sky_get_tick_time();
 	int can_send = mac_can_send(self->mac, now);
-	_sky_tx_poll_arq_timeouts(self, now);
+
+
+	// Check the virtual channels' timeout conditions.
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i)
+		sky_vc_check_timeouts(self->virtual_channels[i], now, self->conf->arq.timeout_ticks);
+
+
 	int vc = _sky_tx_pick_vc(self, now);
 	int content_to_send = (vc >= 0);
 	_sky_tx_track_tdd_state(self, can_send, content_to_send, now);
@@ -119,6 +126,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame) {
 	}
 
 	_sky_tx_advance_vc_round_robin(self);
+
 
 	const SkyVCConfig* vc_conf = &self->conf->vc[vc];
 

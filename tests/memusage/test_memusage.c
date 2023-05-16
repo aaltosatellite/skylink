@@ -12,7 +12,7 @@ void *instrumented_malloc(const char *where, size_t size)
 {
 	allocated_bytes += size;
 	allocations++;
-	printf("   %s allocating %ld\n", where, size);
+	printf("   %s allocating %ld bytes\n", where, size);
 	fflush(stdout);
 	return malloc(size);
 }
@@ -21,6 +21,7 @@ void instrumented_free(const char *where, void *ptr)
 {
 	printf("  %s freeing 0x%x\n", where, (unsigned int)(uintptr_t)ptr);
 	fflush(stdout);
+	free(ptr);
 }
 
 
@@ -28,19 +29,20 @@ int main() {
 	
 	reseed_random();
 
-	PRINTFF(0,"\n-- Creating vanilla config --\n");
+	printf("\n-- Creating vanilla config --\n");
 	SkyConfig* config = new_vanilla_config();
 	
-	PRINTFF(0,"\n-- Initializing sky_handle --\n");
-	new_handle(config);
-	
-	//PRINTFF(0,"\n--  --\n");
+	printf("\n-- Initializing sky_handle --\n");
+	SkyHandle handle = sky_create(config);
+
 
 	printf("=======================\n");
 	printf("  %ld bytes allocated\n", allocated_bytes);
 	printf("  %d allocations\n", allocations);
 	printf("=======================\n");
 
+	sky_destroy(handle);
+	free(config);
 	return 0;
 }
 

@@ -8,7 +8,6 @@
 
 
 /* Tick is the time measurement primitive (often milliseconds), 32 bits. */
-typedef int32_t tick_t;
 typedef int32_t sky_tick_t;
 
 #define SKY_MALLOC malloc

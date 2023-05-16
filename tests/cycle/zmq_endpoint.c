@@ -49,10 +49,10 @@ static SkylinkPeer* new_peer(int ID, SkyConfig* config, int32_t localtime0, doub
 	peer->on = 1;
 	pthread_mutex_init(&peer->mutex, NULL);
 	peer->ID = ID;
-	peer->rcvFrame = new_frame();
-	peer->sendFrame = new_frame();
+	peer->rcvFrame = sky_frame_create();
+	peer->sendFrame = sky_frame_create();
 	peer->zmq_context = zmq_ctx_new();
-	peer->self = new_handle(config);
+	peer->self = sky_create(config);
 	peer->tx_socket = zmq_socket(peer->zmq_context, ZMQ_PUB);
 	peer->rx_socket = zmq_socket(peer->zmq_context, ZMQ_SUB);
 	peer->pl_write_socket = zmq_socket(peer->zmq_context, ZMQ_SUB);
@@ -156,7 +156,7 @@ static void* tx_cycle(void* arg){
 
 		pthread_mutex_lock(&peer->mutex);
 		rel_sky_tick(peer);
-		tick_t now = sky_get_tick_time();
+		sky_tick_t now = sky_get_tick_time();
 		int r = sky_tx_with_fec(peer->self, peer->sendFrame);
 		if(r){
 			peer->physical_state = STATE_TX;
@@ -174,7 +174,7 @@ static void* tx_cycle(void* arg){
 
 		}
 		rel_sky_tick(peer);
-		tick_t time_to = mac_time_to_own_window(peer->self->mac, now);
+		sky_tick_t time_to = mac_time_to_own_window(peer->self->mac, now);
 		if(time_to < 10){
 			slp = (time_to + 2);
 		}
@@ -249,11 +249,11 @@ SkylinkPeer* ep_init_peer(int32_t ID, double relspeed, int32_t baudrate, uint8_t
 	}
 	xassert(conf->hmac.key_length == 16, 32);
 	xassert(conf->hmac.maximum_jump < 400, 33);
-	xassert(conf->arq_timeout_ticks > 1000, 25);
-	xassert(conf->arq_timeout_ticks < 90000, 26);
-	xassert(conf->arq_idle_frame_threshold < conf->arq_timeout_ticks/2, 27);
-	xassert(conf->arq_idle_frame_threshold > 200, 29);
-	xassert(conf->arq_idle_frames_per_window < 5, 30);
+	xassert(conf->arq.timeout_ticks > 1000, 25);
+	xassert(conf->arq.timeout_ticks < 90000, 26);
+	xassert(conf->arq.idle_frame_threshold < conf->arq.timeout_ticks/2, 27);
+	xassert(conf->arq.idle_frame_threshold > 200, 29);
+	xassert(conf->arq.idle_frames_per_window < 5, 30);
 
 
 
@@ -286,8 +286,8 @@ void ep_close(SkylinkPeer* peer){
 	if(peer->pipe_up){
 		pthread_join(peer->thread3, &x);
 	}
-	destroy_config(peer->self->conf);
-	destroy_handle(peer->self);
+	free(peer->self->conf);
+	sky_destroy(peer->self);
 	free(peer);
 }
 
@@ -316,9 +316,9 @@ int ep_vc_init_arq(SkylinkPeer* peer, int32_t vc){
 	if(vc >= SKY_NUM_VIRTUAL_CHANNELS)
 		return -1;
 	pthread_mutex_lock(&peer->mutex);
-	int r = sky_vc_wipe_to_arq_init_state(peer->self->virtual_channels[vc]);
+	sky_vc_wipe_to_arq_init_state(peer->self->virtual_channels[vc]);
 	pthread_mutex_unlock(&peer->mutex);
-	return r;
+	return 0;
 }
 
 

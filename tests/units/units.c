@@ -18,7 +18,7 @@ void print_struct_alignments(){
 	printf("PHY: %ld\n", sizeof(SkyPHYConfig));
 	printf("MAC: %ld\n", sizeof(SkyMACConfig ));
 	printf("VC: %ld\n", sizeof(SkyVCConfig ));
-	printf("HMAC: %ld\n", sizeof(HMACConfig));
+	printf("HMAC: %ld\n", sizeof(SkyHMACConfig));
 	printf("SKY: %ld\n", sizeof(SkyConfig));
 	SkyMACConfig mcc;
 	memset(&mcc, 0, sizeof(SkyMACConfig));
@@ -50,9 +50,9 @@ void print_struct_alignments(){
 	*(uint8_t*)(&conf->vc[2]) = 0x3;
 	*(uint8_t*)(&conf->vc[3]) = 0x4;
 	*(uint8_t*)(&conf->identity) = 0xf;
-	*(uint8_t*)(&conf->arq_timeout_ticks) = 0xaa;
-	*(uint8_t*)(&conf->arq_idle_frame_threshold) = 0xbb;
-	*(uint8_t*)(&conf->arq_idle_frames_per_window) = 0xcc;
+	*(uint8_t*)(&conf->arq.timeout_ticks) = 0xaa;
+	*(uint8_t*)(&conf->arq.idle_frame_threshold) = 0xbb;
+	*(uint8_t*)(&conf->arq.idle_frames_per_window) = 0xcc;
 
 	for (int i = 0; i < (int)sizeof(SkyConfig); ++i) {
 		uint8_t* cp = (uint8_t*)conf;

@@ -17,16 +17,16 @@ struct sky_mac_s {
 	const SkyMACConfig* config;
 
 	// Tick of the beginning of a cycle. Not necessarily the last cycle. Also beginning of one of our windows.
-	tick_t T0;
+	sky_tick_t T0;
 
 	// Length of our own transmission window.
-	tick_t my_window_length;
+	sky_tick_t my_window_length;
 
 	// Length of the peer's transmission window. (Or our belief of what it is)
-	tick_t peer_window_length;
+	sky_tick_t peer_window_length;
 
 	// Tick of last time we updated our belief of T0 (and peer window length).
-	tick_t last_belief_update;
+	sky_tick_t last_belief_update;
 
 	// Counter to monitor is the current window lenght too larger or small
 	int32_t window_adjust_counter;
@@ -73,7 +73,7 @@ void sky_mac_destroy(SkyMAC* mac);
  * This is mainly useful if there is reason to suspect that gs and satellite are in lockstep and talk over
  * each other. Preferably use the current own window length with random sign to shift by.
  */
-void mac_shift_windowing(SkyMAC* mac, tick_t t_shift);
+void mac_shift_windowing(SkyMAC* mac, sky_tick_t t_shift);
 
 
 /*
@@ -83,7 +83,7 @@ void mac_shift_windowing(SkyMAC* mac, tick_t t_shift);
  * params:
  *    mac: Pointer to MAC instance.
  */
-void mac_expand_window(SkyMAC* mac, tick_t now); // TODO: extend / shorten
+void mac_expand_window(SkyMAC* mac, sky_tick_t now); // TODO: extend / shorten
 
 
 /*
@@ -93,34 +93,34 @@ void mac_expand_window(SkyMAC* mac, tick_t now); // TODO: extend / shorten
  * params:
  *    mac: Pointer to MAC instance.
  */
-void mac_shrink_window(SkyMAC* mac, tick_t now);
+void mac_shrink_window(SkyMAC* mac, sky_tick_t now);
 
 
 /*
  * Returns positive integer number of ticks to own transmit window opening,
  * or zero, if the window is open.
  */
-int32_t mac_time_to_own_window(SkyMAC* mac, tick_t now);
+int32_t mac_time_to_own_window(SkyMAC* mac, sky_tick_t now);
 
 
 /*
  * Returns positive integer number of ticks of own transmit window remaining,
  * or negative integer signaling the number of ticks past the window closure.
  */
-int32_t mac_own_window_remaining(SkyMAC* mac, tick_t now);
+int32_t mac_own_window_remaining(SkyMAC* mac, sky_tick_t now);
 
 
 /*
  * Returns positive integer number of ticks of peer transmit window remaining,
  * or negative integer signaling the number of ticks past the window closure.
  */
-int32_t mac_peer_window_remaining(SkyMAC* mac, tick_t now);
+int32_t mac_peer_window_remaining(SkyMAC* mac, sky_tick_t now);
 
 
 /*
  * Returns true whether MAC thinks it is our time to speak at now.
  */
-bool mac_can_send(SkyMAC* mac, tick_t now);
+bool mac_can_send(SkyMAC* mac, sky_tick_t now);
 
 
 /*
@@ -129,13 +129,13 @@ bool mac_can_send(SkyMAC* mac, tick_t now);
  * "peer_mac_remaining" is sent by the peer, and indicates how many ticks the peer thinks is remaining of it's window.
  * With this information we can formulate a picture of the situatuion that will be reasonably accurate for several cycles.
  */
-void mac_update_belief(SkyMAC* mac, const tick_t now, tick_t receive_time, tick_t peer_mac_length, tick_t peer_mac_remaining);
+void mac_update_belief(SkyMAC* mac, const sky_tick_t now, sky_tick_t receive_time, sky_tick_t peer_mac_length, sky_tick_t peer_mac_remaining);
 
 
 /*
  * Resets mac into a state where it can immediately send.
  */
-void mac_reset(SkyMAC* mac, tick_t now);
+void mac_reset(SkyMAC* mac, sky_tick_t now);
 
 
 /*
@@ -143,18 +143,18 @@ void mac_reset(SkyMAC* mac, tick_t now);
  * BE CAREFUL: mac_update_belief is generally invoked only by authenticated messages to prevent 'shut-up-attack'.
  * This function in principle gets invoked before any authentication can take place. Therefore use sparingly.
  */
-void sky_mac_carrier_sensed(SkyMAC* mac, tick_t now);
+void sky_mac_carrier_sensed(SkyMAC* mac, sky_tick_t now);
 
 
 /*
  * Returns boolean 1/0 wether an idle frame should be sent to synch the peer side.
  */
-bool mac_idle_frame_needed(SkyMAC* mac, tick_t now);
+bool mac_idle_frame_needed(SkyMAC* mac, sky_tick_t now);
 
 
 /*
  * Writes out the two uint16 values to the provided spot in buffer.
  */
-int mac_set_frame_fields(SkyMAC* mac, SkyRadioFrame* frame, tick_t now);
+int mac_set_frame_fields(SkyMAC* mac, SkyRadioFrame* frame, sky_tick_t now);
 
 #endif // __SKYLINK_MAC_H__

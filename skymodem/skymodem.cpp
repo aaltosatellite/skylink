@@ -29,7 +29,7 @@ SkyModem::SkyModem() :
 	/*
 	 * PHY configurations
 	 */
-	config.phy.enable_scrambler = 0;
+	config.phy.enable_scrambler = 0; // Suo implements the scrambler and the reed solomon for us!
 	config.phy.enable_rs = 0;
 
 	SKY_ASSERT(SKY_IDENTITY_LEN == 6);
@@ -83,10 +83,12 @@ SkyModem::SkyModem() :
 	config.vc[3].element_size = 36;
 	config.vc[3].require_authentication = 0;
 
-
-	config.arq_timeout_ticks = 12000; // [ticks]
-	config.arq_idle_frame_threshold = config.arq_timeout_ticks / 4; // [ticks]
-	config.arq_idle_frames_per_window = 1;
+	/*
+	 * ARQ configurations
+	 */
+	config.arq.timeout_ticks = 12000; // [ticks]
+	config.arq.idle_frame_threshold = config.arq.timeout_ticks / 4; // [ticks]
+	config.arq.idle_frames_per_window = 1;
 
 
 	/*
@@ -95,31 +97,18 @@ SkyModem::SkyModem() :
 #ifdef EXTERNAL_SECRET
 #include "secret.hpp"
 #else
-	const uint8_t hmac_key[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	const uint8_t hmac_key[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f };
 	const unsigned int hmac_key_len = sizeof(hmac_key);
 #endif
 	config.hmac.key_length = hmac_key_len;
-	config.hmac.maximum_jump = 24;
 	assert(hmac_key_len <= sizeof(config.hmac.key));
 	memcpy(config.hmac.key, hmac_key, hmac_key_len);
+	config.hmac.maximum_jump = 24;
 
-	// Kick the actual protocol implementation running
-	handle = new sky_all;
-	handle->conf = &config;
-	handle->mac = sky_mac_create(&config.mac);
-	handle->hmac = sky_hmac_create(&config.hmac);
-	handle->diag = sky_diag_create();
-	
-	for (unsigned int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i)
-	{
-		handle->virtual_channels[i] = new_virtual_channel(&config.vc[i]);
-		if (handle->virtual_channels[i] == NULL)
-		{
-			cerr << "Failed to create virtual channel %d" << endl;
-			return;
-		}
-	}
-
+	/* 
+	 * Create the Skylink protocol instance
+	 */
+	handle = sky_create(&config);
 
 	/* 
 	 * Initialize
@@ -215,9 +204,10 @@ SkyModem::SkyModem() :
 			receiver_locked(locked, now);
 			receiver_9k6->lockReceiver(locked, now);
 		});
-		deframer_9k6->sinkFrame.connect( [&] (Frame& frame, Timestamp now) {
-			frame.setMetadata("mode", 9600);
-			frame_received(locked, now);
+		deframer_9k6->sinkFrame.connect( [&] (const Frame& frame, Timestamp now) {
+			Frame copy_frame(frame);
+			copy_frame.setMetadata("mode", 9600);
+			frame_received(copy_frame, now);
 		});
 
 		deframer_19k2->syncDetected.connect( [&](bool locked, Timestamp now) {
@@ -225,9 +215,10 @@ SkyModem::SkyModem() :
 			receiver_locked(locked, now);
 			receiver_19k2->lockReceiver(locked, now);
 		});
-		deframer_19k2->sinkFrame.connect( [&] (Frame& frame, Timestamp now) {
-			frame.setMetadata("mode", 19200);
-			frame_received(locked, now);
+		deframer_19k2->sinkFrame.connect( [&] (const Frame& frame, Timestamp now) {
+			Frame copy_frame(frame);
+			copy_frame.setMetadata("mode", 19200);
+			frame_received(copy_frame, now);
 		});
 
 		deframer_36k4->syncDetected.connect( [&] (bool locked, Timestamp now) {
@@ -235,9 +226,10 @@ SkyModem::SkyModem() :
 			receiver_locked(locked, now);
 			receiver_36k4->lockReceiver(locked, now);
 		});
-		deframer_36k4->sinkFrame.connect( [&] (Frame& frame, Timestamp now) {
-			frame.setMetadata("mode", 364600);
-			frame_received(locked, now);
+		deframer_36k4->sinkFrame.connect( [&] (const Frame& frame, Timestamp now) {
+			Frame copy_frame(frame);
+			copy_frame.setMetadata("mode", 364600);
+			frame_received(copy_frame, now);
 		});
 
 #else
@@ -245,9 +237,10 @@ SkyModem::SkyModem() :
 			receiver_locked(locked, now);
 			receiver_9k6->lockReceiver(locked, now);
 		});
-		deframer_9k6->sinkFrame.connect( [&] (Frame& frame, Timestamp now) {
-			frame.setMetadata("mode", 9600);
-			frame_received(frame, now);
+		deframer_9k6->sinkFrame.connect( [&] (const Frame& frame, Timestamp now) {
+			Frame copy_frame(frame);
+			copy_frame.setMetadata("mode", 9600);
+			frame_received(copy_frame, now);
 		});
 
 #endif

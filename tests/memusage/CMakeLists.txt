@@ -4,7 +4,7 @@ add_executable(test_memusage
     # Recompile the whole skylink with different malloc definition
     ${CMAKE_SOURCE_DIR}/src/reliable_vc.c
     ${CMAKE_SOURCE_DIR}/src/diag.c
-    ${CMAKE_SOURCE_DIR}/src/elementbuffer.c
+    ${CMAKE_SOURCE_DIR}/src/element_buffer.c
     ${CMAKE_SOURCE_DIR}/src/fec.c
     ${CMAKE_SOURCE_DIR}/src/frame.c
     ${CMAKE_SOURCE_DIR}/src/hmac.c

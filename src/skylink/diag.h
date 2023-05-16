@@ -2,7 +2,7 @@
 #define __SKYLINK_DIAG_H__
 
 #include <stdint.h>
-#include "skylink.h"
+#include "skylink/skylink.h"
 
 /*
  * Diagnostics and debug tools

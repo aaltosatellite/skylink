@@ -43,7 +43,6 @@
 // SEQUENCE RING
 #define SKY_RET_RING_EMPTY                  (-50)
 #define SKY_RET_RING_INVALID_SEQUENCE       (-51)
-#define SKY_RET_RING_ELEMENTBUFFER_FAULT    (-52)
 #define SKY_RET_RING_BUFFER_FULL            (-53)
 #define SKY_RET_RING_RING_FULL              (-54)
 #define SKY_RET_RING_PACKET_ALREADY_IN      (-55)
@@ -53,30 +52,39 @@
 #define SKY_RET_RING_SEQUENCES_DETACHED     (-59)
 #define SKY_RET_RING_SEQUENCES_OUT_OF_SYNC  (-60)
 #define SKY_RET_TOO_LONG_PAYLOAD  			(-61)
-#define SKY_RET_RING_SEQUENCES_IN_SYNC      (0)
 
 // SYSTEM
 #define SKY_RET_MALLOC_FAILED               (-70)
 
+// ELEMENT BUFFER
+#define SKY_RET_EBUFFER_INVALID_INDEX		(-110)
+#define SKY_RET_EBUFFER_CHAIN_CORRUPTED		(-111)
+#define SKY_RET_EBUFFER_NO_SPACE			(-112)
+#define SKY_RET_EBUFFER_TOO_LONG_PAYLOAD	(-113)
+
+
+
 
 #define SKY_NUM_VIRTUAL_CHANNELS            (4)
 
+typedef uint16_t sky_arq_sequence_t;
+typedef uint16_t idx_t;
 
 //============ STRUCTS ===========================================================================================================
 //================================================================================================================================
+
+
+// Declare all structs so that we can start creating pointers
+typedef struct sky_all *SkyHandle;
 typedef struct sky_mac_s SkyMAC;
-
 typedef struct sky_hmac SkyHMAC;
-
 typedef struct sky_conf SkyConfig;
-
-typedef struct sky_virtual_channel SkyVirtualChannel;
-
+typedef struct sky_virtual_channel_s SkyVirtualChannel;
 typedef struct sky_diag SkyDiagnostics;
-
 typedef struct sky_radio_frame SkyRadioFrame;
-
-typedef uint16_t arq_seq_t;
+typedef struct sky_element_buffer_s SkyElementBuffer;
+typedef struct sky_send_ring_s SkySendRing;
+typedef struct sky_rcv_ring_s SkyRcvRing;
 
 
 typedef struct __attribute__((__packed__)) {
@@ -101,6 +109,11 @@ typedef struct __attribute__((__packed__)) {
 	 */
 	uint16_t rx_frames;
 
+	/*
+	 * Session identifier for the current ARQ connection
+	 */
+	uint32_t session_identifier;
+
 } SkyVCState;
 
 
@@ -118,11 +131,19 @@ struct sky_all {
 	SkyMAC* 			mac;                    				// MAC state
 	SkyHMAC* 			hmac;									// HMAC authentication state
 };
-typedef struct sky_all* SkyHandle;
+
 //============ STRUCTS ===========================================================================================================
 //================================================================================================================================
 
+/* 
+ * Create new Skylink protocol instance based on the configuration struct.
+ */
+SkyHandle sky_create(SkyConfig* config);
 
+/*
+ * Destroy sylink
+ */
+void sky_destroy(SkyHandle handle);
 
 /*
  * Get skylink protocol state
@@ -167,7 +188,7 @@ int sky_tx_with_golay(SkyHandle self, SkyRadioFrame *frame);
  *
  * Args:
  *    self: Skylink handle
- *    frame: 
+ *    frame: Received radio frame
  * Returns:
  *    <0 if there was an error.
  *    0 if there was no error while processing the frame.
@@ -180,7 +201,7 @@ int sky_rx(SkyHandle self, SkyRadioFrame* frame);
  *
  * Args:
  *    self: Skylink handle
- *    frame:
+ *    frame: Received radio frame
  * Returns:
  *    <0 if there was an error.
  *    0 if there was no error while processing the frame.
@@ -193,24 +214,22 @@ int sky_rx_with_fec(SkyHandle self, SkyRadioFrame *frame);
  *
  * Args:
  *    self: Skylink handle
- *    frame:
+ *    frame: Received radio frame
  * Returns:
  *    <0 if there was an error.
  *    0 if there was no error while processing the frame.
  */
 int sky_rx_with_golay(SkyHandle self, SkyRadioFrame *frame);
 
+/*
+ * Connect 
+ */
+int sky_vc_arq_connect(SkyVirtualChannel *vchannel);
 
-//int sky_transmission_queue_full(SkyHandle self, int vc);
-
-//int sky_receive_queue_lengt(SkyHandle self, int vc);
-
-//int sky_vc_arq_status(SkyHandle self, int vc);
-
-//int sky_initialze_arq(SkyHandle self, int vc);
-
-//int sky_close_arq(SkyHandle self, int vc);
-
+/*
+ * Disconnect/flush 
+ */
+int sky_vc_arq_disconnect(SkyVirtualChannel *vchannel);
 
 
 #endif // __SKYLINK_H__

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SKY_INCLUDE_EXTERNAL_DEPENDENCIES
+
 #include "skylink/hmac.h"
 #include "skylink/diag.h"
 #include "skylink/conf.h"
@@ -12,6 +12,7 @@
 
 #include "sky_platform.h"
 
+#include "ext/blake3/blake3.h"
 
 const unsigned int SKY_HMAC_CTX_SIZE = sizeof(blake3_hasher);
 
@@ -22,7 +23,7 @@ int32_t wrap_hmac_sequence(int32_t sequence) {
 
 
 
-SkyHMAC* sky_hmac_create(HMACConfig* config)
+SkyHMAC* sky_hmac_create(SkyHMACConfig* config)
 {
 	// Allocate memory for HMAC struct and clear 
 	SkyHMAC* hmac = SKY_MALLOC(sizeof(SkyHMAC));
@@ -34,6 +35,7 @@ SkyHMAC* sky_hmac_create(HMACConfig* config)
 	SKY_ASSERT(hmac->ctx != NULL);
 
 	// Allocate memory for HMAC key and copy it.
+	SKY_ASSERT(config->key_length == BLAKE3_KEY_LEN);
 	hmac->key = SKY_MALLOC(config->key_length);
 	SKY_ASSERT(hmac->key != NULL);
 	memcpy(hmac->key, config->key, config->key_length);
@@ -99,7 +101,7 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame) {
 }
 
 /* Process HMAC Sequence Reset extension header */
-static void sky_rx_process_ext_hmac_sequence_reset(SkyHMAC *hmac, const SkyPacketExtension *ext, int vc)
+static void sky_rx_process_ext_hmac_sequence_reset(SkyHMAC *hmac, const SkyHeaderExtension* ext, int vc)
 {
 	if (ext->length != sizeof(ExtHMACSequenceReset) + 1)
 		return;
@@ -112,7 +114,7 @@ static void sky_rx_process_ext_hmac_sequence_reset(SkyHMAC *hmac, const SkyPacke
 }
 
 
-int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame *frame, const SkyPacketExtension *ext_hmac_reset)
+int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame *frame, const SkyHeaderExtension* ext_hmac_reset)
 {
 	SkyHMAC *hmac = self->hmac;
 	const SkyVCConfig *vc_conf = &self->conf->vc[frame->vc];

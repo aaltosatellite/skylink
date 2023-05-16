@@ -29,13 +29,16 @@ int x_in_u8_array(uint8_t x, const uint8_t* array, int length);
 
 int x_in_u16_array(uint16_t x, const uint16_t* array, int length);
 
-int32_t wrap_time_ticks(tick_t time_ticks);
+int32_t wrap_time_ticks(sky_tick_t time_ticks);
 // GENERAL PURPOSE =====================================================================================================
 
 
 // GLOBAL TIME =====================================================================================================
-int sky_tick(tick_t time_in_ticks);
-tick_t sky_get_tick_time();
+
+/* */
+int sky_tick(sky_tick_t time_in_ticks);
+
+sky_tick_t sky_get_tick_time();
 // GLOBAL TIME =====================================================================================================
 
 

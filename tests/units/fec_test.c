@@ -40,7 +40,7 @@ void test1(){
 
 
 static int test1_round(){
-	SkyRadioFrame* frame = new_frame();
+	SkyRadioFrame* frame = sky_frame_create();
 	SkyDiagnostics* diag = sky_diag_create();
 
 	int length = randint_i32(16+8, RS_MSGLEN);
@@ -108,7 +108,7 @@ static int test1_round(){
 	}
 
 
-	destroy_frame(frame);
+	sky_frame_destroy(frame);
 	sky_diag_destroy(diag);
 	free(corrupt_indexes);
 	free(encoded_ref);

@@ -1,6 +1,6 @@
 #include "units.h"
 
-#include "skylink/elementbuffer.h"
+#include "skylink/element_buffer.h"
 
 
 
@@ -35,8 +35,8 @@ static void test1(){
 static void test1_pass(int verbose){
 	reseed_random();
 	int elecount = 1700;
-	ElementBuffer* sbuffer = new_element_buffer(64, elecount);
-	sbuffer->last_write_index = randint_i32(0, elecount-1);
+	SkyElementBuffer* buffer = sky_element_buffer_create(64, elecount);
+	buffer->last_write_index = randint_i32(0, elecount-1);
 
 	//generate N_pl test messages
 	if(verbose){
@@ -60,11 +60,11 @@ static void test1_pass(int verbose){
 		PRINTFF(0, "\tStoring...\n");
 	}
 	for (int i = 0; i < N_pl; ++i) {
-		sbuffer->last_write_index = randint_i32(0, elecount-1);
-		int idx = element_buffer_store(sbuffer, datas[i], lengths[i]);
+		buffer->last_write_index = randint_i32(0, elecount-1);
+		int idx = sky_element_buffer_store(buffer, datas[i], lengths[i]);
 		indexes[i] = idx;
 		assert(idx >= 0);
-		int valid = element_buffer_entire_buffer_is_ok(sbuffer);
+		int valid = sky_element_buffer_entire_buffer_is_ok(buffer);
 		assert(valid);
 	}
 
@@ -73,10 +73,10 @@ static void test1_pass(int verbose){
 		PRINTFF(0, "\tReading...\n");
 	}
 	for (int i = 0; i < N_pl; ++i) {
-		int leng_r_fail = element_buffer_read(sbuffer, tgt, indexes[i], lengths[i] - 1);
-		int leng_r = element_buffer_read(sbuffer, tgt, indexes[i], lengths[i]);
-		int leng_r2 = element_buffer_get_data_length(sbuffer, indexes[i]);
-		assert(leng_r_fail == EBUFFER_RET_TOO_LONG_PAYLOAD);
+		int leng_r_fail = sky_element_buffer_read(buffer, tgt, indexes[i], lengths[i] - 1);
+		int leng_r = sky_element_buffer_read(buffer, tgt, indexes[i], lengths[i]);
+		int leng_r2 = sky_element_buffer_get_data_length(buffer, indexes[i]);
+		assert(leng_r_fail == SKY_RET_EBUFFER_TOO_LONG_PAYLOAD);
 		assert(leng_r == lengths[i]);
 		assert(leng_r2 == lengths[i]);
 		assert(memcmp(tgt, datas[i], leng_r) == 0);
@@ -92,24 +92,24 @@ static void test1_pass(int verbose){
 		int j = order1[i];
 		int idx = indexes[j];
 		int leng = lengths[j];
-		int slot_req = element_buffer_element_requirement_for(sbuffer, leng);
-		int old_free = (int)sbuffer->free_elements;
+		int slot_req = sky_element_buffer_element_requirement_for(buffer, leng);
+		int old_free = (int)buffer->free_elements;
 		int new_free_prediction = old_free + slot_req;
 
-		int leng_r = element_buffer_read(sbuffer, tgt, idx, leng);
-		int leng_r2 = element_buffer_get_data_length(sbuffer, idx);
+		int leng_r = sky_element_buffer_read(buffer, tgt, idx, leng);
+		int leng_r2 = sky_element_buffer_get_data_length(buffer, idx);
 		assert(leng_r == leng);
 		assert(leng_r2 == leng);
 		assert(memcmp(tgt, datas[j], leng_r) == 0);
 
-		int r = element_buffer_delete(sbuffer, idx);
+		int r = sky_element_buffer_delete(buffer, idx);
 		assert(r == 0);
-		assert(sbuffer->free_elements == new_free_prediction);
-		int valid = element_buffer_entire_buffer_is_ok(sbuffer);
+		assert(buffer->free_elements == new_free_prediction);
+		int valid = sky_element_buffer_entire_buffer_is_ok(buffer);
 		assert(valid);
 
-		int rd = element_buffer_read(sbuffer, tgt, idx, 1000);
-		assert(rd == EBUFFER_RET_INVALID_INDEX);
+		int rd = sky_element_buffer_read(buffer, tgt, idx, 1000);
+		assert(rd == SKY_RET_EBUFFER_INVALID_INDEX);
 	}
 
 
@@ -130,7 +130,7 @@ static void test1_pass(int verbose){
 	free(indexes);
 	free(tgt);
 	free(order1);
-	destroy_element_buffer(sbuffer);
+	sky_element_buffer_destroy(buffer);
 }
 //======================================================================================================================
 //======================================================================================================================
@@ -151,7 +151,7 @@ struct testjob{
 	TestMsg** msgs;
 	int n_msgs;
 	int n_in;
-	ElementBuffer* buffer;
+	SkyElementBuffer* buffer;
 	int general_direction;
 	int total_stored_content;
 };
@@ -161,9 +161,9 @@ typedef struct testjob TestJob;
 #define DIR_BACKWARD	(-1)
 
 
-static void confirm_msg_i_in_buffer(ElementBuffer* buffer, TestMsg* msg){
+static void confirm_msg_i_in_buffer(SkyElementBuffer* buffer, TestMsg* msg){
 	uint8_t* tgt = x_alloc(msg->data->length + 2);
-	int leng = element_buffer_read(buffer, tgt, msg->index, msg->data->length);
+	int leng = sky_element_buffer_read(buffer, tgt, msg->index, msg->data->length);
 	assert(leng == msg->data->length);
 	assert(memcmp(tgt, msg->data->data, leng) == 0);
 	free(tgt);
@@ -230,7 +230,7 @@ static TestJob new_job(int minlen, int maxlen, int elecount){
 	job.n_msgs = elecount * 2;
 	job.general_direction = DIR_FORWARD;
 	job.n_in = 0;
-	job.buffer = new_element_buffer(64, elecount);
+	job.buffer = sky_element_buffer_create(64, elecount);
 	job.msgs = x_alloc(sizeof(TestMsg*) * job.n_msgs);
 	job.total_stored_content = 0;
 	for (int i = 0; i < job.n_msgs; ++i) {
@@ -247,8 +247,7 @@ static void destroy_job(TestJob* job){
 		free(msg);
 	}
 	free(job->msgs);
-	free(job->buffer->pool);
-	free(job->buffer);
+	sky_element_buffer_destroy(job->buffer);
 }
 
 
@@ -257,12 +256,12 @@ static int up_cycle(TestJob* job) {
 	int i = get_one_to_add(job->msgs, job->n_msgs);
 	assert(job->msgs[i]->in_buff == 0);
 	TestMsg *msg = job->msgs[i];
-	int required = element_buffer_element_requirement_for(job->buffer, msg->data->length);
+	int required = sky_element_buffer_element_requirement_for(job->buffer, msg->data->length);
 	int old_free = (int) job->buffer->free_elements;
-	int ret = element_buffer_store(job->buffer, msg->data->data, msg->data->length);
+	int ret = sky_element_buffer_store(job->buffer, msg->data->data, msg->data->length);
 	if (old_free < required) {
 		assert(job->buffer->free_elements == old_free);
-		assert(ret == EBUFFER_RET_NO_SPACE);
+		assert(ret == SKY_RET_EBUFFER_NO_SPACE);
 	} else {
 		assert(job->buffer->free_elements == (old_free - required));
 		assert(ret >= 0);
@@ -273,7 +272,7 @@ static int up_cycle(TestJob* job) {
 		job->total_stored_content += msg->data->length;
 		confirm_msg_i_in_buffer(job->buffer, msg);
 	}
-	int valid = element_buffer_entire_buffer_is_ok(job->buffer);
+	int valid = sky_element_buffer_entire_buffer_is_ok(job->buffer);
 	assert(valid);
 	return ret > -1;
 }
@@ -284,16 +283,16 @@ static int down_cycle(TestJob* job){
 	TestMsg* msg = job->msgs[i];
 	assert(job->msgs[i]->in_buff == 1);
 	confirm_msg_i_in_buffer(job->buffer, msg);
-	int required = element_buffer_element_requirement_for(job->buffer, msg->data->length);
+	int required = sky_element_buffer_element_requirement_for(job->buffer, msg->data->length);
 	int old_free = (int)job->buffer->free_elements;
-	int ret = element_buffer_delete(job->buffer, job->msgs[i]->index);
+	int ret = sky_element_buffer_delete(job->buffer, job->msgs[i]->index);
 	assert(job->buffer->free_elements == (old_free + required));
 	assert(ret == 0);
 	msg->in_buff = 0;
 	msg->index = -1;
 	job->n_in--;
 	job->total_stored_content -= msg->data->length;
-	int valid = element_buffer_entire_buffer_is_ok(job->buffer);
+	int valid = sky_element_buffer_entire_buffer_is_ok(job->buffer);
 	assert(valid);
 	return 1;
 }
@@ -385,7 +384,7 @@ static void test2(){
 //==== STORAGE SPACE UTILIZATION RATIO TEST ============================================================================
 //======================================================================================================================
 static double obtain_ratio(int elecount, int elesize, int pl_minsize, int pl_maxsize){
-	ElementBuffer* buffer = new_element_buffer(elesize, elecount);
+	SkyElementBuffer* buffer = sky_element_buffer_create(elesize, elecount);
 	int n_strings = 0;
 	int content  = 0;
 	uint8_t* payload = x_alloc(pl_maxsize+20);
@@ -393,7 +392,7 @@ static double obtain_ratio(int elecount, int elesize, int pl_minsize, int pl_max
 	while(1){
 		int size = randint_i32(pl_minsize, pl_maxsize);
 		n_strings++;
-		int store_idx = element_buffer_store(buffer, payload, size);
+		int store_idx = sky_element_buffer_store(buffer, payload, size);
 		if(store_idx >= 0){
 			content += size;
 		}
@@ -405,7 +404,7 @@ static double obtain_ratio(int elecount, int elesize, int pl_minsize, int pl_max
 	double fill = (double) content;
 	double total = (double) (elecount * buffer->element_size);
 	double ratio = fill / total;
-	destroy_element_buffer(buffer);
+	sky_element_buffer_destroy(buffer);
 	return ratio;
 }
 
@@ -457,4 +456,3 @@ static void test_ratios(){
 		PRINTFF(0,"\n");
 	}
 }
-

@@ -6,8 +6,6 @@
  */
 
 #include "skylink/skylink.h"
-#include "skylink/diag.h"
-#include <string.h>
 
 
 #define RS_MSGLEN       223		// Maximum length of message under FEC
@@ -52,44 +50,5 @@ int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag);
  */
 int sky_fec_encode(SkyRadioFrame *frame);
 
-
-
-
-
-
-
-#ifdef SKY_INCLUDE_EXTERNAL_DEPENDENCIES
-
-#include "../ext/libfec/fec.h"
-#include "../ext/blake3/blake3.h"
-#include "../ext/gr-satellites/golay24.h"
-
-#else
-
-#include <stdint.h>
-#include <stddef.h>
-
-typedef uint8_t data_t;
-
-/*
- */
-int decode_golay24(uint32_t* data);
-int encode_golay24(uint32_t* data);
-
-
-int decode_rs_8(data_t *data, int *eras_pos, int no_eras, int pad);
-void encode_rs_8(data_t *data, data_t *parity, int pad);
-
-
-#define BLAKE3_KEY_LEN 32
-#define BLAKE3_OUT_LEN 32
-
-typedef void blake3_hasher;
-
-void blake3_hasher_init_keyed(blake3_hasher *self, const uint8_t key[BLAKE3_KEY_LEN]);
-void blake3_hasher_update(blake3_hasher *self, const void *input, size_t input_len);
-void blake3_hasher_finalize(const blake3_hasher *self, uint8_t *out, size_t out_len);
-
-#endif
 
 #endif /* __SKYLINK_FEC_H__ */

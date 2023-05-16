@@ -1,8 +1,9 @@
-#include "skylink/elementbuffer.h"
+#include "skylink/element_buffer.h"
 #include "skylink/utilities.h"
 
 #include "sky_platform.h"
-#include <string.h>
+
+#include <string.h> // memcpy
 
 
 static int32_t min_i32(int32_t a, int32_t b){
@@ -21,7 +22,7 @@ static int32_t max_i32(int32_t a, int32_t b){
 }
 */
 
-static BufferElement as_element(void* mem){
+static BufferElement as_element(void* mem) {
 	BufferElement element;
 	element.previous = (idx_t*)mem;
 	element.next = (idx_t*)(mem + sizeof(idx_t));
@@ -29,14 +30,14 @@ static BufferElement as_element(void* mem){
 	return element;
 }
 
-static idx_t wrap_element(ElementBuffer* buffer, int32_t idx){
+static idx_t wrap_element(SkyElementBuffer* buffer, int32_t idx){
 	int32_t m = (int32_t) buffer->element_count;
 	int32_t r = positive_modulo(idx, m);
 	//int32_t r = ((idx % m) + m) % m;
 	return (idx_t) r;
 }
 
-static BufferElement element_i(ElementBuffer* elementBuffer, idx_t i){
+static BufferElement element_i(SkyElementBuffer* elementBuffer, idx_t i){
 	return as_element(elementBuffer->pool + i * elementBuffer->element_size);
 }
 
@@ -47,7 +48,7 @@ static int element_is_free(BufferElement element){
 	return 0;
 }
 
-static int element_is_first(ElementBuffer* buffer, BufferElement element){
+static int element_is_first(SkyElementBuffer* buffer, BufferElement element){
 	if((*element.previous == EB_END_IDX) && (*element.next == EB_END_IDX)){
 		return 1;
 	}
@@ -57,7 +58,7 @@ static int element_is_first(ElementBuffer* buffer, BufferElement element){
 	return 0;
 }
 
-static int element_is_last(ElementBuffer* buffer, BufferElement element){
+static int element_is_last(SkyElementBuffer* buffer, BufferElement element){
 	if((*element.next == EB_END_IDX) && (*element.previous == EB_END_IDX)){
 		return 1;
 	}
@@ -67,7 +68,7 @@ static int element_is_last(ElementBuffer* buffer, BufferElement element){
 	return 0;
 }
 
-static int element_is_in_chain(ElementBuffer* buffer, BufferElement element){
+static int element_is_in_chain(SkyElementBuffer* buffer, BufferElement element){
 	if((*element.previous == EB_END_IDX) && (*element.next == EB_END_IDX) ){
 		return 1;
 	}
@@ -88,7 +89,7 @@ static void wipe_element(BufferElement element){
 	*element.next = EB_NULL_IDX;
 }
 
-static int element_buffer_get_next_free(ElementBuffer* buffer, idx_t start_idx){
+static int element_buffer_get_next_free(SkyElementBuffer* buffer, idx_t start_idx){
 	for (idx_t i = 0; i < buffer->element_count; ++i) {
 		idx_t idx = wrap_element(buffer, start_idx + i);
 		BufferElement element = element_i(buffer, idx);
@@ -99,7 +100,7 @@ static int element_buffer_get_next_free(ElementBuffer* buffer, idx_t start_idx){
 	return -1;
 }
 
-static int element_buffer_get_n_free(ElementBuffer* buffer, int32_t n, idx_t start_idx, idx_t* tgt){
+static int element_buffer_get_n_free(SkyElementBuffer* buffer, int32_t n, idx_t start_idx, idx_t* tgt){
 	int idx0 = element_buffer_get_next_free(buffer, start_idx);
 	if(idx0 < 0){
 		return -1;
@@ -118,7 +119,7 @@ static int element_buffer_get_n_free(ElementBuffer* buffer, int32_t n, idx_t sta
 	return 0;
 }
 
-static int chain_is_ok_backwards(ElementBuffer* buffer, idx_t idx){
+static int chain_is_ok_backwards(SkyElementBuffer* buffer, idx_t idx){
 	BufferElement el = element_i(buffer, idx);
 	while (1){
 		if(!element_is_in_chain(buffer, el)){
@@ -136,7 +137,7 @@ static int chain_is_ok_backwards(ElementBuffer* buffer, idx_t idx){
 	}
 }
 
-static int chain_is_ok_forward(ElementBuffer* buffer, idx_t idx){
+static int chain_is_ok_forward(SkyElementBuffer* buffer, idx_t idx){
 	BufferElement el = element_i(buffer, idx);
 	while (1){
 		if(!element_is_in_chain(buffer, el)){
@@ -155,7 +156,7 @@ static int chain_is_ok_forward(ElementBuffer* buffer, idx_t idx){
 }
 
 
-int element_buffer_element_requirement(int32_t element_size, int32_t length){
+int sky_element_buffer_element_requirement(int32_t element_size, int32_t length){
 	int32_t usable_size = element_size - (int32_t)(2 * sizeof(idx_t));
 	int32_t n = (length + EB_LEN_BYTES + usable_size - 1) / usable_size;
 	return n;
@@ -163,30 +164,36 @@ int element_buffer_element_requirement(int32_t element_size, int32_t length){
 
 
 // ==== PUBLIC FUNCTIONS ===============================================================================================
-ElementBuffer* new_element_buffer(int32_t element_size, int32_t element_count){
-	ElementBuffer* ebuffer = SKY_MALLOC(sizeof(ElementBuffer));
+SkyElementBuffer* sky_element_buffer_create(int32_t element_size, int32_t element_count)
+{
+	SKY_ASSERT(element_count <= EB_MAX_ELEMENT_COUNT);
+
+	SkyElementBuffer* buffer = SKY_MALLOC(sizeof(SkyElementBuffer));
+	SKY_ASSERT(buffer != NULL);
+
 	uint8_t* pool = SKY_MALLOC(element_count * element_size);
-	if(element_count > EB_MAX_ELEMENT_COUNT){
-		return NULL;
-	}
-	ebuffer->pool = pool;
-	ebuffer->last_write_index = 0;
-	ebuffer->free_elements = element_count;
-	ebuffer->element_size = element_size;
-	ebuffer->element_count = element_count;
-	ebuffer->element_usable_space = element_size - (int32_t)(2 * sizeof(idx_t));
-	wipe_element_buffer(ebuffer);
-	return ebuffer;
+	SKY_ASSERT(buffer != NULL);
+
+	buffer->pool = pool;
+	buffer->last_write_index = 0;
+	buffer->free_elements = element_count;
+	buffer->element_size = element_size;
+	buffer->element_count = element_count;
+	buffer->element_usable_space = element_size - (int32_t)(2 * sizeof(idx_t));
+
+	sky_element_buffer_wipe(buffer);
+	
+	return buffer;
 }
 
 
-void destroy_element_buffer(ElementBuffer* buffer){
+void sky_element_buffer_destroy(SkyElementBuffer* buffer) {
 	SKY_FREE(buffer->pool);
 	SKY_FREE(buffer);
 }
 
 
-void wipe_element_buffer(ElementBuffer* buffer){
+void sky_element_buffer_wipe(SkyElementBuffer* buffer) {
 	for (idx_t i = 0; i < buffer->element_count; ++i) {
 		BufferElement el = element_i(buffer, i);
 		wipe_element(el);
@@ -196,17 +203,17 @@ void wipe_element_buffer(ElementBuffer* buffer){
 }
 
 
-int element_buffer_element_requirement_for(ElementBuffer* buffer, int32_t length){
+int sky_element_buffer_element_requirement_for(SkyElementBuffer* buffer, int32_t length){
 	int32_t n = (length + EB_LEN_BYTES + buffer->element_usable_space - 1) / buffer->element_usable_space;
 	return n;
 }
 
 
-int element_buffer_store(ElementBuffer* buffer, const uint8_t* data, pl_len_t length){
+int sky_element_buffer_store(SkyElementBuffer* buffer, const uint8_t* data, pl_len_t length){
 	//calculate number of elements required.
-	int32_t n_required = element_buffer_element_requirement_for(buffer, length); //A fast ceil-division.
+	int32_t n_required = sky_element_buffer_element_requirement_for(buffer, length); //A fast ceil-division.
 	if(n_required > buffer->free_elements){
-		return EBUFFER_RET_NO_SPACE;
+		return SKY_RET_EBUFFER_NO_SPACE;
 	}
 	if(n_required == 0){
 		n_required++;
@@ -216,7 +223,7 @@ int element_buffer_store(ElementBuffer* buffer, const uint8_t* data, pl_len_t le
 	idx_t indexes[42]; //todo parametrize this maximum element count used.
 	int r = element_buffer_get_n_free(buffer, n_required, buffer->last_write_index, indexes);
 	if(r < 0){
-		return EBUFFER_RET_NO_SPACE; //exit if not enough space
+		return SKY_RET_EBUFFER_NO_SPACE; //exit if not enough space
 	}
 
 	//write the metadata to the first element
@@ -247,10 +254,10 @@ int element_buffer_store(ElementBuffer* buffer, const uint8_t* data, pl_len_t le
 
 
 
-int element_buffer_get_data_length(ElementBuffer* buffer, idx_t idx){
+int sky_element_buffer_get_data_length(SkyElementBuffer* buffer, idx_t idx){
 	BufferElement el = element_i(buffer, idx);
 	if(!element_is_first(buffer, el)){
-		return EBUFFER_RET_INVALID_INDEX;
+		return SKY_RET_EBUFFER_INVALID_INDEX;
 	}
 	int32_t len = *(pl_len_t*)(el.data);
 	return len;
@@ -258,16 +265,16 @@ int element_buffer_get_data_length(ElementBuffer* buffer, idx_t idx){
 
 
 
-int element_buffer_read(ElementBuffer* buffer, uint8_t* target, idx_t idx, int32_t max_len){
+int sky_element_buffer_read(SkyElementBuffer* buffer, uint8_t* target, idx_t idx, int32_t max_len){
 	BufferElement el = element_i(buffer, idx);
 	if(!element_is_first(buffer, el)){
-		return EBUFFER_RET_INVALID_INDEX;
+		return SKY_RET_EBUFFER_INVALID_INDEX;
 	}
 
 	//check if target buffer is long enough.
 	int32_t leng = *(pl_len_t*)(el.data);
 	if(leng > max_len){
-		return EBUFFER_RET_TOO_LONG_PAYLOAD;
+		return SKY_RET_EBUFFER_TOO_LONG_PAYLOAD;
 	}
 
 	//read from first element
@@ -277,11 +284,11 @@ int element_buffer_read(ElementBuffer* buffer, uint8_t* target, idx_t idx, int32
 	//read from successive elements
 	BufferElement previous_el = el;
 	int32_t cursor = to_read;
-	int32_t n_elements = element_buffer_element_requirement_for(buffer, leng);
+	int32_t n_elements = sky_element_buffer_element_requirement_for(buffer, leng);
 	for (int i = 1; i < n_elements; ++i) {
 		el = element_i(buffer, *previous_el.next);
 		if(element_is_free(el)){
-			return EBUFFER_RET_CHAIN_CORRUPTED;
+			return SKY_RET_EBUFFER_CHAIN_CORRUPTED;
 		}
 		to_read = min_i32(buffer->element_usable_space, leng-cursor);
 		memcpy(target+cursor, el.data, to_read);
@@ -289,17 +296,17 @@ int element_buffer_read(ElementBuffer* buffer, uint8_t* target, idx_t idx, int32
 		previous_el = el;
 	}
 	if(!element_is_last(buffer, el)){
-		return EBUFFER_RET_CHAIN_CORRUPTED;
+		return SKY_RET_EBUFFER_CHAIN_CORRUPTED;
 	}
 	return leng;
 }
 
 
 
-int element_buffer_delete(ElementBuffer* buffer, idx_t idx){
+int sky_element_buffer_delete(SkyElementBuffer* buffer, idx_t idx){
 	BufferElement el = element_i(buffer, idx);
 	if(!element_is_first(buffer, el)){
-		return EBUFFER_RET_INVALID_INDEX;
+		return SKY_RET_EBUFFER_INVALID_INDEX;
 	}
 	while(1){
 		idx_t next = *el.next;
@@ -317,7 +324,7 @@ int element_buffer_delete(ElementBuffer* buffer, idx_t idx){
 
 
 
-int element_buffer_valid_chain(ElementBuffer* buffer, idx_t idx){
+int sky_element_buffer_valid_chain(SkyElementBuffer* buffer, idx_t idx){
 	BufferElement el = element_i(buffer, idx);
 	if(!element_is_in_chain(buffer, el)){
 		return 0;
@@ -329,7 +336,7 @@ int element_buffer_valid_chain(ElementBuffer* buffer, idx_t idx){
 
 
 
-int element_buffer_entire_buffer_is_ok(ElementBuffer* buffer){
+int sky_element_buffer_entire_buffer_is_ok(SkyElementBuffer* buffer){
 	int counted_free = 0;
 	for (idx_t i = 0; i < buffer->element_count; ++i) {
 		BufferElement el = element_i(buffer, i);
@@ -337,7 +344,7 @@ int element_buffer_entire_buffer_is_ok(ElementBuffer* buffer){
 			counted_free++;
 			continue;
 		}
-		if(element_buffer_valid_chain(buffer, i)){
+		if(sky_element_buffer_valid_chain(buffer, i)){
 			continue;
 		}
 		return 0;

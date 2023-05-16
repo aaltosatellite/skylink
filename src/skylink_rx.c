@@ -1,4 +1,5 @@
 #include "skylink/skylink.h"
+#include "skylink/diag.h"
 #include "skylink/fec.h"
 #include "skylink/reliable_vc.h"
 #include "skylink/frame.h"
@@ -6,9 +7,12 @@
 #include "skylink/hmac.h"
 #include "skylink/utilities.h"
 
+#include "ext/gr-satellites/golay24.h"
+
+#include <string.h> // memcmp
 
 
-static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* frame, const SkyPacketExtension* ext);
+static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* frame, const SkyHeaderExtension* ext);
 
 
 int sky_rx_with_golay(SkyHandle self, SkyRadioFrame* frame) {
@@ -68,8 +72,9 @@ int sky_rx(SkyHandle self, SkyRadioFrame* frame) {
 	
 	if (frame->vc >= SKY_NUM_VIRTUAL_CHANNELS)
 		return SKY_RET_INVALID_VC;
-	
-	if (frame->ext_length + EXTENSION_START_IDX > (int)frame->length)
+
+	const unsigned payload_start =  (unsigned int)frame->ext_length + EXTENSION_START_IDX;
+	if (payload_start > frame->length)
 		return SKY_RET_INVALID_EXT_LENGTH;
 	
 	if (memcmp(frame->identity, self->conf->identity, SKY_IDENTITY_LEN) == 0)
@@ -90,10 +95,10 @@ int sky_rx(SkyHandle self, SkyRadioFrame* frame) {
 		sky_rx_process_ext_mac_control(self, frame, exts.mac_tdd);
 
 	// Extract the frame payload
-	const uint8_t* payload = frame->raw + EXTENSION_START_IDX + frame->ext_length;
-	int payload_len = (int) frame->length - (EXTENSION_START_IDX + frame->ext_length);
-	if ((frame->flags & SKY_FLAG_HAS_PAYLOAD) == 0)
-		payload_len = -1;
+	const uint8_t *payload = &frame->raw[payload_start];
+	unsigned int payload_len = frame->length - payload_start;
+	if ((frame->flags & SKY_FLAG_HAS_PAYLOAD) == 0) // Ignore frame payload if payload flag is not set.
+		payload_len = 0;
 	
 	ret = sky_vc_process_content(self->virtual_channels[frame->vc], payload, payload_len, &exts, sky_get_tick_time());
 
@@ -101,7 +106,7 @@ int sky_rx(SkyHandle self, SkyRadioFrame* frame) {
 }
 
 
-static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* frame, const SkyPacketExtension* ext) {
+static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* frame, const SkyHeaderExtension* ext) {
 	if (ext->length != sizeof(ExtTDDControl) + 1){
 		return;
 	}

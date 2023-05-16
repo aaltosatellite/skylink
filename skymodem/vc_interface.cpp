@@ -324,7 +324,7 @@ void VCInterface::VirtualChannelInterface::check()
 			sky_vc_wipe_to_arq_init_state(vc_handle);
 			// No response
 		}
-		else if (ctrl_command == "arq_connect")	// TODO: Fix typo?? could be arq_disconnect
+		else if (ctrl_command == "arq_disconnect")
 		{
 			/*
 			 * ARQ disconnect
@@ -388,9 +388,9 @@ void set_config(const string &parameter, const string &value_)
 	set(protocol_handle, mac.window_adjustment_period, value);
 	set(protocol_handle, mac.idle_frames_per_window, value);
 
-	set(protocol_handle, arq_timeout_ticks, value);
-	set(protocol_handle, arq_idle_frame_threshold, value);
-	set(protocol_handle, arq_idle_frames_per_window, value);
+	set(protocol_handle, arq.timeout_ticks, value);
+	set(protocol_handle, arq.idle_frame_threshold, value);
+	set(protocol_handle, arq.idle_frames_per_window, value);
 
 }
 
@@ -416,9 +416,9 @@ void VCInterface::VirtualChannelInterface::set_config(const string &parameter, c
 	CONFIG_I(mac.window_adjustment_period);
 	CONFIG_I(mac.idle_frames_per_window);
 
-	CONFIG_I(arq_timeout_ticks);
-	CONFIG_I(arq_idle_frame_threshold);
-	CONFIG_I(arq_idle_frames_per_window);
+	CONFIG_I(arq.timeout_ticks);
+	CONFIG_I(arq.idle_frame_threshold);
+	CONFIG_I(arq.idle_frames_per_window);
 
 #undef CONFIG_I
 

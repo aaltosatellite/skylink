@@ -3,6 +3,8 @@
 #include "skylink/diag.h"
 #include "skylink/reliable_vc.h"
 
+#include <string.h> // memset
+
 unsigned int sky_diag_mask = SKY_DIAG_INFO | SKY_DIAG_BUG;
 
 SkyDiagnostics* sky_diag_create(){

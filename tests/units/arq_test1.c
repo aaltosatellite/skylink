@@ -36,8 +36,8 @@ void arq_system_test1_cycle(){
 	config.rcv_ring_len = randint_i32(20,35);
 	config.element_size = 90;
 	config.horizon_width = 16;
-	SkyVirtualChannel* array = new_virtual_channel(&config);
-	SkyVirtualChannel* array_r = new_virtual_channel(&config);
+	SkyVirtualChannel* array = sky_vc_create(&config);
+	SkyVirtualChannel* array_r = sky_vc_create(&config);
 
 	int32_t now_ms = randint_i32(0,100000);
 	int seq0 = randint_i32(0, ARQ_SEQUENCE_MODULO-1);
@@ -67,8 +67,8 @@ void arq_system_test1_cycle(){
 	for (int i = 0; i < ARQ_MAXIMUM_HORIZON+10; ++i) {
 		destroy_string(msgs[i]);
 	}
-	destroy_virtual_channel(array);
-	destroy_virtual_channel(array_r);
+	sky_vc_destroy(array);
+	sky_vc_destroy(array_r);
 	free(tgt);
 }
 
@@ -104,13 +104,13 @@ void arq_system_test2_cycle(){
 	config.rcv_ring_len = randint_i32(20,35);
 	config.element_size = randint_i32(30,80);
 	config.horizon_width = 16;
-	SkyVirtualChannel* array = new_virtual_channel(&config);
-	SkyVirtualChannel* array_r = new_virtual_channel(&config);
+	SkyVirtualChannel* array = sky_vc_create(&config);
+	SkyVirtualChannel* array_r = sky_vc_create(&config);
 
 	SkyConfig* sky_conf = new_vanilla_config();
-	sky_conf->arq_timeout_ticks = randint_i32(4000, 25000);
-	sky_conf->arq_idle_frame_threshold = sky_conf->arq_timeout_ticks / randint_i32(3,5);
-	sky_conf->arq_idle_frames_per_window = randint_i32(0, 3);
+	sky_conf->arq.timeout_ticks = randint_i32(4000, 25000);
+	sky_conf->arq.idle_frame_threshold = sky_conf->arq.timeout_ticks / randint_i32(3,5);
+	sky_conf->arq.idle_frames_per_window = randint_i32(0, 3);
 
 	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);			//virtual channel randomized
 	int32_t ts_base = randint_i32(0,100000);						//coarse timestamp
@@ -181,8 +181,8 @@ void arq_system_test2_cycle(){
 	}
 
 	//arq handshake
-	int frames_sent_in_vc = randint_i32(0, sky_conf->arq_idle_frames_per_window + 2);
-	int now_ms = ts_base + randint_i32(sky_conf->arq_timeout_ticks / 10, sky_conf->arq_timeout_ticks + 1400);
+	int frames_sent_in_vc = randint_i32(0, sky_conf->arq.idle_frames_per_window + 2);
+	int now_ms = ts_base + randint_i32(sky_conf->arq.timeout_ticks / 10, sky_conf->arq.timeout_ticks + 1400);
 
 	int own_recall = randint_i32(0, 10) < 4;
 	int own_recall_mask_i = randint_i32(0, 13);
@@ -194,7 +194,7 @@ void arq_system_test2_cycle(){
 		assert(array->last_tx_tick == ts_send);
 	}
 
-	SkyRadioFrame* frame = new_frame();
+	SkyRadioFrame* frame = sky_frame_create();
 	frame->length = 0;
 	frame->ext_length = 0;
 	frame->flags = 0;
@@ -205,12 +205,12 @@ void arq_system_test2_cycle(){
 
 	int content0 = sky_vc_content_to_send(array, sky_conf, now_ms, frames_sent_in_vc);
 	int content = sky_vc_fill_frame(array, sky_conf, frame, now_ms, frames_sent_in_vc);
-	SkyPacketExtension* extArqCtrl = get_extension(frame, EXTENSION_ARQ_CTRL);
-	SkyPacketExtension* extArqSeq = get_extension(frame, EXTENSION_ARQ_SEQUENCE);
-	SkyPacketExtension* extArqRr = get_extension(frame, EXTENSION_ARQ_REQUEST);
-	SkyPacketExtension* extArqHs = get_extension(frame, EXTENSION_ARQ_HANDSHAKE);
-	SkyPacketExtension* extTDDCtrl = get_extension(frame, EXTENSION_MAC_TDD_CONTROL);
-	SkyPacketExtension* extHMAC = get_extension(frame, EXTENSION_HMAC_SEQUENCE_RESET);
+	SkyHeaderExtension* extArqCtrl = get_extension(frame, EXTENSION_ARQ_CTRL);
+	SkyHeaderExtension* extArqSeq = get_extension(frame, EXTENSION_ARQ_SEQUENCE);
+	SkyHeaderExtension* extArqRr = get_extension(frame, EXTENSION_ARQ_REQUEST);
+	SkyHeaderExtension* extArqHs = get_extension(frame, EXTENSION_ARQ_HANDSHAKE);
+	SkyHeaderExtension* extTDDCtrl = get_extension(frame, EXTENSION_MAC_TDD_CONTROL);
+	SkyHeaderExtension* extHMAC = get_extension(frame, EXTENSION_HMAC_SEQUENCE_RESET);
 
 	assert(content == content0);
 	assert(extTDDCtrl == NULL);
@@ -228,7 +228,7 @@ void arq_system_test2_cycle(){
 			assert(extArqHs == NULL);
 		}
 
-		if(own_recall && (frames_sent_in_vc < sky_conf->arq_idle_frames_per_window)){
+		if(own_recall && (frames_sent_in_vc < sky_conf->arq.idle_frames_per_window)){
 			assert(extArqRr != NULL);
 			assert(sky_ntoh16( extArqRr->ARQReq.sequence ) == seq_rcv);
 			assert(sky_ntoh16( extArqRr->ARQReq.sequence ) == array->rcvRing->head_sequence);
@@ -260,10 +260,10 @@ void arq_system_test2_cycle(){
 			assert(extArqCtrl != NULL);
 		}
 
-		int b0 = (frames_sent_in_vc < sky_conf->arq_idle_frames_per_window);
-		int b1 = wrap_time_ticks(now_ms - ts_send) > sky_conf->arq_idle_frame_threshold;
-		int b2 = wrap_time_ticks(now_ms - ts_recv) > sky_conf->arq_idle_frame_threshold;
-		int b3 = wrap_time_ticks(now_ms - ts_last_ctrl) > sky_conf->arq_idle_frame_threshold;
+		int b0 = (frames_sent_in_vc < sky_conf->arq.idle_frames_per_window);
+		int b1 = wrap_time_ticks(now_ms - ts_send) > sky_conf->arq.idle_frame_threshold;
+		int b2 = wrap_time_ticks(now_ms - ts_recv) > sky_conf->arq.idle_frame_threshold;
+		int b3 = wrap_time_ticks(now_ms - ts_last_ctrl) > sky_conf->arq.idle_frame_threshold;
 		if((b0 && (b1 || b2 || b3)) || (frame->flags & SKY_FLAG_HAS_PAYLOAD)){
 			assert(extArqCtrl != NULL);
 			assert(sky_ntoh16( extArqCtrl->ARQCtrl.tx_sequence ) == seq1);
@@ -286,7 +286,7 @@ void arq_system_test2_cycle(){
 
 		int b_a = !new_pl && !recalled && !handshake_on;
 		int b_b	= !(b0 && (b1 || b2 || b3));
-		int b_c = !(own_recall && (frames_sent_in_vc < sky_conf->arq_idle_frames_per_window))  ;
+		int b_c = !(own_recall && (frames_sent_in_vc < sky_conf->arq.idle_frames_per_window))  ;
 		if(b_a && b_b && b_c){
 			assert(content == 0);
 		} else{
@@ -326,7 +326,7 @@ void arq_system_test2_cycle(){
 		assert(extArqSeq == NULL);
 		assert(extArqRr == NULL);
 		assert(extArqCtrl == NULL);
-		if(frames_sent_in_vc < sky_conf->arq_idle_frames_per_window){
+		if(frames_sent_in_vc < sky_conf->arq.idle_frames_per_window){
 			assert(extArqHs != NULL);
 		}
 		assert(!(frame->flags & SKY_FLAG_HAS_PAYLOAD));
@@ -336,10 +336,10 @@ void arq_system_test2_cycle(){
 	for (int i = 0; i < ARQ_MAXIMUM_HORIZON+10; ++i) {
 		destroy_string(msgs[i]);
 	}
-	destroy_frame(frame);
-	destroy_virtual_channel(array);
-	destroy_virtual_channel(array_r);
-	destroy_config(sky_conf);
+	sky_frame_destroy(frame);
+	sky_vc_destroy(array);
+	sky_vc_destroy(array_r);
+	free(sky_conf);
 	free(tgt);
 }
 

@@ -107,8 +107,25 @@ typedef struct {
 	/* Authentication key */
 	uint8_t key[32];
 
-} HMACConfig;
+} SkyHMACConfig;
 
+
+/*
+ * ARQ configurations
+ */
+typedef struct
+{
+	/* If continuous packet transmission or reception has not advanced in arq_timeout_ticks time, arq drops off. */
+	int32_t timeout_ticks;
+
+	/* If continuous packet transmission or reception has not advanced in idle_frame_threshold time,
+	 * frames are being created even if there are no payloads. This is to keep status fresh. */
+	int32_t idle_frame_threshold;
+
+	/* How many idle frames are created per window per virtual channel where ARQ is active. */
+	int8_t idle_frames_per_window;
+
+} SkyARQConfig;
 
 
 /*
@@ -119,21 +136,12 @@ typedef struct {
  * directly from here, allowing configuration changes.
  */
 struct sky_conf {
-	SkyPHYConfig phy;
-	SkyMACConfig mac;
-	HMACConfig	hmac;
-	SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS];
+	SkyPHYConfig    phy;
+	SkyMACConfig    mac;
+	SkyHMACConfig	hmac;
+	SkyVCConfig     vc[SKY_NUM_VIRTUAL_CHANNELS];
+	SkyARQConfig    arq;
 	uint8_t identity[SKY_IDENTITY_LEN];
-
-	/* If continuous packet transmission or reception has not advanced in arq_timeout_ticks time, arq drops off. */
-	int32_t arq_timeout_ticks;
-
-	/* If continuous packet transmission or reception has not advanced in arq_idle_frame_threshold time,
-	 * frames are being created even if there are no payloads. This is to keep status fresh. */
-	int32_t arq_idle_frame_threshold;
-
-	/* How many idle frames are created per window per virtual channel where ARQ is active. */
-	int8_t arq_idle_frames_per_window;
 };
 typedef struct sky_conf SkyConfig;
 

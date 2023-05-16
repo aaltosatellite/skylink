@@ -1,6 +1,7 @@
 
-#include "units.h"
+// TODO: Rename to frame_encode_test.c
 
+#include "units.h"
 #include "skylink/skylink.h"
 #include "skylink/frame.h"
 #include "skylink/fec.h"
@@ -31,8 +32,8 @@ static void test1(){
 static void test1_round(){
 	// pull random params ----------------------------------------------------------------------------------------------
 	SkyConfig* config = new_vanilla_config();
-	SkyRadioFrame* sframe = new_frame();
-	SkyRadioFrame* rframe = new_frame();
+	SkyRadioFrame* sframe = sky_frame_create();
+	SkyRadioFrame* rframe = sky_frame_create();
 	fillrand((uint8_t*)sframe, sizeof(SkyRadioFrame));
 	fillrand((uint8_t*)rframe, sizeof(SkyRadioFrame));
 	uint8_t identity[SKY_IDENTITY_LEN];
@@ -70,7 +71,7 @@ static void test1_round(){
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_mac_tdd = 1;
-		sky_packet_add_extension_mac_tdd_control(sframe, mac_length, mac_left);
+		sky_frame_add_extension_mac_tdd_control(sframe, mac_length, mac_left);
 	}
 
 	int extension_arq_ctrl = 0;
@@ -79,7 +80,7 @@ static void test1_round(){
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_arq_ctrl = 1;
-		sky_packet_add_extension_arq_ctrl(sframe, ctrl_tx, ctrl_rx);
+		sky_frame_add_extension_arq_ctrl(sframe, ctrl_tx, ctrl_rx);
 	}
 
 	int extension_arq_handshake = 0;
@@ -88,7 +89,7 @@ static void test1_round(){
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_arq_handshake = 1;
-		sky_packet_add_extension_arq_handshake(sframe, setup_flag, setup_identifier);
+		sky_frame_add_extension_arq_handshake(sframe, setup_flag, setup_identifier);
 	}
 
 
@@ -97,7 +98,7 @@ static void test1_round(){
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_arq_sequence = 1;
-		sky_packet_add_extension_arq_sequence(sframe, arq_sequence);
+		sky_frame_add_extension_arq_sequence(sframe, arq_sequence);
 	}
 
 
@@ -107,7 +108,7 @@ static void test1_round(){
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_arq_rrequest = 1;
-		sky_packet_add_extension_arq_request(sframe, rr_sequence, mask);
+		sky_frame_add_extension_arq_request(sframe, rr_sequence, mask);
 	}
 
 
@@ -117,22 +118,22 @@ static void test1_round(){
 	if(randint_i32(0,1) == 1){
 		n_extensions++;
 		extension_hmac_reset = 1;
-		sky_packet_add_extension_hmac_sequence_reset(sframe, hmac_enforcement);
+		sky_frame_add_extension_hmac_sequence_reset(sframe, hmac_enforcement);
 	}
 
 	assert(n_extensions <= 6);
 	if(n_extensions == 6){
-		//PRINTFF(0, "AS: %d\n", available_payload_space(sframe));
-		assert(available_payload_space(sframe) == SKY_MAX_PAYLOAD_LEN);
+		//PRINTFF(0, "AS: %d\n", sky_frame_get_space_left(sframe));
+		assert(sky_frame_get_space_left(sframe) == SKY_MAX_PAYLOAD_LEN);
 	}
 	if(n_extensions == 0){
-		assert(available_payload_space(sframe) == (RS_MSGLEN - (SKY_HMAC_LENGTH + EXTENSION_START_IDX)) );
+		assert(sky_frame_get_space_left(sframe) == (RS_MSGLEN - (SKY_HMAC_LENGTH + EXTENSION_START_IDX)) );
 	}
 
 	int payload_len = randint_i32(0, SKY_MAX_PAYLOAD_LEN); //173 seems to be the max with this setup...
 	uint8_t* pl = x_alloc(payload_len);
 	fillrand(pl, payload_len);
-	int r = sky_packet_extend_with_payload(sframe, pl, payload_len);
+	int r = sky_frame_extend_with_payload(sframe, pl, payload_len);
 	assert(r == 0);
 	assert((int)sframe->length == (payload_len + EXTENSION_START_IDX + sframe->ext_length));
 
@@ -160,12 +161,12 @@ static void test1_round(){
 	assert(rframe->ext_length == sframe->ext_length);
 
 
-	SkyPacketExtension* ext1 = get_extension(rframe, EXTENSION_HMAC_SEQUENCE_RESET);
-	SkyPacketExtension* ext2 = get_extension(rframe, EXTENSION_MAC_TDD_CONTROL);
-	SkyPacketExtension* ext3 = get_extension(rframe, EXTENSION_ARQ_SEQUENCE);
-	SkyPacketExtension* ext4 = get_extension(rframe, EXTENSION_ARQ_CTRL);
-	SkyPacketExtension* ext5 = get_extension(rframe, EXTENSION_ARQ_HANDSHAKE);
-	SkyPacketExtension* ext6 = get_extension(rframe, EXTENSION_ARQ_REQUEST);
+	SkyHeaderExtension* ext1 = get_extension(rframe, EXTENSION_HMAC_SEQUENCE_RESET);
+	SkyHeaderExtension* ext2 = get_extension(rframe, EXTENSION_MAC_TDD_CONTROL);
+	SkyHeaderExtension* ext3 = get_extension(rframe, EXTENSION_ARQ_SEQUENCE);
+	SkyHeaderExtension* ext4 = get_extension(rframe, EXTENSION_ARQ_CTRL);
+	SkyHeaderExtension* ext5 = get_extension(rframe, EXTENSION_ARQ_HANDSHAKE);
+	SkyHeaderExtension* ext6 = get_extension(rframe, EXTENSION_ARQ_REQUEST);
 	assert((extension_hmac_reset > 0) == (ext1 != NULL));
 	assert((extension_mac_tdd > 0) == (ext2 != NULL));
 	assert((extension_arq_sequence > 0) == (ext3 != NULL));
@@ -178,7 +179,7 @@ static void test1_round(){
 	int ext_remaining = rframe->ext_length;
 	int ext_cursor = EXTENSION_START_IDX;
 	while (ext_remaining) {
-		SkyPacketExtension* ext = (SkyPacketExtension*)(rframe->raw + ext_cursor);
+		SkyHeaderExtension* ext = (SkyHeaderExtension*)(rframe->raw + ext_cursor);
 		int r2 = ext->length; // TODO: interpret_extension(rframe->raw + ext_cursor, ext_remaining, &ext);
 		assert(r2 > 0);
 		ext_cursor += r2;
@@ -253,8 +254,8 @@ static void test1_round(){
 	assert(memcmp(rframe->raw + rframe->ext_length + EXTENSION_START_IDX, pl, rcvd_pl_len) == 0);
 
 
-	destroy_config(config);
-	destroy_frame(sframe);
-	destroy_frame(rframe);
+	sky_frame_destroy(sframe);
+	sky_frame_destroy(rframe);
+	free(config);
 	free(pl);
 }

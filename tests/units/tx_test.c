@@ -5,6 +5,7 @@
 #include "skylink/reliable_vc.h"
 #include "skylink/fec.h"
 
+#include "ext/gr-satellites/golay24.h"
 
 void sky_tx_test_cycle();
 
@@ -19,30 +20,30 @@ void sky_tx_test(int load){
 	PRINTFF(0,"\t[\033[1;32mOK\033[0m]\n");
 }
 
-extern tick_t _global_ticks_now;
+extern sky_tick_t _global_ticks_now;
 
 void sky_tx_test_cycle(){
 	uint8_t tgt[1000];
 
 	SkyConfig* config = new_vanilla_config();
-	SkyRadioFrame* frame = new_frame();
+	SkyRadioFrame* frame = sky_frame_create();
 	fillrand(config->identity, SKY_IDENTITY_LEN);
 
 	fillrand(frame->raw, SKY_FRAME_MAX_LEN);
 
 
 	int golay_on = randint_i32(1,10) <= 5;
-	tick_t now = randint_i32(0, MOD_TIME_TICKS - 1);
+	sky_tick_t now = randint_i32(0, MOD_TIME_TICKS - 1);
 	_global_ticks_now = now;
 
 	int mac_shift_threshold = randint_i32(config->mac.idle_frames_per_window / 2, config->mac.idle_frames_per_window * 2);
 	config->mac.shift_threshold_ticks = mac_shift_threshold;
 
 
-	int arq_timeout = randint_i32(100,30000);
+	int arq_timeout = randint_i32(1000, 30000);
 	int arq_idle_threshold = arq_timeout/5;
-	config->arq_timeout_ticks = arq_timeout;
-	config->arq_idle_frame_threshold = arq_idle_threshold;
+	config->arq.timeout_ticks = arq_timeout;
+	config->arq.idle_frame_threshold = arq_idle_threshold;
 
 	int auth_required[SKY_NUM_VIRTUAL_CHANNELS];
 	int array_tx_seq0[SKY_NUM_VIRTUAL_CHANNELS];
@@ -73,8 +74,8 @@ void sky_tx_test_cycle(){
 	}
 
 	// =================================================================================================================
-	SkyHandle self = new_handle(config);
-	SkyHandle self2 = new_handle(config);
+	SkyHandle self = sky_create(config);
+	SkyHandle self2 = sky_create(config);
 	// =================================================================================================================
 
 	int arq_on[SKY_NUM_VIRTUAL_CHANNELS];
@@ -100,7 +101,7 @@ void sky_tx_test_cycle(){
 		self->hmac->sequence_rx[vc] = auth_seq_rx[vc];
 		self->hmac->sequence_tx[vc] = auth_seq_tx[vc];
 
-		frames_sent_per_vc[vc] = randint_i32(0, self->conf->arq_idle_frames_per_window + 1);
+		frames_sent_per_vc[vc] = randint_i32(0, self->conf->arq.idle_frames_per_window + 1);
 		total_frames_sent += frames_sent_per_vc[vc];
 		self->mac->frames_sent_in_current_window_per_vc[vc] = frames_sent_per_vc[vc];
 		self->mac->total_frames_sent_in_current_window = total_frames_sent;
@@ -382,7 +383,7 @@ void sky_tx_test_cycle(){
 
 
 		if(arq_on[i] && (!arq_tx_timed_out[i]) && (!arq_rx_timed_out[i]) ){
-			int util_frame = frames_sent_per_vc[i] < self->conf->arq_idle_frames_per_window;
+			int util_frame = frames_sent_per_vc[i] < self->conf->arq.idle_frames_per_window;
 			//assert(frame->flags & SKY_FLAG_ARQ_ON);
 			if(util_frame && (wrap_time_ticks(now - arq_tx_ts[i]) > arq_idle_threshold) ){
 				content = 1;
@@ -492,7 +493,7 @@ void sky_tx_test_cycle(){
 
 
 
-	SkyPacketExtension* ext = get_extension(frame, EXTENSION_ARQ_CTRL);
+	SkyHeaderExtension* ext = get_extension(frame, EXTENSION_ARQ_CTRL);
 	if(ctrl_ext){
 		assert(ext != NULL);
 	} else {
@@ -525,8 +526,8 @@ void sky_tx_test_cycle(){
 
 
 exit:
-	destroy_config(config);
-	destroy_frame(frame);
-	destroy_handle(self);
-	destroy_handle(self2);
+	sky_frame_destroy(frame);
+	sky_destroy(self);
+	sky_destroy(self2);
+	free(config);
 }

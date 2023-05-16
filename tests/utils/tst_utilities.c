@@ -1,15 +1,9 @@
-//
-// Created by elmore on 28.10.2021.
-//
-
 #include "tst_utilities.h"
 
-
-
-uint8_t arr_[32] = { 209, 20, 248, 100, 175, 77, 5, 118, 38, 204, 144, 17, 56, 109, 2, 158, 41, 177, 86, 7, 46, 17, 190, 165, 110, 32, 139, 229, 74, 13, 111, 179 };
-
-SkyConfig* new_vanilla_config(){
+SkyConfig* new_vanilla_config()
+{
 	SkyConfig* config = SKY_MALLOC(sizeof(SkyConfig));
+
 	config->vc[0].horizon_width 		= 16;
 	config->vc[0].send_ring_len 		= 24;
 	config->vc[0].rcv_ring_len 			= 22;
@@ -35,14 +29,14 @@ SkyConfig* new_vanilla_config(){
 	config->vc[2].require_authentication = 0;
 	config->vc[3].require_authentication = 0;
 
-	config->arq_timeout_ticks 					= 26000;
-	config->arq_idle_frame_threshold 		    = config->arq_timeout_ticks / 4;
-	config->arq_idle_frames_per_window			= 1;
+	config->arq.timeout_ticks           = 26000;
+	config->arq.idle_frame_threshold    = config->arq.timeout_ticks / 4;
+	config->arq.idle_frames_per_window  = 1;
 
-	config->hmac.key_length 			= 32;
-	config->hmac.maximum_jump 			= 32;
-	memcpy(config->hmac.key, arr_, config->hmac.key_length);
-
+	const uint8_t dummy_key[32] = {209, 20, 248, 100, 175, 77, 5, 118, 38, 204, 144, 17, 56, 109, 2, 158, 41, 177, 86, 7, 46, 17, 190, 165, 110, 32, 139, 229, 74, 13, 111, 179};
+	config->hmac.key_length = sizeof(dummy_key);
+	memcpy(config->hmac.key, dummy_key, sizeof(dummy_key));
+	config->hmac.maximum_jump           = 32;
 
 	config->mac.gap_constant_ticks 				= 600;
 	config->mac.tail_constant_ticks 			= 80;
@@ -61,45 +55,11 @@ SkyConfig* new_vanilla_config(){
 	config->identity[1] = 'H';
 	config->identity[2] = '2';
 	config->identity[3] = 'F';
-	config->identity[4] = 'S';
-	config->identity[5] = '1';
+	config->identity[4] = '1';
+	config->identity[5] = 'S';
 
 	return config;
 }
-
-void destroy_config(SkyConfig* config){
-	free(config);
-}
-
-
-
-SkyHandle new_handle(SkyConfig* config){
-	SkyHandle handle = SKY_MALLOC(sizeof(struct sky_all));
-	handle->conf = config;
-	handle->mac = sky_mac_create(&config->mac);
-	handle->hmac = sky_hmac_create(&config->hmac);
-	handle->diag = sky_diag_create();
-
-	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		handle->virtual_channels[i] = new_virtual_channel(&config->vc[i]);
-	}
-	return handle;
-}
-
-
-void destroy_handle(SkyHandle self){
-	sky_mac_destroy(self->mac);
-	sky_hmac_destroy(self->hmac);
-	sky_diag_destroy(self->diag);
-	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
-		destroy_virtual_channel(self->virtual_channels[i]);
-	}
-	free(self);
-}
-
-
-
-
 
 
 
@@ -282,7 +242,7 @@ void tst_randoms(double chance1, double chance2, int NN){
 
 
 
-SkyPacketExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_type) {
+SkyHeaderExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_type) {
 	if((int)(frame->ext_length + EXTENSION_START_IDX) > (int)frame->length)
 		return NULL; // Too short packet.
 
@@ -292,7 +252,7 @@ SkyPacketExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_t
 	unsigned int cursor = 0;
 	while (cursor < frame->ext_length) {
 
-		SkyPacketExtension* ext = (SkyPacketExtension*)&frame->raw[EXTENSION_START_IDX + cursor];
+		SkyHeaderExtension* ext = (SkyHeaderExtension*)&frame->raw[EXTENSION_START_IDX + cursor];
 		if (cursor + ext->length >= frame->length)
 			return NULL;
 		if(ext->length == 0)

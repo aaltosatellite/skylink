@@ -4,9 +4,9 @@ add_executable(unit_tests
     ../utils/tools.c
     ../utils/tst_utilities.c
     
-    elementbuffer_test.c
+    element_buffer_test.c
     ring_test.c
-    packet_encode_test.c
+    frame_encode_test.c
     fec_test.c
     hmac_test.c
     arq_test1.c
