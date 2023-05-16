@@ -200,7 +200,7 @@ SkyModem::SkyModem() :
 		sdr->sinkSamples.connect_member(receiver_36k4, &FSKMatchedFilterDemodulator::sinkSamples);
 
 		deframer_9k6->syncDetected.connect( [&](bool locked, Timestamp now) {
-			cout << getISOCurrentTimestamp() << ": 9600 sync detected!" << endl;
+			cout << getCurrentISOTimestamp() << ": 9600 sync detected!" << endl;
 			receiver_locked(locked, now);
 			receiver_9k6->lockReceiver(locked, now);
 		});
@@ -211,7 +211,7 @@ SkyModem::SkyModem() :
 		});
 
 		deframer_19k2->syncDetected.connect( [&](bool locked, Timestamp now) {
-			cout << getISOCurrentTimestamp() << ": 19200 sync detected!" << endl;
+			cout << getCurrentISOTimestamp() << ": 19200 sync detected!" << endl;
 			receiver_locked(locked, now);
 			receiver_19k2->lockReceiver(locked, now);
 		});
@@ -222,7 +222,7 @@ SkyModem::SkyModem() :
 		});
 
 		deframer_36k4->syncDetected.connect( [&] (bool locked, Timestamp now) {
-			cout << getISOCurrentTimestamp() << ": 36400 sync detected!" << endl;
+			cout << getCurrentISOTimestamp() << ": 36400 sync detected!" << endl;
 			receiver_locked(locked, now);
 			receiver_36k4->lockReceiver(locked, now);
 		});
@@ -371,7 +371,7 @@ void SkyModem::receiver_locked(bool locked, Timestamp now)
 
 	if (locked) {
 		sky_mac_carrier_sensed(handle->mac, convert_to_ticks(now));
-		//cout << getISOCurrentTimestamp() << ": Sync detected: " << (locked ? "true": "false") << endl;
+		//cout << getCurrentISOTimestamp() << ": Sync detected: " << (locked ? "true": "false") << endl;
 	}
 	else {
 
@@ -397,9 +397,9 @@ void SkyModem::frame_transmit(Frame &frame, Timestamp now)
 		// Pass the raw frame also to ZMQ sink
 		frame.setMetadata("mode", 9600);
 		frame.setMetadata("packet_type", "uplink_raw");
-		frame.setMetadata("utc_timestamp", getISOCurrentTimestamp());
+		frame.setMetadata("utc_timestamp", getCurrentISOTimestamp());
 
-		cout << getISOCurrentTimestamp() << ": Frame transmit";
+		cout << getCurrentISOTimestamp() << ": Frame transmit";
 		cout << frame(Frame::PrintData | Frame::PrintMetadata | Frame::PrintColored | Frame::PrintAltColor);
 
 		zmq_output->sinkFrame(frame, now);
@@ -409,7 +409,7 @@ void SkyModem::frame_transmit(Frame &frame, Timestamp now)
 
 void SkyModem::frame_received(Frame &frame, Timestamp now)
 {
-	cout << getISOCurrentTimestamp() << ": Frame received ";
+	cout << getCurrentISOTimestamp() << ": Frame received ";
 	cout << frame(Frame::PrintData | Frame::PrintMetadata | Frame::PrintColored);
 
 	// Copy data from suo's frame structure to Skylink's frame structure
@@ -425,7 +425,7 @@ void SkyModem::frame_received(Frame &frame, Timestamp now)
 
 	// Pass the raw frame also to ZMQ sink
 	frame.setMetadata("packet_type", "downlink_raw");
-	frame.setMetadata("utc_timestamp", getISOCurrentTimestamp());
+	frame.setMetadata("utc_timestamp", getCurrentISOTimestamp());
 	zmq_output->sinkFrame(frame, now);
 }
 

@@ -15,6 +15,7 @@ public:
 		unsigned int vc_index;
 		zmq::socket_t publish_socket, subscribe_socket;
 		int arq_expected_state;
+		uint32_t session_identifier;
 
 		// Skylink pointers
 		SkyHandle protocol_handle;

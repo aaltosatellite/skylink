@@ -23,16 +23,18 @@ VCInterface::VCInterface(SkyHandle protocol_handle, unsigned int vc_base)
 
 		VirtualChannelInterface &vc = vcs[vc_index];
 		vc.vc_index = vc_index;
+		vc.arq_expected_state = ARQ_STATE_OFF;
 		vc.vc_handle = protocol_handle->virtual_channels[vc_index];
 		vc.protocol_handle = protocol_handle;
+		vc.session_identifier = 0;
 
-		// Create ZMQ publish sockets to data received by Skylink
+		// Create ZMQ publish socket for data received by Skylink
 		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%u", vc_base + 10 * vc_index);
 		SKY_PRINTF(SKY_DIAG_INFO, "VC %d RX binding %s\n", vc_index, uri);
 		vc.publish_socket = zmq::socket_t(zmq_ctx, zmq::socket_type::pub);
 		vc.publish_socket.bind(uri);
 
-		// Create ZMQ subscribe sockets to
+		// Create ZMQ subscribe sockets 
 		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%u", vc_base + 10 * vc_index + 1);
 		SKY_PRINTF(SKY_DIAG_INFO, "VC %d TX binding %s\n", vc_index, uri);
 		vc.subscribe_socket = zmq::socket_t(zmq_ctx, zmq::socket_type::sub);
@@ -77,59 +79,57 @@ void VCInterface::VirtualChannelInterface::check()
 	/* 
 	 * Has ARQ changed the state?
 	 */
-	if (arq_expected_state != ARQ_STATE_OFF) {
+	if (arq_expected_state != ARQ_STATE_OFF && vc_handle->arq_state_flag == ARQ_STATE_OFF)
+	{
 		// Has ARQ turned off
-		if (vc_handle->arq_state_flag == ARQ_STATE_OFF) {
-			arq_expected_state = ARQ_STATE_OFF;
+		arq_expected_state = ARQ_STATE_OFF;
+		SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ has disconnected!\n", vc_index);
 
-			SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ has disconnected!\n", vc_index);
+		// Send ARQ disconnected message
+		json metadata_dict = json::object();
+		metadata_dict["rsp"] = "arq_timeout";
+		metadata_dict["vc"] = vc_index;
+		metadata_dict["session_identifier"] = (unsigned int)session_identifier;
 
-			/* Send ARQ disconnected message */
-			json metadata_dict = json::object();
-			metadata_dict["rsp"] = "arq_timeout";
-			metadata_dict["vc"] = vc_index;
+		json response_dict = json::object();
+		response_dict["packet_type"] = "control";
+		response_dict["vc"] = vc_index;
+		response_dict["timestamp"] = getCurrentISOTimestamp();
+		response_dict["metadata"] = metadata_dict;
 
-			json response_dict = json::object();
-			response_dict["type"] = "control";
-			response_dict["timestamp"] = getISOCurrentTimestamp();
-			response_dict["metadata"] = metadata_dict;
+		// Serialize dict and send it socket
+		string frame_str(response_dict.dump());
+		publish_socket.send(zmq::buffer(frame_str), zmq::send_flags::dontwait);
 
-			// Serialize dict and send it socket
-			string frame_str(response_dict.dump());
-			publish_socket.send(zmq::buffer(frame_str), zmq::send_flags::dontwait);
-		}
 	}
-	else {
-		/* Has ARQ turned on? */
-		if (vc_handle->arq_state_flag != ARQ_STATE_OFF) {
-			arq_expected_state = ARQ_STATE_ON;
-				
-#if 0
-			// TODO: Send when state has changed on! now this triggers when the handshake (ARQ_STATE_IN_INIT) is being transmitted.
+	else if (arq_expected_state != ARQ_STATE_ON && vc_handle->arq_state_flag == ARQ_STATE_ON)
+	{
+		// Has ARQ been turned on
+		arq_expected_state = ARQ_STATE_ON;
+		SKY_PRINTF(SKY_DIAG_ARQ, "VC%d ARQ has disconnected!\n", vc_index);
 
-			/* Send ARQ disconnected message */
-			json metadata_dict = json::object();
-			metadata_dict["rsp"] = "arq_connected";
-			metadata_dict["vc"] = index;
+		// Send ARQ disconnected message
+		json metadata_dict = json::object();
+		metadata_dict["rsp"] = "arq_connected";
+		metadata_dict["vc"] = vc_index;
+		metadata_dict["session_identifier"] = (unsigned int)session_identifier;
 
-			json response_dict = json::object();
-			response_dict["type"] = "control";
-			response_dict["vc"] = index;
-			response_dict["timestamp"] = getISOCurrentTimestamp();
-			response_dict["metadata"] = metadata_dict;
+		json response_dict = json::object();
+		response_dict["packet_type"] = "control";
+		response_dict["vc"] = vc_index;
+		response_dict["timestamp"] = getCurrentISOTimestamp();
+		response_dict["metadata"] = metadata_dict;
 
-			// Serialize dict and send it socket
-			string frame_str(response_dict.dump());
-			publish_socket.send(zmq::buffer(frame_str), zmq::send_flags::dontwait);
-#endif
-		}
+		// Serialize dict and send it socket
+		string frame_str(response_dict.dump());
+		publish_socket.send(zmq::buffer(frame_str), zmq::send_flags::dontwait);
 	}
 
 	/*
 	 * If packets appeared to some RX buffer, send them to ZMQ
 	 */
 	uint8_t data[PACKET_MAXLEN];
-	int ret = sky_vc_read_next_received(vc_handle, data + 1, PACKET_MAXLEN);
+	int ret = sky_vc_read_next_received(vc_handle, data, PACKET_MAXLEN);
 	if (ret > 0) {
 		const size_t data_len = (size_t)ret;
 
@@ -137,8 +137,8 @@ void VCInterface::VirtualChannelInterface::check()
 
 		// Output the frame in porthouse's (frame format?)
 		json frame_dict = json::object();
-		frame_dict["packet_type"] = "downlink";
-		frame_dict["timestamp"] = getISOCurrentTimestamp();
+		frame_dict["packet_type"] = "tm";
+		frame_dict["timestamp"] = getCurrentISOTimestamp();
 		frame_dict["vc"] = vc_index;
 
 		// Format binary data to hexadecimal string
@@ -244,6 +244,7 @@ void VCInterface::VirtualChannelInterface::check()
 				vc_dict["buffer_free"] = (unsigned int)state.vc[vc].free_tx_slots;
 				vc_dict["tx_frames"] = (unsigned int)state.vc[vc].tx_frames;
 				vc_dict["rx_frames"] = (unsigned int)state.vc[vc].rx_frames;
+				//vc_dict["session_identifier"] = (unsigned int)state.vc[vc].session_identifier;
 				vc_list.push_back(vc_dict);
 			}
 
@@ -255,7 +256,7 @@ void VCInterface::VirtualChannelInterface::check()
 			/*
 			 * Flush virtual channel buffers
 			 */
-			sky_vc_wipe_to_arq_off_state(vc_handle);
+			sky_vc_arq_disconnect(vc_handle);
 			// No response
 		}
 		else if (ctrl_command == "get_stats")
@@ -321,8 +322,16 @@ void VCInterface::VirtualChannelInterface::check()
 			 * ARQ connect
 			 */
 			SKY_PRINTF(SKY_DIAG_ARQ, "VC%u ARQ connecting\n", vc_index);
-			sky_vc_wipe_to_arq_init_state(vc_handle);
-			// No response
+
+			arq_expected_state = ARQ_STATE_IN_INIT;
+			sky_vc_arq_connect(vc_handle);
+
+			// Return the new session identifier
+			SkyState state;
+			sky_get_state(protocol_handle, &state);
+			session_identifier = state.vc[vc_index].session_identifier;
+			response_dict["rsp"] = "arq_connecting";
+			response_dict["session_identifier"] = (unsigned int)session_identifier;
 		}
 		else if (ctrl_command == "arq_disconnect")
 		{
@@ -330,7 +339,7 @@ void VCInterface::VirtualChannelInterface::check()
 			 * ARQ disconnect
 			 */
 			SKY_PRINTF(SKY_DIAG_ARQ, "VC%u ARQ disconnecting\n", vc_index);
-			sky_vc_wipe_to_arq_off_state(vc_handle);
+			sky_vc_arq_disconnect(vc_handle);
 			// No response
 		}
 		else if (ctrl_command == "mac_reset")
@@ -350,8 +359,8 @@ void VCInterface::VirtualChannelInterface::check()
 		if (response_dict.empty() == false) {
 
 			json frame_dict = json::object();
-			frame_dict["type"] = "control";
-			frame_dict["timestamp"] = getISOCurrentTimestamp();
+			frame_dict["packet_type"] = "control";
+			frame_dict["timestamp"] = getCurrentISOTimestamp();
 			frame_dict["metadata"] = response_dict;
 
 			// Serialize dict and send it socket
@@ -359,8 +368,7 @@ void VCInterface::VirtualChannelInterface::check()
 			publish_socket.send(zmq::buffer(frame_str), zmq::send_flags::dontwait);
 		}
 	}
-}
-
+	}
 
 #if 0
 
