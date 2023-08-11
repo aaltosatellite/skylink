@@ -2,19 +2,19 @@
 
 For communication with the mission control system Skymodem uses JSON formatted packets over ZMQ PUB/SUB sockets. (Implementation of the interface can be found from: skymodem/vc_interface.cpp.) By default, skymodem will create a new binding ZMQ socket for each virtual channel and communication direction (tx/rx). Skymodem subcribes all messages incoming to rx socket and published responses and other asyncronoush messages such as received packets to tx automatically.
 
-The ZMQ port numbers are numbered using following equation `base_port + 10 * vc_index + (tx_port ? 1 : 0)`. For example, if the base_port is 7100 (default value) the application software using Skylink sends the commands to port 7111 to use VC1 and command responses are on port 7110.
+The ZMQ port numbers are numbered using following equation `base_port + 10 * vc_index + (tx_port ? 1 : 0)`.
+For example, if the base_port is 7100 (default value) the port numbers are following:
 
-
-| Port Number | Description             |
-| ----------- | ----------------------- |
-|    7100     | VC0 Receive/Downlink    |
-|    7101     | VC0 Transmit/Uplink     |
-|    7110     | VC1 Receive/Downlink    |
-|    7111     | VC1 Transmit/Uplink     |
-|    7120     | VC2 Receive/Downlink    |
-|    7121     | VC2 Transmit/Uplink     |
-|    7130     | VC3 Receive/Downlink    |
-|    7132     | VC3 Transmit/Uplink     |
+| TCP Port Number | Skymodems's role | Description             |
+| --------------- | ---------------- | ----------------------- |
+|       7100      |     ZMQ PUB      | VC0 Receive/Downlink    |
+|       7101      |     ZMQ SUB      | VC0 Transmit/Uplink     |
+|       7110      |     ZMQ PUB      | VC1 Receive/Downlink    |
+|       7111      |     ZMQ SUB      | VC1 Transmit/Uplink     |
+|       7120      |     ZMQ PUB      | VC2 Receive/Downlink    |
+|       7121      |     ZMQ SUB      | VC2 Transmit/Uplink     |
+|       7130      |     ZMQ PUB      | VC3 Receive/Downlink    |
+|       7132      |     ZMQ SUB      | VC3 Transmit/Uplink     |
 
 
 
@@ -32,14 +32,15 @@ To transmit (aka push a new packet to Skylink's buffer where Skylink will transm
 ```
 
 Where:
-- `packet_type` is `tc` to indicate that this is telecommand packet.
-- The `data` field is a hexadecimal string of the bytes to transmitted.
+- `packet_type` field is `tc` to indicate that this is telecommand packet. (optional)
+- `data` field contains the transmitted data as a hexadecimal string.
+  For example, `bytes(b"test").hex()` can be used to produced hexedecimal strings in Python.
 - `vc` is optional virtual channel index. If the field is given the frame is pushed to specified virtual channel else virtual channel by the used port number is used.
 
 
 ## Receiving packet
 
-When ever a frame is received by the modem and Skylink accepts it, skymodem will automatically transfer the packet to publishing virtual channels socket.
+When ever a frame is received by the modem and Skylink accepts it, skymodem will automatically transfer the packet to publishing virtual channels socket in following format.
 
 ```
 {
@@ -52,11 +53,12 @@ When ever a frame is received by the modem and Skylink accepts it, skymodem will
 ```
 
 Where:
-- `packet_type` is always `tm` to indicate that this is telemetry packet.
-- `timestamp` is ISO 8601 datetime string in UTC timezone.
-- The `data` field is a hexadecimal string of the bytes to transmitted.
-- `vc` is the virtual channel number.
-- `metadata` is a dict to containing possible other metadata.
+- `packet_type` field is always `tm` to indicate that this is telemetry packet.
+- `timestamp` field contains frame receiving time as ISO 8601 datetime string in UTC timezone.
+- `data` field contains the received packet as a hexadecimal string.
+   For example, `bytes.fromhex("abcd")` can be used to convert string hexedecimal strings to bytes-object in Python.
+- `vc` field contains the virtual channel number.
+- `metadata` field contains a dict of possible other metadata.
 
 
 ## ARQ connected/timeout messages
@@ -79,25 +81,28 @@ When the ARQ process changes state following message is output publish socket.
 
 ## Control commands:
 
+In control commands, the `packet_type` must always be `control` and the actual command/response code with relevant fields are inside the `metadata` dict.  
+
+
 ### Get status
 
-Command:
+To request Skylink's current state following command is transmitted to the virtual channels subscribing socket.
 ```
 {
     "packet_type": "control",
     "metadata": {
-        "cmd:" "get_state"
+        "cmd": "get_state"
     }
 }
 ```
 
-Response:
+After handling the command Skymodem responses following message containing state of the all virtual channels. 
 ```
 { 
     "packet_type": "control",
     "timestamp": "2023-04-20T12:01:00Z",
     "metadata": { 
-        "cmd:" "state",
+        "rsp": "state",
         "state": [
             { "arq_state": 2, "buffer_free": 8, "tx_frames": 0, "rx_frames": 0 },
             { "arq_state": 0, "buffer_free": 10, "tx_frames": 0, "rx_frames": 0 },
@@ -108,6 +113,14 @@ Response:
 }
 ``` 
 
+Where:
+- `state` field contains list dict about each virtual channels state. In side each dict:
+    - `arq_state` field is the . 0 = off, 1 = handshaking, 2 = on
+    - `buffer_free` field contains number of free slots for packets in the transmit buffer.
+    - `tx_frames` field ...
+    - `rx_frames` field ...
+
+
 ### Get statistics
 
 Command:
@@ -115,7 +128,7 @@ Command:
 {
     "packet_type": "control",
     "metadata": { 
-        "rsp:" "get_stats",
+        "rsp": "get_stats",
     }
 }
 ```
@@ -126,7 +139,7 @@ Response:
     "packet_type": "control",
     "timestamp": "2023-04-20T12:01:00Z",
     "metadata": {
-        "cmd:" "get_state", 
+        "rsp": "stats", 
         "rx_frames": 0,
         "rx_arq_resets": 0,
         "tx_frames": 0,
@@ -135,6 +148,11 @@ Response:
 }
 ``` 
 
+Where:
+ - `rx_frames` field is total number of transmitted,
+ - `rx_arq_resets` field ...
+ - `tx_frames` field ...
+ - `tx_bytes` field ...
 
 ### Clear statistics
 
@@ -143,7 +161,7 @@ Command:
 {
     "packet_type": "control",
     "metadata": { 
-        "rsp:" "clear_stats",
+        "rsp": "clear_stats",
     }
 }
 ```
@@ -202,7 +220,7 @@ Response:
 { 
     "packet_type": "control",
     "metadata": {
-        "cmd:" "arq_connect"
+        "cmd": "arq_connect"
     }
 }
 ```
