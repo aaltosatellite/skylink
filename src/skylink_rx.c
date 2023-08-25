@@ -7,6 +7,11 @@
 #include "skylink/hmac.h"
 #include "skylink/utilities.h"
 
+#if 0	// Needs to be disabled when using make to build Skymodem on PC
+#include "radio/radio_driver.h"
+#include "radio/com_debug.h"
+#endif
+
 #include "ext/gr-satellites/golay24.h"
 
 #include <string.h> // memcmp
@@ -99,7 +104,14 @@ int sky_rx(SkyHandle self, SkyRadioFrame* frame) {
 	unsigned int payload_len = frame->length - payload_start;
 	if ((frame->flags & SKY_FLAG_HAS_PAYLOAD) == 0) // Ignore frame payload if payload flag is not set.
 		payload_len = 0;
-	
+
+#if 0	// Needs to be disabled when using make to build Skymodem on PC
+	SEGGER_RTT_SetTerminal(3);
+	debugprintf("Res:");
+	terminal_dump(payload, payload_len);
+	debugprintf(":End\n");
+	SEGGER_RTT_SetTerminal(0);
+#endif
 	ret = sky_vc_process_content(self->virtual_channels[frame->vc], payload, payload_len, &exts, sky_get_tick_time());
 
 	return ret;
