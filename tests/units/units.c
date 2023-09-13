@@ -15,7 +15,6 @@ int posmod(int i){
 
 
 void print_struct_alignments(){
-	printf("PHY: %ld\n", sizeof(SkyPHYConfig));
 	printf("MAC: %ld\n", sizeof(SkyMACConfig ));
 	printf("VC: %ld\n", sizeof(SkyVCConfig ));
 	printf("HMAC: %ld\n", sizeof(SkyHMACConfig));
@@ -42,7 +41,6 @@ void print_struct_alignments(){
 
 	SkyConfig* conf = new_vanilla_config();
 	memset(conf, 0, sizeof(SkyConfig));
-	*(uint8_t*)(&conf->phy) = 0xa;
 	*(uint8_t*)(&conf->mac) = 0xb;
 	*(uint8_t*)(&conf->hmac) = 0xc;
 	*(uint8_t*)(&conf->vc[0]) = 0x1;

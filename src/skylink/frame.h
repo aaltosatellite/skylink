@@ -4,69 +4,73 @@
 #include "skylink/skylink.h"
 #include "sky_platform.h"
 
-/*
- * Number of bytes in frame identity field
- */
-#define SKY_IDENTITY_LEN                6
+/* Maximum number of bytes in frame identity field. */
+#define SKY_MAX_IDENTITY_LEN            (8)
 
 /*
  * All packets start with this.
  * ("encoded" protocol + version identifier)
  */
-#define SKYLINK_START_BYTE              ((0b01100 << 3) | (0x7 & SKY_IDENTITY_LEN))
+#define SKYLINK_FRAME_VERSION_BYTE      (0b01100 << 3)
+#define SKYLINK_FRAME_VERSION_MASK      (0xF8)
 
 /*
  * Frame header flags
+ * - vc: 2 bits
+ * - has_auth: 1 bit
+ * - has_crypt: 1 bit
+ * - arq: 1 bit
+ * - has_payload (turha): 1 bit
+ * - sequence control: 2 bits
  */
-#define SKY_FLAG_AUTHENTICATED          0b00001
-#define SKY_FLAG_ARQ_ON                 0b00010
-#define SKY_FLAG_HAS_PAYLOAD            0b00100
+#define SKY_FLAG_AUTHENTICATED          (0b00001)
+#define SKY_FLAG_ARQ_ON                 (0b00010)
+#define SKY_FLAG_HAS_PAYLOAD            (0b00100)
+//#define SKY_FLAG_CRYPT
 
-
-// Extensions start at this byte index. At the same time the minimum length of a healthy frame.
-#define EXTENSION_START_IDX             (SKY_IDENTITY_LEN + 5)
-
-// Extension header type IDs
-#define EXTENSION_ARQ_SEQUENCE          0
-#define EXTENSION_ARQ_REQUEST           1
-#define EXTENSION_ARQ_CTRL              2
-#define EXTENSION_ARQ_HANDSHAKE         3
-#define EXTENSION_MAC_TDD_CONTROL       4
-#define EXTENSION_HMAC_SEQUENCE_RESET   5
+typedef enum {
+	FragmentFirst  = 0,
+	FragmentMiddle = 1,
+	FragmentLast = 2,
+	FragmentStandalone = 3,
+} FragmentControl;
 
 
 // The maximum payload size that fits a worst case frame with all extensions.
-#define SKY_MAX_PAYLOAD_LEN             177
-#define SKY_PLAIN_FRAME_MIN_LENGTH      (EXTENSION_START_IDX)
-#define SKY_ENCODED_FRAME_MIN_LENGTH    (EXTENSION_START_IDX + RS_PARITYS)
-#define SKY_FRAME_MAX_LEN               (0x100)
+#define SKY_PAYLOAD_MAX_LEN             (181)
 
+#define SKY_FRAME_MIN_LEN               (1 + 2 + 4)
+#define SKY_FRAME_MAX_LEN               (223) // Limited by Reed-Solomon message length
+
+//#define SKY_PAYLOAD_MAX_LEN             (SKY_FRAME_MAX_LEN - (1 + SKY_MAX_IDENTITY_LEN + SKY_HMAC_LENGTH) )
+// (1 + sizeof(ExtTDDControl)) + (1 + sizeof(ExtARQReq) + (1 + sizeof(ExtARQSeq)) + (1 + sizeof(ExtARQCtrl)))
 
 
 /* frames ========================================================================================== */
-struct sky_radio_frame {
-
+struct sky_radio_frame
+{
 	// Ticks when the start of the frame was detected
 	sky_tick_t rx_time_ticks;
 
 	// Length of the raw frame
 	unsigned int length;
 
-	union {
-
-		uint8_t raw[SKY_FRAME_MAX_LEN + 6];
-
-		struct __attribute__((__packed__)) {
-			uint8_t start_byte;
-			uint8_t identity[SKY_IDENTITY_LEN];
-			uint8_t vc : 3;
-			uint8_t flags : 5;
-			uint8_t ext_length;
-			uint16_t auth_sequence;
-		};
-	};
+	//
+	uint8_t raw[SKY_FRAME_MAX_LEN + 6];
 };
+
 /* frames ========================================================================================== */
+
+
+/*
+ * Extension header Type IDs
+ */
+#define EXTENSION_ARQ_SEQUENCE          0
+#define EXTENSION_ARQ_REQUEST           1
+#define EXTENSION_ARQ_CTRL              2
+#define EXTENSION_ARQ_HANDSHAKE         3
+#define EXTENSION_MAC_TDD_CONTROL       4
+#define EXTENSION_HMAC_SEQUENCE_RESET   5
 
 
 /* ARQ Sequence */
@@ -118,28 +122,72 @@ typedef struct __attribute__((__packed__)) {
 	};
 } SkyHeaderExtension;
 
-/* Struct to hold pointers to parsed header extensions. */
-typedef struct {
-	SkyHeaderExtension* arq_sequence;
-	SkyHeaderExtension* arq_request;
-	SkyHeaderExtension* arq_ctrl;
-	SkyHeaderExtension* arq_handshake;
-	SkyHeaderExtension* mac_tdd;
-	SkyHeaderExtension* hmac_reset;
-} SkyParsedExtensions;
-
 /* extensions ====================================================================================== */
 
 
+typedef struct __attribute__((__packed__)) {
+	// Variable length source identity is handled separately
 
+	// TODO: Endianess issue????
+	// https://stackoverflow.com/questions/6043483/why-bit-endianness-is-an-issue-in-bitfields
+
+	union {
+		struct {
+			/* Virtual channel number */
+			unsigned int vc : 2;
+
+			/* Flags */
+			unsigned int flag_arq_on : 1; // Avoid confusion with packets around ARQ disconnect event.
+			unsigned int flag_authenticated : 1;
+			unsigned int flag_has_payload : 1;
+			unsigned int sequence_control : 2;
+			unsigned int reserved : 1;
+		};
+		uint8_t flags;
+	};
+
+	/* Frame sequence number used in authentication */
+	unsigned int frame_sequence : 16;
+
+	/* Extension header length */
+	unsigned int extension_length : 8;
+
+} SkyStaticHeader;
+
+
+/* Struct to hold parsed frame information */
+typedef struct {
+	const uint8_t* identity;
+	unsigned int identity_len;
+	SkyStaticHeader hdr;
+	const SkyHeaderExtension* arq_sequence;
+	const SkyHeaderExtension* arq_request;
+	const SkyHeaderExtension* arq_ctrl;
+	const SkyHeaderExtension* arq_handshake;
+	const SkyHeaderExtension* mac_tdd;
+	const SkyHeaderExtension* hmac_reset;
+	const uint8_t* payload;
+	unsigned int payload_len;
+} SkyParsedFrame;
+
+/* Struct to hold */
+typedef struct {
+	SkyStaticHeader* hdr;
+	SkyRadioFrame* frame;
+	uint8_t *ptr;
+} SkyTransmitFrame;
 
 /*
  * Allocate a new radio frame object
+ * Returns:
+ *    Pointer to newly allocated frame struct.
  */
 SkyRadioFrame* sky_frame_create();
 
 /*
- * Destroy frame
+ * Destroy frame.
+ * Args:
+ *   frame: Pointer to
  */
 void sky_frame_destroy(SkyRadioFrame* frame);
 
@@ -149,39 +197,46 @@ void sky_frame_destroy(SkyRadioFrame* frame);
 void sky_frame_clear(SkyRadioFrame* frame);
 
 /*
+ * (internal)
  * Add ARQ sequence number to the frame.
  */
 int sky_frame_add_extension_arq_sequence(SkyRadioFrame* frame, sky_arq_sequence_t sequence);
 
 /*
+ * (internal)
  * Add ARQ Retransmit Request header to the frame.
  */
 int sky_frame_add_extension_arq_request(SkyRadioFrame* frame, sky_arq_sequence_t sequence, uint16_t mask);
 
 /*
+ * (internal)
  * Add ARQ Control header to the frame.
  */
 int sky_frame_add_extension_arq_ctrl(SkyRadioFrame* frame, sky_arq_sequence_t tx_head_sequence, sky_arq_sequence_t rx_head_sequence);
 
 /*
+ * (internal)
  * Add ARQ Handshake header to the frame.
  */
 int sky_frame_add_extension_arq_handshake(SkyRadioFrame* frame, uint8_t state_flag, uint32_t identifier);
 
 /*
+ * (internal)
  * Add MAC TDD control header to the frame.
  */
 int sky_frame_add_extension_mac_tdd_control(SkyRadioFrame* frame, uint16_t window, uint16_t remaining);
 
 /*
+ * (internal)
  * Add HMAC sequence reset header to the frame.
  */
 int sky_frame_add_extension_hmac_sequence_reset(SkyRadioFrame* frame, uint16_t sequence);
 
-/* 
+/*
+ * (internal)
  * Fill the rest of the frame with given payload data.
  */
-int sky_frame_extend_with_payload(SkyRadioFrame *frame, void *pl, unsigned int length);
+int sky_frame_extend_with_payload(SkyRadioFrame *frame, const uint8_t *payload, unsigned int payload_length);
 
 /*
  * Get number of bytes left in the frame.
@@ -189,9 +244,10 @@ int sky_frame_extend_with_payload(SkyRadioFrame *frame, void *pl, unsigned int l
 int sky_frame_get_space_left(const SkyRadioFrame* radioFrame);
 
 /*
+ * (internal)
  * Parse and validate all header extensions inside the frame.
  */
-int sky_frame_parse_extension_headers(const SkyRadioFrame *frame, SkyParsedExtensions *exts);
+int sky_frame_parse_extension_headers(const SkyRadioFrame *frame, SkyParsedFrame *parsed);
 
 
 #endif // __SKYLINK_FRAME_H__

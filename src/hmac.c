@@ -25,7 +25,7 @@ int32_t wrap_hmac_sequence(int32_t sequence) {
 
 SkyHMAC* sky_hmac_create(SkyHMACConfig* config)
 {
-	// Allocate memory for HMAC struct and clear 
+	// Allocate memory for HMAC struct and clear
 	SkyHMAC* hmac = SKY_MALLOC(sizeof(SkyHMAC));
 	SKY_ASSERT(hmac != NULL);
 	memset(hmac, 0, sizeof(SkyHMAC));
@@ -52,7 +52,8 @@ void sky_hmac_destroy(SkyHMAC* hmac) {
 }
 
 
-int32_t sky_hmac_get_next_tx_sequence(SkyHandle self, unsigned int vc) {
+int32_t sky_hmac_get_next_tx_sequence(SkyHandle self, unsigned int vc)
+{
 	if (vc > SKY_NUM_VIRTUAL_CHANNELS)
 		return 0;
 	int32_t seq = self->hmac->sequence_tx[vc];
@@ -61,7 +62,8 @@ int32_t sky_hmac_get_next_tx_sequence(SkyHandle self, unsigned int vc) {
 }
 
 
-int sky_hmac_load_sequences(SkyHandle self, const int32_t* sequences) {
+int sky_hmac_load_sequences(SkyHandle self, const int32_t* sequences)
+{
 	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		self->hmac->sequence_tx[vc] = *sequences++;
 		self->hmac->sequence_rx[vc] = *sequences++;
@@ -69,7 +71,8 @@ int sky_hmac_load_sequences(SkyHandle self, const int32_t* sequences) {
 	return 0;
 }
 
-int sky_hmac_dump_sequences(SkyHandle self, int32_t* sequences) {
+int sky_hmac_dump_sequences(SkyHandle self, int32_t* sequences)
+{
 	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		*sequences++ = self->hmac->sequence_tx[vc];
 		*sequences++ = self->hmac->sequence_rx[vc];
@@ -79,14 +82,15 @@ int sky_hmac_dump_sequences(SkyHandle self, int32_t* sequences) {
 
 
 
-int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame) {
+int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame)
+{
 	SkyHMAC* hmac = self->hmac;
 
 	if(frame->length > (SKY_FRAME_MAX_LEN - SKY_HMAC_LENGTH))
 		return SKY_RET_FRAME_TOO_LONG_FOR_HMAC;
-	
-	// Add authenticaton flag to 
-	frame->flags |= SKY_FLAG_AUTHENTICATED;
+
+	// Add authenticaton flag to static header
+	//hdr->flags |= SKY_FLAG_AUTHENTICATED;
 
 	// Calculate blake3 hash
 	blake3_hasher* hasher = (blake3_hasher*)hmac->ctx;
@@ -106,7 +110,7 @@ static void sky_rx_process_ext_hmac_sequence_reset(SkyHMAC *hmac, const SkyHeade
 	if (ext->length != sizeof(ExtHMACSequenceReset) + 1)
 		return;
 
-	// Parse new sequence number and set it 
+	// Parse new sequence number and set it
 	uint16_t new_sequence = sky_ntoh16(ext->HMACSequenceReset.sequence);
 	hmac->sequence_tx[vc] = wrap_hmac_sequence(new_sequence);
 
@@ -114,32 +118,38 @@ static void sky_rx_process_ext_hmac_sequence_reset(SkyHMAC *hmac, const SkyHeade
 }
 
 
-int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame *frame, const SkyHeaderExtension* ext_hmac_reset)
+int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, SkyParsedFrame* parsed)
 {
 	SkyHMAC *hmac = self->hmac;
-	const SkyVCConfig *vc_conf = &self->conf->vc[frame->vc];
+	const unsigned vc = parsed->hdr.vc;
+	const SkyVCConfig *vc_conf = &self->conf->vc[vc];
+	SkyStaticHeader *hdr = &parsed->hdr;
+
+	// Swap the endianness of sequence number for later use.
+	const uint16_t auth_sequence = sky_ntoh16(parsed->hdr.frame_sequence);
+	parsed->hdr.frame_sequence = auth_sequence;
 
 	// If the frame claims to be authenticated, make sure is not too short.
-	if ((frame->flags & SKY_FLAG_AUTHENTICATED) != 0 && frame->length < (SKY_PLAIN_FRAME_MIN_LENGTH + SKY_HMAC_LENGTH))
+	if ((hdr->flags & SKY_FLAG_AUTHENTICATED) != 0 && parsed->payload_len < SKY_HMAC_LENGTH) {
+		self->diag->rx_hmac_fail++;
 		return SKY_RET_FRAME_TOO_SHORT_FOR_HMAC;
+	}
 
 	// Is not authentication required?
-	if ((vc_conf->require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION) == 0) {
-
-		// Remove the HMAC field if it exists
-		if ((frame->flags & SKY_FLAG_AUTHENTICATED) != 0)
-			frame->length -= SKY_HMAC_LENGTH;
-
-		// Swap the endianness of sequence number for later use
-		frame->auth_sequence = sky_ntoh16(frame->auth_sequence);
+	if ((vc_conf->require_authentication & SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION) == 0)
+	{
+		// Remove the HMAC field if it exists.
+		if ((hdr->flags & SKY_FLAG_AUTHENTICATED) != 0)
+			parsed->payload_len -= SKY_HMAC_LENGTH;
 
 		return SKY_RET_OK;
 	}
 
 	// Authentication is required but no authentication field provided?
-	if ((frame->flags & SKY_FLAG_AUTHENTICATED) == 0) {
+	if ((hdr->flags & SKY_FLAG_AUTHENTICATED) == 0) {
 		SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Authentication missing!\n")
-		hmac->vc_enforcement_need[frame->vc] = 1;
+		self->diag->rx_hmac_fail++;
+		hmac->vc_enforcement_need[vc] = 1;
 		return SKY_RET_AUTH_MISSING;
 	}
 
@@ -151,39 +161,161 @@ int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame *frame, const Sk
 	blake3_hasher_finalize(hasher, calculated_hash, SKY_HMAC_LENGTH);
 
 	// Compare the calculated hash to received one
-	uint8_t *frame_hash = &frame->raw[frame->length - SKY_HMAC_LENGTH];
+	const uint8_t *frame_hash = &frame->raw[frame->length - SKY_HMAC_LENGTH];
 	if (memcmp(frame_hash, calculated_hash, SKY_HMAC_LENGTH) != 0) {
 		SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Invalid authentication code!\n")
-		hmac->vc_enforcement_need[frame->vc] = 1;
+		self->diag->rx_hmac_fail++;
+		hmac->vc_enforcement_need[vc] = 1;
 		return SKY_RET_AUTH_FAILED;
 	}
 
 	// Process possible HMAC reset extension before validating the sequence number.
 	// Otherwise, the logic authentication can get locked if both peers use incorrect sequence number
 	// and both peer's check the sequence number.
-	if (ext_hmac_reset != NULL)
-		sky_rx_process_ext_hmac_sequence_reset(hmac, ext_hmac_reset, frame->vc);
+	if (parsed->hmac_reset != NULL)
+		sky_rx_process_ext_hmac_sequence_reset(hmac, parsed->hmac_reset, vc);
 
 	// Authentication hash check was successfull.
-	// Swap the endianness of sequence number for later use.
-	frame->auth_sequence = sky_ntoh16(frame->auth_sequence);
-	SKY_PRINTF(SKY_DIAG_DEBUG | SKY_DIAG_HMAC, "HMAC: Received sequence %d\n", frame->auth_sequence)
+	SKY_PRINTF(SKY_DIAG_DEBUG | SKY_DIAG_HMAC, "HMAC: Received sequence %u\n", auth_sequence)
 
 	// If sequence number check is required for authentication check it.
-	if (vc_conf->require_authentication & SKY_VC_FLAG_REQUIRE_SEQUENCE) {
-		int32_t jump = wrap_hmac_sequence( (int32_t)(frame->auth_sequence - hmac->sequence_rx[frame->vc]));
+	if (vc_conf->require_authentication & SKY_CONFIG_FLAG_REQUIRE_SEQUENCE) {
+		int32_t jump = wrap_hmac_sequence((int32_t)(auth_sequence - hmac->sequence_rx[vc]));
 		if (jump > self->conf->hmac.maximum_jump) {
 			SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Larger than allowed sequence jump\n")
-			hmac->vc_enforcement_need[frame->vc] = 1;
+			self->diag->rx_hmac_fail++;
+			hmac->vc_enforcement_need[vc] = 1;
 			return SKY_RET_EXCESSIVE_HMAC_JUMP;
 		}
 	}
 
 	// The HMAC sequence on our side jumps to the immediate next sequence number.
-	hmac->sequence_rx[frame->vc] = wrap_hmac_sequence((int32_t)(frame->auth_sequence + 1));
+	hmac->sequence_rx[vc] = wrap_hmac_sequence((int32_t)(auth_sequence + 1));
 
 	// Remove the HMAC field from the end of the frame
-	frame->length -= SKY_HMAC_LENGTH;
+	parsed->payload_len -= SKY_HMAC_LENGTH;
 
 	return SKY_RET_OK;
 }
+
+
+#if 0
+
+void sky_seed(uint32_t seed);
+uint32_t sky_rand();
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Pseudo random number generator
+// Source: https://www.analog.com/en/design-notes/random-number-generation-using-lfsr.html
+// NOTE: c stdlib rand() uses malloc and free...
+////////////////////////////////////////////////////////////////////////////////
+
+#define POLY_MASK_32 0xb4bcd35c
+#define POLY_MASK_31 0x7a5bc2e3
+
+static uint32_t lfsr32, lfsr31;
+
+static uint32_t shift_lfsr(uint32_t lfsr, uint32_t mask) {
+	if (lfsr & 1) {
+		lfsr ^= mask;
+	} else {
+		lfsr >>= 1;
+	}
+	return lfsr;
+}
+
+void sky_seed(uint32_t seed) {
+	lfsr32 = seed ^ (seed << 8);
+	lfsr31 = seed ^ (seed << 16) ^ (seed >> 16);
+}
+
+uint32_t sky_rand() {
+	lfsr32 = shift_lfsr(lfsr32, POLY_MASK_32);
+	lfsr32 = shift_lfsr(lfsr32, POLY_MASK_32);
+	lfsr31 = shift_lfsr(lfsr31, POLY_MASK_31);
+	return (lfsr32 ^ lfsr31) & 0xffff;
+}
+
+
+// https://github.com/oconnor663/bessie/blob/main/design.md
+// https://github.com/BLAKE3-team/BLAKE3/issues/138
+// https://github.com/oconnor663/bessie
+// https://github.com/oconnor663/blake3_aead
+// https://github.com/k0001/baile
+
+int sky_encrypt(SkyHandle self, SkyRadioFrame *frame, uint8_t *data, unsigned int data_len)
+{
+	SkyHMAC *hmac = self->hmac;
+
+	uint32_t nonce = get_rand();
+
+	uint32_t keys[2*32];
+	uint8_t init[5] = {
+		0xFF & (nonce << 24),
+		0xFF & (nonce << 16),
+		0xFF & (nonce << 8),
+		0, // Chunk index
+		1, // Final flag
+	};
+
+	blake3_hasher *hasher = (blake3_hasher *)hmac->ctx;
+	blake3_hasher_init_keyed(hasher, hmac->key);
+	blake3_hasher_update(hasher, init, sizeof(k));
+	blake3_hasher_finalize(hasher, keys, sizeof(keys));
+
+	// Authentication tag
+	blake3_hasher_init_keyed(hasher, &keys[0]);
+	blake3_hasher_update(hasher, data, data_len);
+	blake3_hasher_finalize(hasher, keys, sizeof(keys));
+
+	// Stream
+	uint8_t stream[MAX_LEN];
+	blake3_hasher_init_keyed(hasher, &keys[32]);
+	blake3_hasher_update(hasher, data, data_len);
+	blake3_hasher_finalize(hasher, stream, data_len);
+
+	for (unsigned int i = 0; i < data_len; i++)
+		frame->data[i] ^= stream[i];
+
+	return 0;
+}
+
+int sky_decrypt(uint32_t nonce, uint8_t *data, unsigned int data_len)
+{
+	SkyHMAC *hmac = self->hmac;
+	uint32_t keys[2 * 32];
+
+	uint8_t init[5] = {
+		data[0],
+		data[1],
+		data[2],
+		0, // Chunk index
+		1, // Final flag
+	};
+
+	blake3_hasher *hasher = (blake3_hasher *)hmac->ctx;
+	blake3_hasher_init_keyed(hasher, hmac->key);
+	blake3_hasher_update(hasher, init, sizeof(k));
+	blake3_hasher_finalize(hasher, keys, sizeof(keys));
+
+	// Authentication tag
+	blake3_hasher_init_keyed(hasher, &keys[0]);
+	blake3_hasher_update(hasher, data, data_len);
+	blake3_hasher_finalize(hasher, keys, sizeof(keys));
+
+	// Stream
+	uint8_t stream[MAX_LEN];
+	blake3_hasher_init_keyed(hasher, &keys[32]);
+	blake3_hasher_update(hasher, data, data_len);
+	blake3_hasher_finalize(hasher, stream, data_len);
+
+	for (unsigned int i = 0; i < data_len; i++)
+		frame->data[i] ^= stream[i];
+
+		return SKY_RET_AUTH_FAILED;
+
+	return 0;
+}
+
+#endif

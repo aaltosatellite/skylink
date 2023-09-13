@@ -24,8 +24,8 @@ SkyConfig* new_vanilla_config()
 	config->vc[3].rcv_ring_len 			= 12;
 	config->vc[3].element_size  		= 179;
 
-	config->vc[0].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX | SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE;
-	config->vc[1].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX | SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_REQUIRE_SEQUENCE;
+	config->vc[0].require_authentication = SKY_CONFIG_FLAG_AUTHENTICATE_TX | SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_REQUIRE_SEQUENCE;
+	config->vc[1].require_authentication = SKY_CONFIG_FLAG_AUTHENTICATE_TX | SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_REQUIRE_SEQUENCE;
 	config->vc[2].require_authentication = 0;
 	config->vc[3].require_authentication = 0;
 
@@ -34,6 +34,8 @@ SkyConfig* new_vanilla_config()
 	config->arq.idle_frames_per_window  = 1;
 
 	const uint8_t dummy_key[32] = {209, 20, 248, 100, 175, 77, 5, 118, 38, 204, 144, 17, 56, 109, 2, 158, 41, 177, 86, 7, 46, 17, 190, 165, 110, 32, 139, 229, 74, 13, 111, 179};
+	const uint8_t *key_list[1] = { dummy_key };
+
 	config->hmac.key_length = sizeof(dummy_key);
 	memcpy(config->hmac.key, dummy_key, sizeof(dummy_key));
 	config->hmac.maximum_jump           = 32;
@@ -51,12 +53,8 @@ SkyConfig* new_vanilla_config()
 	config->mac.carrier_sense_ticks				= 200;
 
 
-	config->identity[0] = 'O';
-	config->identity[1] = 'H';
-	config->identity[2] = '2';
-	config->identity[3] = 'F';
-	config->identity[4] = '1';
-	config->identity[5] = 'S';
+	memcpy(config->identity, "test", 4);
+	config->identity_len = 4;
 
 	return config;
 }
@@ -241,8 +239,9 @@ void tst_randoms(double chance1, double chance2, int NN){
 
 
 
-
-SkyHeaderExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_type) {
+#if 0
+SkyHeaderExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_type)
+{
 	if((int)(frame->ext_length + EXTENSION_START_IDX) > (int)frame->length)
 		return NULL; // Too short packet.
 
@@ -265,3 +264,4 @@ SkyHeaderExtension* get_extension(SkyRadioFrame* frame, unsigned int extension_t
 	}
 	return NULL;
 }
+#endif

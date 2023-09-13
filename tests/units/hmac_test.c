@@ -217,13 +217,14 @@ static void test2_round()
 	sky_vc_wipe_to_arq_on_state(self1->virtual_channels[vc], 10);
 	sky_vc_wipe_to_arq_on_state(self2->virtual_channels[vc], 10);
 
-	/* Push random frame to buffer */
+	// Push random frame to buffer
 	uint8_t PL[250];
 	uint8_t TGT[250];
 	fillrand(PL, 250);
 	int LEN_PL = randint_i32(1, 100);
-	sky_vc_push_packet_to_send(self1->virtual_channels[vc], PL, LEN_PL);
+	sky_vc_push_to_send_buffer(self1->virtual_channels[vc], PL, LEN_PL);
 
+	// Transmit the random frame
 	int r = sky_tx_with_fec(self1, sframe);
 	assert(r);
 	memcpy(rframe, sframe, sizeof(SkyRadioFrame));

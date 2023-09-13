@@ -3,19 +3,22 @@
 
 #include <stdint.h>
 
+//============ DEFINES =================================================================================================
+//======================================================================================================================
+
 
 /*
  * Return codes
  */
 #define SKY_RET_OK                          (0)
 
-//RX
+// RX
 #define SKY_RET_INVALID_ENCODED_LENGTH      (-2)
 #define SKY_RET_INVALID_PLAIN_LENGTH        (-3)
-#define SKY_RET_INVALID_START_BYTE          (-4)
+#define SKY_RET_INVALID_VERSION             (-4)
 #define SKY_RET_INVALID_VC                  (-5)
 #define SKY_RET_INVALID_EXT_LENGTH          (-6)
-#define SKY_RET_OWN_TRANSMISSION            (-7)
+#define SKY_RET_FILTERED_BY_IDENDITY        (-7)
 
 // FEC
 #define SKY_RET_GOLAY_FAILED                (-10)
@@ -64,14 +67,24 @@
 
 
 
-
+/*
+ * Number of virtual channels.
+ * Can be modified for specific mission but the number must be from 1 to 4.
+ */
 #define SKY_NUM_VIRTUAL_CHANNELS            (4)
 
-typedef uint16_t sky_arq_sequence_t;
-typedef uint16_t idx_t;
 
-//============ STRUCTS ===========================================================================================================
-//================================================================================================================================
+//============ TYPES ===================================================================================================
+//======================================================================================================================
+
+/* ARQ sequence number type  */
+//typedef uint8_t sky_arq_sequence_t;
+typedef uint16_t sky_arq_sequence_t;
+
+/* Element buffer types */
+typedef uint16_t sky_element_idx_t;
+typedef uint16_t sky_element_length_t;
+
 
 
 // Declare all structs so that we can start creating pointers
@@ -125,38 +138,56 @@ typedef struct __attribute__((__packed__)) {
 
 /* Struct to store pointers to all the data structures related to a protocol instance. */
 struct sky_all {
-	SkyConfig*			conf;                 					// Configuration
-	SkyDiagnostics*		diag;                 					// Diagnostics
-	SkyVirtualChannel* 	virtual_channels[SKY_NUM_VIRTUAL_CHANNELS]; // ARQ capable buffers
-	SkyMAC* 			mac;                    				// MAC state
-	SkyHMAC* 			hmac;									// HMAC authentication state
+	SkyConfig*          conf;                 // Configuration
+	SkyDiagnostics*	    diag;                 // Diagnostics
+	SkyVirtualChannel*  virtual_channels[SKY_NUM_VIRTUAL_CHANNELS]; // ARQ capable buffers
+	SkyMAC*             mac;                  // MAC state
+	SkyHMAC*            hmac;                 // HMAC authentication state
 };
 
-//============ STRUCTS ===========================================================================================================
-//================================================================================================================================
+/* Idenfity filter callback function type */
+typedef int (*SkyReceiveFilterCallback)(const SkyHandle, const uint8_t *, unsigned int);
 
-/* 
+//============ FUNCTIONS ===============================================================================================
+//======================================================================================================================
+
+/*
  * Create new Skylink protocol instance based on the configuration struct.
+ *
+ * Args:
+ *    config: Pointer to Skylink configuration struct.
+ *            The config struct is not copied and it must outlive the instance created.
  */
 SkyHandle sky_create(SkyConfig* config);
 
 /*
- * Destroy sylink
+ * Destroy Skylink instance and free all of its memory.
+ *
+ * Args:
+ *    self: Pointer to Skylink instance to be destroyed.
  */
-void sky_destroy(SkyHandle handle);
+void sky_destroy(SkyHandle self);
 
 /*
  * Get skylink protocol state
+ *
+ * Args:
+ *    self: Pointer to Skylink instance
+ *    state: Pointer to Skylink state object were current protocol state will be stored.
  */
 void sky_get_state(SkyHandle self, SkyState* state);
 
-/* 
+/*
  * Generate a new frame to be sent. The frame won't hae
+ *
+ * Args:
+ *    self: Pointer to Skylink instance
+ *    frame: Pointer to Skylink Radio Frame struct to which the new frame will be created.
  *
  * Returns:
  *    <0 if there was an error.
- *    0 if there's nothing to be sent. 
- *    1 if there's something to be sent and the frame was written to given frame structure.
+ *    0 if there's nothing to be sent.
+ *    1 if there's something to be sent and the frame was written to given structure.
  */
 int sky_tx(SkyHandle self, SkyRadioFrame *frame);
 
@@ -164,10 +195,14 @@ int sky_tx(SkyHandle self, SkyRadioFrame *frame);
  * Generate a new frame to be sent.
  * The frame will have the FEC included.
  *
+ * Args:
+ *    self: Pointer to Skylink instance
+ *    frame: Pointer to Skylink Radio Frame struct to which the new frame will be created.
+ *
  * Returns:
  *    <0 if there was an error.
  *    0 if there's nothing to be sent.
- *    1 if there's something to be sent and the frame was written to given frame structure.
+ *    1 if there's something to be sent and the frame was written to given structure.
  */
 int sky_tx_with_fec(SkyHandle self, SkyRadioFrame *frame);
 
@@ -175,10 +210,14 @@ int sky_tx_with_fec(SkyHandle self, SkyRadioFrame *frame);
  * Generate a new frame to be sent.
  * The frame will have the FEC and Golay header included.
  *
+ * Args:
+ *    self: Pointer to Skylink instance
+ *    frame: Pointer to Skylink Radio Frame struct to which the new frame will be created.
+ *
  * Returns:
  *    <0 if there was an error.
  *    0 if there's nothing to be sent.
- *    1 if there's something to be sent and the frame was written to given frame structure.
+ *    1 if there's something to be sent and the frame was written to given structure.
  */
 int sky_tx_with_golay(SkyHandle self, SkyRadioFrame *frame);
 
@@ -193,7 +232,7 @@ int sky_tx_with_golay(SkyHandle self, SkyRadioFrame *frame);
  *    <0 if there was an error.
  *    0 if there was no error while processing the frame.
  */
-int sky_rx(SkyHandle self, SkyRadioFrame* frame);
+int sky_rx(SkyHandle self, const SkyRadioFrame *frame);
 
 /*
  * Pass received frame for the protocol logic.
@@ -222,14 +261,22 @@ int sky_rx_with_fec(SkyHandle self, SkyRadioFrame *frame);
 int sky_rx_with_golay(SkyHandle self, SkyRadioFrame *frame);
 
 /*
- * Connect 
+ * Start the ARQ process connecting procedure
+ *
+ * Args:
+ *    vchannel: Pointer to virtual channel
  */
 int sky_vc_arq_connect(SkyVirtualChannel *vchannel);
 
 /*
- * Disconnect/flush 
+ * Disconnect/flush ARQ process
+ *
+ * Args:
+ *    vchannel: Pointer to virtual channel
  */
 int sky_vc_arq_disconnect(SkyVirtualChannel *vchannel);
 
+/* */
+void sky_set_receive_filter(SkyHandle self, SkyReceiveFilterCallback *callback);
 
 #endif // __SKYLINK_H__

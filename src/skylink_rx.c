@@ -12,16 +12,15 @@
 #include <string.h> // memcmp
 
 
-static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* frame, const SkyHeaderExtension* ext);
+static void sky_rx_process_ext_mac_control(SkyHandle self, int rx_time_ticks, SkyParsedFrame *parsed);
 
-
-int sky_rx_with_golay(SkyHandle self, SkyRadioFrame* frame) {
-
+int sky_rx_with_golay(SkyHandle self, SkyRadioFrame* frame)
+{
 	// Read Golay coded length
 	uint32_t coded_len = (frame->raw[0] << 16) | (frame->raw[1] << 8) | frame->raw[2];
 	int ret = decode_golay24(&coded_len);
 	if (ret < 0) {
-		SKY_PRINTF(SKY_DIAG_FEC, "\x1B[31m" "Golay failed" "\x1B[0m\n");
+		SKY_PRINTF(SKY_DIAG_FEC, COLOR_RED "Golay failed" COLOR_RESET "\n");
 		self->diag->rx_fec_fail++;
 		return SKY_RET_GOLAY_FAILED;
 	}
@@ -38,12 +37,10 @@ int sky_rx_with_golay(SkyHandle self, SkyRadioFrame* frame) {
 }
 
 
-int sky_rx_with_fec(SkyHandle self, SkyRadioFrame* frame) {
-
-	self->diag->rx_frames++;
-
-	if (frame->length < EXTENSION_START_IDX + RS_PARITYS) {
-		SKY_PRINTF(SKY_DIAG_FRAMES, "\x1B[31m" "Too short frame" "\x1B[0m\n");
+int sky_rx_with_fec(SkyHandle self, SkyRadioFrame* frame)
+{
+	if (frame->length < SKY_FRAME_MIN_LEN + RS_PARITYS) {
+		SKY_PRINTF(SKY_DIAG_FRAMES, COLOR_RED "Too short frame" COLOR_RESET "\n");
 		return SKY_RET_INVALID_ENCODED_LENGTH;
 	}
 
@@ -55,66 +52,98 @@ int sky_rx_with_fec(SkyHandle self, SkyRadioFrame* frame) {
 	return sky_rx(self, frame);
 }
 
+static int filter_by_identity(SkyHandle self, const uint8_t *identity, unsigned int identity_len)
+{
+	//
+	if (memcmp(identity, self->conf->identity, identity_len) == 0 && self->conf->identity_len == identity_len)
+		return 1;
 
-int sky_rx(SkyHandle self, SkyRadioFrame* frame) {
-	
-	int ret;
+	return 0;
+}
 
+int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
+{
 	// Some error checks
-	if(frame->length < SKY_PLAIN_FRAME_MIN_LENGTH){
-		SKY_PRINTF(SKY_DIAG_FRAMES, "\x1B[31m" "Too short frame" "\x1B[0m\n");
+	if(frame->length < SKY_FRAME_MIN_LEN){
+		SKY_PRINTF(SKY_DIAG_FRAMES, COLOR_RED "Too short frame" COLOR_RESET "\n");
 		return SKY_RET_INVALID_PLAIN_LENGTH;
 	}
 
-	// Validate static header
-	if (frame->start_byte != SKYLINK_START_BYTE)
-		return SKY_RET_INVALID_START_BYTE;
-	
-	if (frame->vc >= SKY_NUM_VIRTUAL_CHANNELS)
-		return SKY_RET_INVALID_VC;
+	self->diag->rx_frames++;
+	self->diag->rx_bytes += frame->length;
 
-	const unsigned payload_start =  (unsigned int)frame->ext_length + EXTENSION_START_IDX;
+	int ret;
+	SkyParsedFrame parsed;
+	memset(&parsed, 0, sizeof(SkyParsedFrame));
+
+	// Validate protocol version
+	const uint8_t version = frame->raw[0] & SKYLINK_FRAME_VERSION_BYTE;
+	if (version != SKYLINK_FRAME_VERSION_BYTE)
+		return SKY_RET_INVALID_VERSION;
+
+	// Validate identity field
+	parsed.identity = &frame->raw[1];
+	parsed.identity_len = frame->raw[0] & 0x07;
+	if (parsed.identity_len == 0 || parsed.identity_len > 8)
+		return SKY_RET_INVALID_VERSION;
+
+	// Identity filtering
+	if (filter_by_identity(self, parsed.identity, parsed.identity_len)) // TODO: Filtering callback function
+		return SKY_RET_FILTERED_BY_IDENDITY;
+
+	// Parse header
+	const unsigned header_start = 1 + parsed.identity_len;
+	memcpy(&parsed.hdr, &frame->raw[header_start], sizeof(SkyStaticHeader));
+	const unsigned payload_start = header_start + sizeof(SkyStaticHeader) + parsed.hdr.extension_length;
 	if (payload_start > frame->length)
 		return SKY_RET_INVALID_EXT_LENGTH;
-	
-	if (memcmp(frame->identity, self->conf->identity, SKY_IDENTITY_LEN) == 0)
-		return SKY_RET_OWN_TRANSMISSION;
+	const unsigned vc = parsed.hdr.vc;
 
+#if SKY_NUM_VIRTUAL_CHANNELS < 4
+	if (vc >= SKY_NUM_VIRTUAL_CHANNELS)
+		return SKY_RET_INVALID_VC;
+#endif
+
+	// Extract the frame payload
+	parsed.payload = &frame->raw[payload_start];
+	if ((parsed.hdr.flags & SKY_FLAG_HAS_PAYLOAD) != 0)
+		parsed.payload_len = frame->length - payload_start;
+	else
+		parsed.payload_len = 0; // Ignore frame payload if payload flag is not set.
 
 	// Parse and validate all extension headers
-	SkyParsedExtensions exts;
-	if ((ret = sky_frame_parse_extension_headers(frame, &exts)) < 0)
+	if ((ret = sky_frame_parse_extension_headers(frame, &parsed)) < 0)
 		return ret;
 
 	// Check the authentication/HMAC if the virtual channel necessitates it.
-	if ((ret = sky_hmac_check_authentication(self, frame, exts.hmac_reset)) < 0)
+	if ((ret = sky_hmac_check_authentication(self, frame, &parsed)) < 0)
 		return ret;
 
+#ifdef SKY_USE_TDD_MAC
 	// Update MAC/TDD state, and check for MAC/TDD handshake extension
-	if (exts.mac_tdd != NULL)
-		sky_rx_process_ext_mac_control(self, frame, exts.mac_tdd);
+	sky_rx_process_ext_mac_control(self, frame->rx_time_ticks, &parsed);
+#endif
 
-	// Extract the frame payload
-	const uint8_t *payload = &frame->raw[payload_start];
-	unsigned int payload_len = frame->length - payload_start;
-	if ((frame->flags & SKY_FLAG_HAS_PAYLOAD) == 0) // Ignore frame payload if payload flag is not set.
-		payload_len = 0;
-	
-	ret = sky_vc_process_content(self->virtual_channels[frame->vc], payload, payload_len, &exts, sky_get_tick_time());
+	// Increment VC RX frame count when the frame has been "accepted".
+	self->diag->vc_stats[vc].rx_frames++;
 
-	return ret;
+	return sky_vc_process_frame(self->virtual_channels[vc], &parsed, sky_get_tick_time());
 }
 
 
-static void sky_rx_process_ext_mac_control(SkyHandle self, const SkyRadioFrame* frame, const SkyHeaderExtension* ext) {
-	if (ext->length != sizeof(ExtTDDControl) + 1){
+
+static void sky_rx_process_ext_mac_control(SkyHandle self, int rx_time_ticks, SkyParsedFrame* parsed)
+{
+	const SkyHeaderExtension *tdd_ext = parsed->mac_tdd;
+	if (tdd_ext == NULL)
 		return;
-	}
-	if ((!self->conf->mac.unauthenticated_mac_updates) && (!(frame->flags & SKY_FLAG_AUTHENTICATED)) ) {
+
+	if (self->conf->mac.unauthenticated_mac_updates == 0 && (parsed->hdr.flags & SKY_FLAG_AUTHENTICATED) == 0)
 		return;
-	}
-	uint16_t w = sky_ntoh16(ext->TDDControl.window);
-	uint16_t r = sky_ntoh16(ext->TDDControl.remaining);
+
+	uint16_t w = sky_ntoh16(tdd_ext->TDDControl.window);
+	uint16_t r = sky_ntoh16(tdd_ext->TDDControl.remaining);
 	SKY_PRINTF(SKY_DIAG_MAC | SKY_DIAG_DEBUG, "MAC Updated: Window length %d, window remaining %d\n", w, r);
-	mac_update_belief(self->mac, sky_get_tick_time(), frame->rx_time_ticks, w, r);
+
+	mac_update_belief(self->mac, sky_get_tick_time(), rx_time_ticks, w, r);
 }

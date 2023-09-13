@@ -10,14 +10,13 @@
 
 #include "ext/libfec/fec.h"
 
-#if SKY_FRAME_MAX_LEN < RS_MSGLEN + RS_PARITYS
+#if SKY_FRAME_MAX_LEN > RS_MSGLEN
 #error "Too small buffer for radio frames"
 #endif
 
-#if RS_MSGLEN + RS_PARITYS > 255
-#error "Too big Reed-Solomon codeword"
+#if (RS_MSGLEN != 223 || RS_PARITYS != 32)
+#error "Invalid Reed Solomon config"
 #endif
-
 
 
 /*
@@ -61,89 +60,68 @@ static const uint8_t whitening[WHITENING_LEN] = {
 };
 
 
-/*
- * Default configuration for the PHY layer
- */
-SkyPHYConfig phy_defaults = {
-	.enable_scrambler = 1,
-	.enable_rs = 1,
-};
-
-SkyPHYConfig* conf = &phy_defaults;
-
 
 /** Decode a received frame */
 int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
 {
-	int ret = SKY_RET_OK;
+	// Check frame lenght
+	if (frame->length < RS_PARITYS || frame->length > (RS_MSGLEN + RS_PARITYS)) {
+		SKY_PRINTF(SKY_DIAG_FEC, COLOR_RED "Too short frame" COLOR_RESET "\n");
+		return SKY_RET_RS_INVALID_LENGTH;
+	}
 
-	if (conf->enable_scrambler) {
-		/*
-		 * Remove scrambler/whitening
-		 */
-		for (unsigned int i = 0; i < frame->length; i++){
+	/*
+	 * Remove scrambler/whitening
+	 */
 #if WHITENING_LEN != 256
 #error "Invalid WHITENING_LEN!"
 #endif
-			frame->raw[i] ^= whitening[i & 0xFF];
-		}
+	for (unsigned int i = 0; i < frame->length; i++){
+		frame->raw[i] ^= whitening[i & 0xFF];
 	}
 
-	if (conf->enable_rs) {
-		if (frame->length < RS_PARITYS || frame->length > (RS_MSGLEN + RS_PARITYS)) {
-			SKY_PRINTF(SKY_DIAG_FEC, "\x1B[31m" "Too short frame" "\x1B[0m\n");
-			return SKY_RET_RS_INVALID_LENGTH;
-		}
-
-		/*
-		 * Decode Reed-Solomon FEC
-		 *
-		 * Simply decode in place in the original buffer
-	 	 * and pass it to the next layer together with
-	 	 * the original metadata. */
-		if ((ret = decode_rs_8(frame->raw, NULL, 0, RS_MSGLEN + RS_PARITYS - frame->length)) < 0) {
-			diag->rx_fec_fail++;
-			SKY_PRINTF(SKY_DIAG_FEC, "\x1B[31m" "FEC failed" "\x1B[0m\n")
-			return SKY_RET_RS_FAILED; /* Reed-Solomon decode failed */
-		}
-
-		// Frame is now "shorter"
-		frame->length -= RS_PARITYS;
-
-		if (ret > 0){
-			SKY_PRINTF(SKY_DIAG_FEC, "\x1B[33m" "FEC corrected %d bytes" "\x1B[0m\n", ret)
-		}
-
-		// Update FEC Telemetry
-		diag->rx_fec_ok++;
-		diag->rx_fec_errs += ret;
-		diag->rx_fec_octs += frame->length + RS_PARITYS;
-
-		ret = SKY_RET_OK;
+	/*
+	 * Decode Reed-Solomon FEC
+	 *
+	 * Simply decode in place in the original buffer
+	 * and pass it to the next layer together with
+	 * the original metadata.
+	 */
+	int ret = decode_rs_8(frame->raw, NULL, 0, RS_MSGLEN + RS_PARITYS - frame->length);
+	if (ret < 0) { // Reed-Solomon decode failed
+		diag->rx_fec_fail++;
+		SKY_PRINTF(SKY_DIAG_FEC, COLOR_RED "FEC failed" COLOR_RESET "\n")
+		return SKY_RET_RS_FAILED;
 	}
+	if (ret > 0)
+		SKY_PRINTF(SKY_DIAG_FEC, COLOR_YELLOW "FEC corrected %d bytes" COLOR_RESET "\n", ret)
 
-	return ret;
+	// Frame is now "shorter"
+	frame->length -= RS_PARITYS;
+
+	// Update FEC Telemetry
+	diag->rx_fec_ok++;
+	diag->rx_fec_errs += ret;
+	diag->rx_fec_octs += frame->length + RS_PARITYS;
+
+	return SKY_RET_OK;
 }
 
 
 /** Encode a frame to transmit */
 int sky_fec_encode(SkyRadioFrame *frame)
 {
-	if (conf->enable_rs) {
-		/*
-		 * Calculate Reed-Solomon parity bytes
-		 */
-		encode_rs_8(frame->raw, &frame->raw[frame->length], RS_MSGLEN - frame->length);
-		frame->length += RS_PARITYS;
-	}
+	/*
+	 * Calculate Reed-Solomon parity bytes
+	 */
+	encode_rs_8(frame->raw, &frame->raw[frame->length], RS_MSGLEN - frame->length);
+	frame->length += RS_PARITYS;
 
-	if (conf->enable_scrambler) {
-		/*
-		 * Apply data whitening
-		 */
-		for (unsigned int i = 0; i < frame->length; i++){
-			frame->raw[i] ^= whitening[i & 0xFF];
-		}
+	/*
+	 * Apply data whitening
+	 */
+	for (unsigned int i = 0; i < frame->length; i++){
+		frame->raw[i] ^= whitening[i & 0xFF];
 	}
 
 	return SKY_RET_OK;

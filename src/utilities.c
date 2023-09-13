@@ -15,6 +15,9 @@
 SkyHandle sky_create(SkyConfig *config)
 {
 
+	if (config->identity_len < 3 || config->identity_len > 7) // TODO: better place?
+		return 0;
+
 	// Sanity check ARQ parameters (TODO: find a better place)
 	SkyARQConfig *arq_conf = &config->arq;
 	if (arq_conf->timeout_ticks < 1000 || arq_conf->timeout_ticks > 30000)

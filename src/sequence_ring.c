@@ -320,7 +320,7 @@ static int sendRing_read_new_packet_to_tx_(SkySendRing* sendRing, SkyElementBuff
 		return SKY_RET_RING_EMPTY;
 	}
 	RingItem* item = &sendRing->buff[sendRing->tx_head];
-	int read = sky_element_buffer_read(elementBuffer, tgt, item->idx, SKY_MAX_PAYLOAD_LEN + 100);
+	int read = sky_element_buffer_read(elementBuffer, tgt, item->idx, SKY_PAYLOAD_MAX_LEN + 100); // TODO: What is the +100?
 	if (read < 0) {
 		SKY_ASSERT(read > 0)
 		return read;
@@ -343,7 +343,7 @@ static int sendRing_read_recall_packet_to_tx_(SkySendRing* sendRing, SkyElementB
 		return SKY_RET_RING_CANNOT_RECALL;
 	}
 	RingItem* item = &sendRing->buff[recall_ring_index];
-	int read = sky_element_buffer_read(elementBuffer, tgt, item->idx, SKY_MAX_PAYLOAD_LEN + 100);
+	int read = sky_element_buffer_read(elementBuffer, tgt, item->idx, SKY_PAYLOAD_MAX_LEN + 100); // TODO: What is the +100?
 	if (read < 0)
 		return read;
 

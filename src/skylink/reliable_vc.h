@@ -111,12 +111,12 @@ int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* vchannel);
 // This is called with the head-tx sequence provided by an arq-control-extension
 void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequence_by_ctrl, sky_tick_t now);
 
-// Processes the content
-int sky_vc_process_content(SkyVirtualChannel *vchannel,
-							const uint8_t *payload,
-							int payload_len,
-							SkyParsedExtensions *exts,
-							sky_tick_t now);
+/*
+ * (internal)
+ * Processes a parsed frame.
+ */
+int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sky_tick_t now);
+
 //======================================================================================================================
 //======================================================================================================================
 

@@ -3,22 +3,27 @@
 
 #include "skylink/skylink.h"
 
-#ifdef SKY_DEBUG
-#define ARQ_SEQUENCE_MODULO 			517
-#else
-#define ARQ_SEQUENCE_MODULO 			32000
-#endif
-#define ARQ_RESEND_SCHEDULE_DEPTH		16
-#define ARQ_MAXIMUM_HORIZON				128
+/* */
+// #define ARQ_SEQUENCE_MODULO             250
+#define ARQ_SEQUENCE_MODULO             32000
+
+/* */
+#define ARQ_RESEND_SCHEDULE_DEPTH       16
+
+/* */
+#define ARQ_MAXIMUM_HORIZON             128
 
 
-//todo: define sequences as a new type (uint16 probably?) This would save 2*lots of bytes
-struct sky_ring_item_s {
-	idx_t idx;
+/* Sequence ring item */
+typedef struct __attribute__((__packed__))
+{
+	// Element buffer position
+	sky_element_idx_t idx;
+
+	// ARQ sequence number
 	sky_arq_sequence_t sequence;
-}__attribute__((__packed__));
-typedef struct sky_ring_item_s RingItem;
 
+} RingItem;
 
 struct sky_send_ring_s
 {

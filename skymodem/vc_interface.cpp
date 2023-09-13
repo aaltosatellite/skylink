@@ -34,7 +34,7 @@ VCInterface::VCInterface(SkyHandle protocol_handle, unsigned int vc_base)
 		vc.publish_socket = zmq::socket_t(zmq_ctx, zmq::socket_type::pub);
 		vc.publish_socket.bind(uri);
 
-		// Create ZMQ subscribe sockets 
+		// Create ZMQ subscribe sockets
 		snprintf(uri, ZMQ_URI_LEN, "tcp://*:%u", vc_base + 10 * vc_index + 1);
 		SKY_PRINTF(SKY_DIAG_INFO, "VC %d TX binding %s\n", vc_index, uri);
 		vc.subscribe_socket = zmq::socket_t(zmq_ctx, zmq::socket_type::sub);
@@ -45,7 +45,7 @@ VCInterface::VCInterface(SkyHandle protocol_handle, unsigned int vc_base)
 }
 
 
-void VCInterface::flush() 
+void VCInterface::flush()
 {
 	for (VirtualChannelInterface &vc : vcs)
 	{
@@ -65,7 +65,7 @@ void VCInterface::tick(Timestamp now)
 {
 	(void)now;
 	for (VirtualChannelInterface& vc: vcs) {
-		try { 
+		try {
 			vc.check();
 		}
 		catch (const SuoError& e) {
@@ -76,7 +76,7 @@ void VCInterface::tick(Timestamp now)
 
 void VCInterface::VirtualChannelInterface::check()
 {
-	/* 
+	/*
 	 * Has ARQ changed the state?
 	 */
 	if (arq_expected_state != ARQ_STATE_OFF && vc_handle->arq_state_flag == ARQ_STATE_OFF)
@@ -173,7 +173,7 @@ void VCInterface::VirtualChannelInterface::check()
 		cerr << "zmq_recv_frame: Failed to read data. " << e.what() << endl;
 	}
 
-	// Try to parse received message as JSON dictionary 
+	// Try to parse received message as JSON dictionary
 	json frame_dict;
 	try {
 		// TODO: Check that the packet meets basic Skylink JSON requirements??
@@ -185,7 +185,7 @@ void VCInterface::VirtualChannelInterface::check()
 		throw SuoError("Failed to parse received ZMQ message", e.what());
 	}
 
-	// If the frame has some data, pass it to Skylink 
+	// If the frame has some data, pass it to Skylink
 	if (frame_dict.contains("data") && frame_dict["data"].is_null() == false)
 	{
 		// Check packet type
@@ -199,7 +199,7 @@ void VCInterface::VirtualChannelInterface::check()
 			throw SuoError("JSON data field has odd number of characters!");
 
 		unsigned int tx_vc = frame_dict.value("vc", vc_index);
-		if (tx_vc >= SKY_NUM_VIRTUAL_CHANNELS) 
+		if (tx_vc >= SKY_NUM_VIRTUAL_CHANNELS)
 			throw SuoError("Invalid virtual channel index!", tx_vc);
 
 		size_t frame_len = hex_string.size() / 2;
@@ -241,10 +241,10 @@ void VCInterface::VirtualChannelInterface::check()
 			{
 				json vc_dict = json::object();
 				vc_dict["arq_state"] = (unsigned int)state.vc[vc].state;
-				vc_dict["buffer_free"] = (unsigned int)state.vc[vc].free_tx_slots;
-				vc_dict["tx_frames"] = (unsigned int)state.vc[vc].tx_frames;
-				vc_dict["rx_frames"] = (unsigned int)state.vc[vc].rx_frames;
-				//vc_dict["session_identifier"] = (unsigned int)state.vc[vc].session_identifier;
+				vc_dict["tx_free_slots"] = (unsigned int)state.vc[vc].tx_free_slots;
+				vc_dict["tx_queue_frames"] = (unsigned int)state.vc[vc].tx_queued_frames;
+				vc_dict["rx_queue_frames"] = (unsigned int)state.vc[vc].rx_queued_frames;
+				vc_dict["session_identifier"] = (unsigned int)state.vc[vc].session_identifier;
 				vc_list.push_back(vc_dict);
 			}
 
@@ -265,13 +265,32 @@ void VCInterface::VirtualChannelInterface::check()
 			 * Get statistics
 			 */
 
-			// Dump skylink stats
+			// Dump Skylink's general stats
 			json sky_stats_dict = json::object();
 			SkyDiagnostics stats = *protocol_handle->diag;
 			sky_stats_dict["rx_frames"] = stats.rx_frames;
+			sky_stats_dict["rx_bytes"] = stats.rx_bytes;
+			sky_stats_dict["rx_fec_ok"] = stats.rx_fec_ok;
+			sky_stats_dict["rx_fec_fail"] = stats.rx_fec_fail;
+			sky_stats_dict["rx_fec_errs"] = stats.rx_fec_errs;
 			sky_stats_dict["rx_arq_resets"] = stats.rx_arq_resets;
+			sky_stats_dict["rx_hmac_fail"] = stats.rx_hmac_fail;
+
 			sky_stats_dict["tx_frames"] = stats.tx_frames;
 			sky_stats_dict["tx_bytes"] = stats.tx_bytes;
+
+			// Dump Skylink's Virtual channel specific stats
+			json vc_list = json::array();
+			for (size_t vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++)
+			{
+				json vc_dict = json::object();
+				vc_dict["arq_retransmits"] = (unsigned int)stats.vc_stats[vc].arq_retransmits;
+				vc_dict["buffer_free"] = (unsigned int)stats.vc_stats[vc].free_tx_slots; // tx_free
+				vc_dict["total_tx_frames"] = (unsigned int)stats.vc_stats[vc].total_tx_frames;
+				vc_dict["total_rx_frames"] = (unsigned int)stats.vc_stats[vc].total_rx_frames;
+				vc_list.push_back(vc_dict);
+			}
+			sky_stats_dict["vc"] = vc_list;
 
 			// Dump suo statistics
 			json suo_stats_dict = json::object();
@@ -299,7 +318,7 @@ void VCInterface::VirtualChannelInterface::check()
 			string config_name = control_dict["config"];
 			string config_value = control_dict["value"];
 			set_config(config_name, config_value);
-			
+
 			// No response
 		}
 		else if (ctrl_command == "get_config")
@@ -351,13 +370,23 @@ void VCInterface::VirtualChannelInterface::check()
 			mac_reset(protocol_handle->mac, sky_get_tick_time());
 			// No response
 		}
-		else {
+#if 1
+		else if (ctrl_command == "debug")
+		{
+			/*
+			 * MAC/TDD Reset
+			 */
+		}
+#endif
+		else
+		{
 			cerr << "Unknown ZMQ message '" << msg.to_string() << "'" << endl;
 		}
 
 		// Send response back to publisher socket
-		if (response_dict.empty() == false) {
-
+		if (response_dict.empty() == false)
+		{
+			//SKY_PRINTF(SKY_DIAG_DEBUG, "Replying to %s on VC %d\n", ctrl_command, vc_index);
 			json frame_dict = json::object();
 			frame_dict["packet_type"] = "control";
 			frame_dict["timestamp"] = getCurrentISOTimestamp();

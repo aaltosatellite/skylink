@@ -32,14 +32,8 @@ SkyModem::SkyModem() :
 	config.phy.enable_scrambler = 0; // Suo implements the scrambler and the reed solomon for us!
 	config.phy.enable_rs = 0;
 
-	SKY_ASSERT(SKY_IDENTITY_LEN == 6);
-	config.identity[0] = 'D';
-	config.identity[1] = 'e';
-	config.identity[2] = 'f';
-	config.identity[3] = 'a';
-	config.identity[4] = 'u';
-	config.identity[5] = 'l';
-	//config.identity[6] = 't';
+	memcpy(config.identity, "Default", 7);
+	config.identity_len = 7;
 
 	/*
 	 * MAC configurations
@@ -63,19 +57,19 @@ SkyModem::SkyModem() :
 	config.vc[0].send_ring_len = 24;
 	config.vc[0].rcv_ring_len = 24;
 	config.vc[0].element_size = 36;
-	config.vc[0].require_authentication = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
+	config.vc[0].require_authentication = SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_AUTHENTICATE_TX;
 
 	config.vc[1].horizon_width = 16;
 	config.vc[1].send_ring_len = 24;
 	config.vc[1].rcv_ring_len = 24;
 	config.vc[1].element_size = 36;
-	config.vc[1].require_authentication = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
+	config.vc[1].require_authentication = SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_AUTHENTICATE_TX;
 
 	config.vc[2].horizon_width = 2;
 	config.vc[2].send_ring_len = 8;
 	config.vc[2].rcv_ring_len = 8;
 	config.vc[2].element_size = 36;
-	config.vc[2].require_authentication = SKY_VC_FLAG_REQUIRE_AUTHENTICATION | SKY_VC_FLAG_AUTHENTICATE_TX;
+	config.vc[2].require_authentication = SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_AUTHENTICATE_TX;
 
 	config.vc[3].horizon_width = 2;
 	config.vc[3].send_ring_len = 8;
@@ -97,9 +91,15 @@ SkyModem::SkyModem() :
 #ifdef EXTERNAL_SECRET
 #include "secret.hpp"
 #else
-	const uint8_t hmac_key[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f };
+	const uint8_t hmac_key[32] = { 
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+		0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+		0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+		0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+	};
 	const unsigned int hmac_key_len = sizeof(hmac_key);
 #endif
+
 	config.hmac.key_length = hmac_key_len;
 	assert(hmac_key_len <= sizeof(config.hmac.key));
 	memcpy(config.hmac.key, hmac_key, hmac_key_len);
@@ -149,7 +149,7 @@ SkyModem::SkyModem() :
 		sdr = new SoapySDRIO(sdr_conf);
 		sdr->sinkTicks.connect_member(this, &SkyModem::tick);
 		sdr->sinkTicks.connect_member(vc_interface, &VCInterface::tick);
-
+		sdr->configureSDR.connect_member(this, &SkyModem::configureSDR);
 		/*
 		 * Setup receiver
 		 */

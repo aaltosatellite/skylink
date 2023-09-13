@@ -29,37 +29,38 @@ static void test1(){
 
 
 
-static void test1_round(){
+static void test1_round()
+{
 	// pull random params ----------------------------------------------------------------------------------------------
 	SkyConfig* config = new_vanilla_config();
 	SkyRadioFrame* sframe = sky_frame_create();
 	SkyRadioFrame* rframe = sky_frame_create();
-	fillrand((uint8_t*)sframe, sizeof(SkyRadioFrame));
-	fillrand((uint8_t*)rframe, sizeof(SkyRadioFrame));
-	uint8_t identity[SKY_IDENTITY_LEN];
-	fillrand(identity, SKY_IDENTITY_LEN);
-	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS-1);
+	fillrand(sframe, sizeof(SkyRadioFrame));
+	fillrand(rframe, sizeof(SkyRadioFrame));
 
+	// Generate random content for the static header
+	uint8_t random_identity[SKY_MAX_IDENTITY_LEN];
+	fillrand(random_identity, SKY_MAX_IDENTITY_LEN);
+	int random_identity_len = randint_i32(0, SKY_MAX_IDENTITY_LEN);
+	int random_vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS - 1);
 	int arq_on = randint_i32(0,1);
-
 	int hmac_on = randint_i32(0,1);
-	int hmac_sequence = randint_i32(0, HMAC_CYCLE_LENGTH-1);
+	int random_sequence = randint_i32(0, HMAC_CYCLE_LENGTH - 1);
 
+	// Set static members ----------------------------------------------------------------------------------------------
+	sframe->length = random_identity_len + sizeof(SkyStaticHeader);
+	sframe->raw[0] = SKYLINK_FRAME_VERSION_BYTE | random_identity_len;
+	memcpy(&sframe->raw[1], random_identity, random_identity_len);
 
-	// set satic members ----------------------------------------------------------------------------------------------
-	sframe->length = EXTENSION_START_IDX;
-	sframe->start_byte = SKYLINK_START_BYTE;
-	memcpy(sframe->identity, identity, SKY_IDENTITY_LEN);
-	sframe->vc = vc;
-	sframe->auth_sequence = hmac_sequence;
-	sframe->ext_length = 0;
-	sframe->flags = 0;
-	if(hmac_on){
-		sframe->flags |= SKY_FLAG_AUTHENTICATED;
-	}
-	if(arq_on){
-		sframe->flags |= SKY_FLAG_ARQ_ON;
-	}
+	SkyStaticHeader *hdr = (SkyStaticHeader *)sframe->raw[random_identity_len + 1];
+	hdr->vc = random_vc;
+	hdr->frame_sequence = random_sequence;
+	hdr->extension_length = 0;
+	hdr->flags = 0;
+	if (hmac_on)
+		hdr->flags |= SKY_FLAG_AUTHENTICATED;
+	if (arq_on)
+		hdr->flags |= SKY_FLAG_ARQ_ON;
 
 
 
@@ -130,7 +131,7 @@ static void test1_round(){
 		assert(sky_frame_get_space_left(sframe) == (RS_MSGLEN - (SKY_HMAC_LENGTH + EXTENSION_START_IDX)) );
 	}
 
-	int payload_len = randint_i32(0, SKY_MAX_PAYLOAD_LEN); //173 seems to be the max with this setup...
+	int payload_len = randint_i32(0, SKY_PAYLOAD_MAX_LEN); //173 seems to be the max with this setup...
 	uint8_t* pl = x_alloc(payload_len);
 	fillrand(pl, payload_len);
 	int r = sky_frame_extend_with_payload(sframe, pl, payload_len);
@@ -148,7 +149,7 @@ static void test1_round(){
 
 	//Frame static header
 	assert(rframe->start_byte == SKYLINK_START_BYTE);
-	assert(memcmp(rframe->identity, identity, SKY_IDENTITY_LEN) ==0);
+	assert(memcmp(rframe->identity, identity, SKY_MAX_IDENTITY_LEN) ==0);
 	assert(rframe->vc == vc);
 	assert(((rframe->flags & SKY_FLAG_AUTHENTICATED) > 0) == (hmac_on > 0));
 	assert(((rframe->flags & SKY_FLAG_ARQ_ON) > 0) == (arq_on > 0));

@@ -5,21 +5,49 @@
 #include "skylink/skylink.h"
 #include "skylink/conf.h"
 
+
+/* HMAC trailer length */
+#define SKY_HMAC_LENGTH                 4 // bytes
+
 #define HMAC_CYCLE_LENGTH	65000
-#define HMAC_NO_SEQUENCE	65010
 
-
+#if 1
 /* HMAC runtime state */
 struct sky_hmac {
+	// TODO: Own key for each VC and direction
 	uint8_t* key;
 	int32_t key_len;
+	uint32_t nonce_seed;
+
 	int32_t sequence_tx[SKY_NUM_VIRTUAL_CHANNELS];
 	int32_t sequence_rx[SKY_NUM_VIRTUAL_CHANNELS];
 	uint8_t vc_enforcement_need[SKY_NUM_VIRTUAL_CHANNELS];
 	void* ctx;
 };
+#else
+ 
+/*
+ IDEA: globaali key list jonka pituus voi olla mikä taansa ja conffi 
+ määrittelee mitä key_indexiä milloinkin pitää käyttää.
+ */
 
+/* HMAC runtime state */
+struct sky_hmac
+{
+	// TODO: Own key for each VC and direction
+	uint32_t nonce_seed;
+	uint8_t** key_list;
 
+	struct {
+		int32_t sequence_tx;
+		int32_t sequence_rx;
+		uint8_t vc_enforcement_need;
+	} vc[SKY_NUM_VIRTUAL_CHANNELS];
+
+	void *ctx;
+};
+
+#endif
 
 /* Allocate and initialize HMAC state instance */
 SkyHMAC *sky_hmac_create(SkyHMACConfig *config);
@@ -38,7 +66,7 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame);
  * Also, corrects sequence number field endianess and removes the HMAC extension from the frame if provided.
  * HMAC trailer is removed from the end of the frame.
  */
-int sky_hmac_check_authentication(SkyHandle self, SkyRadioFrame *frame, const SkyHeaderExtension* ext_hmac_reset);
+int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, SkyParsedFrame* parsed);
 
 /* Positive modulo by max hmac sequence */
 int32_t wrap_hmac_sequence(int32_t sequence);

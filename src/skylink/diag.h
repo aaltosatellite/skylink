@@ -22,21 +22,91 @@
 /* Global define for debug print flags */
 extern unsigned int sky_diag_mask;
 
-
 /*
- * Protocol diagnostic information.
+ * Structs to hold protocol diagnostic information
  */
-struct sky_diag {
-	uint16_t rx_frames;      // Total number of received frames
-	uint16_t rx_fec_ok;      // Number of successfully decoded codewords
-	uint16_t rx_fec_fail;    // Number of failed decodes
-	uint16_t rx_fec_octs;    // Total number of octets successfully decoded
-	uint16_t rx_fec_errs;    // Number of bytes errors corrected
-	uint16_t rx_arq_resets;  // Number of bytes errors corrected
-	uint16_t tx_frames;      // Total number of transmitted frames
-	uint16_t tx_bytes;       // Number of bytes transmitted
+typedef struct
+{
+	uint16_t arq_retransmits;
+	//uint16_t arq_dunno;
+
+	/*
+	 * Total number of transmitted frames using this virtual channel.
+	 */
+	uint16_t tx_frames;
+
+	/*
+	 * Total number of received/accepted frames using this virtual channel.
+	 * Counteed frame must have passed HMAC and other sanity checks.
+	 */
+	uint16_t rx_frames;
+
+} SkyVCDiagnostics;
+
+
+struct sky_diag
+{
+
+	/*
+	 * Total number of received frames.
+	 * Counted frame has passed integrity checks.
+	 */
+	uint16_t rx_frames;
+
+	/*
+	 * Total number of received bytes.
+	 */
+	uint16_t rx_bytes;
+
+	/*
+	 * Number of successfully decoded codewords.
+	 */
+	uint16_t rx_fec_ok;
+
+	/*
+	 * Number of failed frame FEC decode.
+	 * These frames won't be counter in the total "rx_frames" count.
+	 */
+	uint16_t rx_fec_fail;
+
+	/*
+	 * Total number of octets/bytes successfully decoded.
+	 * Number includes both payload and parity bytes.
+	 */
+	uint16_t rx_fec_octs;
+
+	/*
+	 * Total number of octect/byte errors corrected.
+	 * byte error rate = rx_fec_errs / rx_fec_octs
+	 */
+	uint16_t rx_fec_errs;
+
+	/*
+	 * Number of HMAC failures
+	 */
+	uint16_t rx_hmac_fail;
+
+	/*
+	 * Number of bytes errors corrected
+	 */
+	uint16_t rx_arq_resets;
+
+	/*
+	 * Total number of transmitted frames
+	 */
+	uint16_t tx_frames;
+
+	/*
+	 * Total Number of bytes transmitted
+	 */
+	uint16_t tx_bytes;
+
+	/*
+	 * Stats for individual virtual channels
+	 */
+	SkyVCDiagnostics vc_stats[SKY_NUM_VIRTUAL_CHANNELS];
 };
-typedef struct sky_diag SkyDiagnostics;
+
 
 /* Allocate and initialize a new diagnostics object */
 SkyDiagnostics* sky_diag_create();
@@ -49,5 +119,16 @@ void sky_diag_clear(SkyDiagnostics *diag);
 
 /* Print out the link state to debug print. */
 void sky_print_link_state(SkyHandle self);
+
+/* ASCII color defines */
+#define COLOR_BLACK   "\e[0;30m"
+#define COLOR_RED     "\e[0;31m"
+#define COLOR_GREE    "\e[0;32m"
+#define COLOR_YELLOW  "\e[0;33m"
+#define COLOR_BLUE    "\e[0;34m"
+#define COLOR_MAGENTA "\e[0;35m"
+#define COLOR_CYAN    "\e[0;36m"
+#define COLOR_WHITE   "\e[0;37m"
+#define COLOR_RESET   "\e[0m"
 
 #endif /* __SKYLINK_DIAG_H__ */

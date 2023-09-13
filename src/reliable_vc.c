@@ -35,7 +35,7 @@ static int compute_required_element_count(int elementsize, int total_ring_slots,
 
 //===== SKYLINK VIRTUAL CHANNEL  =======================================================================================
 SkyVirtualChannel* sky_vc_create(SkyVCConfig* config) {
-	
+
 	if (config->rcv_ring_len < 6 || config->rcv_ring_len > 250)
 		config->rcv_ring_len = 32;
 	if(config->horizon_width > config->rcv_ring_len - 3)
@@ -48,7 +48,7 @@ SkyVirtualChannel* sky_vc_create(SkyVCConfig* config) {
 
 	SkyVirtualChannel* vchannel = SKY_MALLOC(sizeof(SkyVirtualChannel));
 	SKY_ASSERT(vchannel != NULL);
-	
+
 	// Create send ring
 	vchannel->sendRing = sky_send_ring_create(config->send_ring_len, 0);
 	SKY_ASSERT(vchannel->sendRing != NULL);
@@ -59,7 +59,7 @@ SkyVirtualChannel* sky_vc_create(SkyVCConfig* config) {
 
 	// Create element buffer
 	int32_t ring_slots = config->rcv_ring_len + config->send_ring_len -2;
-	int32_t optimal_element_count = compute_required_element_count(config->element_size, ring_slots, SKY_MAX_PAYLOAD_LEN);
+	int32_t optimal_element_count = compute_required_element_count(config->element_size, ring_slots, SKY_PAYLOAD_MAX_LEN);
 	vchannel->elementBuffer = sky_element_buffer_create(config->element_size, optimal_element_count);
 	SKY_ASSERT(vchannel->elementBuffer != NULL);
 
@@ -160,8 +160,15 @@ void sky_vc_check_timeouts(SkyVirtualChannel *vchannel, sky_tick_t now, sky_tick
 
 //=== SEND =============================================================================================================
 //======================================================================================================================
+
+/*
+ * sky_vc_write_packet_to_send()
+ * sky_vc_write_to_send()
+ * sky_vc_write_to_send_buffer()
+ */
+
 int sky_vc_push_packet_to_send(SkyVirtualChannel* vchannel, void* payload, int length){
-	if(length > SKY_MAX_PAYLOAD_LEN){
+	if(length > SKY_PAYLOAD_MAX_LEN){
 		return SKY_RET_TOO_LONG_PAYLOAD;
 	}
 	return sendRing_push_packet_to_send(vchannel->sendRing, vchannel->elementBuffer, payload, length);
@@ -219,10 +226,13 @@ int sky_vc_peek_next_tx_size_and_sequence(SkyVirtualChannel* vchannel, int inclu
 
 //=== RECEIVE ==========================================================================================================
 //======================================================================================================================
+
+// sky_vc_count_available_packets()
 int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* vchannel){
 	return rcvRing_count_readable_packets(vchannel->rcvRing);
 }
 
+// sky_vc_read_from_receive_buffer()
 int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int max_length){
 	return rcvRing_read_next_received(vchannel->rcvRing, vchannel->elementBuffer, tgt, max_length);
 }
@@ -232,6 +242,7 @@ int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, const void* src
 	return rcvRing_push_rx_packet(vchannel->rcvRing, vchannel->elementBuffer, src, length, sequence);
 }
 
+// sky_vc_write_to_receive_buffer()
 int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, const void* src, int length, int sequence, sky_tick_t now){
 	int r = rcvRing_push_rx_packet(vchannel->rcvRing, vchannel->elementBuffer, src, length, sequence);
 	if(r > 0){ //head advanced at least by 1
@@ -259,53 +270,59 @@ void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequenc
 //======================================================================================================================
 
 
-
+// sky_vc_has_content_to_send()
 int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_tick_t now, uint16_t frames_sent_in_this_vc_window)
 {
 	switch (vchannel->arq_state_flag) {
 	case ARQ_STATE_OFF:
 		/*
-		 * ARQ is off: 
+		 * ARQ is off:
 		 */
-		
+
 		// Transmit if there's something in the buffer
 		if (sendRing_count_packets_to_send(vchannel->sendRing, 0) > 0)
 			return 1;
-		
+
 		return 0;
 
 	case ARQ_STATE_IN_INIT:
-		/* 
-		 * ARQ is initizling so generate idle frames.
+		/*
+		 * ARQ is handshaking but we haven't received response yet.
 		 */
+
+		// Transmit if not too many idle frames have not been generated.
 		if (frames_sent_in_this_vc_window < config->arq.idle_frames_per_window)
 			return 1;
 		return 0;
 
 	case ARQ_STATE_ON:
 		/*
+		 * ARQ is on.
 		 */
 
 		// Yes, if we have something in the buffer
 		if (sendRing_count_packets_to_send(vchannel->sendRing, 1) > 0)
 			return 1;
-		
-		// Yes, if and we have need to retransmit something.
-		if ((frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) && (rcvRing_get_horizon_bitmap(vchannel->rcvRing) || vchannel->need_recall))
+
+		// Yes, if and we have need to retransmit something and not all idle frame are used.
+		if (frames_sent_in_this_vc_window < config->arq.idle_frames_per_window && \
+		    (rcvRing_get_horizon_bitmap(vchannel->rcvRing) || vchannel->need_recall))
 			return 1;
-		
+
+		// Yes, if we need to response a ARQ handshake
 		if (vchannel->handshake_send)
 			return 1;
-		
 
-		int b0 = frames_sent_in_this_vc_window < config->arq.idle_frames_per_window;
-		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > config->arq.idle_frame_threshold;
-		int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > config->arq.idle_frame_threshold;
-		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > config->arq.idle_frame_threshold;
-		int b4 = vchannel->unconfirmed_payloads > 0;
-		if (b0 && (b1 || b2 || b3 || b4))
-			return 1;
+		// Can still generate more idle frames?
+		if (frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) {
 
+			int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > config->arq.idle_frame_threshold;
+			int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > config->arq.idle_frame_threshold;
+			int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > config->arq.idle_frame_threshold;
+			int b4 = vchannel->unconfirmed_payloads > 0;
+			if (b1 || b2 || b3 || b4)
+				return 1;
+		}
 	}
 
 	return 0;
@@ -320,48 +337,54 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 
 	switch (vchannel->arq_state_flag) {
 	case ARQ_STATE_OFF: {
-		/* 
+		/*
 		 */
 
-		// Try to read a new frame 
+		// Try to read a new frame
 		int length, sequence;
 		if (sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 0, &length, &sequence) >= 0) {
 			SKY_ASSERT(length <= sky_frame_get_space_left(frame))
 			int read = sky_vc_read_packet_for_tx_monotonic(vchannel, frame->raw + frame->length, &sequence);
 			SKY_ASSERT(read >= 0)
 			frame->length += read;
-			frame->flags |= SKY_FLAG_HAS_PAYLOAD;
+			//frame->hdr->flags |= SKY_FLAG_HAS_PAYLOAD;
 			return 1;
 		}
-		
+
 		return 0;
 	}
 	case ARQ_STATE_IN_INIT:
 		/*
+		 * ARQ is handshaking but we haven't received response yet.
 		 */
 
-		// To be commented
+		// Transmit handshake as an idle frame if n
 		if (frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) {
+
+			// Add only a ARQ handshake extension to the packet
 			sky_frame_add_extension_arq_handshake(frame, ARQ_STATE_IN_INIT, vchannel->arq_session_identifier);
 			return 1;
 		}
+
 		return 0;
 
 	case ARQ_STATE_ON: {
 		/*
-
+		 * ARQ is on,
 		 */
 
 		int ret = 0;
 
-		// To be commented
-		if (vchannel->handshake_send) {
+		//hdr->flag_arq_on = 1; // TODO: SKY_FLAG_ARQ_ON
+
+		// Add ARQ handshake response if it is pending.
+		if (vchannel->handshake_send > 0) {
 			sky_frame_add_extension_arq_handshake(frame, ARQ_STATE_ON, vchannel->arq_session_identifier);
-			vchannel->handshake_send = 0;
+			vchannel->handshake_send--;
 			ret = 1;
 		}
 
-		// To be commented
+		// Add ARQ retransmit request extension if we see that there are missing frames.
 		uint16_t mask = rcvRing_get_horizon_bitmap(vchannel->rcvRing);
 		if ((frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) && (mask || vchannel->need_recall)){
 			sky_frame_add_extension_arq_request(frame, vchannel->rcvRing->head_sequence, mask);
@@ -369,7 +392,7 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 			ret = 1;
 		}
 
-		// To be commented
+		// Add ARQ Control/Sync extension if TBD
 		int payload_to_send = sendRing_count_packets_to_send(vchannel->sendRing, 1) > 0;
 		int b0 = frames_sent_in_this_vc_window < config->arq.idle_frames_per_window;
 		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > config->arq.idle_frame_threshold;
@@ -383,23 +406,34 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 			ret = 1;
 		}
 
-		// 
+		// If we have something to be send copy it to frame.
 		if (sendRing_count_packets_to_send(vchannel->sendRing, 1) > 0){
-			int sequence = -1;
-			int length = 0;
-			int r = sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 1, &length, &sequence);
-			int length_requirement = length + (int)sizeof(ExtARQSeq) + 1;
-			if ((r == 0) && (length_requirement <= sky_frame_get_space_left(frame)) && (sequence > -1)){
-				sky_frame_add_extension_arq_sequence(frame, sequence);
-				int read = sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, frame->raw + frame->length, &sequence, 1);
+
+			// Peek length and the sequence number of the next frame
+			int packet_sequence = -1;
+			int packet_length = 0;
+			int r = sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 1, &packet_length, &packet_sequence);
+
+			// Does the packet fit in remaining space?
+			unsigned int length_requirement = packet_length + (int)sizeof(ExtARQSeq) + 1;
+			if ((r == 0) && (packet_length <= sky_frame_get_space_left(frame)) && (packet_sequence > -1))
+			{
+				// Add ARQ sequence number extension
+				sky_frame_add_extension_arq_sequence(frame, packet_sequence);
+
+				// Copy the packet inside the frame
+				int read = sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, frame->raw + frame->length, &packet_sequence, 1);
 				SKY_ASSERT(read >= 0)
 				frame->length += read;
-				frame->flags |= SKY_FLAG_HAS_PAYLOAD;
+				//frame->flags |= SKY_FLAG_HAS_PAYLOAD;
+				//hdr->flag_has_payload = 1; // TODO:
+
 				ret = 1;
 			} else {
 				/* If the payload for some reason is too large, remove is nonetheless. */
 				uint8_t tmp_tgt[300];
-				sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tmp_tgt, &sequence, 1);
+				sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tmp_tgt, &packet_sequence, 1);
+				SKY_PRINTF(SKY_DIAG_BUG, "Too larger packet to fit! Discarding it!");
 			}
 
 		}
@@ -425,9 +459,9 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 		return 1;
 
 	case ARQ_STATE_IN_INIT:
-		/* 
+		/*
 		 * Our ARQ has been initialized (we are the initiator)
-		 * and we received the handshake form the peer. 
+		 * and we received the handshake form the peer.
 		 */
 		if (identifier == vchannel->arq_session_identifier) {
 			// Matching session identifier so ARQ is now connected.
@@ -435,8 +469,8 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 			vchannel->handshake_send = 0;
 			return 1;
 		}
-		else if (identifier > vchannel->arq_session_identifier) { // TODO: Overflow not 
-			// 
+		else if (identifier > vchannel->arq_session_identifier) { // TODO: Overflow not considered!
+			// A newer identifier is received.
 			sky_vc_wipe_to_arq_on_state(vchannel, identifier);
 			vchannel->handshake_send = 1;
 			return 1;
@@ -449,7 +483,7 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 	case ARQ_STATE_ON:
 		/*
 		 * Our ARQ is on and we received a new handshake.
-		 */ 
+		 */
 		if (identifier == vchannel->arq_session_identifier) {
 			// Matching session identifier matches so this is just redundant re-transmitted handshake.
 			vchannel->handshake_send = 0;
@@ -458,7 +492,7 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 			return 0;
 		}
 		else {
-			// The peer is trying to reconnect to us so just accept the 
+			// The peer is trying to reconnect to us so just accept the
 			sky_vc_wipe_to_arq_on_state(vchannel, identifier);
 			vchannel->handshake_send = 1;
 			return 1;
@@ -470,67 +504,67 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 }
 
 
-int sky_vc_process_content(SkyVirtualChannel *vchannel,
-	const uint8_t *payload, int payload_len,
-	SkyParsedExtensions *exts,
-	sky_tick_t now)
+int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sky_tick_t now)
 {
 
-	/* Handle incoming ARQ handshake first in any state. 
+	/* Handle incoming ARQ handshake first in any state.
 	 * Our state machine might advance during handshake handling. */
-	if (exts->arq_handshake != NULL) {
-		const ExtARQHandshake *handshake = &exts->arq_handshake->ARQHandshake;
+	if (parsed->arq_handshake != NULL) {
+		const ExtARQHandshake *handshake = &parsed->arq_handshake->ARQHandshake;
 		sky_vc_handle_handshake(vchannel, handshake->peer_state, handshake->identifier);
 	}
 
 	switch (vchannel->arq_state_flag) {
 	case ARQ_STATE_OFF:
-		/* ARQ is off */
-		if (payload_len >= 0)
-			sky_vc_push_rx_packet_monotonic(vchannel, payload, payload_len);
+		/*
+		 * ARQ is off.
+		 * Just pass the payload to buffer.
+		 */
+		if (parsed->payload_len > 0)
+			sky_vc_push_rx_packet_monotonic(vchannel, parsed->payload, parsed->payload_len);
 		break;
-	
+
 	case ARQ_STATE_IN_INIT:
-		/* ARQ is trying to handshake
-		 * but we received a frame without response or with invalid response. 
+		/* ARQ is trying to handshake.
+		 * but we received a frame without response or with invalid response.
 		 * Ignore rest of the frame due to state missmatch. */
 		break;
 
 	case ARQ_STATE_ON:
-		/* 
-		 * ARQ is on, so parse and handle ARQ related extension headers and   
+		/*
+		 * ARQ is on, so parse and handle ARQ related extension headers and
 		 */
 
 		/* Handle ARQ control extension */
-		if (exts->arq_ctrl != NULL)
+		if (parsed->arq_ctrl != NULL)
 		{
-			sky_arq_sequence_t rx_sequence = sky_ntoh16(exts->arq_ctrl->ARQCtrl.rx_sequence);
-			sky_arq_sequence_t tx_sequence = sky_ntoh16(exts->arq_ctrl->ARQCtrl.rx_sequence);
+			sky_arq_sequence_t rx_sequence = sky_ntoh16(parsed->arq_ctrl->ARQCtrl.rx_sequence);
+			sky_arq_sequence_t tx_sequence = sky_ntoh16(parsed->arq_ctrl->ARQCtrl.rx_sequence);
 			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ CTRL %d %d", (int)rx_sequence, (int)tx_sequence);
 			sky_vc_update_tx_sync(vchannel, rx_sequence, now);
 			sky_vc_update_rx_sync(vchannel, tx_sequence, now);
 		}
 
 		/* Handle ARQ data packet */
-		if (payload_len > 0) // TODO: Only non-zero and positive lengths?
+		if (parsed->payload_len > 0) // TODO: Only non-zero and positive lengths?
 		{
 			/* Make sure we received ARQ sequence number header. */
-			if (exts->arq_sequence == NULL)
+			if (parsed->arq_sequence == NULL)
 			{
 				SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_BUG, "ARQ is on but received a frame without ARQ sequence!");
 				return -1; // Ignore mallformed frame
 			}
 
-			sky_arq_sequence_t packet_sequence = sky_ntoh16(exts->arq_sequence->ARQSeq.sequence);
+			sky_arq_sequence_t packet_sequence = sky_ntoh16(parsed->arq_sequence->ARQSeq.sequence);
 			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ packet %d", (int)packet_sequence);
-			sky_vc_push_rx_packet(vchannel, payload, payload_len, packet_sequence, now);
+			sky_vc_push_rx_packet(vchannel, parsed->payload, parsed->payload_len, packet_sequence, now);
 		}
 
 		/* Handle retransmit request received */
-		if (exts->arq_request != NULL)
+		if (parsed->arq_request != NULL)
 		{
-			sky_arq_sequence_t window_start = sky_ntoh16(exts->arq_request->ARQReq.sequence);
-			uint16_t window_mask = sky_ntoh16(exts->arq_request->ARQReq.mask);
+			sky_arq_sequence_t window_start = sky_ntoh16(parsed->arq_request->ARQReq.sequence);
+			uint16_t window_mask = sky_ntoh16(parsed->arq_request->ARQReq.mask);
 			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ Request: %d %04x", (int)window_start, (int)window_mask);
 			sendRing_schedule_resends_by_mask(vchannel->sendRing, window_start, window_mask);
 		}

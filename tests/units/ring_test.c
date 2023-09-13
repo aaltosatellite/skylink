@@ -48,13 +48,13 @@ static void test1_round(){
 	config.element_size = 64;
 	SkyVirtualChannel* array = sky_vc_create(&config);
 	uint8_t* tgt = x_alloc(60000);
-	String* s0 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
-	String* s1 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
-	String* s2 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
-	String* s3 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
-	String* s4 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
-	String* s5 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
-	String* s6 = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
+	String* s0 = get_random_string(randint_i32(0, SKY_PAYLOAD_MAX_LEN));
+	String* s1 = get_random_string(randint_i32(0, SKY_PAYLOAD_MAX_LEN));
+	String* s2 = get_random_string(randint_i32(0, SKY_PAYLOAD_MAX_LEN));
+	String* s3 = get_random_string(randint_i32(0, SKY_PAYLOAD_MAX_LEN));
+	String* s4 = get_random_string(randint_i32(0, SKY_PAYLOAD_MAX_LEN));
+	String* s5 = get_random_string(randint_i32(0, SKY_PAYLOAD_MAX_LEN));
+	String* s6 = get_random_string(randint_i32(0, SKY_PAYLOAD_MAX_LEN));
 
 	sky_tick(10);
 	sky_vc_wipe_to_arq_init_state(array);
@@ -144,27 +144,27 @@ static void test1_round(){
 
 	//receive packets 0, 1, and 2
 	int seq = array->rcvRing->tail_sequence;
-	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
+	r = sky_vc_read_next_received(array, tgt, SKY_PAYLOAD_MAX_LEN);
 	assert(r == s0->length);
 	assert(seq == sq0);
 	assert(sky_vc_count_readable_rcv_packets(array) == 2);
 	assert(memcmp(tgt, s0->data, s0->length) == 0);
 
 	seq = array->rcvRing->tail_sequence;
-	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
+	r = sky_vc_read_next_received(array, tgt, SKY_PAYLOAD_MAX_LEN);
 	assert(r == s1->length);
 	assert(seq == sq0+1);
 	assert(sky_vc_count_readable_rcv_packets(array) == 1);
 	assert(memcmp(tgt, s1->data, s1->length) == 0);
 
 	seq = array->rcvRing->tail_sequence;
-	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
+	r = sky_vc_read_next_received(array, tgt, SKY_PAYLOAD_MAX_LEN);
 	assert(r == s2->length);
 	assert(seq == sq0+2);
 	assert(memcmp(tgt, s2->data, s2->length) == 0);
 	assert(sky_vc_count_readable_rcv_packets(array) == 0);
 
-	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
+	r = sky_vc_read_next_received(array, tgt, SKY_PAYLOAD_MAX_LEN);
 	assert(r == SKY_RET_RING_EMPTY);
 	assert(sky_vc_count_readable_rcv_packets(array) == 0);
 
@@ -208,14 +208,14 @@ static void test1_round(){
 
 	//receive all. They should be packages 3 and 4 with old sequences, and 0 and 1 in new sequencing.
 	seq = array->rcvRing->tail_sequence;
-	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
+	r = sky_vc_read_next_received(array, tgt, SKY_PAYLOAD_MAX_LEN);
 	assert(r == s0->length);
 	assert(seq == sqn);
 	assert(memcmp(tgt, s0->data, s0->length) == 0);
 	assert(sky_vc_count_readable_rcv_packets(array) == 1);
 
 	seq = array->rcvRing->tail_sequence;
-	r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN);
+	r = sky_vc_read_next_received(array, tgt, SKY_PAYLOAD_MAX_LEN);
 	assert(r == s1->length);
 	assert(seq == sqn+1);
 	assert(memcmp(tgt, s1->data, s1->length) == 0);
@@ -329,19 +329,19 @@ static void test3_round(){
 	uint8_t* received_pls[rcv_ring_len+1];
 	int k = 0;
 	for (int i = 0; i < send_ring_len - 1; ++i) {
-		uint8_t* pl = malloc(SKY_MAX_PAYLOAD_LEN);
-		fillrand(pl, SKY_MAX_PAYLOAD_LEN);
+		uint8_t* pl = malloc(SKY_PAYLOAD_MAX_LEN);
+		fillrand(pl, SKY_PAYLOAD_MAX_LEN);
 		sent_pls[i] = pl;
-		int r = sky_vc_push_packet_to_send(array, pl, SKY_MAX_PAYLOAD_LEN);
+		int r = sky_vc_push_packet_to_send(array, pl, SKY_PAYLOAD_MAX_LEN);
 		assert(r >= 0);
 		k++;
 	}
 	int h = array->rcvRing->head_sequence;
 	for (int i = 0; i < rcv_ring_len - 1; ++i) {
-		uint8_t* pl = malloc(SKY_MAX_PAYLOAD_LEN);
-		fillrand(pl, SKY_MAX_PAYLOAD_LEN);
+		uint8_t* pl = malloc(SKY_PAYLOAD_MAX_LEN);
+		fillrand(pl, SKY_PAYLOAD_MAX_LEN);
 		received_pls[i] = pl;
-		int r = sky_vc_push_rx_packet(array, pl, SKY_MAX_PAYLOAD_LEN, h, 10);
+		int r = sky_vc_push_rx_packet(array, pl, SKY_PAYLOAD_MAX_LEN, h, 10);
 		h++;
 		assert(r >= 0);
 		k++;
@@ -350,15 +350,15 @@ static void test3_round(){
 
 	int s = 0;
 	for (int i = 0; i < send_ring_len - 1; ++i) {
-		uint8_t tgt[SKY_MAX_PAYLOAD_LEN];
+		uint8_t tgt[SKY_PAYLOAD_MAX_LEN];
 		int r = sky_vc_read_packet_for_tx(array, tgt, &s, 1);
 		assert(r >= 0);
 		assert(memcmp(tgt, sent_pls[i], r) == 0);
 		free(sent_pls[i]);
 	}
 	for (int i = 0; i < rcv_ring_len - 1; ++i) {
-		uint8_t tgt[SKY_MAX_PAYLOAD_LEN];
-		int r = sky_vc_read_next_received(array, tgt, SKY_MAX_PAYLOAD_LEN+1);
+		uint8_t tgt[SKY_PAYLOAD_MAX_LEN];
+		int r = sky_vc_read_next_received(array, tgt, SKY_PAYLOAD_MAX_LEN+1);
 		assert(r >= 0);
 		assert(memcmp(tgt, received_pls[i], r) == 0);
 		free(received_pls[i]);
@@ -406,7 +406,7 @@ static void test4_round(){
 	int n_strings = NMSG+500;
 	String** messages = x_alloc(n_strings * sizeof(String*));
 	for (int i = 0; i < n_strings; ++i) {
-		messages[i] = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
+		messages[i] = get_random_string(randint_i32(0, SKY_PAYLOAD_MAX_LEN));
 	}
 	//int send_sq0 = randint_i32(0,100); //randomize starting sequence.
 	int rcv_sq0 = 0;
@@ -544,7 +544,7 @@ static void test5_round(){
 	int n_strings = NMSG+500;
 	String** messages = x_alloc(n_strings * sizeof(String*));
 	for (int i = 0; i < n_strings; ++i) {
-		messages[i] = get_random_string(randint_i32(0, SKY_MAX_PAYLOAD_LEN));
+		messages[i] = get_random_string(randint_i32(0, SKY_PAYLOAD_MAX_LEN));
 	}
 	int s_seq0 = 0; //randint_i32(0,100);
 	//int r_seq0 = randint_i32(0,100);

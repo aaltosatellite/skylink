@@ -5,23 +5,8 @@
 #include "skylink/frame.h"
 
 
-// HMAC
-#define SKY_HMAC_LENGTH                 8 // bytes
+#define SKY_USE_TDD_MAC
 
-
-
-
-/*
- * Physical level configuration
- */
-typedef struct {
-	/* Enable CCSDS randomizer/scrambler */
-	uint8_t enable_scrambler;
-
-	/* Enable CCSDS Reed-Solomon */
-	uint8_t enable_rs;
-
-} SkyPHYConfig;
 
 
 /* TDD MAC configuration struct */
@@ -69,9 +54,9 @@ typedef struct {
 
 
 /* Virtual channel authentication option flags */
-#define SKY_VC_FLAG_AUTHENTICATE_TX          (0b001)
-#define SKY_VC_FLAG_REQUIRE_AUTHENTICATION   (0b010)
-#define SKY_VC_FLAG_REQUIRE_SEQUENCE         (0b100)
+#define SKY_CONFIG_FLAG_AUTHENTICATE_TX          (0b001)
+#define SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION   (0b010)
+#define SKY_CONFIG_FLAG_REQUIRE_SEQUENCE         (0b100)
 
 /*
  * Per virtual channel configurations
@@ -91,6 +76,9 @@ typedef struct {
 
 	/* Is authentication code (HMAC) required for the virtual channel */
 	uint8_t require_authentication;
+
+	//uint8_t tx_key, rx_key;
+
 } SkyVCConfig;
 
 
@@ -98,6 +86,7 @@ typedef struct {
  * HMAC configurations
  */
 typedef struct {
+
 	/* Length of the authentication key */
 	int32_t key_length;
 
@@ -136,12 +125,12 @@ typedef struct
  * directly from here, allowing configuration changes.
  */
 struct sky_conf {
-	SkyPHYConfig    phy;
 	SkyMACConfig    mac;
 	SkyHMACConfig	hmac;
 	SkyVCConfig     vc[SKY_NUM_VIRTUAL_CHANNELS];
 	SkyARQConfig    arq;
-	uint8_t identity[SKY_IDENTITY_LEN];
+	uint8_t         identity[SKY_MAX_IDENTITY_LEN];
+	unsigned int    identity_len;
 };
 typedef struct sky_conf SkyConfig;
 
