@@ -1,13 +1,14 @@
-import hashlib
-import hmac
+import secrets
+from blake3 import blake3
 
 from .fec import SkylinkError
+
 
 class HMACError(SkylinkError):
     pass
 
-
-HMAC_LENGTH = 8
+NONCE_LEN = 2
+HMAC_LENGTH = 4
 
 
 def hmac_verify(data: bytes, key: bytes) -> bytes:
@@ -28,7 +29,7 @@ def hmac_verify(data: bytes, key: bytes) -> bytes:
     if len(data) < HMAC_LENGTH:
         raise HMACError("Too short frame")
 
-    calculated = hmac.new(key, data[:-HMAC_LENGTH], hashlib.sha256).digest()[:HMAC_LENGTH]
+    calculated = blake3(data[:-HMAC_LENGTH], key=key).digest(HMAC_LENGTH)
     received = data[-HMAC_LENGTH:]
 
     if calculated != received:
@@ -49,5 +50,5 @@ def hmac_append(data: bytes, key: bytes) -> bytes:
         An authenticated frame as bytes.
     """
 
-    hmkey = hmac.new(key, data, hashlib.sha256).digest()[:HMAC_LENGTH]
-    return data + hmkey
+    hmackey = blake3(data, key=key).digest(HMAC_LENGTH)
+    return data + hmackey
