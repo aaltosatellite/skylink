@@ -14,6 +14,16 @@ constexpr sky_tick_t convert_to_ticks(Timestamp now) {
 }
 
 
+// Filtering function to accept only frames from the Foresail-1.
+static int filter_by_identity(const SkyHandle self, const uint8_t *identity, unsigned int identity_len)
+{
+	(void)self;
+	if (memcmp(identity, "OH2F1S", 6) == 0 && identity_len == 6)
+		return 0;
+	return 1;
+}
+
+
 SkyModem::SkyModem() :
 	sdr(nullptr),
 	zmq_output(nullptr),
@@ -26,14 +36,11 @@ SkyModem::SkyModem() :
 
 	sky_diag_mask = SKY_DIAG_INFO | SKY_DIAG_FRAMES | SKY_DIAG_ARQ | SKY_DIAG_BUG;
 
-	/*
-	 * PHY configurations
-	 */
-	config.phy.enable_scrambler = 0; // Suo implements the scrambler and the reed solomon for us!
-	config.phy.enable_rs = 0;
 
 	memcpy(config.identity, "Default", 7);
 	config.identity_len = 7;
+
+	//config.filter_by_identity = filter_by_identity;
 
 	/*
 	 * MAC configurations
@@ -91,7 +98,7 @@ SkyModem::SkyModem() :
 #ifdef EXTERNAL_SECRET
 #include "secret.hpp"
 #else
-	const uint8_t hmac_key[32] = { 
+	const uint8_t hmac_key[32] = {
 		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 		0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 		0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
@@ -105,12 +112,12 @@ SkyModem::SkyModem() :
 	memcpy(config.hmac.key, hmac_key, hmac_key_len);
 	config.hmac.maximum_jump = 24;
 
-	/* 
+	/*
 	 * Create the Skylink protocol instance
 	 */
 	handle = sky_create(&config);
 
-	/* 
+	/*
 	 * Initialize
 	 */
 	vc_interface = new VCInterface(handle, 7100);
@@ -127,7 +134,7 @@ SkyModem::SkyModem() :
 		sdr_conf.tx_on = true;
 		sdr_conf.half_duplex = true;
 
-		sdr_conf.idle_delay = 10e6; // [ns] 
+		sdr_conf.idle_delay = 10e6; // [ns]
 		sdr_conf.transmission_delay = 10e6; // [ns]
 
 		sdr_conf.use_time = 1;
@@ -242,7 +249,9 @@ SkyModem::SkyModem() :
 			copy_frame.setMetadata("mode", 9600);
 			frame_received(copy_frame, now);
 		});
-
+		//deframer_9k6->reedsolomonfailed.connect( [&] (const Frame& frame, Timestamp now) {
+		//	handle->diag->rx_fec_fail++;
+		//});
 #endif
 
 
@@ -313,7 +322,7 @@ SkyModem::SkyModem() :
 			modulator->setFrequencyOffset(frequency - center_frequency);
 		});
 #endif
-		
+
 	}
 	catch (const SuoError& e)
 	{
@@ -382,14 +391,14 @@ void SkyModem::frame_transmit(Frame &frame, Timestamp now)
 {
 	(void)now;
 
-	// Request a frame to be transmitted from the Skylink implementation 
+	// Request a frame to be transmitted from the Skylink implementation
 	SkyRadioFrame sky_frame;
 	int ret = sky_tx(handle, &sky_frame);
 	if (ret < 0)
 		SKY_PRINTF(SKY_DIAG_BUG, "sky_tx() error %d\n", ret);
 
-	if (ret == 1) { // A new physical frame was produced. 
-		
+	if (ret == 1) { // A new physical frame was produced.
+
 		// Copy data from Skylink's frame structure to suo's frame structure
 		frame.data.resize(sky_frame.length);
 		memcpy(&frame.data[0], sky_frame.raw, sky_frame.length);
@@ -417,6 +426,10 @@ void SkyModem::frame_received(Frame &frame, Timestamp now)
 	sky_frame.rx_time_ticks = convert_to_ticks(frame.timestamp);
 	sky_frame.length = frame.size();
 	memcpy(sky_frame.raw, &frame.data[0], frame.size());
+
+	handle->diag->rx_fec_ok++;
+	handle->diag->rx_fec_octs += get<unsigned int>(frame.metadata.at("rs_bytes_corrected"));
+	// handle->diag->rx_fec_octs += get<unsigned int>(frame.metadata.at("rs_bits_corrected"));
 
 	// Pass the frame to Skylink implementation
 	int ret = sky_rx(handle, &sky_frame);
