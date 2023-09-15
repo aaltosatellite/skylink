@@ -18,7 +18,8 @@
 #define SKY_RET_INVALID_VERSION             (-4)
 #define SKY_RET_INVALID_VC                  (-5)
 #define SKY_RET_INVALID_EXT_LENGTH          (-6)
-#define SKY_RET_FILTERED_BY_IDENDITY        (-7)
+#define SKY_RET_REDUNDANT_EXTENSIONS        (-7)
+#define SKY_RET_FILTERED_BY_IDENDITY        (-8)
 
 // FEC
 #define SKY_RET_GOLAY_FAILED                (-10)

@@ -83,8 +83,8 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 
 	// Validate identity field
 	parsed.identity = &frame->raw[1];
-	parsed.identity_len = frame->raw[0] & 0x07;
-	if (parsed.identity_len == 0 || parsed.identity_len > 8)
+	parsed.identity_len = (frame->raw[0] & SKYLINK_FRAME_IDENTITY_MASK);
+	if (parsed.identity_len == 0 || parsed.identity_len > SKY_MAX_IDENTITY_LEN)
 		return SKY_RET_INVALID_VERSION;
 
 	// Identity filtering

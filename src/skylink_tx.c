@@ -52,8 +52,7 @@ static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to
 	}
 }
 
-
-static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* frame, uint8_t vc)
+static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyTransmitFrame *tx_frame, uint8_t vc)
 {
 	if (self->hmac->vc_enforcement_need[vc] != 0)
 		return 0;
@@ -62,7 +61,7 @@ static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyRadioFrame* fram
 
 	// +3 so that immediate sends don't invalidate what we give here. Jump constant must be bigger.
 	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 3);
-	sky_frame_add_extension_hmac_sequence_reset(frame, sequence);
+	sky_frame_add_extension_hmac_sequence_reset(tx_frame, sequence);
 	return 1;
 }
 
@@ -131,32 +130,41 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	 * It's okay to transmit and we have something to transmit,
 	 * so let's start crafting a new frame.
 	 */
+	SkyTransmitFrame tx_frame;
+	tx_frame.frame = frame;
 	sky_frame_clear(frame);
 
-	// Copy source identifier
-	frame->raw[0] = SKYLINK_FRAME_VERSION_BYTE | self->conf->identity_len;
-	memcpy(&frame->raw[1], self->conf->identity, self->conf->identity_len);
+	// Set the start byte
+	const unsigned int identity_len = self->conf->identity_len;
+	frame->raw[0] = SKYLINK_FRAME_VERSION_BYTE | identity_len;
+	tx_frame.ptr = &frame->raw[1];
+	frame->length = 0;
 
-	unsigned int header_start = self->conf->identity_len + 1;
-	frame->length = header_start + sizeof(SkyStaticHeader);
-	SkyStaticHeader *hdr = (SkyStaticHeader*)&frame->raw[header_start];
+	// Copy source identifier
+	memcpy(&frame->raw[1], self->conf->identity, identity_len);
+	tx_frame.ptr += identity_len;
+	frame->length += identity_len;
+
+	// Set the static header
+	SkyStaticHeader *hdr = (SkyStaticHeader*)&tx_frame.ptr;
+	tx_frame.ptr += sizeof(SkyStaticHeader);
+	frame->length += sizeof(SkyStaticHeader);
 	hdr->vc = vc;
 
 #ifdef SKY_USE_TDD_MAC
 	/* Add TDD MAC extension. */
-	mac_set_frame_fields(self->mac, frame, now);
+	mac_set_frame_fields(self->mac, &tx_frame, now);
 #endif
 
 	/* Add HMAC reset extension if required. */
-	_sky_tx_extension_eval_hmac_reset(self, frame, vc);
-
-	/*typedef struct {
-		SkyStaticHeader* hdr;
-		SkyRadioFrame *frame;
-	};*/
+	_sky_tx_extension_eval_hmac_reset(self, &tx_frame, vc);
 
 	/* Fill rest of the frame with payload data and necessary ARQ extensions. */
-	sky_vc_fill_frame(self->virtual_channels[vc], self->conf, frame, now, self->mac->frames_sent_in_current_window_per_vc[vc]);
+	int ret = sky_vc_fill_frame(self->virtual_channels[vc], self->conf, &tx_frame, now, self->mac->frames_sent_in_current_window_per_vc[vc]);
+	if (ret < 0)
+		return ret;
+	if (ret == 0)
+		SKY_PRINTF(SKY_DIAG_BUG, "Construction of new frame was started but there was nothing to transmit!");
 
 	/* Set HMAC state and sequence */
 	hdr->frame_sequence = sky_hmac_get_next_tx_sequence(self, vc);
@@ -167,8 +175,6 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 		hdr->flag_authenticated = 1; // Add authenticaton flag to static header
 		sky_hmac_extend_with_authentication(self, frame);
 	}
-
-
 
 
 	self->mac->total_frames_sent_in_current_window++;

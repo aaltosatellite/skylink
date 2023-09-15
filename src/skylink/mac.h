@@ -155,6 +155,6 @@ bool mac_idle_frame_needed(SkyMAC* mac, sky_tick_t now);
 /*
  * Writes out the two uint16 values to the provided spot in buffer.
  */
-int mac_set_frame_fields(SkyMAC* mac, SkyRadioFrame* frame, sky_tick_t now);
+int mac_set_frame_fields(SkyMAC *mac, SkyTransmitFrame *tx_frame, sky_tick_t now);
 
 #endif // __SKYLINK_MAC_H__
