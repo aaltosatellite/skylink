@@ -328,11 +328,7 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_t
 	return 0;
 }
 
-
-
-
-
-int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFrame* frame, sky_tick_t now, uint16_t frames_sent_in_this_vc_window)
+int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmitFrame *tx_frame, sky_tick_t now, uint16_t frames_sent_in_this_vc_window)
 {
 
 	switch (vchannel->arq_state_flag) {
@@ -342,12 +338,15 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 
 		// Try to read a new frame
 		int length, sequence;
-		if (sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 0, &length, &sequence) >= 0) {
-			SKY_ASSERT(length <= sky_frame_get_space_left(frame))
-			int read = sky_vc_read_packet_for_tx_monotonic(vchannel, frame->raw + frame->length, &sequence);
+		if (sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 0, &length, &sequence) >= 0)
+		{
+			SKY_ASSERT(length <= sky_frame_get_space_left(tx_frame->frame))
+
+			int read = sky_vc_read_packet_for_tx_monotonic(vchannel, tx_frame->ptr, &sequence);
 			SKY_ASSERT(read >= 0)
-			frame->length += read;
-			//frame->hdr->flags |= SKY_FLAG_HAS_PAYLOAD;
+			tx_frame->frame->length += read;
+			tx_frame->ptr += read;
+			tx_frame->hdr->flags |= SKY_FLAG_HAS_PAYLOAD;
 			return 1;
 		}
 
@@ -358,11 +357,11 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 		 * ARQ is handshaking but we haven't received response yet.
 		 */
 
-		// Transmit handshake as an idle frame if n
+		// Transmit handshake as an idle frame if we haven't spam enough in this window
 		if (frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) {
 
 			// Add only a ARQ handshake extension to the packet
-			sky_frame_add_extension_arq_handshake(frame, ARQ_STATE_IN_INIT, vchannel->arq_session_identifier);
+			sky_frame_add_extension_arq_handshake(tx_frame, ARQ_STATE_IN_INIT, vchannel->arq_session_identifier);
 			return 1;
 		}
 
@@ -375,11 +374,11 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 
 		int ret = 0;
 
-		//hdr->flag_arq_on = 1; // TODO: SKY_FLAG_ARQ_ON
+		tx_frame->hdr->flag_arq_on = 1; // TODO: SKY_FLAG_ARQ_ON
 
 		// Add ARQ handshake response if it is pending.
 		if (vchannel->handshake_send > 0) {
-			sky_frame_add_extension_arq_handshake(frame, ARQ_STATE_ON, vchannel->arq_session_identifier);
+			sky_frame_add_extension_arq_handshake(tx_frame, ARQ_STATE_ON, vchannel->arq_session_identifier);
 			vchannel->handshake_send--;
 			ret = 1;
 		}
@@ -387,7 +386,7 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 		// Add ARQ retransmit request extension if we see that there are missing frames.
 		uint16_t mask = rcvRing_get_horizon_bitmap(vchannel->rcvRing);
 		if ((frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) && (mask || vchannel->need_recall)){
-			sky_frame_add_extension_arq_request(frame, vchannel->rcvRing->head_sequence, mask);
+			sky_frame_add_extension_arq_request(tx_frame, vchannel->rcvRing->head_sequence, mask);
 			vchannel->need_recall = 0;
 			ret = 1;
 		}
@@ -400,40 +399,45 @@ int sky_vc_fill_frame(SkyVirtualChannel* vchannel, SkyConfig* config, SkyRadioFr
 		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > config->arq.idle_frame_threshold;
 		int b4 = vchannel->unconfirmed_payloads > 0;
 		if ((b0 && (b1 || b2 || b3 || b4)) || payload_to_send){
-			sky_frame_add_extension_arq_ctrl(frame, vchannel->sendRing->tx_sequence, vchannel->rcvRing->head_sequence);
+			sky_frame_add_extension_arq_ctrl(tx_frame, vchannel->sendRing->tx_sequence, vchannel->rcvRing->head_sequence);
 			vchannel->last_ctrl_send_tick = now;
 			vchannel->unconfirmed_payloads = 0;
 			ret = 1;
 		}
 
 		// If we have something to be send copy it to frame.
-		if (sendRing_count_packets_to_send(vchannel->sendRing, 1) > 0){
-
+		if (sendRing_count_packets_to_send(vchannel->sendRing, 1) > 0)
+		{
 			// Peek length and the sequence number of the next frame
 			int packet_sequence = -1;
-			int packet_length = 0;
-			int r = sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 1, &packet_length, &packet_sequence);
+			int packet_length = 0; // TODO: packet_length could be in the return value
+			ret = sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 1, &packet_length, &packet_sequence);
+			if (ret < 0)
+				return ret;
 
 			// Does the packet fit in remaining space?
-			unsigned int length_requirement = packet_length + (int)sizeof(ExtARQSeq) + 1;
-			if ((r == 0) && (packet_length <= sky_frame_get_space_left(frame)) && (packet_sequence > -1))
+			int required_length = packet_length + (int)sizeof(ExtARQSeq) + 1;
+			if (required_length <= sky_frame_get_space_left(tx_frame->frame) && packet_sequence >= 0)
 			{
 				// Add ARQ sequence number extension
-				sky_frame_add_extension_arq_sequence(frame, packet_sequence);
+				sky_frame_add_extension_arq_sequence(tx_frame, packet_sequence);
 
 				// Copy the packet inside the frame
-				int read = sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, frame->raw + frame->length, &packet_sequence, 1);
-				SKY_ASSERT(read >= 0)
-				frame->length += read;
-				//frame->flags |= SKY_FLAG_HAS_PAYLOAD;
-				//hdr->flag_has_payload = 1; // TODO:
+				int read = sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tx_frame->ptr, &packet_sequence, 1);
+				SKY_ASSERT(read >= 0);
+				tx_frame->ptr += read;
+				tx_frame->frame->length += read;
+				tx_frame->hdr->flags |= SKY_FLAG_HAS_PAYLOAD;
+				tx_frame->hdr->flag_has_payload = 1;
 
 				ret = 1;
-			} else {
+			}
+			else {
 				/* If the payload for some reason is too large, remove is nonetheless. */
 				uint8_t tmp_tgt[300];
 				sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tmp_tgt, &packet_sequence, 1);
 				SKY_PRINTF(SKY_DIAG_BUG, "Too larger packet to fit! Discarding it!");
+				return SKY_RET_NO_SPACE_FOR_PAYLOAD;
 			}
 
 		}

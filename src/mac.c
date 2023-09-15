@@ -204,11 +204,9 @@ bool mac_idle_frame_needed(SkyMAC* mac, sky_tick_t now) {
 }
 
 
-int mac_set_frame_fields(SkyMAC* mac, SkyRadioFrame* frame, sky_tick_t now){
-	uint16_t w = (uint16_t)mac->my_window_length;
-	int32_t R = mac_own_window_remaining(mac, now);
-	R = (R < 1) ? 1 : R;
-	uint16_t r = (uint16_t)R;
-	sky_frame_add_extension_mac_tdd_control(frame, w, r);
-	return 0;
+int mac_set_frame_fields(SkyMAC* mac, SkyTransmitFrame* tx_frame, sky_tick_t now)
+{
+	int32_t remaining = mac_own_window_remaining(mac, now);
+	remaining = (remaining < 1) ? 1 : remaining;
+	return sky_frame_add_extension_mac_tdd_control(tx_frame, (uint16_t)mac->my_window_length, (uint16_t)remaining);
 }

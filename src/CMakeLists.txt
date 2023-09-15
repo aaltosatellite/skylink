@@ -8,12 +8,12 @@ include_directories(../platforms/posix)
 add_library(skylink OBJECT)
 
 target_compile_definitions(
-    skylink PRIVATE
+    skylink PUBLIC
     "SKY_DEBUG"
 )
 
 target_include_directories(
-    skylink PRIVATE
+    skylink PUBLIC
     "${PROJECT_SOURCE_DIR}"
     "${CMAKE_SOURCE_DIR}/platforms/linux/"
 )

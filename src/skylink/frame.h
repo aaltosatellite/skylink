@@ -5,7 +5,7 @@
 #include "sky_platform.h"
 
 /* Maximum number of bytes in frame identity field. */
-#define SKY_MAX_IDENTITY_LEN            (8)
+#define SKY_MAX_IDENTITY_LEN            (7)
 
 /*
  * All packets start with this.
@@ -13,6 +13,7 @@
  */
 #define SKYLINK_FRAME_VERSION_BYTE      (0b01100 << 3)
 #define SKYLINK_FRAME_VERSION_MASK      (0xF8)
+#define SKYLINK_FRAME_IDENTITY_MASK     (0x07)
 
 /*
  * Frame header flags
@@ -170,11 +171,12 @@ typedef struct {
 	unsigned int payload_len;
 } SkyParsedFrame;
 
+
 /* Struct to hold */
 typedef struct {
 	SkyStaticHeader* hdr;
 	SkyRadioFrame* frame;
-	uint8_t *ptr;
+	uint8_t *ptr; // write pointer
 } SkyTransmitFrame;
 
 /*
@@ -200,43 +202,43 @@ void sky_frame_clear(SkyRadioFrame* frame);
  * (internal)
  * Add ARQ sequence number to the frame.
  */
-int sky_frame_add_extension_arq_sequence(SkyRadioFrame* frame, sky_arq_sequence_t sequence);
+int sky_frame_add_extension_arq_sequence(SkyTransmitFrame *tx_frame, sky_arq_sequence_t sequence);
 
 /*
  * (internal)
  * Add ARQ Retransmit Request header to the frame.
  */
-int sky_frame_add_extension_arq_request(SkyRadioFrame* frame, sky_arq_sequence_t sequence, uint16_t mask);
+int sky_frame_add_extension_arq_request(SkyTransmitFrame *tx_frame, sky_arq_sequence_t sequence, uint16_t mask);
 
 /*
  * (internal)
  * Add ARQ Control header to the frame.
  */
-int sky_frame_add_extension_arq_ctrl(SkyRadioFrame* frame, sky_arq_sequence_t tx_head_sequence, sky_arq_sequence_t rx_head_sequence);
+int sky_frame_add_extension_arq_ctrl(SkyTransmitFrame *tx_frame, sky_arq_sequence_t tx_head_sequence, sky_arq_sequence_t rx_head_sequence);
 
 /*
  * (internal)
  * Add ARQ Handshake header to the frame.
  */
-int sky_frame_add_extension_arq_handshake(SkyRadioFrame* frame, uint8_t state_flag, uint32_t identifier);
+int sky_frame_add_extension_arq_handshake(SkyTransmitFrame *tx_frame, uint8_t state_flag, uint32_t identifier);
 
 /*
  * (internal)
  * Add MAC TDD control header to the frame.
  */
-int sky_frame_add_extension_mac_tdd_control(SkyRadioFrame* frame, uint16_t window, uint16_t remaining);
+int sky_frame_add_extension_mac_tdd_control(SkyTransmitFrame *tx_frame, uint16_t window, uint16_t remaining);
 
 /*
  * (internal)
  * Add HMAC sequence reset header to the frame.
  */
-int sky_frame_add_extension_hmac_sequence_reset(SkyRadioFrame* frame, uint16_t sequence);
+int sky_frame_add_extension_hmac_sequence_reset(SkyTransmitFrame *tx_frame, uint16_t sequence);
 
 /*
  * (internal)
  * Fill the rest of the frame with given payload data.
  */
-int sky_frame_extend_with_payload(SkyRadioFrame *frame, const uint8_t *payload, unsigned int payload_length);
+int sky_frame_extend_with_payload(SkyTransmitFrame *tx_frame, const uint8_t *payload, unsigned int payload_length);
 
 /*
  * Get number of bytes left in the frame.

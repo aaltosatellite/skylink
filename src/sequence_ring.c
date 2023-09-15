@@ -41,13 +41,13 @@ void sky_rcv_ring_wipe(SkyRcvRing* rcvRing, SkyElementBuffer* elementBuffer, int
 }
 
 
-SkyRcvRing* sky_rcv_ring_create(int length, int horizon_width, int initial_sequence) 
+SkyRcvRing* sky_rcv_ring_create(int length, int horizon_width, int initial_sequence)
 {
 	if (length < 3 || horizon_width < 0)
 		return NULL;
 	if (length < horizon_width + 3)
 		return NULL;
-	
+
 	SkyRcvRing* rcvRing = SKY_MALLOC(sizeof(SkyRcvRing));
 	RingItem* ring = SKY_MALLOC(sizeof(RingItem)*length);
 	memset(ring, 0, sizeof(RingItem)*length);
@@ -96,10 +96,10 @@ static int rcvRing_rx_sequence_fits(SkyRcvRing* rcvRing, int sequence) {
 
 
 int rcvRing_read_next_received(SkyRcvRing* rcvRing, SkyElementBuffer* elementBuffer, void* tgt, int max_length)
-{	
+{
 	if (rcvRing_count_readable_packets(rcvRing) == 0)
 		return SKY_RET_RING_EMPTY;
-	
+
 	RingItem* tail_item = &rcvRing->buff[rcvRing->tail];
 	int ret = sky_element_buffer_read(elementBuffer, tgt, tail_item->idx, max_length);
 	if (ret < 0)
@@ -120,7 +120,7 @@ int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, SkyElementBuffer* elementBuffer,
 {
 	if (rcvRing_rx_sequence_fits(rcvRing, sequence) == 0)
 		return SKY_RET_RING_INVALID_SEQUENCE;
-	
+
 	int ring_idx = ring_wrap(rcvRing->head + wrap_sequence(sequence - rcvRing->head_sequence), rcvRing->length);
 	RingItem* item = &rcvRing->buff[ring_idx];
 	if (item->idx != EB_NULL_IDX) {
@@ -386,7 +386,7 @@ int sendRing_peek_next_tx_size_and_sequence(SkySendRing* sendRing, SkyElementBuf
 	int length = sky_element_buffer_get_data_length(elementBuffer, item->idx);
 	*size = length;
 	*sequence = item->sequence;
-	return 0;
+	return 0; // TODO: Packet length could be returned.
 }
 
 
