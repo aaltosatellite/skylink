@@ -27,7 +27,11 @@ void sky_tx_test_cycle(){
 
 	SkyConfig* config = new_vanilla_config();
 	SkyRadioFrame* frame = sky_frame_create();
-	fillrand(config->identity, SKY_IDENTITY_LEN);
+
+	// Random identity
+	unsigned int indentity_len = randint_i32(1, SKY_MAX_IDENTITY_LEN);
+	config->identity_len = indentity_len;
+	fillrand(config->identity, indentity_len);
 
 	fillrand(frame->raw, SKY_FRAME_MAX_LEN);
 
@@ -236,16 +240,18 @@ void sky_tx_test_cycle(){
 			for (unsigned int i = 0; i < frame->length; i++)
 				frame->raw[i] = frame->raw[i + 3];
 		}
+
 		// Decode FEC
 		int fec_decode_ret = sky_fec_decode(frame, self->diag);
 		assert(fec_decode_ret == 0);
 
-		if(frame->flags & SKY_FLAG_AUTHENTICATED){
+		SkyStaticHeader *hdr = &frame->raw[1 + indentity_len];
+		if (hdr->flags & SKY_FLAG_AUTHENTICATED){
 			//assert(frame->flags & SKY_FLAG_AUTHENTICATED);
 			//todo check auth
 			frame->length = frame->length - SKY_HMAC_LENGTH;
 		}
-		assert(frame->start_byte == SKYLINK_START_BYTE);
+		assert(frame->raw[0] == (SKYLINK_FRAME_VERSION_BYTE | indentity_len));
 		assert(frame->length >= EXTENSION_START_IDX);
 	}
 	// =================================================================================================================

@@ -59,19 +59,20 @@ static void test1_round()
 	self1->hmac->sequence_rx[vc] = wrap_hmac_sequence(self2->hmac->sequence_tx[vc] + shift_rx);
 	self1->hmac->sequence_tx[vc] = wrap_hmac_sequence(self2->hmac->sequence_rx[vc] + shift_tx);
 
-	assert((SKY_VC_FLAG_AUTHENTICATE_TX & SKY_VC_FLAG_REQUIRE_SEQUENCE) == 0);
-	assert((SKY_VC_FLAG_AUTHENTICATE_TX & SKY_VC_FLAG_REQUIRE_AUTHENTICATION) == 0);
-	assert((SKY_VC_FLAG_REQUIRE_SEQUENCE & SKY_VC_FLAG_REQUIRE_AUTHENTICATION) == 0);
+	// Make sure config flags
+	assert((SKY_CONFIG_FLAG_AUTHENTICATE_TX & SKY_CONFIG_FLAG_REQUIRE_SEQUENCE) == 0);
+	assert((SKY_CONFIG_FLAG_AUTHENTICATE_TX & SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION) == 0);
+	assert((SKY_CONFIG_FLAG_REQUIRE_SEQUENCE & SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION) == 0);
 
 	self1->conf->vc[vc].require_authentication = 0;
-	self1->conf->vc[vc].require_authentication |= (SKY_VC_FLAG_AUTHENTICATE_TX * randint_i32(0, 1));
-	int auth_tx = self1->conf->vc[vc].require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX;
+	self1->conf->vc[vc].require_authentication |= (SKY_CONFIG_FLAG_AUTHENTICATE_TX * randint_i32(0, 1));
+	int auth_tx = self1->conf->vc[vc].require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX;
 
 	self2->conf->vc[vc].require_authentication = 0;
-	self2->conf->vc[vc].require_authentication |= (SKY_VC_FLAG_REQUIRE_AUTHENTICATION * randint_i32(0, 1));
-	self2->conf->vc[vc].require_authentication |= (SKY_VC_FLAG_REQUIRE_SEQUENCE * randint_i32(0, 1));
-	int req_auth = self2->conf->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION;
-	int req_seq = self2->conf->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_SEQUENCE;
+	self2->conf->vc[vc].require_authentication |= (SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION * randint_i32(0, 1));
+	self2->conf->vc[vc].require_authentication |= (SKY_CONFIG_FLAG_REQUIRE_SEQUENCE * randint_i32(0, 1));
+	int req_auth = self2->conf->vc[vc].require_authentication & SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION;
+	int req_seq = self2->conf->vc[vc].require_authentication & SKY_CONFIG_FLAG_REQUIRE_SEQUENCE;
 
 	SkyRadioFrame *sframe = sky_frame_create();
 	SkyRadioFrame *rframe = sky_frame_create();
@@ -195,13 +196,13 @@ static void test2_round()
 	}
 
 	int vc = randint_i32(0, SKY_NUM_VIRTUAL_CHANNELS - 1);
-	self1->conf->vc[vc].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX * randint_i32(0, 1);
-	self1->conf->vc[vc].require_authentication |= SKY_VC_FLAG_REQUIRE_AUTHENTICATION * randint_i32(0, 1);
-	self1->conf->vc[vc].require_authentication |= SKY_VC_FLAG_REQUIRE_SEQUENCE * randint_i32(0, 1);
+	self1->conf->vc[vc].require_authentication = SKY_CONFIG_FLAG_AUTHENTICATE_TX * randint_i32(0, 1);
+	self1->conf->vc[vc].require_authentication |= SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION * randint_i32(0, 1);
+	self1->conf->vc[vc].require_authentication |= SKY_CONFIG_FLAG_REQUIRE_SEQUENCE * randint_i32(0, 1);
 
-	self2->conf->vc[vc].require_authentication = SKY_VC_FLAG_AUTHENTICATE_TX * randint_i32(0, 1);
-	self2->conf->vc[vc].require_authentication |= SKY_VC_FLAG_REQUIRE_AUTHENTICATION * randint_i32(0, 1);
-	self2->conf->vc[vc].require_authentication |= SKY_VC_FLAG_REQUIRE_SEQUENCE * randint_i32(0, 1);
+	self2->conf->vc[vc].require_authentication = SKY_CONFIG_FLAG_AUTHENTICATE_TX * randint_i32(0, 1);
+	self2->conf->vc[vc].require_authentication |= SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION * randint_i32(0, 1);
+	self2->conf->vc[vc].require_authentication |= SKY_CONFIG_FLAG_REQUIRE_SEQUENCE * randint_i32(0, 1);
 
 	self2->hmac->sequence_rx[vc] = randint_i32(0, HMAC_CYCLE_LENGTH - 1);
 	self2->hmac->sequence_tx[vc] = randint_i32(0, HMAC_CYCLE_LENGTH - 1);
@@ -234,16 +235,16 @@ static void test2_round()
 
 	int rr = sky_rx_with_fec(self2, sframe); // TODO: rframe?
 
-	if ((config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION) == 0)
+	if ((config2->vc[vc].require_authentication & SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION) == 0)
 	{
 		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 1);
 		assert(rr == 0);
 	}
 
 	if ((!corrupt_key) &&
-		(config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION) &&
-		(config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_SEQUENCE) &&
-		(config1->vc[vc].require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX) &&
+		(config2->vc[vc].require_authentication & SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION) &&
+		(config2->vc[vc].require_authentication & SKY_CONFIG_FLAG_REQUIRE_SEQUENCE) &&
+		(config1->vc[vc].require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX) &&
 		(shift_tx <= config1->hmac.maximum_jump))
 	{
 		assert(rr == 0);
@@ -255,9 +256,9 @@ static void test2_round()
 	}
 
 	if ((!corrupt_key) &&
-		(config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION) &&
-		(!(config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_SEQUENCE)) &&
-		(config1->vc[vc].require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX))
+		(config2->vc[vc].require_authentication & SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION) &&
+		(!(config2->vc[vc].require_authentication & SKY_CONFIG_FLAG_REQUIRE_SEQUENCE)) &&
+		(config1->vc[vc].require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX))
 	{
 		assert(rr == 0);
 		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 1);
@@ -268,16 +269,16 @@ static void test2_round()
 	}
 
 	if ((corrupt_key) &&
-		(config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION))
+		(config2->vc[vc].require_authentication & SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION))
 	{
 		assert((rr == SKY_RET_AUTH_FAILED) || (rr == SKY_RET_AUTH_MISSING));
 		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 0);
 	}
 
 	if ((!corrupt_key) &&
-		(config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION) &&
-		(config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_SEQUENCE) &&
-		(config1->vc[vc].require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX) &&
+		(config2->vc[vc].require_authentication & SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION) &&
+		(config2->vc[vc].require_authentication & SKY_CONFIG_FLAG_REQUIRE_SEQUENCE) &&
+		(config1->vc[vc].require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX) &&
 		(shift_tx > config1->hmac.maximum_jump))
 	{
 		assert(rr == SKY_RET_EXCESSIVE_HMAC_JUMP);
@@ -291,8 +292,8 @@ static void test2_round()
 		assert(sky_ntoh16(ext->HMACSequenceReset.sequence) == wrap_hmac_sequence(self2->hmac->sequence_rx[vc] + 3));
 	}
 
-	if ((config2->vc[vc].require_authentication & SKY_VC_FLAG_REQUIRE_AUTHENTICATION) &&
-		(!(config1->vc[vc].require_authentication & SKY_VC_FLAG_AUTHENTICATE_TX)))
+	if ((config2->vc[vc].require_authentication & SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION) &&
+		(!(config1->vc[vc].require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX)))
 	{
 		assert(rr == SKY_RET_AUTH_MISSING);
 		assert(sky_vc_count_readable_rcv_packets(self2->virtual_channels[vc]) == 0);
