@@ -115,10 +115,10 @@ void sky_send_ring_destroy(SkySendRing* sendRing);
 /* Clear/wipe all the contents of the send ring */
 void sky_send_ring_wipe(SkySendRing* sendRing, SkyElementBuffer* elementBuffer, int initial_sequence);
 
-/* Returns boolean 1/0 wether the ring is full. (Full: tail == head+1. "Push_packet_to_send" will fail) */
+/* Returns boolean 1/0 whether the ring is full. (Full: tail == head+1. "Push_packet_to_send" will fail) */
 int sendRing_is_full(SkySendRing* sendRing);
 
-/* Wether a particular sequence can be scheduled for retransmission. Returns 1 if yes, 0 if not. So boolean. */
+/* Whether a particular sequence can be scheduled for retransmission. Returns 1 if yes, 0 if not. So boolean. */
 int sendRing_can_recall(SkySendRing* sendRing, int sequence);
 
 /* Returns the ring index of a particular index, of negative error if the sequence is not present. */
