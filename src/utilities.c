@@ -12,6 +12,7 @@
 
 #include <string.h> // memset, memcpy
 
+// Create new Skylink protocol instance based on the configuration struct.
 SkyHandle sky_create(SkyConfig *config)
 {
 
@@ -53,6 +54,7 @@ SkyHandle sky_create(SkyConfig *config)
 	return handle;
 }
 
+// Destroy Skylink instance and free all of its memory.
 void sky_destroy(SkyHandle handle)
 {
 	sky_diag_destroy(handle->diag);
@@ -65,6 +67,9 @@ void sky_destroy(SkyHandle handle)
 
 
 // GENERAL PURPOSE =====================================================================================================
+/*
+Functions for swapping endian ordering if needed.
+*/
 uint16_t sky_hton16(uint16_t vh) {
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 	return vh;

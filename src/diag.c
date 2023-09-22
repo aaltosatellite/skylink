@@ -1,4 +1,6 @@
-
+/******************************
+******SKYLINK DIAGNOSTICS******
+******************************/
 #include "skylink/skylink.h"
 #include "skylink/diag.h"
 #include "skylink/reliable_vc.h"

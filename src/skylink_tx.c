@@ -120,7 +120,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	_sky_tx_track_tdd_state(self, can_send, content_to_send, now);
 
 	if (!can_send || vc < 0)
-		return 0; // This is supposed to return 0, Not "-1": sky_tx returns a boolean value as to if there is need to send somethign.
+		return 0; // This is supposed to return 0, Not "-1": sky_tx returns a boolean value as to if there is need to send something.
 
 	_sky_tx_advance_vc_round_robin(self);
 	const SkyVCConfig* vc_conf = &self->conf->vc[vc];
