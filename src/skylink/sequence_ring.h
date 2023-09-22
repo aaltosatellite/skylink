@@ -86,7 +86,7 @@ void sky_rcv_ring_destroy(SkyRcvRing* rcvRing);
 /* */
 void sky_rcv_ring_wipe(SkyRcvRing* rcvRing, SkyElementBuffer* elementBuffer, int initial_sequence);
 
-/* Returns the amound of packets that can be red from the ring. (>=0) */
+/* Returns the amount of packets that can be red from the ring. (>=0) */
 int rcvRing_count_readable_packets(SkyRcvRing* rcvRing);
 
 /* Reads a payload from ring to address pointed by tgt, if it's length is less than max_length.

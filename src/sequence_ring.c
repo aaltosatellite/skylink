@@ -136,7 +136,10 @@ static int rcvRing_rx_sequence_fits(SkyRcvRing* rcvRing, int sequence)
 	return 1;
 }
 
-//
+/*
+Reads a payload from ring to address pointed by tgt, if it's length is less than max_length.
+Returns number of bytes read, or negative error code.
+*/
 int rcvRing_read_next_received(SkyRcvRing* rcvRing, SkyElementBuffer* elementBuffer, void* tgt, int max_length)
 {
 	//Check if there are packets to read.
@@ -164,7 +167,7 @@ int rcvRing_read_next_received(SkyRcvRing* rcvRing, SkyElementBuffer* elementBuf
 	return ret;
 }
 
-
+//Pushes a payload received with "sequence". Returns how many steps the head advances (>=0) or negative error code.
 int rcvRing_push_rx_packet(SkyRcvRing* rcvRing, SkyElementBuffer* elementBuffer, const void* src, int length, int sequence)
 {
 	//Check if the sequence fits in the horizon window.
