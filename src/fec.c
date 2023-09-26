@@ -64,7 +64,7 @@ static const uint8_t whitening[WHITENING_LEN] = {
 /** Decode a received frame */
 int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
 {
-	// Check frame lenght
+	// Check frame length
 	if (frame->length < RS_PARITYS || frame->length > (RS_MSGLEN + RS_PARITYS)) {
 		SKY_PRINTF(SKY_DIAG_FEC, COLOR_RED "Too short frame" COLOR_RESET "\n");
 		return SKY_RET_RS_INVALID_LENGTH;
@@ -111,6 +111,9 @@ int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
 /** Encode a frame to transmit */
 int sky_fec_encode(SkyRadioFrame *frame)
 {
+	if (frame->length > RS_MSGLEN)
+		return SKY_RET_RS_INVALID_LENGTH;
+
 	/*
 	 * Calculate Reed-Solomon parity bytes
 	 */

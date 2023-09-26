@@ -214,7 +214,7 @@ int sky_frame_add_extension_arq_request(SkyTransmitFrame *tx_frame, sky_arq_sequ
  * (internal)
  * Add ARQ Control header to the frame.
  */
-int sky_frame_add_extension_arq_ctrl(SkyTransmitFrame *tx_frame, sky_arq_sequence_t tx_head_sequence, sky_arq_sequence_t rx_head_sequence);
+int sky_frame_add_extension_arq_ctrl(SkyTransmitFrame *tx_frame, sky_arq_sequence_t tx_sequence, sky_arq_sequence_t rx_sequence);
 
 /*
  * (internal)
