@@ -98,17 +98,18 @@ int sky_hmac_dump_sequences(SkyHandle self, int32_t* sequences)
 
 
 // Add authentication to a frame.
-int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame)
+int sky_hmac_extend_with_authentication(SkyHandle self, SkyTransmitFrame* tx_frame)
 {
 	// Get the pointer for hmac struct from the handle.
 	SkyHMAC* hmac = self->hmac;
+	SkyRadioFrame *frame = tx_frame->frame;
 
 	// Check that the frame has enough free space for the hmac.
-	if(frame->length > (SKY_FRAME_MAX_LEN - SKY_HMAC_LENGTH))
 		return SKY_RET_FRAME_TOO_LONG_FOR_HMAC;
 
 	// Add authenticaton flag to static header
-	//hdr->flags |= SKY_FLAG_AUTHENTICATED;
+	tx_frame->hdr->flags |= SKY_FLAG_AUTHENTICATED;
+	tx_frame->hdr->flag_authenticated = 1;
 
 	// Calculate blake3 hash
 	blake3_hasher* hasher = (blake3_hasher*)hmac->ctx;
@@ -116,9 +117,10 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame)
 	blake3_hasher_update(hasher, frame->raw, frame->length);
 
 	// Copy truncated hash to the end of the frame.
-	blake3_hasher_finalize(hasher, &frame->raw[frame->length], SKY_HMAC_LENGTH);
+	blake3_hasher_finalize(hasher, tx_frame->ptr, SKY_HMAC_LENGTH);
 
 	// Update length of frame.
+	tx_frame->ptr += SKY_HMAC_LENGTH;
 	frame->length += SKY_HMAC_LENGTH;
 
 	return SKY_RET_OK;

@@ -9,7 +9,7 @@
 
 #include "ext/gr-satellites/golay24.h"
 
-#include <string.h> // memcmp
+#include <string.h> // memcmp, memset
 
 
 static void sky_rx_process_ext_mac_control(SkyHandle self, int rx_time_ticks, SkyParsedFrame *parsed);
@@ -58,7 +58,7 @@ static int filter_by_identity(SkyHandle self, const uint8_t *identity, unsigned 
 	if (memcmp(identity, self->conf->identity, identity_len) == 0 && self->conf->identity_len == identity_len)
 		return 1;
 
-	return 0;
+	return SKY_RET_OK;
 }
 
 int sky_rx(SkyHandle self, const SkyRadioFrame* frame)

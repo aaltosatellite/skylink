@@ -171,10 +171,8 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	hdr->frame_sequence = sky_hton16(hdr->frame_sequence);
 
 	/* Authenticate the frame. Ie. appends a hash digest to the end of the frame. */
-	if (vc_conf->require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX) {
-		hdr->flag_authenticated = 1; // Add authenticaton flag to static header
-		sky_hmac_extend_with_authentication(self, frame);
-	}
+	if (vc_conf->require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX)
+		sky_hmac_extend_with_authentication(self, &tx_frame);
 
 
 	self->mac->total_frames_sent_in_current_window++;

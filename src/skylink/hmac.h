@@ -25,9 +25,9 @@ struct sky_hmac {
 	void* ctx;
 };
 #else
- 
+
 /*
- IDEA: globaali key list jonka pituus voi olla mikä taansa ja conffi 
+ IDEA: globaali key list jonka pituus voi olla mikä taansa ja conffi
  määrittelee mitä key_indexiä milloinkin pitää käyttää.
  */
 
@@ -58,8 +58,8 @@ void sky_hmac_destroy(SkyHMAC *hmac);
 /* Get next sequence number from transmit counter and advance it by one (and wrap modulo cycle) */
 int32_t sky_hmac_get_next_tx_sequence(SkyHandle self, unsigned int vc);
 
-/* Authenticate a frame. */
-int sky_hmac_extend_with_authentication(SkyHandle self, SkyRadioFrame* frame);
+/* Add authenticate trailer to a transmit frame. */
+int sky_hmac_extend_with_authentication(SkyHandle self, SkyTransmitFrame* tx_frame);
 
 
 /* Check the frame authentication and sequence number if required for the virtual channel.
