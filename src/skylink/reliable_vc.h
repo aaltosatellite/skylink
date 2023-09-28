@@ -35,7 +35,7 @@ struct sky_virtual_channel_s {
 /* Create a virtual channel instance */
 SkyVirtualChannel* sky_vc_create(SkyVCConfig* config);
 
-/* Destroy virtual channel instance */
+/* Destroy a virtual channel instance */
 void sky_vc_destroy(SkyVirtualChannel* vchannel);
 
 // Cleans the rings, deletes all the packets from buffer, and initalizes to given sequence numbers.
@@ -63,7 +63,7 @@ void sky_vc_check_timeouts(SkyVirtualChannel* vchannel, sky_tick_t now, sky_tick
 // Push packet to buffer. Return the save address index, or -1.
 int sky_vc_push_packet_to_send(SkyVirtualChannel* vchannel, void* payload, int length);
 
-// Returns boolean 1/0 wether the send ring is full.
+// Returns boolean 1/0 whether the send ring is full.
 int sky_vc_send_buffer_is_full(SkyVirtualChannel* vchannel);
 
 // Reads next message to be sent.
@@ -72,7 +72,7 @@ int sky_vc_read_packet_for_tx(SkyVirtualChannel* vchannel, void* tgt, int* seque
 // Returns the number of messages in buffer.
 int sky_vc_count_packets_to_tx(SkyVirtualChannel* vchannel, int include_resend);
 
-// Return boolean wether a message of particular sequence is still recallable.
+// Return boolean whether a message of particular sequence is still recallable.
 int sky_vc_can_recall(SkyVirtualChannel* vchannel, int sequence);
 
 // Schedules packet of a sequence to be resent. Returns 0/-1 according to if the packet was recallable.
@@ -108,7 +108,7 @@ int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, const void* src, int leng
 // Read next message to tgt buffer. Return number of bytes written on success, or negative error code.
 int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int max_length);
 
-// How many messages there are in buffer as a continuous sequence, an thus readable by sky_vc_read_next_received()
+// How many messages there are in buffer as a continuous sequence, and thus readable by sky_vc_read_next_received()
 int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* vchannel);
 
 // This is called with the head-tx sequence provided by an arq-control-extension

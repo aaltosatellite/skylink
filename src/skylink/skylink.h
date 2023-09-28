@@ -19,7 +19,7 @@
 #define SKY_RET_INVALID_VC                  (-5)
 #define SKY_RET_INVALID_EXT_LENGTH          (-6)
 #define SKY_RET_REDUNDANT_EXTENSIONS        (-7)
-#define SKY_RET_FILTERED_BY_IDENDITY        (-8)
+#define SKY_RET_FILTERED_BY_IDENTITY        (-8)
 
 // FEC
 #define SKY_RET_GOLAY_FAILED                (-10)
@@ -100,7 +100,7 @@ typedef struct sky_element_buffer_s SkyElementBuffer;
 typedef struct sky_send_ring_s SkySendRing;
 typedef struct sky_rcv_ring_s SkyRcvRing;
 
-
+/* Virtual Channel State */
 typedef struct __attribute__((__packed__)) {
 	/*
 	 * ARQ state
@@ -179,7 +179,7 @@ void sky_destroy(SkyHandle self);
 void sky_get_state(SkyHandle self, SkyState* state);
 
 /*
- * Generate a new frame to be sent. The frame won't hae
+ * Generate a new frame to be sent. The frame won't have any FEC or Golay included yet.
  *
  * Args:
  *    self: Pointer to Skylink instance
@@ -224,7 +224,7 @@ int sky_tx_with_golay(SkyHandle self, SkyRadioFrame *frame);
 
 /*
  * Pass received frame for the protocol logic.
- * The frame doensn't have FEC or Golay included.
+ * The frame doesn't have FEC or Golay included.
  *
  * Args:
  *    self: Skylink handle
@@ -250,7 +250,7 @@ int sky_rx_with_fec(SkyHandle self, SkyRadioFrame *frame);
 
 /*
  * Pass received frame for the protocol logic.
- * The frame doensn't have FEC or Golay included.
+ * The frame will have the FEC and Golay header included.
  *
  * Args:
  *    self: Skylink handle

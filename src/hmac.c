@@ -105,6 +105,7 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyTransmitFrame* tx_fra
 	SkyRadioFrame *frame = tx_frame->frame;
 
 	// Check that the frame has enough free space for the hmac.
+	if(frame->length > (SKY_FRAME_MAX_LEN - SKY_HMAC_LENGTH))
 		return SKY_RET_FRAME_TOO_LONG_FOR_HMAC;
 
 	// Add authenticaton flag to static header

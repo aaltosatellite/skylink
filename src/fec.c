@@ -111,6 +111,7 @@ int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
 /** Encode a frame to transmit */
 int sky_fec_encode(SkyRadioFrame *frame)
 {
+	// Check frame length
 	if (frame->length > RS_MSGLEN)
 		return SKY_RET_RS_INVALID_LENGTH;
 

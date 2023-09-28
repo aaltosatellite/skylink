@@ -18,9 +18,9 @@ typedef struct {
 
 	/* Default time gap size between windows.
 	 * Gap is fully utilized when two peers cannot hear each other.
-	 * Too small gap value will make it difficult for the peers to avoid speaking over each other by chance.
-	 * Too large value will decrease error and packet loss resistance of ARQ: In cases of packet loss,
-	 * the peers will take long time to send anything, and will ARQ timeout happens too easily.*/
+	 * Too small of a gap value will make it difficult for the peers to avoid speaking over each other by chance.
+	 * Too large of a value will decrease error and packet loss resistance of ARQ: In cases of packet loss,
+	 * the peers will take a long time to send anything, and ARQ timeouts will happen too easily.*/
 	int32_t gap_constant_ticks;
 
 	/* Minimum time */
@@ -38,7 +38,7 @@ typedef struct {
 	/* Fallback by this many ticks when frame carrier is sensed */
 	int16_t carrier_sense_ticks;
 
-	/* Boolean toggle for wether an unauthenticated frame can update MAC state belief.
+	/* Boolean toggle for whether an unauthenticated frame can update MAC state belief.
 	 * Enabling this will allow a continuous stream of unauthenticated frames to essentially block transmission:
 	 * a so called 'shut-up-attack' */
 	uint8_t unauthenticated_mac_updates;
@@ -46,7 +46,7 @@ typedef struct {
 	/* How often window length can be adjusted (incremented or decremented). Count in windows. */
 	int8_t window_adjustment_period;
 
-	/* If window has less frames than the count, an idle frames are generated to fill the window. */
+	/* If window has less frames than the count, idle frames are generated to fill the window. */
 	uint8_t idle_frames_per_window;
 
 } SkyMACConfig;
@@ -125,12 +125,12 @@ typedef struct
  * directly from here, allowing configuration changes.
  */
 struct sky_conf {
-	SkyMACConfig    mac;
-	SkyHMACConfig	hmac;
-	SkyVCConfig     vc[SKY_NUM_VIRTUAL_CHANNELS];
-	SkyARQConfig    arq;
-	uint8_t         identity[SKY_MAX_IDENTITY_LEN];
-	unsigned int    identity_len;
+	SkyMACConfig    mac; // MAC/TDD Configuration
+	SkyHMACConfig	hmac; // HMAC Configuration
+	SkyVCConfig     vc[SKY_NUM_VIRTUAL_CHANNELS]; // Virtual channel configurations
+	SkyARQConfig    arq; // Automatic repeat request configurations
+	uint8_t         identity[SKY_MAX_IDENTITY_LEN]; // Identity
+	unsigned int    identity_len; // Length of identity in bytes
 };
 typedef struct sky_conf SkyConfig;
 

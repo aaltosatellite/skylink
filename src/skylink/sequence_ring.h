@@ -33,8 +33,8 @@ struct sky_send_ring_s
 	int tx_head;        // The first untransmitted packet. (if tx_head == head, nothing to transmit)
 	int tail;           // Last packet in memory. Moves forward as sent packets are acknowledged as received. (if tail == head, ring is empty)
 	int head_sequence;  // Sequence of the next packet (head).
-	int tx_sequence;    // sequence of the first untransmitted packet. That is, the packet pointed to by tx_head.
-	int tail_sequence;  // sequence of the packet at tail. Essentially "ring[wrap(tail)].sequence".
+	int tx_sequence;    // Sequence of the first untransmitted packet. That is, the packet pointed to by tx_head.
+	int tail_sequence;  // Sequence of the packet at tail. Essentially "ring[wrap(tail)].sequence".
 	int storage_count;  // Number of packets stored.
 	int resend_count;   // Number of sequence numbers scheduled for resend.
 	sky_arq_sequence_t resend_list[ARQ_RESEND_SCHEDULE_DEPTH];
@@ -45,7 +45,7 @@ struct sky_rcv_ring_s
 	RingItem* buff;	    // The ring.
 	int length;	        // Size of the ring
 	int horizon_width;  // Width of out of order buffer. Up to this many+1 sequence numbers are accepted.
-	                    // In situation where head_sequence = 5, and horizon_width = 3, we have packet 4, but not 5.
+	                    // In a situation where head_sequence = 5, and horizon_width = 3, we have packet 4, but not 5.
 	                    // We accept packts 5,6,7,8. We reject 9 and all with higher sequence number.
 	                    // (head_sequence + horizon_width) = last sequence number that will be accepted.
 	int head;           // Ring index after packet up to which all packets have been received. At a vacant slot, when rcv is not choked*.
@@ -71,22 +71,22 @@ struct sky_rcv_ring_s
  * be received packets at or ahead of head. The side effect is that read-operation has to check if the head is at choked state,
  * and advance it manually if needed.
  *
- * Choise #2 was picked.
+ * Choice #2 was picked.
  */
 
-
+/* Wrap a sequence number around ARQ modulo. */
 int wrap_sequence(int sequence);
 
-/* */
+/* Create a recieve ring instance */
 SkyRcvRing* sky_rcv_ring_create(int length, int horizon_width, int initial_sequence);
 
-/* */
+/* Destroy a recieve ring. */
 void sky_rcv_ring_destroy(SkyRcvRing* rcvRing);
 
-/* */
+/* Clear/Wipe all contents of the recieve ring. */
 void sky_rcv_ring_wipe(SkyRcvRing* rcvRing, SkyElementBuffer* elementBuffer, int initial_sequence);
 
-/* Returns the amount of packets that can be red from the ring. (>=0) */
+/* Returns the amount of packets that can be read from the ring. (>=0) */
 int rcvRing_count_readable_packets(SkyRcvRing* rcvRing);
 
 /* Reads a payload from ring to address pointed by tgt, if it's length is less than max_length.
@@ -139,7 +139,7 @@ int sendRing_count_free_send_slots(SkySendRing* sendRing);
 /* Returns the number of packets that wait sending (>=0) */
 int sendRing_count_packets_to_send(SkySendRing* sendRing, int include_resend);
 
-/* Reads a payload to target. Writes sequence number to "sequence" pointer. Returns the (nonnegative) number of bytes read, or negative errotr code. */
+/* Reads a payload to target. Writes sequence number to "sequence" pointer. Returns the (nonnegative) number of bytes read, or a negative error code. */
 int sendRing_read_to_tx(SkySendRing* sendRing, SkyElementBuffer* elementBuffer, void* tgt, int* sequence, int include_resend);
 
 /* Writes sequence and length of the next payload to be sent into according pointer aguments. Returns 0 on success, negative error code otherwise. */

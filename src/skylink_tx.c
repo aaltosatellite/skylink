@@ -19,38 +19,56 @@
 /* This zeroes the tracking of how many frames have been sent in current window. */
 static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_send, sky_tick_t now)
 {
-	if (can_send && !content_to_send) {
-		self->mac->unused_window_time = true; // We can send, but there is nothing to send.
+	// We can send, but there is nothing to send.
+	if (can_send && !content_to_send) 
+		self->mac->unused_window_time = true;
+
+	// Window is closing.	
+	if (!can_send && self->mac->window_on) { 
+
+		 // Indicate need to shrink window.
+		if(self->mac->unused_window_time)
+			self->mac->window_adjust_counter--;
+		
+		// Indicate need to grow window.
+		else
+			self->mac->window_adjust_counter++;
+		
 	}
-	if (!can_send && self->mac->window_on) { // window is closing.
-		if(self->mac->unused_window_time){
-			self->mac->window_adjust_counter--;  // indicate need to shrink window.
-		}
-		else{
-			self->mac->window_adjust_counter++;  // indicate need to grow window.
-		}
-	}
-	if (can_send && !self->mac->window_on) { // window is opening
-		if(self->mac->window_adjust_counter <= -self->conf->mac.window_adjustment_period){ // need to shrink window?
+
+	// Window is opening.
+	if (can_send && !self->mac->window_on) { 
+
+		// Indicate need to shrink window.
+		if(self->mac->window_adjust_counter <= -self->conf->mac.window_adjustment_period){
 			mac_shrink_window(self->mac, now);
 			self->mac->window_adjust_counter = 0;
 		}
-		if(self->mac->window_adjust_counter >= self->conf->mac.window_adjustment_period){ // need to grow window?
+
+		// Indicate need to grow window.
+		if(self->mac->window_adjust_counter >= self->conf->mac.window_adjustment_period){
 			mac_expand_window(self->mac, now);
 			self->mac->window_adjust_counter = 0;
 		}
 	}
+
+	// Can't send.
 	if (!can_send) {
+
+		// Update MAC state accordingly.
 		self->mac->window_on = 0;
 		self->mac->unused_window_time = false;
 		for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 			self->mac->frames_sent_in_current_window_per_vc[i] = 0;
 		}
 		self->mac->total_frames_sent_in_current_window = 0;
-	} else {
+		
+	} else { // Can send.
+		// MAC window on.
 		self->mac->window_on = 1;
 	}
 }
+
 
 static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyTransmitFrame *tx_frame, uint8_t vc)
 {
@@ -66,6 +84,7 @@ static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyTransmitFrame *t
 }
 
 
+// Advance round robin index for virtual channels. Loops around using modulo with number of channels.
 static void _sky_tx_advance_vc_round_robin(SkyHandle self)
 {
 	self->mac->vc_round_robin_start = (self->mac->vc_round_robin_start + 1) % SKY_NUM_VIRTUAL_CHANNELS;
@@ -79,8 +98,10 @@ static void _sky_tx_advance_vc_round_robin(SkyHandle self)
  */
 static int _sky_tx_pick_vc(SkyHandle self, sky_tick_t now)
 {
+	// Loop through all virtual channels.
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i)
 	{
+		// Get the VC. Check VC's in order starting from round robin start, looping to 0 at SKY_NUM_VIRTUAL_CHANNELS.
 		int vc = (self->mac->vc_round_robin_start + i) % SKY_NUM_VIRTUAL_CHANNELS;
 
 		// Pending HMAC sequence enforcement?
@@ -96,15 +117,18 @@ static int _sky_tx_pick_vc(SkyHandle self, sky_tick_t now)
 	if (mac_idle_frame_needed(self->mac, now))
 		return 0;
 
+	// No need to transmit.
 	return -1;
 }
 
-
+// Generate a new frame to be sent.
 int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 {
+	// Check that the pointers are valid.
 	SKY_ASSERT(self != NULL);
 	SKY_ASSERT(frame != NULL);
 
+	// Check If it is okay to transmit.
 	sky_tick_t now = sky_get_tick_time();
 	int can_send = mac_can_send(self->mac, now);
 
@@ -115,13 +139,16 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 
 	//if (!can_send) return 0; ?????????
 
+	// Pick a virtual channel to transmit on.
 	int vc = _sky_tx_pick_vc(self, now);
 	int content_to_send = (vc >= 0);
 	_sky_tx_track_tdd_state(self, can_send, content_to_send, now);
 
+	// No need to transmit.
 	if (!can_send || vc < 0)
 		return 0; // This is supposed to return 0, Not "-1": sky_tx returns a boolean value as to if there is need to send something.
 
+	// Advance round robin index for virtual channels.
 	_sky_tx_advance_vc_round_robin(self);
 	const SkyVCConfig* vc_conf = &self->conf->vc[vc];
 
@@ -161,7 +188,9 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 
 	/* Fill rest of the frame with payload data and necessary ARQ extensions. */
 	int ret = sky_vc_fill_frame(self->virtual_channels[vc], self->conf, &tx_frame, now, self->mac->frames_sent_in_current_window_per_vc[vc]);
-	if (ret < 0)
+
+	// If there was an error, return it.
+	if (ret < 0) 
 		return ret;
 	if (ret == 0)
 		SKY_PRINTF(SKY_DIAG_BUG, "Construction of new frame was started but there was nothing to transmit!");
@@ -175,6 +204,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 		sky_hmac_extend_with_authentication(self, &tx_frame);
 
 
+	// Increment counters
 	self->mac->total_frames_sent_in_current_window++;
 	self->mac->frames_sent_in_current_window_per_vc[vc]++;
 
@@ -186,23 +216,28 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	return 1; // Return 1 to indicate that a new frame was created.
 }
 
-
+// Generate a new frame with FEC coding.
 int sky_tx_with_fec(SkyHandle self, SkyRadioFrame *frame) {
 
+	//Generate a new frame to be sent.
 	int ret = sky_tx(self, frame);
+	// If sky_tx created a new frame, apply FEC coding.
 	if (ret == 1) {
 		SKY_ASSERT(frame->length + RS_PARITYS <= sizeof(frame->raw));
 
 		/* Apply Forward Error Correction (FEC) coding */
 		sky_fec_encode(frame);
 	}
+	// Return whether or not the frame succesfully created.
 	return ret;
 }
 
-
+// Generate a new frame with FEC and Golay coding.
 int sky_tx_with_golay(SkyHandle self, SkyRadioFrame* frame) {
 
+	// Generate a new frame with FEC coding.
 	int ret = sky_tx_with_fec(self, frame);
+	// If sky_tx_with_fec created a new frame, apply Golay coding.
 	if (ret == 1) {
 		SKY_ASSERT(frame->length + 3 <= sizeof(frame->raw));
 
@@ -210,6 +245,7 @@ int sky_tx_with_golay(SkyHandle self, SkyRadioFrame* frame) {
 		for (unsigned int i = frame->length; i != 0; i--)
 			frame->raw[i + 3] = frame->raw[i];
 
+		/* Add PHY header */
 		uint32_t phy_header = frame->length;
 		encode_golay24(&phy_header);
 		frame->raw[0] = 0xff & (phy_header >> 16);
@@ -217,6 +253,7 @@ int sky_tx_with_golay(SkyHandle self, SkyRadioFrame* frame) {
 		frame->raw[2] = 0xff & (phy_header >> 0);
 		frame->length += 3;
 	}
-
+	
+	// Return whether or not the frame succesfully created.
 	return ret;
 }

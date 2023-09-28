@@ -6,33 +6,34 @@
 
 
 
-#define EB_MAX_ELEMENT_COUNT        (65530)
-#define EB_END_IDX                  (EB_MAX_ELEMENT_COUNT + 1)
-#define EB_NULL_IDX                 (EB_MAX_ELEMENT_COUNT + 2)
-#define EB_LEN_BYTES                ((int)sizeof(sky_element_length_t))
+#define EB_MAX_ELEMENT_COUNT        (65530) // Element Buffer maximum element count.
+#define EB_END_IDX                  (EB_MAX_ELEMENT_COUNT + 1) // Index used at the end/beginning of the buffer.
+#define EB_NULL_IDX                 (EB_MAX_ELEMENT_COUNT + 2) // Index used for null pointer.
+#define EB_LEN_BYTES                ((int)sizeof(sky_element_length_t)) // Length of the element buffer in bytes.
 
-
+// Element Buffer.
 struct sky_element_buffer_s
 {
 	/* Memory pool used to store elements */
 	void* pool;
 
-	/* */
+	/* Index of last written element */
 	sky_element_idx_t last_write_index;
 
 	/* Number of free elements */
 	int32_t free_elements;
 
-	/* */
+	/* Number of total elements */
 	sky_element_idx_t element_count;
 
-	/* */
+	/* Size of element in bytes */
 	int32_t element_size;
 
-	/* */
+	/* Amount of space usable by payload in element.  */
 	int32_t element_usable_space;
 };
 
+// Element within the buffer.
 typedef struct
 {
 	sky_element_idx_t* previous;

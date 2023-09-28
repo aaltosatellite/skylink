@@ -21,7 +21,7 @@
  * - has_auth: 1 bit
  * - has_crypt: 1 bit
  * - arq: 1 bit
- * - has_payload (turha): 1 bit
+ * - has_payload (useless): 1 bit
  * - sequence control: 2 bits
  */
 #define SKY_FLAG_AUTHENTICATED          (0b00001)
@@ -56,7 +56,7 @@ struct sky_radio_frame
 	// Length of the raw frame
 	unsigned int length;
 
-	//
+	// Raw frame data
 	uint8_t raw[SKY_FRAME_MAX_LEN + 6];
 };
 

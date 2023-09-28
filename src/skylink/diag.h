@@ -27,6 +27,7 @@ extern unsigned int sky_diag_mask;
  */
 typedef struct
 {
+	// Total number of retransmitted frames using this virtual channel. This is not actually updated anywhere.
 	uint16_t arq_retransmits;
 	//uint16_t arq_dunno;
 
@@ -37,7 +38,7 @@ typedef struct
 
 	/*
 	 * Total number of received/accepted frames using this virtual channel.
-	 * Counteed frame must have passed HMAC and other sanity checks.
+	 * Counted frames must have passed HMAC and other sanity checks.
 	 */
 	uint16_t rx_frames;
 
@@ -65,7 +66,7 @@ struct sky_diag
 
 	/*
 	 * Number of failed frame FEC decode.
-	 * These frames won't be counter in the total "rx_frames" count.
+	 * These frames won't be counted in the total "rx_frames" count.
 	 */
 	uint16_t rx_fec_fail;
 
@@ -76,7 +77,7 @@ struct sky_diag
 	uint16_t rx_fec_octs;
 
 	/*
-	 * Total number of octect/byte errors corrected.
+	 * Total number of octet/byte errors corrected.
 	 * byte error rate = rx_fec_errs / rx_fec_octs
 	 */
 	uint16_t rx_fec_errs;

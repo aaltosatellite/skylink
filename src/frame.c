@@ -86,6 +86,7 @@ int sky_frame_add_extension_arq_ctrl(SkyTransmitFrame *tx_frame, sky_arq_sequenc
 	SkyHeaderExtension *extension = (SkyHeaderExtension *)tx_frame->ptr;
 	extension->type = EXTENSION_ARQ_CTRL;
 	extension->length = sizeof(ExtARQCtrl);
+	// Swap endianess of the sequence numbers.
 #if 1
 	extension->ARQCtrl.tx_sequence = sky_hton16(tx_sequence);
 	extension->ARQCtrl.rx_sequence = sky_hton16(rx_sequence);

@@ -28,7 +28,7 @@ struct sky_mac_s {
 	// Tick of last time we updated our belief of T0 (and peer window length).
 	sky_tick_t last_belief_update;
 
-	// Counter to monitor is the current window lenght too larger or small
+	// Counter to monitor is the current window length too large or small
 	int32_t window_adjust_counter;
 
 	// The virtual channel that takes presence on next window.
@@ -37,10 +37,10 @@ struct sky_mac_s {
 	// Is our window open?
 	bool window_on;
 
-	// Was there ability to send, without content to send?
+	// Was it possible to send, without content to send?
 	bool unused_window_time;
 
-	// Number of frames transmitted in this
+	// Number of frames transmitted in this window per VC
 	uint16_t frames_sent_in_current_window_per_vc[SKY_NUM_VIRTUAL_CHANNELS];
 
 	// Total number of frames sent in this windows
@@ -51,81 +51,81 @@ struct sky_mac_s {
 
 
 /*
- * Create new TDD MAC instance.
+ *	Create a new TDD/MAC instance.
  *
- * params:
- *    config: Pointer to configuration struct. The allocation must always be available.
+ *	params:
+ *  	config: Pointer to configuration struct. The allocation must always be available.
  */
 SkyMAC* sky_mac_create(SkyMACConfig* config);
 
 
 /*
- * Destroy TDD MAC instance
+ *	Destroy a TDD/MAC instance
  *
- * params:
- *    mac: Pointer to MAC instance.
+ *	params:
+ *  	mac: Pointer to MAC instance.
  */
 void sky_mac_destroy(SkyMAC* mac);
 
 
 /*
- * Moves the cycle startpoint by 't_shift' ticks.
- * This is mainly useful if there is reason to suspect that gs and satellite are in lockstep and talk over
- * each other. Preferably use the current own window length with random sign to shift by.
+ *	Moves the cycle startpoint by 't_shift' ticks.
+ *	This is mainly useful if there is reason to suspect that the ground station and satellite are in lockstep and talk over
+ *	each other. Preferably use the current own window length with random sign to shift by.
  */
 void mac_shift_windowing(SkyMAC* mac, sky_tick_t t_shift);
 
 
 /*
- * Expand/extend own TDD window by `window_adjust_increment_ticks`.
- * New length is limited `maximum_window_length_ticks` config.
+ *	Expand/extend own TDD window by `window_adjust_increment_ticks`.
+ *	New length is limited `maximum_window_length_ticks` config.
  *
- * params:
- *    mac: Pointer to MAC instance.
+ *	params:
+ *  	mac: Pointer to MAC instance.
  */
 void mac_expand_window(SkyMAC* mac, sky_tick_t now); // TODO: extend / shorten
 
 
 /*
- * Shrink/shorten own TDD window by `window_adjust_increment_ticks`.
- * New length is limited `minimum_window_length_ticks` config.
+ *	Shrink/shorten own TDD window by `window_adjust_increment_ticks`.
+ *	New length is limited `minimum_window_length_ticks` config.
  *
- * params:
- *    mac: Pointer to MAC instance.
+ *	params:
+ *   	mac: Pointer to MAC instance.
  */
 void mac_shrink_window(SkyMAC* mac, sky_tick_t now);
 
 
 /*
- * Returns positive integer number of ticks to own transmit window opening,
- * or zero, if the window is open.
+ *	Returns positive integer number of ticks to own transmit window opening,
+ *	or zero, if the window is open.
  */
 int32_t mac_time_to_own_window(SkyMAC* mac, sky_tick_t now);
 
 
 /*
- * Returns positive integer number of ticks of own transmit window remaining,
- * or negative integer signaling the number of ticks past the window closure.
+ *	Returns positive integer number of ticks of own transmit window remaining,
+ *	or negative integer signaling the number of ticks past the window closure.
  */
 int32_t mac_own_window_remaining(SkyMAC* mac, sky_tick_t now);
 
 
 /*
- * Returns positive integer number of ticks of peer transmit window remaining,
- * or negative integer signaling the number of ticks past the window closure.
+ *	Returns positive integer number of ticks of peer transmit window remaining,
+ *	or negative integer signaling the number of ticks past the window closure.
  */
 int32_t mac_peer_window_remaining(SkyMAC* mac, sky_tick_t now);
 
 
 /*
- * Returns true whether MAC thinks it is our time to speak at now.
+ *	Returns boolean whether MAC thinks it is our time to speak at now.
  */
 bool mac_can_send(SkyMAC* mac, sky_tick_t now);
 
 
 /*
  * Updates the MAC-system's belief of the current status of the windowing:
- * "peer_mac_window" is sent by the peer, and is simply the total length of the window it wishes to transmit in, in ticks.
+ * "peer_mac_length" is sent by the peer, and is simply the total length of the window it wishes to transmit in, in ticks.
  * "peer_mac_remaining" is sent by the peer, and indicates how many ticks the peer thinks is remaining of it's window.
  * With this information we can formulate a picture of the situatuion that will be reasonably accurate for several cycles.
  */
@@ -147,7 +147,7 @@ void sky_mac_carrier_sensed(SkyMAC* mac, sky_tick_t now);
 
 
 /*
- * Returns boolean 1/0 wether an idle frame should be sent to synch the peer side.
+ * Returns boolean 1/0 whether an idle frame should be sent to sync the peer side.
  */
 bool mac_idle_frame_needed(SkyMAC* mac, sky_tick_t now);
 
