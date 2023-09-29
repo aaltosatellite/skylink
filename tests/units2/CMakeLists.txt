@@ -1,8 +1,10 @@
 
 add_executable(unit_tests2
     "frame_tests.c"
+    "fec_tests.c"
+    "hmac_tests.c"
     "../utils/tools.c"
-    "../utils/tst_utilities.c"
+    "units.c"
     "narwhal.c"
 )
 
@@ -13,7 +15,7 @@ target_link_libraries(
 
 target_compile_options(
     unit_tests2 PRIVATE
-    -O2 -Wall -Wextra
+    -g -O0 -Wall -Wextra
 )
 
 target_include_directories(
