@@ -5,6 +5,7 @@
 #include "skylink/frame.h"
 #include "skylink/mac.h"
 #include "skylink/hmac.h"
+#include "skylink/crc.h"
 #include "skylink/utilities.h"
 
 #include "ext/gr-satellites/golay24.h"
@@ -88,8 +89,17 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 	self->diag->rx_frames++;
 	self->diag->rx_bytes += frame->length;
 
-	// Initialize parsed frame structure to zero.
 	int ret;
+
+#if 0
+	// Check CRC if present
+	if ( /* TODO */ 0 && (ret = sky_check_crc32(frame)) != SKY_RET_OK) {
+		self->diag->rx_fec_fail++;
+		return ret;
+	}
+#endif
+
+	// Initialize parsed frame structure to zero.
 	SkyParsedFrame parsed;
 	memset(&parsed, 0, sizeof(SkyParsedFrame));
 

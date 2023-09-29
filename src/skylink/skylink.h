@@ -21,6 +21,10 @@
 #define SKY_RET_REDUNDANT_EXTENSIONS        (-7)
 #define SKY_RET_FILTERED_BY_IDENTITY        (-8)
 
+// CRC
+#define SKY_RET_CRC_INVALID_LENGTH          (-9)
+#define SKY_RET_CRC_INVALID_CHECKSUM        (-9)
+
 // FEC
 #define SKY_RET_GOLAY_FAILED                (-10)
 #define SKY_RET_GOLAY_MISCONFIGURED         (-11)

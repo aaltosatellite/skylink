@@ -7,6 +7,7 @@
 #include "skylink/frame.h"
 #include "skylink/mac.h"
 #include "skylink/hmac.h"
+#include "skylink/crc.h"
 #include "skylink/utilities.h"
 
 #include "ext/gr-satellites/golay24.h"
@@ -20,24 +21,24 @@
 static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_send, sky_tick_t now)
 {
 	// We can send, but there is nothing to send.
-	if (can_send && !content_to_send) 
+	if (can_send && !content_to_send)
 		self->mac->unused_window_time = true;
 
-	// Window is closing.	
-	if (!can_send && self->mac->window_on) { 
+	// Window is closing.
+	if (!can_send && self->mac->window_on) {
 
 		 // Indicate need to shrink window.
 		if(self->mac->unused_window_time)
 			self->mac->window_adjust_counter--;
-		
+
 		// Indicate need to grow window.
 		else
 			self->mac->window_adjust_counter++;
-		
+
 	}
 
 	// Window is opening.
-	if (can_send && !self->mac->window_on) { 
+	if (can_send && !self->mac->window_on) {
 
 		// Indicate need to shrink window.
 		if(self->mac->window_adjust_counter <= -self->conf->mac.window_adjustment_period){
@@ -62,7 +63,7 @@ static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to
 			self->mac->frames_sent_in_current_window_per_vc[i] = 0;
 		}
 		self->mac->total_frames_sent_in_current_window = 0;
-		
+
 	} else { // Can send.
 		// MAC window on.
 		self->mac->window_on = 1;
@@ -190,7 +191,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	int ret = sky_vc_fill_frame(self->virtual_channels[vc], self->conf, &tx_frame, now, self->mac->frames_sent_in_current_window_per_vc[vc]);
 
 	// If there was an error, return it.
-	if (ret < 0) 
+	if (ret < 0)
 		return ret;
 	if (ret == 0)
 		SKY_PRINTF(SKY_DIAG_BUG, "Construction of new frame was started but there was nothing to transmit!");
@@ -203,6 +204,11 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	if (vc_conf->require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX)
 		sky_hmac_extend_with_authentication(self, &tx_frame);
 
+#if 0
+	/* Append CRC-32 checksum to the end of frame */
+	if (vc_conf->require_authentication & SKY_CONFIG_FLAG_USE_CRC32)
+		sky_extend_with_crc32(frame);
+#endif
 
 	// Increment counters
 	self->mac->total_frames_sent_in_current_window++;
@@ -253,7 +259,7 @@ int sky_tx_with_golay(SkyHandle self, SkyRadioFrame* frame) {
 		frame->raw[2] = 0xff & (phy_header >> 0);
 		frame->length += 3;
 	}
-	
+
 	// Return whether or not the frame succesfully created.
 	return ret;
 }

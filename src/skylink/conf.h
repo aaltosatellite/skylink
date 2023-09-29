@@ -54,9 +54,10 @@ typedef struct {
 
 
 /* Virtual channel authentication option flags */
-#define SKY_CONFIG_FLAG_AUTHENTICATE_TX          (0b001)
-#define SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION   (0b010)
-#define SKY_CONFIG_FLAG_REQUIRE_SEQUENCE         (0b100)
+#define SKY_CONFIG_FLAG_AUTHENTICATE_TX          (0b0001)
+#define SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION   (0b0010)
+#define SKY_CONFIG_FLAG_REQUIRE_SEQUENCE         (0b0100)
+#define SKY_CONFIG_FLAG_USE_CRC32                (0b1000)
 
 /*
  * Per virtual channel configurations

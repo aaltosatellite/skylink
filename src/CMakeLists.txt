@@ -31,12 +31,13 @@ target_compile_options(
 
 target_sources(
     skylink PRIVATE
-    "reliable_vc.c"
+    "crc.c"
     "diag.c"
     "element_buffer.c"
     "fec.c"
     "frame.c"
     "hmac.c"
+    "reliable_vc.c"
     "mac.c"
     "sequence_ring.c"
     "skylink_rx.c"

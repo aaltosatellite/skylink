@@ -53,7 +53,8 @@ SkyVirtualChannel* sky_vc_create(SkyVCConfig* config)
 		config->send_ring_len = 32;
 	if (config->element_size < 12 || config->element_size > 500)
 		config->element_size = 36;
-
+	if ((config->require_authentication & (SKY_CONFIG_FLAG_AUTHENTICATE_TX | SKY_CONFIG_FLAG_USE_CRC32)) == 0)
+		config->require_authentication |= SKY_CONFIG_FLAG_USE_CRC32;
 
 	// Allocate memory for the virtual channel struct.
 	SkyVirtualChannel* vchannel = SKY_MALLOC(sizeof(SkyVirtualChannel));
