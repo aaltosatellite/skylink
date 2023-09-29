@@ -18,14 +18,6 @@
 
 const unsigned int SKY_HMAC_CTX_SIZE = sizeof(blake3_hasher);
 
-/*
-Function for modulo operation between a given sequence and the value of HMAC_CYCLE_LENGTH
-This is done to allow the sequence to wrap back to 0 after reaching the maximum value of HMAC_CYCLE_LENGTH
-*/
-wrap_hmac_sequence(int32_t sequence)
-{
-	return positive_modulo(sequence, HMAC_CYCLE_LENGTH);
-}
 
 
 // Allocate and initialize HMAC state instance
@@ -64,7 +56,7 @@ int32_t sky_hmac_get_next_tx_sequence(SkyHandle self, unsigned int vc)
 	if (vc > SKY_NUM_VIRTUAL_CHANNELS)
 		return 0;
 	int32_t seq = self->hmac->sequence_tx[vc];
-	self->hmac->sequence_tx[vc] = wrap_hmac_sequence(self->hmac->sequence_tx[vc] + 1);
+	self->hmac->sequence_tx[vc] = seq + 1; // uint16 naturally overflows
 	return seq;
 }
 
@@ -72,28 +64,26 @@ int32_t sky_hmac_get_next_tx_sequence(SkyHandle self, unsigned int vc)
 Load HMAC sequence numbers from given array.
 Size of the array is 2 * SKY_NUM_VIRTUAL_CHANNELS
 */
-int sky_hmac_load_sequences(SkyHandle self, const int32_t* sequences)
+void sky_hmac_load_sequences(SkyHandle self, const uint16_t* sequences)
 {
 	// Loop through all virtual channels and load the sequence numbers
 	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		self->hmac->sequence_tx[vc] = *sequences++;
 		self->hmac->sequence_rx[vc] = *sequences++;
 	}
-	return 0;
 }
 
 /*
 Dump HMAC sequence numbers to given array.
 Size of the array is 2 * SKY_NUM_VIRTUAL_CHANNELS.
 */
-int sky_hmac_dump_sequences(SkyHandle self, int32_t* sequences)
+void sky_hmac_dump_sequences(SkyHandle self, uint16_t* sequences)
 {
 	// Loop through all virtual channels and dump the sequence numbers
 	for (int vc = 0; vc < SKY_NUM_VIRTUAL_CHANNELS; vc++) {
 		*sequences++ = self->hmac->sequence_tx[vc];
 		*sequences++ = self->hmac->sequence_rx[vc];
 	}
-	return 0;
 }
 
 
@@ -136,9 +126,9 @@ static void sky_rx_process_ext_hmac_sequence_reset(SkyHMAC *hmac, const SkyHeade
 
 	// Parse new sequence number and set it
 	uint16_t new_sequence = sky_ntoh16(ext->HMACSequenceReset.sequence);
-	hmac->sequence_tx[vc] = wrap_hmac_sequence(new_sequence);
+	hmac->sequence_tx[vc] = new_sequence;
 
-	SKY_PRINTF(SKY_DIAG_INFO, "VC #%d sequence numbering reset to %d\n", vc, new_sequence);
+	SKY_PRINTF(SKY_DIAG_INFO | SKY_DIAG_HMAC, "VC #%d sequence numbering reset to %u\n", vc, new_sequence);
 }
 
 /*
@@ -154,8 +144,8 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 	SkyStaticHeader *hdr = &parsed->hdr;
 
 	// Swap the endianness of sequence number for later use.
-	const uint16_t auth_sequence = sky_ntoh16(parsed->hdr.frame_sequence);
-	parsed->hdr.frame_sequence = auth_sequence;
+	const uint16_t frame_sequence = sky_ntoh16(parsed->hdr.frame_sequence);
+	parsed->hdr.frame_sequence = frame_sequence;
 
 	// If the frame claims to be authenticated, make sure is not too short.
 	if ((hdr->flags & SKY_FLAG_AUTHENTICATED) != 0 && parsed->payload_len < SKY_HMAC_LENGTH) {
@@ -175,7 +165,7 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 
 	// Authentication is required but no authentication field provided?
 	if ((hdr->flags & SKY_FLAG_AUTHENTICATED) == 0) {
-		SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Authentication missing!\n")
+		SKY_PRINTF(SKY_DIAG_INFO | SKY_DIAG_HMAC, "HMAC: Authentication missing!\n")
 		self->diag->rx_hmac_fail++;
 		hmac->vc_enforcement_need[vc] = 1;
 		return SKY_RET_AUTH_MISSING;
@@ -191,7 +181,7 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 	// Compare the calculated hash to received one
 	const uint8_t *frame_hash = &frame->raw[frame->length - SKY_HMAC_LENGTH];
 	if (memcmp(frame_hash, calculated_hash, SKY_HMAC_LENGTH) != 0) {
-		SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Invalid authentication code!\n")
+		SKY_PRINTF(SKY_DIAG_INFO | SKY_DIAG_HMAC, "HMAC: Invalid authentication code!\n")
 		self->diag->rx_hmac_fail++;
 		hmac->vc_enforcement_need[vc] = 1;
 		return SKY_RET_AUTH_FAILED;
@@ -204,15 +194,17 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 		sky_rx_process_ext_hmac_sequence_reset(hmac, parsed->hmac_reset, vc);
 
 	// Authentication hash check was successfull.
-	SKY_PRINTF(SKY_DIAG_DEBUG | SKY_DIAG_HMAC, "HMAC: Received sequence %u\n", auth_sequence)
+	SKY_PRINTF(SKY_DIAG_DEBUG | SKY_DIAG_HMAC, "HMAC: Received sequence %u\n", frame_sequence)
 
 	// If sequence number check is required for authentication check it.
-	if (vc_conf->require_authentication & SKY_CONFIG_FLAG_REQUIRE_SEQUENCE) {
-		// Get distance between sequence_rx and the sequence that is being authenticated.
-		int32_t jump = wrap_hmac_sequence((int32_t)(auth_sequence - hmac->sequence_rx[vc]));
+	if (vc_conf->require_authentication & SKY_CONFIG_FLAG_REQUIRE_SEQUENCE)
+	{
+		// Get distance between received sequence number and the expected next sequence number.
+		uint16_t jump = frame_sequence - hmac->sequence_rx[vc];
+
 		// Check if jump is too large
 		if (jump > self->conf->hmac.maximum_jump) {
-			SKY_PRINTF(SKY_DIAG_HMAC, "HMAC: Larger than allowed sequence jump\n")
+			SKY_PRINTF(SKY_DIAG_INFO | SKY_DIAG_HMAC, "HMAC: Larger than allowed sequence jump\n")
 			self->diag->rx_hmac_fail++;
 			hmac->vc_enforcement_need[vc] = 1;
 			return SKY_RET_EXCESSIVE_HMAC_JUMP;
@@ -220,7 +212,7 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 	}
 
 	// The HMAC sequence on our side jumps to the immediate next sequence number.
-	hmac->sequence_rx[vc] = wrap_hmac_sequence((int32_t)(auth_sequence + 1));
+	hmac->sequence_rx[vc] = frame_sequence + 1; // uint16 naturally overflows
 
 	// Remove the HMAC field from the end of the frame
 	parsed->payload_len -= SKY_HMAC_LENGTH;

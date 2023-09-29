@@ -79,7 +79,7 @@ static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyTransmitFrame *t
 	self->hmac->vc_enforcement_need[vc] = 0;
 
 	// +3 so that immediate sends don't invalidate what we give here. Jump constant must be bigger.
-	uint16_t sequence = wrap_hmac_sequence(self->hmac->sequence_rx[vc] + 3);
+	uint16_t sequence = self->hmac->sequence_rx[vc] + 3; // uint16 naturally overflows
 	sky_frame_add_extension_hmac_sequence_reset(tx_frame, sequence);
 	return 1;
 }

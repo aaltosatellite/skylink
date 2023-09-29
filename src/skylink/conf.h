@@ -91,7 +91,9 @@ typedef struct {
 	/* Length of the authentication key */
 	int32_t key_length;
 
-	/* Maximum allowed forward jump in sequence count */
+	/* Maximum allowed forward jump in sequence count.
+	 * Value should larger than expected number of lost frames aka ARQ window length.
+	 * Sensible values are between 16 and 64. Recommended value is 24. */
 	int32_t maximum_jump;
 
 	/* Authentication key */

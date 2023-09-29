@@ -9,7 +9,6 @@
 /* HMAC trailer length */
 #define SKY_HMAC_LENGTH                 4 // bytes
 
-#define HMAC_CYCLE_LENGTH	65000
 
 #if 1
 /* HMAC runtime state */
@@ -19,17 +18,19 @@ struct sky_hmac {
 	int32_t key_len;
 	uint32_t nonce_seed;
 
-	int32_t sequence_tx[SKY_NUM_VIRTUAL_CHANNELS];
-	int32_t sequence_rx[SKY_NUM_VIRTUAL_CHANNELS];
-	uint8_t vc_enforcement_need[SKY_NUM_VIRTUAL_CHANNELS];
+	// Next transmitted sequence number
+	uint16_t sequence_tx[SKY_NUM_VIRTUAL_CHANNELS];
+
+	// Next expected received sequence number
+	uint16_t sequence_rx[SKY_NUM_VIRTUAL_CHANNELS];
+
+	// Flag to indicate need to transmit HMAC reset extension
+	uint8_t vc_enforcement_need[SKY_NUM_VIRTUAL_CHANNELS]; // TODO: bit field?
+
+	// Pointer to hash function's context object
 	void* ctx;
 };
 #else
-
-/*
- IDEA: globaali key list jonka pituus voi olla mikä taansa ja conffi
- määrittelee mitä key_indexiä milloinkin pitää käyttää.
- */
 
 /* HMAC runtime state */
 struct sky_hmac
@@ -68,20 +69,17 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyTransmitFrame* tx_fra
  */
 int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, SkyParsedFrame* parsed);
 
-/* Positive modulo by max hmac sequence */
-int32_t wrap_hmac_sequence(int32_t sequence);
-
 /*
  * Load HMAC sequence numbers from given array.
  * Size of the array is 2 * SKY_NUM_VIRTUAL_CHANNELS.
  */
-int sky_hmac_load_sequences(SkyHandle self, const int32_t* sequences);
+void sky_hmac_load_sequences(SkyHandle self, const uint16_t* sequences);
 
 /*
  * Dump HMAC sequence numbers to given array.
  * Size of the array is 2 * SKY_NUM_VIRTUAL_CHANNELS.
  */
-int sky_hmac_dump_sequences(SkyHandle self, int32_t* sequences);
+void sky_hmac_dump_sequences(SkyHandle self, uint16_t* sequences);
 
 
 /* Marks a vc number as requiring hmac-sequence reset. This is used after a peer attempts authentication with too big sequence jump. */
