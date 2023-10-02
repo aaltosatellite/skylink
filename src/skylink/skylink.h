@@ -83,8 +83,20 @@
 //======================================================================================================================
 
 /* ARQ sequence number type  */
-//typedef uint8_t sky_arq_sequence_t;
+#ifndef SKY_16BIT_ARQ_SEQUENCES
+typedef uint8_t sky_arq_sequence_t;
+#define sky_arq_seq_hton(x) (x)
+#define sky_arq_seq_ntoh(x) (x)
+#else
 typedef uint16_t sky_arq_sequence_t;
+#define sky_arq_seq_hton(x) sky_hton16((x))
+#define sky_arq_seq_ntoh(x) sky_ntoh16((x))
+#endif
+
+typedef uint16_t sky_arq_mask_t;
+#define sky_arq_mask_hton(x) sky_hton16((x))
+#define sky_arq_mask_ntoh(x) sky_ntoh16((x))
+
 
 /* Element buffer types */
 typedef uint16_t sky_element_idx_t;

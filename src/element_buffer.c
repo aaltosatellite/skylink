@@ -420,7 +420,7 @@ int sky_element_buffer_get_data_length(SkyElementBuffer* buffer, sky_element_idx
 
 
 //Reads the data from the chain starting with the given index to the target buffer. Returns the number of bytes read, or negative error if the index is invalid or the target buffer is too small.
-int sky_element_buffer_read(SkyElementBuffer* buffer, uint8_t* target, sky_element_idx_t idx, int32_t max_len)
+int sky_element_buffer_read(SkyElementBuffer* buffer, uint8_t* target, sky_element_idx_t idx, unsigned int max_len)
 {
 
 	//Get the element at the given index.

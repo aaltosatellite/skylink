@@ -97,7 +97,7 @@ int sky_element_buffer_store(SkyElementBuffer* buffer, const uint8_t* data, sky_
  * Reads a payload from address index 'idx' that was previously returned by store function.
  * Or returns error if there is no payload or it is too long.
  */
-int sky_element_buffer_read(SkyElementBuffer* buffer, uint8_t* target, sky_element_idx_t idx, int32_t max_len);
+int sky_element_buffer_read(SkyElementBuffer* buffer, uint8_t* target, sky_element_idx_t idx, unsigned int max_len);
 
 /*
  * Delete a payload at index 'idx'

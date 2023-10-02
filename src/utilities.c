@@ -37,11 +37,11 @@ SkyHandle sky_create(SkyConfig *config)
 
 	// Copy configuration to Skylink instance.
 	handle->conf = config;
-	
+
 	// Create diagnostics instance.
 	handle->diag = sky_diag_create();
 	SKY_ASSERT(handle != NULL);
-	
+
 	// Create TDD/MAC instance.
 	handle->mac = sky_mac_create(&config->mac);
 	SKY_ASSERT(handle->mac != NULL);
@@ -145,30 +145,6 @@ int32_t positive_modulo(int32_t x, int32_t m){
 }
 
 
-
-
-
-// Returns the index of x in uint8 array, or -1 if not found.
-int x_in_u8_array(uint8_t x, const uint8_t* array, int length){
-	// Linear search.
-	for (int i = 0; i < length; ++i) {
-		if(array[i] == x){
-			return i;
-		}
-	}
-	return -1;
-}
-
-// Returns the index of x in uint16 array, or -1 if not found.
-int x_in_u16_array(uint16_t x, const uint16_t* array, int length){
-	// Linear search.
-	for (int i = 0; i < length; ++i) {
-		if(array[i] == x){
-			return i;
-		}
-	}
-	return -1;
-}
 
 // Positive modulo for time ticks. Allows time to wrap around back to zero.
 int32_t wrap_time_ticks(sky_tick_t time_ticks){

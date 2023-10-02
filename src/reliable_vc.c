@@ -196,11 +196,10 @@ void sky_vc_check_timeouts(SkyVirtualChannel *vchannel, sky_tick_t now, sky_tick
  */
 
 // Push packet to send to element buffer.
-int sky_vc_push_packet_to_send(SkyVirtualChannel* vchannel, void* payload, int length)
+int sky_vc_push_packet_to_send(SkyVirtualChannel* vchannel, const uint8_t* payload, unsigned int length)
 {
-	if(length > SKY_PAYLOAD_MAX_LEN){
+	if (length > SKY_PAYLOAD_MAX_LEN)
 		return SKY_RET_TOO_LONG_PAYLOAD;
-	}
 	return sendRing_push_packet_to_send(vchannel->sendRing, vchannel->elementBuffer, payload, length);
 }
 
@@ -210,12 +209,6 @@ int sky_vc_send_buffer_is_full(SkyVirtualChannel* vchannel)
 	return sendRing_is_full(vchannel->sendRing);
 }
 
-// Schedule a packet to be resent. Returns 0 if succesful and a negative error code otherwise.
-int sky_vc_schedule_resend(SkyVirtualChannel* arqRing, int sequence)
-{
-	return sendRing_schedule_resend(arqRing->sendRing, sequence);
-}
-
 // Returns the number of packets that wait sending.
 int sky_vc_count_packets_to_tx(SkyVirtualChannel* vchannel, int include_resend)
 {
@@ -223,50 +216,41 @@ int sky_vc_count_packets_to_tx(SkyVirtualChannel* vchannel, int include_resend)
 }
 
 // Reads the next packet to be sent to tgt. Returns the number of bytes written on success, or a negative error code.
-int sky_vc_read_packet_for_tx(SkyVirtualChannel* vchannel, void* tgt, int* sequence, int include_resend)
+int sky_vc_read_packet_for_tx(SkyVirtualChannel *vchannel, uint8_t *target, sky_arq_sequence_t *sequence, int include_resend)
 {
-	return sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tgt, sequence, include_resend);
+	return sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, target, sequence, include_resend);
 }
 
 /*
 Read the next packet to be sent to target and moves the tail up to the first untransmitted packet.
 Returns the number of bytes written on success, or a negative error code.
 */
-int sky_vc_read_packet_for_tx_monotonic(SkyVirtualChannel* vchannel, void* tgt, int* sequence)
+int sky_vc_read_packet_for_tx_monotonic(SkyVirtualChannel *vchannel, uint8_t *tgt, sky_arq_sequence_t *sequence)
 {
 	int read = sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tgt, sequence, 0);
-	if(read >= 0){
-		sendRing_clean_tail_up_to(vchannel->sendRing, vchannel->elementBuffer, vchannel->sendRing->tx_sequence);
-	}
+	if (read < 0)
+		return read;
+
+	sendRing_clean_tail_up_to(vchannel->sendRing, vchannel->elementBuffer, vchannel->sendRing->tx_sequence);
 	return read;
 }
 
-// Returns 1 if the packet of particular sequence is still recallable, 0 otherwise.
-int sky_vc_can_recall(SkyVirtualChannel* vchannel, int sequence)
-{
-	return sendRing_can_recall(vchannel->sendRing, sequence);
-}
 
 // This is called with the head-rx sequence provided by an arq-control-extension
-void sky_vc_update_tx_sync(SkyVirtualChannel* vchannel, int peer_rx_head_sequence_by_ctrl, sky_tick_t now)
+void sky_vc_update_tx_sync(SkyVirtualChannel *vchannel, sky_arq_sequence_t peer_rx_head_sequence_by_ctrl, sky_tick_t now)
 {
 	//Clean the send ring up to the sequence provided by the peer.
 	int n_cleared = sendRing_clean_tail_up_to(vchannel->sendRing, vchannel->elementBuffer, peer_rx_head_sequence_by_ctrl);
 	//If the ring was succesfully cleared, update the last tx tick.
 	if(n_cleared > 0)
 		vchannel->last_tx_tick = now;
-	
+
 	//Tx sequence is updated to the sequence provided by the peer.
 	if(vchannel->sendRing->tx_sequence == peer_rx_head_sequence_by_ctrl)
 		vchannel->last_tx_tick = now;
-	
+
 }
 
-// Fills the length and sequence of the next packet to be transmitted to the corresponding pointers. Returns 0/negative errorcode.
-int sky_vc_peek_next_tx_size_and_sequence(SkyVirtualChannel* vchannel, int include_resend, int* length, int* sequence)
-{
-	return sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, include_resend, length, sequence);
-}
 //======================================================================================================================
 //======================================================================================================================
 
@@ -288,13 +272,13 @@ int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* vchannel)
 
 // sky_vc_read_from_receive_buffer()
 // Read next message to tgt buffer. Return number of bytes written on success, or negative error code.
-int sky_vc_read_next_received(SkyVirtualChannel* vchannel, void* tgt, int max_length)
+int sky_vc_read_next_received(SkyVirtualChannel* vchannel, uint8_t* tgt, unsigned int max_length)
 {
 	return rcvRing_read_next_received(vchannel->rcvRing, vchannel->elementBuffer, tgt, max_length);
 }
 
 // Push latest radio received message in. Returns how many steps the head has advanced or negative error.
-int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, const void* src, int length)
+int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, const uint8_t* src, unsigned int length)
 {
 	int sequence = vchannel->rcvRing->head_sequence;
 	return rcvRing_push_rx_packet(vchannel->rcvRing, vchannel->elementBuffer, src, length, sequence);
@@ -302,7 +286,7 @@ int sky_vc_push_rx_packet_monotonic(SkyVirtualChannel* vchannel, const void* src
 
 // sky_vc_write_to_receive_buffer()
 // Pushes a radio received message of particular sequence to buffer.
-int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, const void* src, int length, int sequence, sky_tick_t now)
+int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, const uint8_t* src, unsigned int length, sky_arq_sequence_t sequence, sky_tick_t now)
 {
 	//Push the packet to the buffer.
 	int r = rcvRing_push_rx_packet(vchannel->rcvRing, vchannel->elementBuffer, src, length, sequence);
@@ -315,17 +299,17 @@ int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, const void* src, int leng
 }
 
 // Get sync status of the receive ring and act accordingly.
-void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequence_by_ctrl, sky_tick_t now)
+void sky_vc_update_rx_sync(SkyVirtualChannel *vchannel, sky_arq_sequence_t peer_tx_head_sequence_by_ctrl, sky_tick_t now)
 {
 	int sync = rcvRing_get_sequence_sync_status(vchannel->rcvRing, peer_tx_head_sequence_by_ctrl);
-	
+
 	if(sync == SKY_RET_OK) { // SKY_RET_RING_SEQUENCES_IN_SYNC
 		vchannel->last_rx_tick = now;
 		vchannel->need_recall = 0;
 	}
 	else if(sync == SKY_RET_RING_SEQUENCES_OUT_OF_SYNC) // Out of sync but recoverable.
 		vchannel->need_recall = 1;
-	
+
 	else if(sync == SKY_RET_RING_SEQUENCES_DETACHED){
 		// vc->arq_state_flag = ARQ_STATE_BROKEN;
 	}
@@ -335,7 +319,7 @@ void sky_vc_update_rx_sync(SkyVirtualChannel* vchannel, int peer_tx_head_sequenc
 
 
 // sky_vc_has_content_to_send()
-/* 
+/*
 Returns boolean 0/1 as to if there is content to be sent on this virtual channel.
 Execution of function depends on the ARQ state of the virtual channel.
 */
@@ -407,21 +391,24 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 	switch (vchannel->arq_state_flag) {
 	case ARQ_STATE_OFF: {
 		/*
+		 * ARQ is off.
 		 */
 
 		// Try to read a new frame
-		int length, sequence;
-		//Check if there are packets to be sent.
-		if (sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 0, &length, &sequence) >= 0)
+		sky_arq_sequence_t sequence;
+		int length = sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 0, &sequence);
+		if (length > 0)
 		{
 			SKY_ASSERT(length <= sky_frame_get_space_left(tx_frame->frame))
-			//Read the packet to the frame.
+
+			// Read the packet to the frame.
 			int read = sky_vc_read_packet_for_tx_monotonic(vchannel, tx_frame->ptr, &sequence);
 			SKY_ASSERT(read >= 0)
-			//Update the frame.
+
+			// Update the frame
 			tx_frame->frame->length += read;
 			tx_frame->ptr += read;
-			tx_frame->hdr->flags |= SKY_FLAG_HAS_PAYLOAD;
+			tx_frame->hdr->flag_has_payload = 1;
 			return 1;
 		}
 
@@ -449,7 +436,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 
 		int ret = 0;
 
-		tx_frame->hdr->flag_arq_on = 1; // TODO: SKY_FLAG_ARQ_ON
+		tx_frame->hdr->flag_arq_on = 1;
 
 		// Add ARQ handshake response if it is pending.
 		if (vchannel->handshake_send > 0) {
@@ -459,8 +446,8 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 		}
 
 		// Add ARQ retransmit request extension if we see that there are missing frames.
-		uint16_t mask = rcvRing_get_horizon_bitmap(vchannel->rcvRing);
-		if ((frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) && (mask || vchannel->need_recall)){
+		sky_arq_mask_t mask = rcvRing_get_horizon_bitmap(vchannel->rcvRing);
+		if ((frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) && (mask != 0 || vchannel->need_recall)){
 			sky_frame_add_extension_arq_request(tx_frame, vchannel->rcvRing->head_sequence, mask);
 			vchannel->need_recall = 0;
 			ret = 1;
@@ -483,17 +470,15 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 		// If we have something to be send copy it to frame.
 		if (sendRing_count_packets_to_send(vchannel->sendRing, 1) > 0)
 		{
-			// Peek length and the sequence number of the next frame
-			int packet_sequence = -1;
-			int packet_length = 0; // TODO: packet_length could be in the return value
 			// Get length and sequence of the next packet to be sent. Ret should not be 0 since the sendRing_count_packets_to_send() > 0.
-			ret = sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 1, &packet_length, &packet_sequence);
-			if (ret < 0)
-				return ret;
+			sky_arq_sequence_t packet_sequence;
+			int packet_length = sendRing_peek_next_tx_size_and_sequence(vchannel->sendRing, vchannel->elementBuffer, 1, &packet_sequence);
+			if (packet_length < 0)
+				return packet_length;
 
 			// Does the packet fit in remaining space?
 			int required_length = packet_length + (int)sizeof(ExtARQSeq) + 1;
-			if (required_length <= sky_frame_get_space_left(tx_frame->frame) && packet_sequence >= 0)
+			if (required_length <= sky_frame_get_space_left(tx_frame->frame))
 			{
 				// Add ARQ sequence number extension
 				sky_frame_add_extension_arq_sequence(tx_frame, packet_sequence);
@@ -621,8 +606,8 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 		if (parsed->arq_ctrl != NULL)
 		{
 			// Get the sequence numbers from the ARQ control and update the sync.
-			sky_arq_sequence_t rx_sequence = sky_ntoh16(parsed->arq_ctrl->ARQCtrl.rx_sequence);
-			sky_arq_sequence_t tx_sequence = sky_ntoh16(parsed->arq_ctrl->ARQCtrl.rx_sequence);
+			sky_arq_sequence_t rx_sequence = sky_arq_seq_ntoh(parsed->arq_ctrl->ARQCtrl.rx_sequence);
+			sky_arq_sequence_t tx_sequence = sky_arq_seq_ntoh(parsed->arq_ctrl->ARQCtrl.tx_sequence);
 			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ CTRL %d %d", (int)rx_sequence, (int)tx_sequence);
 			sky_vc_update_tx_sync(vchannel, rx_sequence, now);
 			sky_vc_update_rx_sync(vchannel, tx_sequence, now);
@@ -638,8 +623,8 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 				return -1; // Ignore malformed frame
 			}
 
-			// Get the sequence number from the ARQ sequence header and push the packet to buffer.	
-			sky_arq_sequence_t packet_sequence = sky_ntoh16(parsed->arq_sequence->ARQSeq.sequence);
+			// Get the sequence number from the ARQ sequence header and push the packet to buffer.
+			sky_arq_sequence_t packet_sequence = sky_arq_seq_ntoh(parsed->arq_sequence->ARQSeq.sequence);
 			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ packet %d", (int)packet_sequence);
 			sky_vc_push_rx_packet(vchannel, parsed->payload, parsed->payload_len, packet_sequence, now);
 		}
@@ -648,10 +633,10 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 		if (parsed->arq_request != NULL)
 		{
 			// Get the sequence numbers from the ARQ request and a mask for resends then schedule the resends.
-			sky_arq_sequence_t window_start = sky_ntoh16(parsed->arq_request->ARQReq.sequence);
-			uint16_t window_mask = sky_ntoh16(parsed->arq_request->ARQReq.mask);
-			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ Request: %d %04x", (int)window_start, (int)window_mask);
-			sendRing_schedule_resends_by_mask(vchannel->sendRing, window_start, window_mask);
+			sky_arq_sequence_t window_start = sky_arq_seq_ntoh(parsed->arq_request->ARQReq.sequence);
+			sky_arq_mask_t mask = sky_arq_mask_ntoh(parsed->arq_request->ARQReq.mask);
+			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ Request: %d %04x", (int)window_start, (int)mask);
+			sendRing_schedule_resends_by_mask(vchannel->sendRing, window_start, mask);
 		}
 
 		break;

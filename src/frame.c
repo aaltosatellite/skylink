@@ -43,7 +43,7 @@ int sky_frame_add_extension_arq_sequence(SkyTransmitFrame *tx_frame, sky_arq_seq
 	SkyHeaderExtension *extension = (SkyHeaderExtension *)tx_frame->ptr;
 	extension->type = EXTENSION_ARQ_SEQUENCE;
 	extension->length = sizeof(ExtARQSeq);
-	extension->ARQSeq.sequence = sky_hton16(sequence);
+	extension->ARQSeq.sequence = sky_arq_seq_hton(sequence);
 
 	// Move cursor forward and update frame and extension length.
 	const unsigned int len = 1 + sizeof(ExtARQSeq);
@@ -54,7 +54,7 @@ int sky_frame_add_extension_arq_sequence(SkyTransmitFrame *tx_frame, sky_arq_seq
 }
 
 // Add ARQ Retransmit Request header to the frame.
-int sky_frame_add_extension_arq_request(SkyTransmitFrame *tx_frame, sky_arq_sequence_t sequence, uint16_t mask)
+int sky_frame_add_extension_arq_request(SkyTransmitFrame *tx_frame, sky_arq_sequence_t sequence, sky_arq_mask_t mask)
 {
 	// Ensure that the extensions field is the last field in the frame and frame has still room for the extension.
 	SKY_ASSERT(tx_frame->hdr->flag_has_payload == 0);
@@ -64,8 +64,8 @@ int sky_frame_add_extension_arq_request(SkyTransmitFrame *tx_frame, sky_arq_sequ
 	SkyHeaderExtension *extension = (SkyHeaderExtension *)tx_frame->ptr;
 	extension->type = EXTENSION_ARQ_REQUEST;
 	extension->length = sizeof(ExtARQReq);
-	extension->ARQReq.sequence = sky_hton16(sequence);
-	extension->ARQReq.mask = sky_hton16(mask);
+	extension->ARQReq.sequence = sky_arq_seq_hton(sequence);
+	extension->ARQReq.mask = sky_arq_mask_hton(mask);
 
 	// Move cursor forward and update frame and extension length.
 	const unsigned int len = 1 + sizeof(ExtARQReq);
@@ -86,14 +86,8 @@ int sky_frame_add_extension_arq_ctrl(SkyTransmitFrame *tx_frame, sky_arq_sequenc
 	SkyHeaderExtension *extension = (SkyHeaderExtension *)tx_frame->ptr;
 	extension->type = EXTENSION_ARQ_CTRL;
 	extension->length = sizeof(ExtARQCtrl);
-	// Swap endianess of the sequence numbers.
-#if 1
-	extension->ARQCtrl.tx_sequence = sky_hton16(tx_sequence);
-	extension->ARQCtrl.rx_sequence = sky_hton16(rx_sequence);
-#else
-	extension->ARQCtrl.tx_sequence = tx_sequence;
-	extension->ARQCtrl.rx_sequence = rx_sequence;
-#endif
+	extension->ARQCtrl.tx_sequence = sky_arq_seq_hton(tx_sequence);
+	extension->ARQCtrl.rx_sequence = sky_arq_seq_hton(rx_sequence);
 
 	// Move cursor forward and update frame and extension length.
 	const unsigned int len = 1 + sizeof(ExtARQCtrl);

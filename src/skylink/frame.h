@@ -82,7 +82,7 @@ typedef struct __attribute__((__packed__)) {
 /* ARQ Retransmit Request */
 typedef struct __attribute__((__packed__)) {
 	sky_arq_sequence_t sequence;
-	uint16_t mask;
+	sky_arq_mask_t mask;
 } ExtARQReq;
 
 /* ARQ control sequence */
@@ -208,7 +208,7 @@ int sky_frame_add_extension_arq_sequence(SkyTransmitFrame *tx_frame, sky_arq_seq
  * (internal)
  * Add ARQ Retransmit Request header to the frame.
  */
-int sky_frame_add_extension_arq_request(SkyTransmitFrame *tx_frame, sky_arq_sequence_t sequence, uint16_t mask);
+int sky_frame_add_extension_arq_request(SkyTransmitFrame *tx_frame, sky_arq_sequence_t sequence, sky_arq_mask_t mask);
 
 /*
  * (internal)
