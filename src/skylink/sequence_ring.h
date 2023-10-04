@@ -138,7 +138,6 @@ int sendRing_push_packet_to_send(SkySendRing* sendRing, SkyElementBuffer* elemen
 int sendRing_schedule_resend(SkySendRing *sendRing, sky_arq_sequence_t sequence);
 
 /* Schedules resend for the sequence argument, and all the sequences pointed to by the mask if possible. */
- * Schedules resend for the sequence argument, and all the sequences pointed to by the mask if possible.
 int sendRing_schedule_resends_by_mask(SkySendRing *sendRing, sky_arq_sequence_t sequence, sky_arq_mask_t mask);
 
 /* Calculates the number of free ring slots for packets. */

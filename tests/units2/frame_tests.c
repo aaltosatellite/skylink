@@ -87,8 +87,8 @@ TEST(add_extension_arq_sequence)
 	// Make sure ARQ Sequence is parsed correctly
 	ret = sky_frame_parse_extension_headers(&frame, &parsed);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
-	ASSERT(parsed.arq_sequence != NULL);
-	ASSERT(parsed.arq_sequence->ARQSeq.sequence == sky_ntoh16(sequence));
+	ASSERT(parsed.arq_sequence != NULL, "Parsed frame does not contain ARQ Sequence extension");
+	ASSERT(parsed.arq_sequence->ARQSeq.sequence == sky_ntoh16(sequence), "Parsed sequence: %d, expected: %d", parsed.arq_sequence->ARQSeq.sequence, sky_ntoh16(sequence));
 }
 
 /*
@@ -114,9 +114,9 @@ TEST(add_extension_arq_request)
 	// Make sure ARQ Request is parsed correctly
 	ret = sky_frame_parse_extension_headers(&frame, &parsed);
 	ASSERT(ret == SKY_RET_OK, "ret: %d extension_length: %d", ret, tx_frame.hdr->extension_length);
-	ASSERT(parsed.arq_request != NULL);
-	ASSERT(parsed.arq_request->ARQReq.sequence == sky_ntoh16(sequence));
-	ASSERT(parsed.arq_request->ARQReq.mask == sky_ntoh16(mask));
+	ASSERT(parsed.arq_request != NULL, "Parsed frame does not contain ARQ Request extension");
+	ASSERT(parsed.arq_request->ARQReq.sequence == sky_ntoh16(sequence), "Parsed sequence: %d, expected: %d", parsed.arq_request->ARQReq.sequence, sky_ntoh16(sequence));
+	ASSERT(parsed.arq_request->ARQReq.mask == sky_ntoh16(mask), "Parsed mask: %d, expected: %d", parsed.arq_request->ARQReq.mask, sky_ntoh16(mask));
 }
 
 /*
@@ -143,9 +143,9 @@ TEST(add_extension_arq_ctrl)
 	// Make sure HMAC Control is parsed correctly
 	ret = sky_frame_parse_extension_headers(&frame, &parsed);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
-	ASSERT(parsed.arq_ctrl != NULL);
-	ASSERT(parsed.arq_ctrl->ARQCtrl.tx_sequence == sky_ntoh16(tx_sequence));
-	ASSERT(parsed.arq_ctrl->ARQCtrl.rx_sequence == sky_ntoh16(rx_sequence));
+	ASSERT(parsed.arq_ctrl != NULL, "Parsed frame does not contain ARQ Control extension");
+	ASSERT(parsed.arq_ctrl->ARQCtrl.tx_sequence == sky_ntoh16(tx_sequence), "Parsed tx_sequence: %d, expected: %d", parsed.arq_ctrl->ARQCtrl.tx_sequence, sky_ntoh16(tx_sequence));
+	ASSERT(parsed.arq_ctrl->ARQCtrl.rx_sequence == sky_ntoh16(rx_sequence), "Parsed rx_sequence: %d, expected: %d", parsed.arq_ctrl->ARQCtrl.rx_sequence, sky_ntoh16(rx_sequence));
 }
 
 /*

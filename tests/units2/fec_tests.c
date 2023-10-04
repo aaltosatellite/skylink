@@ -9,7 +9,7 @@ TEST(fec_successful)
 	int length = randint_i32(16+8, RS_MSGLEN);
 	int n_corrupt_bytes = randint_i32(0, 16); // RS(223,256) can correct up to 16 byte errors.
 
-	// Mmake a reference payload.
+	// Make a reference payload.
 	uint8_t* ref = x_alloc(RS_MSGLEN*3);
 	fillrand(ref, RS_MSGLEN*3);
 	memcpy(frame->raw, ref, length);
@@ -34,7 +34,7 @@ TEST(fec_successful)
 		ASSERT(memcmp(encoded_ref, frame->raw, frame->length) == 0);
 
 
-	//attempt fec deocde.
+	//attempt fec decode.
 	int ret = sky_fec_decode(frame, diag);
 	if (ret == 0){
 		//PRINTFF(0, "SUCCESS:  %d bytes.\n",  n_corrupt_bytes);
@@ -80,14 +80,14 @@ TEST(fec_wrong_length)
 	frame.length = 31;
 	ret = sky_fec_decode(&frame, &diag);
 	ASSERT(ret == SKY_RET_RS_INVALID_LENGTH, "ret: %d", ret);
-	ASSERT(diag.rx_fec_errs == 1);
+	//NOTE: FEC Error counter is not incremented for too short or long frames
 
-	// Too long frame frame
+	// Too long of a frame
 	frame.rx_time_ticks = 0;
 	frame.length = 256;
 	ret = sky_fec_decode(&frame, &diag);
 	ASSERT(ret == SKY_RET_RS_INVALID_LENGTH, "ret: %d", ret);
-	ASSERT(diag.rx_fec_errs == 2);
+
 
 	// Too long frame to be encoded
 	frame.length = 255;
@@ -119,5 +119,5 @@ TEST(fec_wrong_length)
 	frame.length = 100 + RS_PARITYS + 1;
 	ret = sky_fec_decode(&frame, &diag);
 	ASSERT(ret == SKY_RET_RS_FAILED, "ret: %d", ret);
-
+	ASSERT(diag.rx_fec_errs == 0, "Incorrect number of errors corrected: %d", diag.rx_fec_errs);
 }

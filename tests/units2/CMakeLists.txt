@@ -1,8 +1,10 @@
 
 add_executable(unit_tests2
     "frame_tests.c"
+    "cycle_test.c"
     "fec_tests.c"
     "hmac_tests.c"
+    "ring_tests.c"
     "../utils/tools.c"
     "units.c"
     "narwhal.c"
@@ -10,7 +12,7 @@ add_executable(unit_tests2
 
 target_link_libraries(
     unit_tests2 PRIVATE
-    skylink
+    skylink ${ZMQ_LIBRARIES} pthread m
 )
 
 target_compile_options(

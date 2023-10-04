@@ -254,7 +254,8 @@ void sky_send_ring_wipe(SkySendRing *sendRing, SkyElementBuffer *elementBuffer, 
 //Create a new send ring.
 SkySendRing *sky_send_ring_create(int length, sky_arq_sequence_t initial_sequence)
 {
-	SKY_ASSERT(length >= 4);
+	if(length < 4)
+		return NULL;
 	//Allocate memory for the ring and the buffer.
 	SkySendRing* sendRing = SKY_MALLOC(sizeof(SkySendRing));
 	RingItem* ring = SKY_MALLOC(sizeof(RingItem)*length);

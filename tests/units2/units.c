@@ -140,3 +140,11 @@ int start_parsing(SkyRadioFrame *frame, SkyParsedFrame *parsed)
 
 	return SKY_RET_OK;
 }
+
+int roll_chance(double const chance){
+	int r = rand(); // NOLINT(cert-msc50-cpp)
+	double rd = (double)r;
+	double rM = (double)RAND_MAX;
+	double rr = rd/rM;
+	return rr < chance;
+}
