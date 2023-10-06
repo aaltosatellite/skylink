@@ -97,6 +97,9 @@ typedef uint16_t sky_arq_mask_t;
 #define sky_arq_mask_hton(x) sky_hton16((x))
 #define sky_arq_mask_ntoh(x) sky_ntoh16((x))
 
+typedef uint16_t sky_arq_window_t;
+#define sky_arq_window_hton(x) sky_hton16((x))
+#define sky_arq_window_ntoh(x) sky_ntoh16((x))
 
 /* Element buffer types */
 typedef uint16_t sky_element_idx_t;

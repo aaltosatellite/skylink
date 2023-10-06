@@ -13,7 +13,7 @@
 #include "skylink/diag.h"
 #include "skylink/sequence_ring.h"
 #include "skylink/element_buffer.h"
-
+#include "skylink/skylink.h"
 #include "tools.h"
 
 #define ARRAY_SZ(array) (sizeof(array) / sizeof(array[0]))

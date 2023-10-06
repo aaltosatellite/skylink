@@ -88,7 +88,7 @@ TEST(add_extension_arq_sequence)
 	ret = sky_frame_parse_extension_headers(&frame, &parsed);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 	ASSERT(parsed.arq_sequence != NULL, "Parsed frame does not contain ARQ Sequence extension");
-	ASSERT(parsed.arq_sequence->ARQSeq.sequence == sky_ntoh16(sequence), "Parsed sequence: %d, expected: %d", parsed.arq_sequence->ARQSeq.sequence, sky_ntoh16(sequence));
+	ASSERT(parsed.arq_sequence->ARQSeq.sequence == sky_arq_seq_hton(sequence), "Parsed sequence: %d, expected: %d", parsed.arq_sequence->ARQSeq.sequence, sky_arq_seq_hton(sequence));
 }
 
 /*
@@ -115,8 +115,8 @@ TEST(add_extension_arq_request)
 	ret = sky_frame_parse_extension_headers(&frame, &parsed);
 	ASSERT(ret == SKY_RET_OK, "ret: %d extension_length: %d", ret, tx_frame.hdr->extension_length);
 	ASSERT(parsed.arq_request != NULL, "Parsed frame does not contain ARQ Request extension");
-	ASSERT(parsed.arq_request->ARQReq.sequence == sky_ntoh16(sequence), "Parsed sequence: %d, expected: %d", parsed.arq_request->ARQReq.sequence, sky_ntoh16(sequence));
-	ASSERT(parsed.arq_request->ARQReq.mask == sky_ntoh16(mask), "Parsed mask: %d, expected: %d", parsed.arq_request->ARQReq.mask, sky_ntoh16(mask));
+	ASSERT(parsed.arq_request->ARQReq.sequence == sky_arq_seq_hton(sequence), "Parsed sequence: %d, expected: %d", parsed.arq_request->ARQReq.sequence, sky_arq_seq_hton(sequence));
+	ASSERT(parsed.arq_request->ARQReq.mask == sky_arq_mask_hton(mask), "Parsed mask: %d, expected: %d", parsed.arq_request->ARQReq.mask, sky_arq_mask_hton(mask));
 }
 
 /*
@@ -144,8 +144,8 @@ TEST(add_extension_arq_ctrl)
 	ret = sky_frame_parse_extension_headers(&frame, &parsed);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 	ASSERT(parsed.arq_ctrl != NULL, "Parsed frame does not contain ARQ Control extension");
-	ASSERT(parsed.arq_ctrl->ARQCtrl.tx_sequence == sky_ntoh16(tx_sequence), "Parsed tx_sequence: %d, expected: %d", parsed.arq_ctrl->ARQCtrl.tx_sequence, sky_ntoh16(tx_sequence));
-	ASSERT(parsed.arq_ctrl->ARQCtrl.rx_sequence == sky_ntoh16(rx_sequence), "Parsed rx_sequence: %d, expected: %d", parsed.arq_ctrl->ARQCtrl.rx_sequence, sky_ntoh16(rx_sequence));
+	ASSERT(parsed.arq_ctrl->ARQCtrl.tx_sequence == sky_arq_seq_hton(tx_sequence), "Parsed tx_sequence: %d, expected: %d", parsed.arq_ctrl->ARQCtrl.tx_sequence, sky_arq_seq_hton(tx_sequence));
+	ASSERT(parsed.arq_ctrl->ARQCtrl.rx_sequence == sky_arq_seq_hton(rx_sequence), "Parsed rx_sequence: %d, expected: %d", parsed.arq_ctrl->ARQCtrl.rx_sequence, sky_arq_seq_hton(rx_sequence));
 }
 
 /*
@@ -200,8 +200,8 @@ TEST(add_extension_mac_tdd_control)
 	ret = sky_frame_parse_extension_headers(&frame, &parsed);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 	ASSERT(parsed.mac_tdd != NULL);
-	ASSERT(parsed.mac_tdd->TDDControl.window == sky_ntoh16(window));
-	ASSERT(parsed.mac_tdd->TDDControl.remaining == sky_ntoh16(remaining));
+	ASSERT(parsed.mac_tdd->TDDControl.window == sky_arq_window_ntoh(window), "Parsed window: %d, expected: %d", parsed.mac_tdd->TDDControl.window, sky_arq_seq_ntoh(window));
+	ASSERT(parsed.mac_tdd->TDDControl.remaining == sky_arq_window_ntoh(remaining), "Parsed remaining: %d, expected: %d", parsed.mac_tdd->TDDControl.remaining, sky_arq_seq_ntoh(remaining));
 }
 
 /*
