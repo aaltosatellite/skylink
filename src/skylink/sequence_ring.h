@@ -28,9 +28,9 @@ struct sky_send_ring_s
 	int head;           // Ring index next packet pushed by upper stack will obtain.
 	int tx_head;        // The first untransmitted packet. (if tx_head == head, nothing to transmit)
 	int tail;           // Last packet in memory. Moves forward as sent packets are acknowledged as received. (if tail == head, ring is empty)
-	int head_sequence;  // Sequence of the next packet (head).
-	int tx_sequence;    // Sequence of the first untransmitted packet. That is, the packet pointed to by tx_head.
-	int tail_sequence;  // Sequence of the packet at tail. Essentially "ring[wrap(tail)].sequence".
+	sky_arq_sequence_t head_sequence;  // Sequence of the next packet (head).
+	sky_arq_sequence_t  tx_sequence;    // Sequence of the first untransmitted packet. That is, the packet pointed to by tx_head.
+	sky_arq_sequence_t  tail_sequence;  // Sequence of the packet at tail. Essentially "ring[wrap(tail)].sequence".
 	int storage_count;  // Number of packets stored.
 	unsigned int resend_count;   // Number of sequence numbers scheduled for resend.
 	sky_arq_sequence_t resend_list[ARQ_RESEND_SCHEDULE_DEPTH];
