@@ -47,7 +47,7 @@ typedef struct
  * Args:
  *     buffer: Element buffer to be destroyed
  */
-SkyElementBuffer* sky_element_buffer_create(int32_t element_size, int32_t element_count);
+SkyElementBuffer* sky_element_buffer_create(int32_t usable_element_size, int32_t element_count);
 
 /*
  * Destroy element buffer

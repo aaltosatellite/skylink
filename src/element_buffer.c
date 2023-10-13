@@ -268,6 +268,7 @@ This differs from sky_element_buffer_element_requirement_for, because it uses a 
 */
 int sky_element_buffer_element_requirement(int32_t element_size, int32_t length)
 {
+	SKY_ASSERT(element_size > 4)
 	int32_t usable_size = element_size - (int32_t)(2 * sizeof(sky_element_idx_t));
 	int32_t n = (length + EB_LEN_BYTES + usable_size - 1) / usable_size;
 	return n;
@@ -277,7 +278,7 @@ int sky_element_buffer_element_requirement(int32_t element_size, int32_t length)
 // ==== PUBLIC FUNCTIONS ===============================================================================================
 
 //Creates a new element buffer and returns a pointer to it. 
-SkyElementBuffer* sky_element_buffer_create(int32_t element_size, int32_t element_count)
+SkyElementBuffer* sky_element_buffer_create(int32_t usable_element_size, int32_t element_count)
 {
 	//Make sure that the element count for the buffer is not larger than the maximum allowed. (65530)
 	SKY_ASSERT(element_count <= EB_MAX_ELEMENT_COUNT);
@@ -287,16 +288,16 @@ SkyElementBuffer* sky_element_buffer_create(int32_t element_size, int32_t elemen
 	SKY_ASSERT(buffer != NULL);
 
 	//Allocate memory for the pool and assert that it was succesfully allocated.
-	uint8_t* pool = SKY_MALLOC(element_count * element_size);
+	uint8_t* pool = SKY_MALLOC(element_count * (usable_element_size + (int32_t)(2 * sizeof(sky_element_idx_t))));
 	SKY_ASSERT(buffer != NULL);
 
 	//Initialize the buffer.
 	buffer->pool = pool;
 	buffer->last_write_index = 0;
 	buffer->free_elements = element_count;
-	buffer->element_size = element_size;
+	buffer->element_size = usable_element_size + (int32_t)(2 * sizeof(sky_element_idx_t));
 	buffer->element_count = element_count;
-	buffer->element_usable_space = element_size - (int32_t)(2 * sizeof(sky_element_idx_t));
+	buffer->element_usable_space = usable_element_size;
 
 	//Erase all data in the buffer and mark all elements as free.
 	sky_element_buffer_wipe(buffer);
@@ -333,6 +334,7 @@ This differs from sky_element_buffer_element_requirement, because it uses a buff
 */
 int sky_element_buffer_element_requirement_for(SkyElementBuffer* buffer, int32_t length)
 {
+	SKY_ASSERT(buffer->element_usable_space > 0)
 	int32_t n = (length + EB_LEN_BYTES + buffer->element_usable_space - 1) / buffer->element_usable_space;
 	return n;
 }

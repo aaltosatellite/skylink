@@ -63,8 +63,8 @@ typedef struct {
  * Per virtual channel configurations
  */
 typedef struct {
-	/* Size of single element in the element buffer*/
-	int element_size;
+	/* Usable size of single element in the element buffer*/
+	int usable_element_size;
 
 	/* Size of the ring buffer for reception */
 	int rcv_ring_len;

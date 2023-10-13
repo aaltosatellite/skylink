@@ -51,8 +51,8 @@ SkyVirtualChannel* sky_vc_create(SkyVCConfig* config)
 		config->horizon_width = config->rcv_ring_len - 3;
 	if (config->send_ring_len < 6 || config->send_ring_len > 250)
 		config->send_ring_len = 32;
-	if (config->element_size < 12 || config->element_size > 500)
-		config->element_size = 36;
+	if (config->usable_element_size < 12 || config->usable_element_size > 500)
+		config->usable_element_size = 32;
 	if ((config->require_authentication & (SKY_CONFIG_FLAG_AUTHENTICATE_TX | SKY_CONFIG_FLAG_USE_CRC32)) == 0)
 		config->require_authentication |= SKY_CONFIG_FLAG_USE_CRC32;
 
@@ -70,8 +70,8 @@ SkyVirtualChannel* sky_vc_create(SkyVCConfig* config)
 
 	// Create element buffer
 	int32_t ring_slots = config->rcv_ring_len + config->send_ring_len -2;
-	int32_t optimal_element_count = compute_required_element_count(config->element_size, ring_slots, SKY_PAYLOAD_MAX_LEN);
-	vchannel->elementBuffer = sky_element_buffer_create(config->element_size, optimal_element_count);
+	int32_t optimal_element_count = compute_required_element_count((config->usable_element_size+4), ring_slots, SKY_PAYLOAD_MAX_LEN);
+	vchannel->elementBuffer = sky_element_buffer_create(config->usable_element_size, optimal_element_count);
 	SKY_ASSERT(vchannel->elementBuffer != NULL);
 
 	// Reset ARQ state
@@ -271,7 +271,7 @@ int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* vchannel)
 }
 
 // sky_vc_read_from_receive_buffer()
-// Read next message to tgt buffer. Return number of bytes written on success, or negative error code.
+// Read next message to tgt buffer. Return zero on success, or negative error code.
 int sky_vc_read_next_received(SkyVirtualChannel* vchannel, uint8_t* tgt, unsigned int max_length)
 {
 	return rcvRing_read_next_received(vchannel->rcvRing, vchannel->elementBuffer, tgt, max_length);

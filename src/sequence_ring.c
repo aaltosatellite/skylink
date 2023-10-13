@@ -119,7 +119,7 @@ static int rcvRing_advance_head(SkyRcvRing* rcvRing)
 
 /*
 Reads a payload from ring to address pointed by tgt, if it's length is less than max_length.
-Returns number of bytes read, or negative error code.
+Returns zero on success, or negative error code.
 */
 int rcvRing_read_next_received(SkyRcvRing* rcvRing, SkyElementBuffer* elementBuffer, uint8_t* tgt, unsigned int max_length)
 {
