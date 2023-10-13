@@ -5,6 +5,7 @@ add_executable(unit_tests2
     "fec_tests.c"
     "hmac_tests.c"
     "ring_tests.c"
+    "element_buffer_tests.c"
     "../utils/tools.c"
     "units.c"
     "narwhal.c"
