@@ -5,6 +5,7 @@
 #include "narwhal.h"
 
 #include "skylink/skylink.h"
+#include "skylink/conf.h"
 #include "skylink/frame.h"
 #include "skylink/fec.h"
 #include "skylink/hmac.h"
