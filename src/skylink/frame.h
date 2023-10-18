@@ -24,9 +24,9 @@
  * - has_payload (useless): 1 bit
  * - sequence control: 2 bits
  */
-#define SKY_FLAG_AUTHENTICATED          (0b00001)
-#define SKY_FLAG_ARQ_ON                 (0b00010)
-#define SKY_FLAG_HAS_PAYLOAD            (0b00100)
+#define SKY_FLAG_ARQ_ON                 (0b00000100)
+#define SKY_FLAG_AUTHENTICATED          (0b00001000)
+#define SKY_FLAG_HAS_PAYLOAD            (0b00010000)
 //#define SKY_FLAG_CRYPT
 
 typedef enum {
