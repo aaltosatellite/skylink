@@ -9,6 +9,7 @@
 #include "skylink/frame.h"
 #include "skylink/fec.h"
 #include "skylink/hmac.h"
+#include "skylink/mac.h"
 #include "skylink/utilities.h"
 #include "skylink/reliable_vc.h"
 #include "skylink/diag.h"

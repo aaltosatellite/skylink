@@ -38,7 +38,7 @@ static sky_tick_t wrap_tdd_cycle(SkyMAC* mac, sky_tick_t ticks)
 
 // === PUBLIC FUNCTIONS ================================================================================================
 
-// Create a new MAC struct and initialize it with the given configuration.
+// Create a new MAC instance and initialize it with the given configuration.
 SkyMAC* sky_mac_create(SkyMACConfig* config)
 {
 	//Check that values are within allowed parameters, if not set them to default.
@@ -142,7 +142,7 @@ int32_t mac_time_to_own_window(SkyMAC* mac, sky_tick_t now)
 	if (dt < mac->my_window_length)
 		return 0;
 
-	// Peer's windows is open. Return number of ticks to own transmit window opening.
+	// Gap, peer window or tail currently. Return number of ticks to own transmit window opening.
 	return get_mac_cycle(mac) - dt; 
 }
 
@@ -207,11 +207,11 @@ void mac_update_belief(SkyMAC* mac, const sky_tick_t now, sky_tick_t receive_tim
 
 	const int32_t cycle = get_mac_cycle(mac);
 
-	// Calculate implied value for T0 based on recieve time and peer_mac remaining and a minimum value for T0.
+	// Calculate implied value for T0 based on recieve time and peer_mac remaining and a minimum value for T0. Cycle is removed so that T0 is before now.
 	sky_tick_t implied_t0 = receive_time + peer_mac_remaining + (mac->config->tail_constant_ticks - cycle);
 	sky_tick_t minimum_t0 = now_ + (mac->config->tail_constant_ticks - cycle);
 
-	// Choose the one that is furthest in the future.
+	// Choose the one that is newer.
 	if (implied_t0 < minimum_t0)
 		mac->T0 = wrap_time_ticks(minimum_t0);
 	else
@@ -232,11 +232,11 @@ void mac_update_belief(SkyMAC* mac, const sky_tick_t now, sky_tick_t receive_tim
 // Reset mac into a state where it can immediately send.
 void mac_reset(SkyMAC* mac, sky_tick_t now)
 {
-	// Reset window length to minimum and zero it's counter.
+	// Reset window length to minimum and zero it's adjustment counter.
 	mac->window_adjust_counter = 0;
 	mac->my_window_length = mac->config->minimum_window_length_ticks;
 
-	// Set value of start of cycle/own window.
+	// Set value of start of cycle/own window. Now - cycle length sets it so that now is the beginning of the next cycle. (T0 is always behind now)
 	mac->T0 = wrap_time_ticks(now - get_mac_cycle(mac));
 }
 
