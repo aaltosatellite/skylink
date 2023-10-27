@@ -397,7 +397,7 @@ TEST(mac_reset_to_send){
 // Test updating belief.
 /*
 function: mac_update_belief(SkyMAC* mac, const sky_tick_t now, sky_tick_t receive_time, sky_tick_t peer_mac_length, sky_tick_t peer_mac_remaining)
-Steps for belief update for easier test implementation:
+Steps for belief update for easier understanding:
 Has parameters: SkyMAC* mac, const sky_tick_t now, sky_tick_t receive_time, sky_tick_t peer_mac_length, sky_tick_t peer_mac_remaining
 First check if peer_mac length is between min and max length, if not set to min/max.
 Check if peer_mac_remaining is less than peer_mac_length, if so set to peer_mac_length.
@@ -507,6 +507,15 @@ TEST(mac_carrier_sense){
     SkyMAC* mac = sky_mac_create(&handle->conf->mac);
 
     // Tests:
+    ASSERT(mac->config->carrier_sense_ticks == 200, "MAC carrier sense ticks should be 200, was: %d", mac->config->carrier_sense_ticks);
+
+    // Case where time to window opening is greater than carrier sense ticks, T0 should not change.
+    sky_mac_carrier_sensed(mac, mac->my_window_length+mac->config->gap_constant_ticks+mac->peer_window_length+mac->config->tail_constant_ticks-201);
+    ASSERT(mac->T0 == 0, "MAC T0 should be 0, was: %d", mac->T0);
+
+    // Case where time to window opening is less than carrier sense ticks, T0 should change.
+    sky_mac_carrier_sensed(mac, 1100);
+    ASSERT(mac->T0 == (1100 - get_cycle(mac)) + 200, "MAC T0 should be %d, was: %d", (1100 - get_cycle(mac)) + 200, mac->T0);
 
     // Destroy the handle.
     sky_destroy(handle);
@@ -518,20 +527,44 @@ TEST(mac_carrier_sense){
 
 // Test if idle frame is needed.
 TEST(mac_is_idle_frame_needed){
-    // Default config.
+    // Default config and config where idle frames are not set up.
     SkyConfig* config = malloc(sizeof(SkyConfig));
+    SkyConfig* config2 = malloc(sizeof(SkyConfig));
     default_config(config);
+    default_config(config2);
+    config->mac.idle_frames_per_window = 3;
+    config2->mac.idle_frames_per_window = 0;
     // Create SkyHandle struct.
     SkyHandle handle = sky_create(config);
     // Create SkyMAC struct.
     SkyMAC* mac = sky_mac_create(&handle->conf->mac);
+    mac->last_belief_update = 1000;
 
     // Tests:
+
+    // Case where timed out (now - last belief update > idle timeout ticks) and idle frames are set up:
+    ASSERT(mac->config->idle_timeout_ticks == 30000, "MAC idle timeout ticks should be 30000, was: %d", mac->config->idle_timeout_ticks);
+    ASSERT(mac_idle_frame_needed(mac, 50000) == false, "Idle frame should not be needed, was: %d", mac_idle_frame_needed(mac, 50000));
+    
+    // Idle frame needed:
+    ASSERT(mac->config->idle_frames_per_window == 3, "MAC idle frames per window should be 3, was: %d", mac->config->idle_frames_per_window);
+    ASSERT(mac_idle_frame_needed(mac, 20000) == true, "Idle frame should be needed, was: %d", mac_idle_frame_needed(mac, 20000));
+    
+    // Idle frame not needed:
+    mac->total_frames_sent_in_current_window = 3;
+    ASSERT(mac_idle_frame_needed(mac, 20000) == false, "Idle frame should not be needed, was: %d", mac_idle_frame_needed(mac, 20000));
+    
+    // Case where idle frames are not set up:
+    // Set config to config2.
+    mac->config = &config2->mac;
+    ASSERT(mac->config->idle_timeout_ticks == 30000, "MAC idle timeout ticks should be 0, was: %d", mac->config->idle_timeout_ticks);
+    ASSERT(mac_idle_frame_needed(mac, 0) == false, "Idle frame should not be needed, was: %d", mac_idle_frame_needed(mac, 0));
 
     // Destroy the handle.
     sky_destroy(handle);
     // Free the config.
     SKY_FREE(config);
+    SKY_FREE(config2);
     // Destroy the mac.
     sky_mac_destroy(mac);
 }
