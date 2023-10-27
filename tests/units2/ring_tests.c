@@ -745,6 +745,5 @@ TEST(continuous_pushing)
 }
 
 // TODO: Test invalid parameters for all functions and test more edge cases.
-// Test lost packets.
 
 // FIX Notes: Very inconsistent return values for similar functions for send and receive ring. Make these more consistant.

@@ -56,7 +56,7 @@ SkyHMAC *sky_hmac_create(SkyHMACConfig *config);
 /* Free HMAC resources */
 void sky_hmac_destroy(SkyHMAC *hmac);
 
-/* Get next sequence number from transmit counter and advance it by one (and wrap modulo cycle) */
+/* Get next sequence number from transmit counter and advance it by one. Sequence number naturally wraps around due to uint16 overflow. */
 int32_t sky_hmac_get_next_tx_sequence(SkyHandle self, unsigned int vc);
 
 /* Add authenticate trailer to a transmit frame. */

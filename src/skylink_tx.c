@@ -174,7 +174,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	frame->length += identity_len;
 
 	// Set the static header
-	SkyStaticHeader *hdr = (SkyStaticHeader*)&tx_frame.ptr;
+	SkyStaticHeader *hdr = (SkyStaticHeader*)tx_frame.ptr;
 	tx_frame.ptr += sizeof(SkyStaticHeader);
 	frame->length += sizeof(SkyStaticHeader);
 	hdr->vc = vc;

@@ -50,7 +50,7 @@ void sky_hmac_destroy(SkyHMAC* hmac)
 	SKY_FREE(hmac);
 }
 
-
+// Get next sequence number from transmit counter and advance it by one. Sequence number naturally wraps around due to uint16 overflow.
 int32_t sky_hmac_get_next_tx_sequence(SkyHandle self, unsigned int vc)
 {
 	if (vc > SKY_NUM_VIRTUAL_CHANNELS)
