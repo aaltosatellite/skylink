@@ -57,19 +57,6 @@ void check_send_ring(SkySendRing *send_ring, int length, int original_sequence)
     }
 }
 
-u_int8_t *create_payload(int length)
-{
-    u_int8_t *pl = malloc(length);
-
-    // Fill payload.
-    for (int i = 0; i < length; i++)
-    {
-        pl[i] = i;
-    }
-
-    // Data needs to be const to push the packet.
-    return pl;
-}
 
 // Test creating rings with various parameters. Check that the rings are created correctly.
 // TODO: Make the test have less code duplication.

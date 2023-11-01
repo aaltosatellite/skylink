@@ -240,6 +240,8 @@ void sky_send_ring_wipe(SkySendRing *sendRing, SkyElementBuffer *elementBuffer, 
 		item->idx = EB_NULL_IDX;
 		item->sequence = 0;
 	}
+	// Wipe the resend list. Check with implementer if this should be done.
+	memset(sendRing->resend_list, 0, sizeof(sendRing->resend_list));
 	//Reset the ring counters.
 	sendRing->head = 0;
 	sendRing->tx_head = 0;

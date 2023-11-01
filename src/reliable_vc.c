@@ -406,7 +406,8 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 			SKY_ASSERT(read >= 0)
 
 			// Update the frame
-			tx_frame->frame->length += read;
+			// Works now but should be checked with implementer if this is the correct place to update the length.
+			tx_frame->frame->length += read + 1;
 			tx_frame->ptr += read;
 			tx_frame->hdr->flag_has_payload = 1;
 			return 1;
@@ -489,7 +490,8 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 
 				// Update the frame.
 				tx_frame->ptr += read;
-				tx_frame->frame->length += read;
+				// Works now but should be checked with implementer if this is the correct place to update the length.
+				tx_frame->frame->length += read + 1;
 				tx_frame->hdr->flags |= SKY_FLAG_HAS_PAYLOAD;
 				tx_frame->hdr->flag_has_payload = 1;
 

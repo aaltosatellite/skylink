@@ -45,4 +45,7 @@ void init_tx(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame);
  */
 int start_parsing(SkyRadioFrame *frame, SkyParsedFrame *parsed);
 
+// Create payload of given length.
+u_int8_t *create_payload(int length);
+
 #endif /* __UNITS_H__ */

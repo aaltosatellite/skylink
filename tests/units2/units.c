@@ -57,6 +57,19 @@ void default_config(SkyConfig* config)
     memcpy(config->identity, "testabc", 7);
 	config->identity_len = 4;
 }
+u_int8_t *create_payload(int length)
+{
+    u_int8_t *pl = malloc(length);
+
+    // Fill payload.
+    for (int i = 0; i < length; i++)
+    {
+        pl[i] = i;
+    }
+
+    // Data needs to be const to push the packet.
+    return pl;
+}
 
 
 void corrupt(uint8_t *data, unsigned int data_len, unsigned int byte_errors)
