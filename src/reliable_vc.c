@@ -70,7 +70,7 @@ SkyVirtualChannel* sky_vc_create(SkyVCConfig* config)
 
 	// Create element buffer
 	int32_t ring_slots = config->rcv_ring_len + config->send_ring_len -2;
-	int32_t optimal_element_count = compute_required_element_count((config->usable_element_size+4), ring_slots, SKY_PAYLOAD_MAX_LEN);
+	int32_t optimal_element_count = compute_required_element_count((config->usable_element_size + 4), ring_slots, SKY_PAYLOAD_MAX_LEN);
 	vchannel->elementBuffer = sky_element_buffer_create(config->usable_element_size, optimal_element_count);
 	SKY_ASSERT(vchannel->elementBuffer != NULL);
 
