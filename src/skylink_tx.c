@@ -166,7 +166,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	const unsigned int identity_len = self->conf->identity_len;
 	frame->raw[0] = SKYLINK_FRAME_VERSION_BYTE | identity_len;
 	tx_frame.ptr = &frame->raw[1];
-	frame->length = 0;
+	frame->length = 1;
 
 	// Copy source identifier
 	memcpy(&frame->raw[1], self->conf->identity, identity_len);
