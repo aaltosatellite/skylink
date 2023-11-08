@@ -58,6 +58,7 @@ TEST(tx_rx_with_golay_and_fec){
     handle2->conf->vc[0].require_authentication |= SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION;
     handle->mac->last_belief_update = 0;
     sky_vc_wipe_to_arq_on_state(handle->virtual_channels[0],0);
+    sky_vc_wipe_to_arq_on_state(handle2->virtual_channels[0],0);
     ASSERT(_sky_tx_pick_vc(handle, sky_get_tick_time()) == 0, "VC picked should be 0, was %d", _sky_tx_pick_vc(handle, sky_get_tick_time()));
     ASSERT(mac_can_send(handle->mac, sky_get_tick_time()) == 1, "mac_can_send should return 1, was %d", mac_can_send(handle->mac, sky_get_tick_time()));
     // Add a payload to the VC send ring buffer.
@@ -99,6 +100,7 @@ TEST(tx_rx_with_fec){
     handle2->conf->vc[0].require_authentication |= SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION;
     handle->mac->last_belief_update = 0;
     sky_vc_wipe_to_arq_off_state(handle->virtual_channels[0]);
+    sky_vc_wipe_to_arq_off_state(handle2->virtual_channels[0]);
     ASSERT(_sky_tx_pick_vc(handle, sky_get_tick_time()) == 0, "VC picked should be 0, was %d", _sky_tx_pick_vc(handle, sky_get_tick_time()));
     ASSERT(mac_can_send(handle->mac, sky_get_tick_time()) == 1, "mac_can_send should return 1, was %d", mac_can_send(handle->mac, sky_get_tick_time()));
     // Add a payload to the VC send ring buffer.
@@ -141,6 +143,7 @@ TEST(tx_rx){
     handle2->conf->vc[0].require_authentication |= SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION;
     handle->mac->last_belief_update = 0;
     sky_vc_wipe_to_arq_on_state(handle->virtual_channels[0],0);
+    sky_vc_wipe_to_arq_on_state(handle2->virtual_channels[0],0);
     ASSERT(_sky_tx_pick_vc(handle, sky_get_tick_time()) == 0, "VC picked should be 0, was %d", _sky_tx_pick_vc(handle, sky_get_tick_time()));
     ASSERT(mac_can_send(handle->mac, sky_get_tick_time()) == 1, "mac_can_send should return 1, was %d", mac_can_send(handle->mac, sky_get_tick_time()));
     // Add a payload to the VC send ring buffer.
@@ -183,6 +186,7 @@ TEST(continuous_tx_rx){
     handle2->conf->vc[0].require_authentication |= SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION;
     handle->mac->last_belief_update = 0;
     sky_vc_wipe_to_arq_on_state(handle->virtual_channels[0],0);
+    sky_vc_wipe_to_arq_on_state(handle2->virtual_channels[0],0);
     ASSERT(_sky_tx_pick_vc(handle, sky_get_tick_time()) == 0, "VC picked should be 0, was %d", _sky_tx_pick_vc(handle, sky_get_tick_time()));
     ASSERT(mac_can_send(handle->mac, sky_get_tick_time()) == 1, "mac_can_send should return 1, was %d", mac_can_send(handle->mac, sky_get_tick_time()));
     // Add a payload to the VC send ring buffer.

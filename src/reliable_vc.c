@@ -483,7 +483,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 				// Add ARQ sequence number extension
 				sky_frame_add_extension_arq_sequence(tx_frame, packet_sequence);
 
-				// Copy the packet inside the frame
+				// Copy the packet to the frame
 				int read = sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tx_frame->ptr, &packet_sequence, 1);
 				SKY_ASSERT(read >= 0);
 
@@ -499,7 +499,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 				/* If the payload for some reason is too large, remove it nonetheless. */
 				uint8_t tmp_tgt[300];
 				sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tmp_tgt, &packet_sequence, 1);
-				SKY_PRINTF(SKY_DIAG_BUG, "Too larger packet to fit! Discarding it!");
+				SKY_PRINTF(SKY_DIAG_BUG, "Too large of a packet to fit! Discarding it!");
 				return SKY_RET_NO_SPACE_FOR_PAYLOAD;
 			}
 
@@ -522,7 +522,7 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 		 * Accept the handshake and set the handshake response flag-
 		 */
 		sky_vc_wipe_to_arq_on_state(vchannel, identifier);
-		vchannel->handshake_send = 1;
+		vchannel->handshake_send = 1; // Is this needed? Same thing done when wiping to on.
 		return 1;
 
 	case ARQ_STATE_IN_INIT:
@@ -539,7 +539,7 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 		else if (identifier > vchannel->arq_session_identifier) { // TODO: Overflow not considered!
 			// A newer identifier is received.
 			sky_vc_wipe_to_arq_on_state(vchannel, identifier);
-			vchannel->handshake_send = 1;
+			vchannel->handshake_send = 1; // Is this needed?
 			return 1;
 		}
 		else {
@@ -561,10 +561,9 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 		else {
 			// The peer is trying to reconnect to us so just accept the new handshake.
 			sky_vc_wipe_to_arq_on_state(vchannel, identifier);
-			vchannel->handshake_send = 1;
+			vchannel->handshake_send = 1; // Needed?
 			return 1;
 		}
-		return 0;
 	}
 
 	return -1; // Invalid state

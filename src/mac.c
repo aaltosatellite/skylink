@@ -153,7 +153,7 @@ int32_t mac_time_to_own_window(SkyMAC* mac, sky_tick_t now)
  */
 int32_t mac_own_window_remaining(SkyMAC* mac, sky_tick_t now)
 {
-	// Get delta time between now and the beginning of our window.
+	// Get delta time between now and the end of our window.
 	int32_t dt = wrap_tdd_cycle(mac, wrap_time_ticks(now - mac->T0));
 
 	// Return number of ticks of own transmit window remaining, If dt > my_window_length, return negative number. (window is closed)
