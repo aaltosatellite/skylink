@@ -385,14 +385,7 @@ TEST(wrap_around)
 
     // Create a payload and push 8 different packets to the rings.
 
-    u_int8_t *pl = malloc(120);
-
-    // Fill payload.
-    for (int i = 0; i < 120; i++)
-    {
-        pl[i] = i;
-    }
-
+    u_int8_t *pl = create_payload(120);
     // Data needs to be const to push the packet.
     const u_int8_t *const_pl = pl;
 
@@ -501,8 +494,6 @@ TEST(wrap_around)
     sky_send_ring_destroy(send_ring);
 }
 
-#define DISABLE_TEST_DISCOVERY 1 // WIP
-
 // Send ring: Test that the resend list is filled correctly.
 TEST(resend_list)
 {
@@ -517,52 +508,32 @@ TEST(resend_list)
 
     // Check that the send ring is created correctly..
     check_send_ring(vc->sendRing, 10, 0);
+    uint8_t *pl = create_payload(64);
+    const uint8_t *const_pl = pl;
 
     // Add some packets to the ring and have some of them be lost.
     for (int i = 0; i < 8; i++)
     {
-
-        // Create a payload.
-        u_int8_t *pl = malloc(64);
-
-        // Fill payload.
-        for (int j = 0; j < 64; j++)
-        {
-            pl[j] = i;
-        }
-
-        // Data needs to be const to push the packet.
-        const u_int8_t *const_pl = pl;
-
         // Push the packet to send ring.
         sky_vc_push_packet_to_send(vc, const_pl, 64);
-
-        // Free the payload.
-        free(pl);
     }
-    // Acknowledge packets 0, 1, 2, 4, 5, 7, how to do this???
+    free(pl);
+    // Set tx head to 19 to allow resend list to fill.
+    vc->sendRing->tx_head = 19;
+    // Schedule resends by mask-> 0b00110011 Resend list should have sequences 1, 4, 5, 8. Index 9 shouldn't be filled, because tx_head ahead of tail == sequence_ahead_of_tail.
+    sendRing_schedule_resends_by_mask(vc->sendRing, 1, 0b00110011);
+    // Check that resend list is filled correctly.
+    ASSERT(vc->sendRing->resend_list[0] == 1, "Resend list index 0 is not 1, it is %d.", vc->sendRing->resend_list[0]);
+    ASSERT(vc->sendRing->resend_list[1] == 4, "Resend list index 1 is not 4, it is %d.", vc->sendRing->resend_list[1]);
+    ASSERT(vc->sendRing->resend_list[2] == 5, "Resend list index 2 is not 5, it is %d.", vc->sendRing->resend_list[2]);
+    ASSERT(vc->sendRing->resend_list[3] == 8, "Resend list index 3 is not 8, it is %d.", vc->sendRing->resend_list[3]);
+    ASSERT(vc->sendRing->resend_list[4] == 0, "Resend list index 4 is not 0, it is %d.", vc->sendRing->resend_list[4]);
+    ASSERT(vc->sendRing->resend_list[5] == 0, "Resend list index 5 is not 0, it is %d.", vc->sendRing->resend_list[5]);
+    ASSERT(vc->sendRing->resend_list[6] == 0, "Resend list index 6 is not 0, it is %d.", vc->sendRing->resend_list[6]);
+    ASSERT(vc->sendRing->resend_list[7] == 0, "Resend list index 7 is not 0, it is %d.", vc->sendRing->resend_list[7]);
 
-    // Check that the correct indexes can recall.
-    for (int i = 0; i < 8; i++)
-    {
-        if (i == 3 || i == 6)
-        { // Lost packets.
-            ASSERT(sendRing_can_recall(vc->sendRing, i) == 1, "Packet %d can't recall even though it wasn't sent properly.", i);
-        }
-        else
-        {
-            ASSERT(sendRing_can_recall(vc->sendRing, i) == 0, "Packet %d can recall even though it was sent properly.", i);
-        }
-    }
-
-    // Check that the resend list is filled correctly.
-
-    // Test that the resend list is emptied correctly.
-
-    // TODO: Understand how the resend list is filled and finish testing it.
 }
 
-#undef DISABLE_TEST_DISCOVERY
 // Recieve ring: Test having packets be lost and them pushing them afterwards.
 // Head should be moved to the correct position, and the packets should be readable in a continuous sequence.
 

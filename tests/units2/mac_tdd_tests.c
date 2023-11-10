@@ -568,5 +568,3 @@ TEST(mac_is_idle_frame_needed){
     // Destroy the mac.
     sky_mac_destroy(mac);
 }
-
-// TODO: Test adding frame fields to mac frame in frame_tests.c.
