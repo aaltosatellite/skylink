@@ -505,9 +505,9 @@ TEST(process_frame){
     ASSERT(sRing >= 0, "VC sendRing_push_packet_to_send error: %d", sRing);
     // Create a parsed frame.
     SkyParsedFrame parsed;
-    sky_frame_add_extension_arq_sequence(&TXframe, 1);
+    sky_frame_add_extension_arq_sequence(&TXframe, 0);
 	sky_frame_add_extension_arq_request(&TXframe, 1, 2);
-	sky_frame_add_extension_arq_ctrl(&TXframe, 1, 2);
+	sky_frame_add_extension_arq_ctrl(&TXframe, 0, 0);
 	sky_frame_add_extension_arq_handshake(&TXframe, 1, 2);
 	ASSERT(sky_frame_extend_with_payload(&TXframe, const_pl, 100) == SKY_RET_OK);
     int ret = start_parsing(TXframe.frame, &parsed);
@@ -515,33 +515,57 @@ TEST(process_frame){
     ret = sky_frame_parse_extension_headers(TXframe.frame, &parsed);
     ASSERT(ret == 0, "sky_frame_parse_extension_headers() should return 0, it returned %d", ret);
     ASSERT(parsed.hdr.flag_has_payload == 1);
+    ASSERT(parsed.payload_len == 100);
     // ARQ OFF Just pass the payload to buffer:
     sky_vc_wipe_to_arq_off_state(handle->virtual_channels[0]);
     ASSERT(handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_OFF, "VC arq_state is not ARQ_STATE_OFF, it is: %d", handle->virtual_channels[0]->arq_state_flag);
-    // Check that payload is processed properly.
-    ret = sky_vc_process_frame(handle->virtual_channels[0], &parsed, 0);
-    ASSERT(ret == 1, "sky_vc_process_frame() should return 1 when arq is off and payload is received, %d", ret);
+    // Check that payload is processed properly, has handshake so arq state should be turned on. Test ARQ ON first.
+    ret = sky_vc_process_frame(handle->virtual_channels[0], &parsed, 6);
+    ASSERT(ret == 0, "sky_vc_process_frame() should return 0 when arq is off and payload is received, %d", ret);
     // Arq state should be on.
     ASSERT(handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON, "VC arq_state is not ARQ_STATE_ON, it is: %d", handle->virtual_channels[0]->arq_state_flag);
+    // Check that last tx/rx tick is updated.
+    ASSERT(handle->virtual_channels[0]->last_tx_tick == 6, "VC last_tx_tick is not 1, it is: %d", handle->virtual_channels[0]->last_tx_tick);
+    ASSERT(handle->virtual_channels[0]->last_rx_tick == 6, "VC last_rx_tick is not 1, it is: %d", handle->virtual_channels[0]->last_rx_tick);
+    // Check that payload is in the rcv ring.
+    ASSERT(handle->virtual_channels[0]->unconfirmed_payloads == 1, "There should be 1 payload in the unconfirmed payloads, there is %d", handle->virtual_channels[0]->unconfirmed_payloads);
+    ASSERT(rcvRing_count_readable_packets(handle->virtual_channels[0]->rcvRing) == 1, "There should be 1 payload in the rcv ring, there is %d", rcvRing_count_readable_packets(handle->virtual_channels[0]->rcvRing));
+    // Wipe ring to enable pushing with same sequence.
+    sky_rcv_ring_wipe(handle->virtual_channels[0]->rcvRing, handle->virtual_channels[0]->elementBuffer, 0);
+    // ARQ request with mask 2, should schedule resends using this mask.
     // Remove arq handshake extension from parsed frame.
     parsed.arq_handshake = NULL;
+    // Set tx head to 2.
+    handle->virtual_channels[0]->sendRing->tx_head = 2;
+    // Check that payload is processed properly.
+    ret = sky_vc_process_frame(handle->virtual_channels[0], &parsed, 0);
+    ASSERT(ret == 0, "sky_vc_process_frame() should return 0 when successful, %d", ret);
+    // Check sendring resend list and resend count.:
+    // Process frame again with new tx head to allow resend list to fill. (Sendring is wiped when processing with handshake)
+    ASSERT(handle->virtual_channels[0]->sendRing->resend_list[0] == 1, "Resend list[0] should be 1, it is: %d", handle->virtual_channels[0]->sendRing->resend_list[0]);
+    ASSERT(handle->virtual_channels[0]->sendRing->resend_count == 1, "Resend count should be 1, it is: %d", handle->virtual_channels[0]->sendRing->resend_count);
+   
     sky_vc_wipe_to_arq_off_state(handle->virtual_channels[0]);
+    // No handshake, should return 0.
+    ret = sky_vc_process_frame(handle->virtual_channels[0], &parsed, 0);
+    ASSERT(ret == 0, "sky_vc_process_frame() should return 0 when arq is off and payload is received, %d", ret);
+    // Arq state should be off.
+    ASSERT(handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_OFF, "VC arq_state is not ARQ_STATE_OFF, it is: %d", handle->virtual_channels[0]->arq_state_flag);
     // Check that payload is in the rcv ring.
     ASSERT(rcvRing_count_readable_packets(handle->virtual_channels[0]->rcvRing) == 1, "There should be 1 payload in the rcv ring, there is %d", rcvRing_count_readable_packets(handle->virtual_channels[0]->rcvRing));
+    // Wipe ring to enable pushing with same sequence.
+    sky_rcv_ring_wipe(handle->virtual_channels[0]->rcvRing, handle->virtual_channels[0]->elementBuffer, 0);
     // IN INIT Should just return 0 after checking state.:
     sky_vc_wipe_to_arq_init_state(handle->virtual_channels[0]);
     ASSERT(handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_IN_INIT, "VC arq_state is not ARQ_STATE_IN_INIT, it is: %d", handle->virtual_channels[0]->arq_state_flag);
     // Check that payload is processed properly.
     ret = sky_vc_process_frame(handle->virtual_channels[0], &parsed, 0);
     ASSERT(ret == 0, "sky_vc_process_frame() should return 0 when arq is in init and payload is received, %d", ret);
-    // ON control, payload and arq request:
-    sky_vc_wipe_to_arq_on_state(handle->virtual_channels[0], 10);
-    ASSERT(handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON, "VC arq_state is not ARQ_STATE_ON, it is: %d", handle->virtual_channels[0]->arq_state_flag);
-    ret = sky_vc_process_frame(handle->virtual_channels[0], &parsed, 0);
-    ASSERT(ret == 1, "sky_vc_process_frame() should return 1 when arq is on and control is received, %d", ret);
-    // Control: updates tx and rx sync.
-
-    // Payload, pushes packet.
+    // Free memory:
+    sky_destroy(handle);
+    free(config);
+    free(pl);
+    
 }
 
 // Possible bug note. If a payload is too long, is there any way to remove it except wiping?
