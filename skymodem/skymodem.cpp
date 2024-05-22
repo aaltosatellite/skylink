@@ -8,6 +8,7 @@
 using namespace std;
 using namespace suo;
 
+const string sequence_filename = "sequences";
 
 constexpr sky_tick_t convert_to_ticks(Timestamp now) {
 	return now / 1000000; // Convert nanoseconds to milliseconds
@@ -116,6 +117,9 @@ SkyModem::SkyModem() :
 	 * Create the Skylink protocol instance
 	 */
 	handle = sky_create(&config);
+
+	load_sequence_numbers();
+	last_sequence_refresh = 0;
 
 	/*
 	 * Initialize
@@ -370,7 +374,18 @@ int SkyModem::run()
 
 void SkyModem::tick(Timestamp now)
 {
-	sky_tick(convert_to_ticks(now));
+	sky_tick_t now_ticks = convert_to_ticks(now);
+	sky_tick(now_ticks);
+
+	if (last_sequence_refresh == 0)
+		last_sequence_refresh = now_ticks;
+
+	// Store sequence numbers to file system every second
+	if (now_ticks - last_sequence_refresh > 1000)
+	{
+		last_sequence_refresh = now_ticks;
+		store_sequence_numbers();
+	}
 }
 
 
@@ -444,13 +459,13 @@ void SkyModem::frame_received(Frame &frame, Timestamp now)
 
 void SkyModem::load_sequence_numbers()
 {
-	ifstream sequence_file("sequences");
-	if (sequence_file) {
+	ifstream sequence_file(sequence_filename);
+	if (!sequence_file) {
 		cerr << "Failed to open sequence file for reading" << endl;
 		return;
 	}
 
-	int32_t sequences[2 * SKY_NUM_VIRTUAL_CHANNELS] = {0};
+	uint16_t sequences[2 * SKY_NUM_VIRTUAL_CHANNELS] = {0};
 	for (int i = 0; i < 2 * SKY_NUM_VIRTUAL_CHANNELS; i++)
 		sequence_file >> sequences[i];
 	sky_hmac_load_sequences(handle, sequences);
@@ -459,13 +474,13 @@ void SkyModem::load_sequence_numbers()
 
 void SkyModem::store_sequence_numbers()
 {
-	ofstream sequence_file("sequences");
+	ofstream sequence_file(sequence_filename);
 	if (!sequence_file) {
 		cerr << "Failed to open sequence file for writing" << endl;
 		return;
 	}
 
-	int32_t sequences[2 * SKY_NUM_VIRTUAL_CHANNELS];
+	uint16_t sequences[2 * SKY_NUM_VIRTUAL_CHANNELS];
 	sky_hmac_dump_sequences(handle, sequences);
 
 	for (int i = 0; i < 2 * SKY_NUM_VIRTUAL_CHANNELS; i++)

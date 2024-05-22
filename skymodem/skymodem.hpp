@@ -38,6 +38,7 @@ private:
 
 	SkyConfig config;
 	SkyHandle handle;
+	sky_tick_t last_sequence_refresh;
 
 	suo::SoapySDRIO* sdr;
 
