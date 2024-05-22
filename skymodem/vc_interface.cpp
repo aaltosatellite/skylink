@@ -370,6 +370,24 @@ void VCInterface::VirtualChannelInterface::check()
 			mac_reset(protocol_handle->mac, sky_get_tick_time());
 			// No response
 		}
+		else if (ctrl_command == "set_sequences")
+		{
+			/*
+			 * Set sequence numbers
+			 */
+			SKY_PRINTF(SKY_DIAG_MAC, "Setting sequence numbers\n");
+
+			json json_sequences = control_dict["sequences"];
+			if (json_sequences.is_array() == false)
+				throw SuoError("sequences is not an array");
+
+			uint16_t sequences[2 * SKY_NUM_VIRTUAL_CHANNELS] = {0};
+			for (int i = 0; i < 2 * SKY_NUM_VIRTUAL_CHANNELS; i++)
+				sequences[i] = (int)json_sequences[i];
+
+			sky_hmac_load_sequences(protocol_handle, sequences);
+			// No response
+		}
 #if 1
 		else if (ctrl_command == "debug")
 		{
