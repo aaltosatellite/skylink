@@ -146,7 +146,7 @@ int rcvRing_read_next_received(SkyRcvRing* rcvRing, SkyElementBuffer* elementBuf
 	rcvRing->tail_sequence++; // natural overflow
 	rcvRing_advance_head(rcvRing); //This needs to be performed bc: If the buffer has been so full that head advance has stalled, it needs to be advanced "manually"
 
-	return SKY_RET_OK;
+	return ret;
 }
 
 //Pushes a payload received with "sequence". Returns how many steps the head advances (>=0) or negative error code.
