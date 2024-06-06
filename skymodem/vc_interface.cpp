@@ -241,9 +241,9 @@ void VCInterface::VirtualChannelInterface::check()
 			{
 				json vc_dict = json::object();
 				vc_dict["arq_state"] = (unsigned int)state.vc[vc].state;
-				//vc_dict["tx_free_slots"] = (unsigned int)state.vc[vc].tx_free_slots;
-				//vc_dict["tx_queue_frames"] = (unsigned int)state.vc[vc].tx_queued_frames;
-				//vc_dict["rx_queue_frames"] = (unsigned int)state.vc[vc].rx_queued_frames;
+				vc_dict["tx_free_slots"] = (unsigned int)state.vc[vc].free_tx_slots;
+				vc_dict["tx_queue_frames"] = (unsigned int)state.vc[vc].rx_frames;
+				vc_dict["rx_queue_frames"] = (unsigned int)state.vc[vc].tx_frames;
 				vc_dict["session_identifier"] = (unsigned int)state.vc[vc].session_identifier;
 				vc_list.push_back(vc_dict);
 			}
