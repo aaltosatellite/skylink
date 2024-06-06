@@ -57,7 +57,7 @@ struct sky_radio_frame
 	unsigned int length;
 
 	// Raw frame data
-	uint8_t raw[SKY_FRAME_MAX_LEN + 6];
+	uint8_t raw[SKY_FRAME_MAX_LEN + 32 + 1];
 };
 
 /* frames ========================================================================================== */
