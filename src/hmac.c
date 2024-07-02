@@ -193,8 +193,8 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 	if (parsed->hmac_reset != NULL)
 		sky_rx_process_ext_hmac_sequence_reset(hmac, parsed->hmac_reset, vc);
 
-	// Authentication hash check was successfull.
-	SKY_PRINTF(SKY_DIAG_DEBUG | SKY_DIAG_HMAC, "HMAC: Received sequence %u\n", frame_sequence)
+	// Authentication hash check was successful.
+	SKY_PRINTF(SKY_DIAG_DEBUG | SKY_DIAG_HMAC, "HMAC: Received sequence %u, own sequence: %u\n", frame_sequence, hmac->sequence_rx[vc])
 
 	// If sequence number check is required for authentication check it.
 	if (vc_conf->require_authentication & SKY_CONFIG_FLAG_REQUIRE_SEQUENCE)

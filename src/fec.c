@@ -66,7 +66,7 @@ int sky_fec_decode(SkyRadioFrame *frame, SkyDiagnostics *diag)
 {
 	// Check frame length
 	if (frame->length < RS_PARITYS || frame->length > (RS_MSGLEN + RS_PARITYS)) {
-		SKY_PRINTF(SKY_DIAG_FEC, COLOR_RED "Too short frame" COLOR_RESET "\n");
+		SKY_PRINTF(SKY_DIAG_FEC, COLOR_RED "Invalid frame length: %d" COLOR_RESET "\n", frame->length);
 		return SKY_RET_RS_INVALID_LENGTH;
 	}
 

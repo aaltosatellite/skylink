@@ -128,7 +128,7 @@ SkyModem::SkyModem() :
 
 	try {
 
-		const float center_frequency = 437.125e6; // [Hz]
+		const float center_frequency = 437.1233e6; // [Hz]
 
 		/*
 		 * SDR
@@ -395,7 +395,8 @@ void SkyModem::receiver_locked(bool locked, Timestamp now)
 	//sdr->lock_tx(locked);
 
 	if (locked) {
-		sky_mac_carrier_sensed(handle->mac, convert_to_ticks(now));
+		// Disabled for now due to SDR sensing it's own transmissions
+		// sky_mac_carrier_sensed(handle->mac, convert_to_ticks(now));
 		//cout << getCurrentISOTimestamp() << ": Sync detected: " << (locked ? "true": "false") << endl;
 	}
 	else {

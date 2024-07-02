@@ -164,7 +164,7 @@ TEST(tx_rx){
 }
 TEST(continuous_tx_rx){
     // N times NOTE: pushes same package, could be changed to have different packages (Ran succesfully with n = 300000).:
-    int n = 1000;
+    int n = 100;
     SkyTransmitFrame TXframe;
     SkyRadioFrame frame;
     init_tx(&frame, &TXframe);

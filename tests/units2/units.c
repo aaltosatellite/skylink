@@ -161,3 +161,6 @@ int roll_chance(double const chance){
 	double rr = rd/rM;
 	return rr < chance;
 }
+int get_cycle(SkyMAC* mac){
+	return mac->my_window_length + mac->config->gap_constant_ticks + mac->peer_window_length + mac->config->tail_constant_ticks;
+}

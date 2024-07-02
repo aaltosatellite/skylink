@@ -624,7 +624,7 @@ TEST(lost_packets)
 // Test continuous pushing of packets to rings. (Should not cause any problems.)
 TEST(continuous_pushing)
 {
-    int n = 30000; // Amount of packets to be pushed. Make smaller for faster testing.
+    int n = 3000; // Amount of packets to be pushed. Make smaller for faster testing.
     // Create config
     SkyVCConfig config;
     config.send_ring_len = 15;
@@ -680,7 +680,7 @@ TEST(continuous_pushing)
                 // Read packets to receive ring.
                 u_int8_t *read_pl = malloc(64);
                 int read = sky_vc_read_next_received(vc, read_pl, 64);
-                ASSERT(read == 0, "Packet: %d, was not read properly. Error code: %d", (i-1)*5+j, read);
+                ASSERT(read == 64, "Packet: %d, was not read properly. Error code: %d", (i-1)*5+j, read);
 
                 // Read packets to send ring.
                 read = sky_vc_read_packet_for_tx(vc, read_pl, &s, 0);

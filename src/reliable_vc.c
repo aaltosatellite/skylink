@@ -522,7 +522,7 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 		 * Accept the handshake and set the handshake response flag-
 		 */
 		sky_vc_wipe_to_arq_on_state(vchannel, identifier);
-		vchannel->handshake_send = 1; // Is this needed? Same thing done when wiping to on.
+		vchannel->handshake_send = 1;
 		return 1;
 
 	case ARQ_STATE_IN_INIT:
@@ -539,7 +539,7 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 		else if (identifier > vchannel->arq_session_identifier) { // TODO: Overflow not considered!
 			// A newer identifier is received.
 			sky_vc_wipe_to_arq_on_state(vchannel, identifier);
-			vchannel->handshake_send = 1; // Is this needed?
+			vchannel->handshake_send = 1;
 			return 1;
 		}
 		else {

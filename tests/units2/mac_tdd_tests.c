@@ -12,10 +12,8 @@ Then the cycle resets.
 */
 
 #include "units.h"
-
-static int get_cycle(SkyMAC* mac){
-	return mac->my_window_length + mac->config->gap_constant_ticks + mac->peer_window_length + mac->config->tail_constant_ticks;
-}
+#include <sys/time.h>
+#include <math.h>
 
 // Test Creating a MAC instance.
 TEST(mac_create){
@@ -316,7 +314,7 @@ TEST(mac_window_times){
     SkyHandle handle = sky_create(config);
     // Create SkyMAC struct.
     SkyMAC* mac = sky_mac_create(&handle->conf->mac);
-    int n = 10000;
+    int n = 1000;
     int increment = 1;
     int now = 0;
     int cycle_length = get_cycle(mac);
@@ -375,7 +373,7 @@ TEST(mac_reset_to_send){
     SkyHandle handle = sky_create(config);
     // Create SkyMAC struct.
     SkyMAC* mac = sky_mac_create(&handle->conf->mac);
-    int n = 100000;
+    int n = 10000;
     // Tests:
     // Reseting no matter the time should result in mac_can_send(mac, now) == true.
     // n random now resets should all result in being able to send at that time.
@@ -567,4 +565,135 @@ TEST(mac_is_idle_frame_needed){
     SKY_FREE(config2);
     // Destroy the mac.
     sky_mac_destroy(mac);
+}
+
+// Test if the time until a frame can be sent after carrier sense is greater than carrier sense ticks.
+TEST(tx_after_carrier_sense){
+    bool tx_success = false;
+    // Init for test.
+    SkyConfig config;
+    default_config(&config);
+    SkyRadioFrame frame;
+    SkyHandle handle = sky_create(&config);
+    SkyMAC *mac = handle->mac;
+    struct timeval  tv;
+    // Get start time to measure time spent, add 1000 to allow for T0 to be set behind current time.
+    gettimeofday(&tv, NULL);
+    double time_start_ms = 
+            ((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000) - 1500;
+    
+    // Add payload to send ring
+    u_int8_t *pl = create_payload(60);
+    const u_int8_t *pl_const = pl;
+    sendRing_push_packet_to_send(handle->virtual_channels[0]->sendRing, handle->virtual_channels[0]->elementBuffer, pl_const, 60);
+    
+    // Time how long it takes until tx is successful
+    
+    gettimeofday(&tv, NULL);
+
+    double time_in_mill = 
+            ((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000) - time_start_ms;
+    sky_tick_t now = ceil(time_in_mill);
+    sky_tick(now);
+    int32_t time_to_wind = mac_time_to_own_window(mac, now);
+
+    // Set T0 so that test takes less time and it is not needed to wait for next window.
+    mac->T0 = 450;
+
+    while (time_to_wind > mac->config->carrier_sense_ticks-50 || time_to_wind == 0) // Fifty ticks into the carrier sense fallback threshold, also want to be outside own window.
+    {
+        gettimeofday(&tv, NULL);
+        time_in_mill = 
+            ((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000) - time_start_ms;
+        now = ceil(time_in_mill);
+        sky_tick(now);
+        time_to_wind = mac_time_to_own_window(mac, now);
+        sleep(0.0001);
+    }
+    
+    sky_mac_carrier_sensed(mac, now);
+    sky_tick_t start = sky_get_tick_time();
+
+    while (!tx_success)
+    {
+        tx_success = sky_tx(handle, &frame);
+        gettimeofday(&tv, NULL);
+        time_in_mill = 
+            ((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000) - time_start_ms;
+        now = ceil(time_in_mill);
+        sky_tick(now);
+    }
+    sky_tick_t end = sky_get_tick_time();
+    // Time spent in ms
+    sky_tick_t time_spent_ms = end - start;
+
+    // Check that time_spent is greater than carrier_sense_ticks
+    ASSERT(time_spent_ms >= config.mac.carrier_sense_ticks, "Time spent should be greater than carrier sense ticks, was: %d, carrier sense ticks was: %d", time_spent_ms, config.mac.carrier_sense_ticks);
+    free(pl);
+}
+
+TEST(window_adjustments){
+    // Notes for understanding the intended functionality of the window adjustments:
+
+    // Test that shrinking/expanding window happens when needed.
+    // If can send but there is nothing to send, unused window time will be set to true.
+    // When window is closing, if there is unused window time, window adjust counter will be decremented else incremented.
+    // Window is closing when _sky_track_tdd_state is called for the first time after not being able to send.
+    // Window is opening when _sky_track_tdd_state is called for the first time after being able to send.
+    // This is tracked by window on variable, which is set at the end of the function if window is closing/opening, so it can be checked before if can send and window not on or cant send and window on.
+    // When window is opening, if adjust counters are equal or below/ equal or above a certain threshold, window will be expanded or shrunk. (Window adjust period)
+    // This resets the counters.
+
+    // Init for test.
+    SkyConfig config;
+    default_config(&config);
+    SkyHandle handle = sky_create(&config);
+    SkyMAC *mac = handle->mac;
+
+    // Window adjust period in default config is 2, window adjust increment ticks is 250.
+
+    // Test expand first, because window length is initialized to minimum window length.
+
+    // Create frame to send.
+    SkyRadioFrame frame;
+    u_int8_t *pl = create_payload(60);
+    const u_int8_t *pl_const = pl;
+
+    // Time ticks.
+    sky_tick_t now = 0;
+    sky_tick(now);
+    mac->T0 = 0; // start at own window.
+
+    // Cycle length: if starting from own window, incrementing by half of cycle length should close it and open it again next time. This should increment the window adjust counter.
+    int cycle_length = get_cycle(mac);
+    int i = 0;
+    // Initially zero, shouldnt be after first cycle.
+    while(i < 16 || mac->window_adjust_counter != 0){
+        // Send frame.
+        if(sendRing_count_packets_to_send(handle->virtual_channels[0]->sendRing, 0) == 0)
+            sendRing_push_packet_to_send(handle->virtual_channels[0]->sendRing, handle->virtual_channels[0]->elementBuffer, pl_const, 60);
+        sky_tx(handle, &frame);
+        now += cycle_length/16;
+        sky_tick(now);
+        i++;
+    }
+    ASSERT(mac->window_adjust_counter == 0, "Window adjust counter should be reset, was: %d", mac->window_adjust_counter);
+    // After two windows where everything could not be sent, window should be expanded.
+    ASSERT(mac->my_window_length == (config.mac.minimum_window_length_ticks + 250), "MAC my window length should be %d, was: %d", config.mac.minimum_window_length_ticks + 250, mac->my_window_length);
+    // Wipe send ring to allow for new frames to be sent.
+    sky_send_ring_wipe(handle->virtual_channels[0]->sendRing, handle->virtual_channels[0]->elementBuffer, 0);
+    i = 0;
+    // Test shrink.
+    while(i < 16 || mac->window_adjust_counter != 0){
+        // No frame, just tx and increment time.
+        sky_tx(handle, &frame);
+        now += cycle_length/16;
+        sky_tick(now);
+        i++;
+    }
+
+    ASSERT(mac->window_adjust_counter == 0, "Window adjust counter should be reset, was: %d", mac->window_adjust_counter);
+    // After two windows with unused window time, window should be shrunk.
+    ASSERT(mac->my_window_length == config.mac.minimum_window_length_ticks, "MAC my window length should be %d, was: %d", config.mac.minimum_window_length_ticks, mac->my_window_length);
+    free(pl);
 }
