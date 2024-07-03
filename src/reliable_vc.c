@@ -499,7 +499,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 				/* If the payload for some reason is too large, remove it nonetheless. */
 				uint8_t tmp_tgt[300];
 				sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tmp_tgt, &packet_sequence, 1);
-				SKY_PRINTF(SKY_DIAG_BUG, "Too large of a packet to fit! Discarding it!");
+				SKY_PRINTF(SKY_DIAG_BUG, "Too large of a packet to fit! Discarding it!\n");
 				return SKY_RET_NO_SPACE_FOR_PAYLOAD;
 			}
 
@@ -618,7 +618,7 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 			/* Make sure we received ARQ sequence number header. */
 			if (parsed->arq_sequence == NULL)
 			{
-				SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_BUG, "ARQ is on but received a frame without ARQ sequence!");
+				SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_BUG, "ARQ is on but received a frame without ARQ sequence!\n");
 				return -1; // Ignore malformed frame
 			}
 

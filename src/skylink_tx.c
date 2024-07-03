@@ -195,7 +195,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	if (ret < 0)
 		return ret;
 	if (ret == 0)
-		SKY_PRINTF(SKY_DIAG_BUG, "Construction of new frame was started but there was nothing to transmit!");
+		SKY_PRINTF(SKY_DIAG_BUG, "Construction of new frame was started but there was nothing to transmit!\n");
 
 	/* Set HMAC state and sequence */
 	hdr->frame_sequence = sky_hmac_get_next_tx_sequence(self, vc);

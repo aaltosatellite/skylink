@@ -133,7 +133,7 @@ int sky_check_crc32(SkyRadioFrame *frame)
 
 	// Match?
 	if (received != calculated) {
-		SKY_PRINTF(SKY_DIAG_INFO, COLOR_RED "CRC-32 failed" COLOR_RESET "\n")
+		SKY_PRINTF(SKY_DIAG_INFO, COLOR_RED "CRC-32 failed!\n" COLOR_RESET "\n")
 		return SKY_RET_CRC_INVALID_CHECKSUM;
 	}
 
