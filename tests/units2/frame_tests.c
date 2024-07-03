@@ -444,9 +444,10 @@ TEST(extension_effects){
 	// Also send handshake back
 	sendRing_push_packet_to_send(handle2->virtual_channels[0]->sendRing, handle2->virtual_channels[0]->elementBuffer, pl_const, 60);
 	// Tick by half a cycle to have handle2's window open
-	sky_tick_t now = 0;
+	sky_tick_t now = 1000;
 	now += mac_time_to_own_window(handle2->mac, now);
 	sky_tick(now);
+	printf("Now: %d\n", now);
 	ret = sky_tx(handle2, &frame);
 	ASSERT(ret == 1, "ret: %d", ret);
 	// Receive the frame
@@ -454,14 +455,34 @@ TEST(extension_effects){
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 	// Check that ARQ State has changed
 	ASSERT(handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON, "ARQ Handshake failed, expected: 2, got: %d", handle->virtual_channels[0]->arq_state_flag);
-	// Back to handle 1 window
-	now += mac_time_to_own_window(handle->mac, now);
-	sky_tick(now);
+	// Read packet from handshake
+	rcvRing_read_next_received(handle->virtual_channels[0]->rcvRing, handle->virtual_channels[0]->elementBuffer, pl, 60);
 
-	// Extension 3: ARQ Control
-	// Should be sent since ARQ is now on until arq_idle_frames_per_window is reached
+	// Extension 3: ARQ Control, extension 4: ARQ Request and extension 5: ARQ Sequence
+
+	// ARQ sequence gets tested automatically, since it handles all of the sequence numbers within the rcvRing.
 
 	// ARQ control sends sendRing->tx_sequence and rcvRing->head_sequence
+	
+
+	for(int i = 0; i < 6; i++){
+		sendRing_push_packet_to_send(handle2->virtual_channels[0]->sendRing, handle2->virtual_channels[0]->elementBuffer, pl_const, 60);
+		ret = sky_tx(handle2, &frame);
+		ASSERT(ret == 1, "ret: %d", ret);
+		// To allow for ARQ Request to be sent leave out the 3rd frame (Sequence 4)
+		if(i != 3){
+			// Receive the frame
+			ret = sky_rx(handle, &frame);
+			ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
+			rcvRing_read_next_received(handle->virtual_channels[0]->rcvRing, handle->virtual_channels[0]->elementBuffer, pl, 60);
+		}
+	}
+	// Back to handle 1 window
+	now += mac_time_to_own_window(handle->mac, now);
+	printf("Now: %d\n", now);
+	sky_tick(now);
+	printf("SendRing tx_sequence: %d\n", handle->virtual_channels[0]->sendRing->tx_sequence);
+	printf("rcvRing head_sequence: %d\n", handle->virtual_channels[0]->rcvRing->head_sequence);
 	sendRing_push_packet_to_send(handle->virtual_channels[0]->sendRing, handle->virtual_channels[0]->elementBuffer, pl_const, 60);
 	ret = sky_tx(handle, &frame);
 	printf("ret: %d\n", ret);
@@ -469,11 +490,45 @@ TEST(extension_effects){
 	// Receive the frame
 	ret = sky_rx(handle2, &frame);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
-	
-	// TODO: Finish this test including ARQ Control tx_sequence and head sequence setting and checking that the receiving end behaves correctly.S
-	
+	// Should be 6 since 5 frames were read in loop and 1 before it.
+	ASSERT(handle2->virtual_channels[0]->sendRing->tx_sequence == 7, "tx_sequence: %d", handle2->virtual_channels[0]->sendRing->tail_sequence);
+	// Head sequence of handle rcvRing should be 4 since packet 4 was not received
+	ASSERT(handle->virtual_channels[0]->rcvRing->head_sequence == 4, "head_sequence: %d", handle2->virtual_channels[0]->rcvRing->tail_sequence);
+	now += mac_time_to_own_window(handle2->mac, now);
+	sky_tick(now);
+	ret = sky_tx(handle2, &frame);
+	ASSERT(ret == 1, "ret: %d", ret);
+	ret = sky_rx(handle, &frame);
+	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
+	// rx sync should be done in handle 1 and its need recall should be set. (Handle 2 has not read any of its received packets so its rcvRing head sequence hasnt moved)
+	// Recall itself is tested elsewhere to not overcomplicate this test
+	ASSERT(handle->virtual_channels[0]->need_recall == 1, "need_recall: %d", handle->virtual_channels[0]->need_recall);
+	rcvRing_read_next_received(handle->virtual_channels[0]->rcvRing, handle->virtual_channels[0]->elementBuffer, pl, 60);
+	// Should now have sent package 4 and head sequence should be moved to 7
+	ASSERT(handle->virtual_channels[0]->rcvRing->head_sequence == 7, "head_sequence: %d", handle->virtual_channels[0]->rcvRing->tail_sequence);
+	now += mac_time_to_own_window(handle->mac, now);
+	sky_tick(now);
+	printf("Now: %d\n", now);
 
+	// Extension 6: MAC TDD Control
+
+	mac_expand_window(handle->mac, now);
+
+	// Send the frame
+	ret = sky_tx(handle, &frame);
+	printf("Handle 2 T0: %d\n", handle2->mac->T0);
+	ASSERT(ret == 1, "ret: %d", ret);
+	frame.rx_time_ticks = now;
+	// Receive the frame
+	ret = sky_rx(handle2, &frame);
+	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
+	// Check that MAC TDD Control has changed the window
+	ASSERT(handle2->mac->peer_window_length == handle2->conf->mac.minimum_window_length_ticks + handle2->conf->mac.window_adjust_increment_ticks, "MAC TDD Control failed, expected: %d, got: %d", handle2->conf->mac.minimum_window_length_ticks + handle2->conf->mac.window_adjust_increment_ticks, handle2->mac->peer_window_length);
+	// T0 of handle 2 should be set to implied T0. (frame time (now) + handle 1 window remaining + tail constant ticks) - updated cycle
+	// Start of window so window remaining is the window length
+	ASSERT(handle2->mac->T0 == now + handle->mac->my_window_length + handle2->conf->mac.tail_constant_ticks - get_cycle(handle2->mac), "T0: %d, should be: %d", handle2->mac->T0, now + handle2->mac->peer_window_length + handle2->conf->mac.tail_constant_ticks - get_cycle(handle2->mac));
 	free(pl);
+
 }
 
 #if 0

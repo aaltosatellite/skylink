@@ -607,7 +607,7 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 			// Get the sequence numbers from the ARQ control and update the sync.
 			sky_arq_sequence_t rx_sequence = sky_arq_seq_ntoh(parsed->arq_ctrl->ARQCtrl.rx_sequence);
 			sky_arq_sequence_t tx_sequence = sky_arq_seq_ntoh(parsed->arq_ctrl->ARQCtrl.tx_sequence);
-			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ CTRL %d %d", (int)rx_sequence, (int)tx_sequence);
+			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ CTRL %d %d\n", (int)rx_sequence, (int)tx_sequence);
 			sky_vc_update_tx_sync(vchannel, rx_sequence, now);
 			sky_vc_update_rx_sync(vchannel, tx_sequence, now);
 		}
@@ -624,7 +624,7 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 
 			// Get the sequence number from the ARQ sequence header and push the packet to buffer.
 			sky_arq_sequence_t packet_sequence = sky_arq_seq_ntoh(parsed->arq_sequence->ARQSeq.sequence);
-			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ packet %d", (int)packet_sequence);
+			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ packet %d\n", (int)packet_sequence);
 			sky_vc_push_rx_packet(vchannel, parsed->payload, parsed->payload_len, packet_sequence, now);
 		}
 
@@ -634,7 +634,7 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 			// Get the sequence numbers from the ARQ request and a mask for resends then schedule the resends.
 			sky_arq_sequence_t window_start = sky_arq_seq_ntoh(parsed->arq_request->ARQReq.sequence);
 			sky_arq_mask_t mask = sky_arq_mask_ntoh(parsed->arq_request->ARQReq.mask);
-			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ Request: %d %04x", (int)window_start, (int)mask);
+			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ Request: %d %04x\n", (int)window_start, (int)mask);
 			sendRing_schedule_resends_by_mask(vchannel->sendRing, window_start, mask);
 		}
 

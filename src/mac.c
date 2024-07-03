@@ -211,14 +211,13 @@ void mac_update_belief(SkyMAC* mac, const sky_tick_t now, sky_tick_t receive_tim
 	sky_tick_t implied_t0 = receive_time + peer_mac_remaining + (mac->config->tail_constant_ticks - cycle);
 	sky_tick_t minimum_t0 = now_ + (mac->config->tail_constant_ticks - cycle);
 
-	// Choose the one that is newer.
+	// Choose the one that is furthest in the future.
 	if (implied_t0 < minimum_t0)
 		mac->T0 = wrap_time_ticks(minimum_t0);
 	else
 		mac->T0 = wrap_time_ticks(implied_t0);
 
-	// Debug print
-	SKY_PRINTF(SKY_DIAG_MAC | SKY_DIAG_DEBUG, "MAC Update belief: peer window length: %d, remaining %d, time to t0: %d",
+	SKY_PRINTF(SKY_DIAG_MAC | SKY_DIAG_DEBUG, "MAC Update belief: peer window length: %d, remaining %d, time to t0: %d\n",
 		peer_mac_length, peer_mac_remaining, mac_time_to_own_window(mac, now))
 
 	// Reset frame counts
