@@ -217,7 +217,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 
 	// Update statistics
 	self->diag->tx_bytes += frame->length;
-	self->diag->vc_stats[vc].rx_frames++;
+	self->diag->vc_stats[vc].tx_frames++;
 	self->diag->tx_frames++;
 
 	return 1; // Return 1 to indicate that a new frame was created.

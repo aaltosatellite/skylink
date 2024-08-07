@@ -285,9 +285,9 @@ void VCInterface::VirtualChannelInterface::check()
 			{
 				json vc_dict = json::object();
 				vc_dict["arq_retransmits"] = (unsigned int)stats.vc_stats[vc].arq_retransmits;
-				//vc_dict["buffer_free"] = (unsigned int)stats.vc_stats[vc].free_tx_slots; // tx_free
-				//vc_dict["total_tx_frames"] = (unsigned int)stats.vc_stats[vc].total_tx_frames;
-				//vc_dict["total_rx_frames"] = (unsigned int)stats.vc_stats[vc].total_rx_frames;
+				// vc_dict["buffer_free"] = (unsigned int)stats.vc_stats[vc].free_tx_slots; // tx_free
+				vc_dict["total_tx_frames"] = (unsigned int)stats.vc_stats[vc].tx_frames;
+				vc_dict["total_rx_frames"] = (unsigned int)stats.vc_stats[vc].rx_frames;
 				vc_list.push_back(vc_dict);
 			}
 			sky_stats_dict["vc"] = vc_list;
