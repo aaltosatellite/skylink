@@ -45,7 +45,7 @@ automatically. Otherwise, the location of the Suo git repository needs to be hin
 $ git clone https://github.com/aaltosatellite/skylink
 $ mkdir build
 $ cd build
-$ cmake .. -DSUO_GIT='~/suo.git'
+$ cmake .. -DSUO_GIT='~/[yoursuopath]/suo'
 $ make
 ```
 
