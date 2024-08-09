@@ -145,10 +145,7 @@ int start_parsing(SkyRadioFrame *frame, SkyParsedFrame *parsed)
 
 	// Extract the frame payload
 	parsed->payload = &frame->raw[payload_start];
-	if (parsed->hdr.flag_has_payload)
-		parsed->payload_len = frame->length - payload_start;
-	else
-		parsed->payload_len = 0; // Ignore frame payload if payload flag is not set.
+	parsed->payload_len = frame->length - payload_start;
 
 	return SKY_RET_OK;
 }

@@ -58,7 +58,6 @@ TEST(successful_extension_parsing)
 		if (combination & 0x20)
 			ASSERT(parsed.hmac_reset != NULL);
 		if (combination & 0x40) {
-			ASSERT(parsed.hdr.flag_has_payload == 1);
 			ASSERT(parsed.payload_len == 11, "payload_len: %d combination: %02x", parsed.payload_len, combination);
 			ASSERT(parsed.payload != NULL);
 			ASSERT_MEMORY(parsed.payload, "Hello world", 11);
@@ -543,7 +542,6 @@ TEST(manual_decoding)
 		'a', 'b', 'c', // Identity
 		0 | // Flags MSB
 		((sequence_control) << 2) |
-		((has_payload) << 4) |
 		((authenticated) << 3) |
 		((arq_on) << 2) |
 		((vc) << 0), // Flags LSB

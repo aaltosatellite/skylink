@@ -36,7 +36,7 @@ void sky_frame_clear(SkyRadioFrame* frame)
 int sky_frame_add_extension_arq_sequence(SkyTransmitFrame *tx_frame, sky_arq_sequence_t sequence)
 {
 	// Ensure that the extensions field is the last field in the frame and the frame still has room for the extension.
-	SKY_ASSERT(tx_frame->hdr->flag_has_payload == 0);
+	//SKY_ASSERT(tx_frame->flag_has_payload == 0);
 	SKY_ASSERT(tx_frame->frame->length + 1 + sizeof(ExtARQSeq) < SKY_PAYLOAD_MAX_LEN);
 
 	// Cast a pointer to the cursor position and fill the extension header.
@@ -57,7 +57,7 @@ int sky_frame_add_extension_arq_sequence(SkyTransmitFrame *tx_frame, sky_arq_seq
 int sky_frame_add_extension_arq_request(SkyTransmitFrame *tx_frame, sky_arq_sequence_t sequence, sky_arq_mask_t mask)
 {
 	// Ensure that the extensions field is the last field in the frame and frame has still room for the extension.
-	SKY_ASSERT(tx_frame->hdr->flag_has_payload == 0);
+	//SKY_ASSERT(tx_frame->flag_has_payload == 0);
 	SKY_ASSERT(tx_frame->frame->length + 1 + sizeof(ExtARQReq) < SKY_PAYLOAD_MAX_LEN);
 
 	// Cast a pointer to the extension header and fill the extension header.
@@ -79,7 +79,7 @@ int sky_frame_add_extension_arq_request(SkyTransmitFrame *tx_frame, sky_arq_sequ
 int sky_frame_add_extension_arq_ctrl(SkyTransmitFrame *tx_frame, sky_arq_sequence_t tx_sequence, sky_arq_sequence_t rx_sequence)
 {
 	// Ensure that the extensions field is the last field in the frame and frame has still room for the extension.
-	SKY_ASSERT(tx_frame->hdr->flag_has_payload == 0);
+	//SKY_ASSERT(tx_frame->flag_has_payload == 0);
 	SKY_ASSERT(tx_frame->frame->length + 1 + sizeof(ExtARQCtrl) < SKY_PAYLOAD_MAX_LEN);
 
 	// Cast a pointer to the extension header and fill the extension header.
@@ -101,7 +101,7 @@ int sky_frame_add_extension_arq_ctrl(SkyTransmitFrame *tx_frame, sky_arq_sequenc
 int sky_frame_add_extension_arq_handshake(SkyTransmitFrame *tx_frame, uint8_t state_flag, uint32_t identifier)
 {
 	// Ensure that the extensions field is the last field in the frame and frame has still room for the extension.
-	SKY_ASSERT(tx_frame->hdr->flag_has_payload == 0);
+	//SKY_ASSERT(tx_frame->flag_has_payload == 0);
 	SKY_ASSERT(tx_frame->frame->length + 1 + sizeof(ExtARQHandshake) < SKY_PAYLOAD_MAX_LEN);
 
 	// Cast a pointer to the extension header and fill the extension header.
@@ -123,7 +123,7 @@ int sky_frame_add_extension_arq_handshake(SkyTransmitFrame *tx_frame, uint8_t st
 int sky_frame_add_extension_mac_tdd_control(SkyTransmitFrame *tx_frame, uint16_t window, uint16_t remaining)
 {
 	// Ensure that the extensions field is the last field in the frame and frame has still room for the extension.
-	SKY_ASSERT(tx_frame->hdr->flag_has_payload == 0);
+	//SKY_ASSERT(tx_frame->flag_has_payload == 0);
 	SKY_ASSERT(tx_frame->frame->length < SKY_PAYLOAD_MAX_LEN - sizeof(ExtTDDControl));
 
 	// Cast a pointer to the extension header and fill the extension header.
@@ -145,7 +145,7 @@ int sky_frame_add_extension_mac_tdd_control(SkyTransmitFrame *tx_frame, uint16_t
 int sky_frame_add_extension_hmac_sequence_reset(SkyTransmitFrame *tx_frame, uint16_t sequence)
 {
 	// Ensure that the extensions field is the last field in the frame and frame has still room for the extension.
-	SKY_ASSERT(tx_frame->hdr->flag_has_payload == 0);
+	//SKY_ASSERT(tx_frame->flag_has_payload == 0);
 	SKY_ASSERT(tx_frame->frame->length < SKY_PAYLOAD_MAX_LEN - sizeof(ExtHMACSequenceReset));
 
 	// Cast a pointer to the extension header and fill the extension header.
@@ -172,8 +172,8 @@ int sky_frame_get_space_left(const SkyRadioFrame *frame)
 int sky_frame_extend_with_payload(SkyTransmitFrame *tx_frame, const uint8_t *payload, unsigned int payload_length)
 {
 	// TODO: Unused function
-	SKY_ASSERT(tx_frame->hdr->flag_has_payload == 0);
-	//Check that the payload fits in the frame.
+	// SKY_ASSERT(tx_frame->flag_has_payload == 0);
+	// Check that the payload fits in the frame.
 	if (sky_frame_get_space_left(tx_frame->frame) < (int)payload_length)
 		return SKY_RET_NO_SPACE_FOR_PAYLOAD;
 
@@ -183,7 +183,6 @@ int sky_frame_extend_with_payload(SkyTransmitFrame *tx_frame, const uint8_t *pay
 	// Increment lengths and write pointer
 	tx_frame->ptr += payload_length;
 	tx_frame->frame->length += payload_length;
-	tx_frame->hdr->flag_has_payload = 1;
 	return SKY_RET_OK;
 }
 
@@ -194,8 +193,6 @@ int sky_frame_extend_with_payload(SkyTransmitFrame *tx_frame, const uint8_t *pay
 // Parse and validate all header extensions inside the frame.
 int sky_frame_parse_extension_headers(const SkyRadioFrame* frame, SkyParsedFrame* parsed)
 {
-
-
 	// Get cursor position for the start of the extension header.
 	unsigned int cursor = 1 + (frame->raw[0] & SKYLINK_FRAME_IDENTITY_MASK) + sizeof(SkyStaticHeader);
 	// Get the end position of the extension header.

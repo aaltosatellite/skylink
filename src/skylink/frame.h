@@ -20,13 +20,12 @@
  * - vc: 2 bits
  * - has_auth: 1 bit
  * - has_crypt: 1 bit
+ * - has_crc32: 1 bit
  * - arq: 1 bit
- * - has_payload (useless): 1 bit
  * - sequence control: 2 bits
  */
 #define SKY_FLAG_ARQ_ON                 (0b00000100)
 #define SKY_FLAG_AUTHENTICATED          (0b00001000)
-#define SKY_FLAG_HAS_PAYLOAD            (0b00010000)
 //#define SKY_FLAG_CRYPT
 
 typedef enum {
@@ -85,27 +84,26 @@ typedef struct __attribute__((__packed__)) {
 	sky_arq_mask_t mask;
 } ExtARQReq;
 
-/* ARQ control sequence */
+/* ARQ Control sequence extension */
 typedef struct __attribute__((__packed__)) {
 	sky_arq_sequence_t tx_sequence;
 	sky_arq_sequence_t rx_sequence;
 } ExtARQCtrl;
 
-/* ARQ state initializer */
+/* ARQ Handshake extension */
 typedef struct __attribute__((__packed__)) {
 	uint8_t  peer_state;
 	uint32_t identifier;
 } ExtARQHandshake;
 
-/* TDD MAC Control  */
+/* TDD MAC Control extension */
 typedef struct __attribute__((__packed__)) {
 	uint16_t window;
 	uint16_t remaining;
 } ExtTDDControl;
 
-/* HMAC Sequence Correction */
+/* HMAC Sequence Reset extension */
 typedef struct __attribute__((__packed__)) {
-	/* New sequence number to be started from */
 	uint16_t sequence;
 } ExtHMACSequenceReset;
 
@@ -140,7 +138,9 @@ typedef struct __attribute__((__packed__)) {
 			/* Flags */
 			unsigned int flag_arq_on : 1; // Avoid confusion with packets around ARQ disconnect event.
 			unsigned int flag_authenticated : 1;
-			unsigned int flag_has_payload : 1;
+			//unsigned int flag_crypted : 1;
+			//unsigned int flag_crced : 1;
+
 			unsigned int sequence_control : 2;
 			unsigned int reserved : 1;
 		};

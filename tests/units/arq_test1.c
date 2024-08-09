@@ -248,7 +248,6 @@ void arq_system_test2_cycle(){
 				PRINTFF(0,"recalled:%d  recall:%d\n", recalled, recall_seq);
 			}
 			assert(extArqSeq != NULL);
-			assert(frame->flags & SKY_FLAG_HAS_PAYLOAD);
 			if(recalled){
 				assert(sky_ntoh16( extArqSeq->ARQSeq.sequence ) == recall_seq);
 			} else {
@@ -264,7 +263,7 @@ void arq_system_test2_cycle(){
 		int b1 = wrap_time_ticks(now_ms - ts_send) > sky_conf->arq.idle_frame_threshold;
 		int b2 = wrap_time_ticks(now_ms - ts_recv) > sky_conf->arq.idle_frame_threshold;
 		int b3 = wrap_time_ticks(now_ms - ts_last_ctrl) > sky_conf->arq.idle_frame_threshold;
-		if((b0 && (b1 || b2 || b3)) || (frame->flags & SKY_FLAG_HAS_PAYLOAD)){
+		if((b0 && (b1 || b2 || b3)) || 0) { // TODO: was: (frame->flags & SKY_FLAG_HAS_PYLOAD)){
 			assert(extArqCtrl != NULL);
 			assert(sky_ntoh16( extArqCtrl->ARQCtrl.tx_sequence ) == seq1);
 			if(new_pl && (!recalled)){
@@ -281,7 +280,7 @@ void arq_system_test2_cycle(){
 
 		if(!(new_pl || recalled)){
 			assert(extArqSeq == NULL);
-			assert(!(frame->flags & SKY_FLAG_HAS_PAYLOAD));
+
 		}
 
 		int b_a = !new_pl && !recalled && !handshake_on;
@@ -302,14 +301,14 @@ void arq_system_test2_cycle(){
 		assert(extArqCtrl == NULL);
 		assert(extArqRr == NULL);
 		if(new_pl){
-			assert(frame->flags & SKY_FLAG_HAS_PAYLOAD);
+
 		} else {
-			assert(!(frame->flags & SKY_FLAG_HAS_PAYLOAD));
+
 		}
 	}
 
 
-	if(frame->flags & SKY_FLAG_HAS_PAYLOAD){
+	if (1) { // { TODO: was frame->flags & SKY_FLAG_HAS_PYLOAD){
 		int pl_i = n_in_tail;
 		if(recalled && (array->arq_state_flag == ARQ_STATE_ON)){
 			pl_i = wrap_sequence(recall_seq - seq0);
@@ -329,7 +328,7 @@ void arq_system_test2_cycle(){
 		if(frames_sent_in_vc < sky_conf->arq.idle_frames_per_window){
 			assert(extArqHs != NULL);
 		}
-		assert(!(frame->flags & SKY_FLAG_HAS_PAYLOAD));
+
 	}
 
 

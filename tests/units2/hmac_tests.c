@@ -178,16 +178,12 @@ TEST(header_bits){
     ASSERT(parsed.hdr.flags == 0b00001000, "Returned %d", parsed.hdr.flags);
     parsed.hdr.flag_authenticated = 0;
     ASSERT(parsed.hdr.flags == 0, "Returned %d", parsed.hdr.flags);
-    parsed.hdr.flag_arq_on = 1;
-    ASSERT(parsed.hdr.flags == 0b00000100, "Returned %d", parsed.hdr.flags);
-    parsed.hdr.flag_arq_on = 0;
-    ASSERT(parsed.hdr.flags == 0, "Returned %d", parsed.hdr.flags);
-    parsed.hdr.flag_has_payload = 1;
-    ASSERT(parsed.hdr.flags == 0b00010000, "Returned %d", parsed.hdr.flags);
-    parsed.hdr.flag_has_payload = 0;
-    ASSERT(parsed.hdr.flags == 0, "Returned %d", parsed.hdr.flags);
-    parsed.hdr.vc = 3;
-    ASSERT(parsed.hdr.flags & 0b11, "Returned %d", parsed.hdr.flags);
+	parsed.hdr.flag_arq_on = 1;
+	ASSERT(parsed.hdr.flags == 0b00000100, "Returned %d", parsed.hdr.flags);
+	parsed.hdr.flag_arq_on = 0;
+	ASSERT(parsed.hdr.flags == 0, "Returned %d", parsed.hdr.flags);
+	parsed.hdr.vc = 3;
+	ASSERT(parsed.hdr.flags & 0b11, "Returned %d", parsed.hdr.flags);
 
 
 
@@ -200,10 +196,9 @@ VC2 =                       0b00000010
 VC3 =                       0b00000011
 SKY_FLAG_ARQ_ON =           0b00000100
 SKY_FLAG_AUTHENTICATED =    0b00001000
-SKY_FLAG_HAS_PAYLOAD =      0b00010000
 Sequence control bits =     0b01100000
 Reserved =                  0b10000000
-Fixed so that SKY_FLAG_ARQ_ON is now 0b00000100, SKY_FLAG_AUTHENTICATED is 0b00001000 and SKY_FLAG_HAS_PAYLOAD is 0b00010000.
+Fixed so that SKY_FLAG_ARQ_ON is now 0b00000100, SKY_FLAG_AUTHENTICATED is 0b00001000.
 Previously bits were offset.
 */
 

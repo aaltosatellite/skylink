@@ -361,7 +361,6 @@ void sky_tx_test_cycle(){
 	PRINTFF(0,"ext ctrl: %d\n", get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
 	PRINTFF(0,"ext arq rr: %d\n", get_extension(frame, EXTENSION_ARQ_REQUEST) != NULL);
 	PRINTFF(0,"arq on: %d\n", frame->flags & SKY_FLAG_ARQ_ON);
-	PRINTFF(0,"pl: %d\n", frame->flags & SKY_FLAG_HAS_PAYLOAD);
 	PRINTFF(0,"len pl: %d\n", frame->length - (EXTENSION_START_IDX + frame->ext_length));
 	PRINTFF(0,"--------------\n");
 	*/
@@ -383,7 +382,6 @@ void sky_tx_test_cycle(){
 				content = 1;
 				assert(ret == 1);
 				pl = 1;
-				assert(frame->flags & SKY_FLAG_HAS_PAYLOAD);
 			}
 		}
 
@@ -429,7 +427,7 @@ void sky_tx_test_cycle(){
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_SEQUENCE) != NULL);
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
-				assert(frame->flags & SKY_FLAG_HAS_PAYLOAD);
+
 			}
 			if(n_recalled_pl[i] > 0){
 				content = 1;
@@ -439,7 +437,7 @@ void sky_tx_test_cycle(){
 				ctrl_ext = 1;
 				assert(get_extension(frame, EXTENSION_ARQ_SEQUENCE) != NULL);
 				assert(get_extension(frame, EXTENSION_ARQ_CTRL) != NULL);
-				assert(frame->flags & SKY_FLAG_HAS_PAYLOAD);
+
 			}
 
 		}
@@ -519,13 +517,6 @@ void sky_tx_test_cycle(){
 		assert(ext != NULL);
 	} else {
 		assert(ext == NULL);
-	}
-
-
-	if(pl || recall){
-		assert(frame->flags & SKY_FLAG_HAS_PAYLOAD);
-	} else {
-		assert((frame->flags & SKY_FLAG_HAS_PAYLOAD) == 0);
 	}
 
 

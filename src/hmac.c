@@ -148,7 +148,9 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 	parsed->hdr.frame_sequence = frame_sequence;
 
 	// If the frame claims to be authenticated, make sure is not too short.
-	if ((hdr->flags & SKY_FLAG_AUTHENTICATED) != 0 && parsed->payload_len < SKY_HMAC_LENGTH) {
+	const unsigned frame_is_authenticated = (hdr->flags & SKY_FLAG_AUTHENTICATED);
+	if (frame_is_authenticated != 0 && parsed->payload_len < SKY_HMAC_LENGTH)
+	{
 		self->diag->rx_hmac_fail++;
 		return SKY_RET_FRAME_TOO_SHORT_FOR_HMAC;
 	}
@@ -157,14 +159,14 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 	if ((vc_conf->require_authentication & SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION) == 0)
 	{
 		// Remove the HMAC field if it exists.
-		if ((hdr->flags & SKY_FLAG_AUTHENTICATED) != 0)
+		if (frame_is_authenticated != 0)
 			parsed->payload_len -= SKY_HMAC_LENGTH;
 
 		return SKY_RET_OK;
 	}
 
 	// Authentication is required but no authentication field provided?
-	if ((hdr->flags & SKY_FLAG_AUTHENTICATED) == 0) {
+	if (frame_is_authenticated == 0) {
 		SKY_PRINTF(SKY_DIAG_INFO | SKY_DIAG_HMAC, "HMAC: Authentication missing!\n")
 		self->diag->rx_hmac_fail++;
 		hmac->vc_enforcement_need[vc] = 1;

@@ -408,7 +408,6 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 			// Update the frame
 			tx_frame->frame->length += read;
 			tx_frame->ptr += read;
-			tx_frame->hdr->flag_has_payload = 1;
 			return 1;
 		}
 
@@ -439,7 +438,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 		tx_frame->hdr->flag_arq_on = 1;
 
 		// Add ARQ handshake response if it is pending.
-		if (vchannel->handshake_send > 0) {
+		if (vchannel->handshake_send != 0) {
 			sky_frame_add_extension_arq_handshake(tx_frame, ARQ_STATE_ON, vchannel->arq_session_identifier);
 			vchannel->handshake_send--;
 			ret = 1;
@@ -490,8 +489,6 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 				// Update the frame.
 				tx_frame->ptr += read;
 				tx_frame->frame->length += read;
-				tx_frame->hdr->flags |= SKY_FLAG_HAS_PAYLOAD;
-				tx_frame->hdr->flag_has_payload = 1;
 
 				ret = 1;
 			}

@@ -341,7 +341,6 @@ TEST(fill_frame){
     ASSERT(TXframe.frame->length == init_len, "Frame length should be %d, it was %d", init_len, TXframe.frame->length);
     // IN INIT:
     sky_vc_wipe_to_arq_init_state(handle->virtual_channels[0]);
-    TXframe.hdr->flag_has_payload = 0;
     // No idle frames to be sent, should return 0 and length should not be changed.
     ret = sky_vc_fill_frame(handle->virtual_channels[0], config, &TXframe, 0, 4);
     ASSERT(ret == 0, "There was an idle frame to be sent when there shouldn't be one.");
@@ -402,7 +401,6 @@ TEST(fill_frame){
     // Make frame reusable.
     TXframe.ptr -= 100 + sizeof(ExtARQCtrl) + sizeof(ExtARQSeq) + 2;
     TXframe.frame->length -= 100 + sizeof(ExtARQCtrl) + sizeof(ExtARQSeq) + 2;
-    TXframe.hdr->flag_has_payload = 0;
     ASSERT(TXframe.frame->length == init_len, "Frame length should be %d, it was %d", init_len, TXframe.frame->length);
     // Payload too large:
     // Add payload to send ring.
@@ -514,7 +512,6 @@ TEST(process_frame){
     ASSERT(ret == 0, "start_parsing() should return 0, it returned %d", ret);
     ret = sky_frame_parse_extension_headers(TXframe.frame, &parsed);
     ASSERT(ret == 0, "sky_frame_parse_extension_headers() should return 0, it returned %d", ret);
-    ASSERT(parsed.hdr.flag_has_payload == 1);
     ASSERT(parsed.payload_len == 100);
     // ARQ OFF Just pass the payload to buffer:
     sky_vc_wipe_to_arq_off_state(handle->virtual_channels[0]);
