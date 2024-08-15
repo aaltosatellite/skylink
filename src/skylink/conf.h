@@ -26,9 +26,6 @@ typedef struct {
 	/* Minimum time */
 	int32_t tail_constant_ticks; // TODO: Rename switch_delay_ticks.
 
-	/* Deprecated configuration value for shifting window to avoid MAC collision. Instead, adjust gap length. */
-	int32_t shift_threshold_ticks; //TODO: Remove in the future.
-
 	/* After this many ticks of not getting MAC state updates, the link is considered idle. */
 	int32_t idle_timeout_ticks;
 
@@ -44,7 +41,7 @@ typedef struct {
 	uint8_t unauthenticated_mac_updates;
 
 	/* How often window length can be adjusted (incremented or decremented). Count in windows. */
-	int8_t window_adjustment_period;
+	int8_t window_adjustment_threshold;
 
 	/* If window has less frames than the count, idle frames are generated to fill the window. */
 	uint8_t idle_frames_per_window;

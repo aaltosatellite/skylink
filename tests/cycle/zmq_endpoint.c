@@ -231,21 +231,20 @@ SkylinkPeer* ep_init_peer(int32_t ID, double relspeed, int32_t baudrate, uint8_t
 	xassert(conf->mac.minimum_window_length_ticks < 6000, 9);
 	xassert(conf->mac.gap_constant_ticks > 100, 11);
 	xassert(conf->mac.tail_constant_ticks < 1000, 12);
-	xassert(conf->mac.shift_threshold_ticks < 90000, 13);
 	xassert(conf->mac.idle_timeout_ticks < 90000, 14);
 	xassert(conf->mac.window_adjust_increment_ticks > 10, 15);
 	xassert(conf->mac.window_adjust_increment_ticks < 1000, 15);
 	xassert(conf->mac.carrier_sense_ticks < 900, 16);
 	xassert(conf->mac.carrier_sense_ticks > 10, 16);
 	xassert(conf->mac.unauthenticated_mac_updates < 2, 17);
-	xassert(conf->mac.window_adjustment_period < 8, 18);
+	xassert(conf->mac.window_adjustment_threshold < 8, 18);
 	xassert(conf->mac.idle_frames_per_window < 4, 19);
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		xassert(conf->vc[i].require_authentication <= 0b111, 20);
 		xassert(conf->vc[i].rcv_ring_len > 12, 21);
 		xassert(conf->vc[i].send_ring_len > 12, 22);
 		xassert(conf->vc[i].horizon_width > 1, 23);
-		xassert(conf->vc[i].element_size > 40, 24);
+		xassert(conf->vc[i].usable_element_size > 36, 24);
 	}
 	xassert(conf->hmac.key_length == 16, 32);
 	xassert(conf->hmac.maximum_jump < 400, 33);

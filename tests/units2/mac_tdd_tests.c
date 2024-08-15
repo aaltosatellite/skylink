@@ -36,9 +36,8 @@ TEST(mac_create){
     ASSERT(mac->config->gap_constant_ticks == 600, "MAC gap constant ticks should be 600, was: %d", mac->config->gap_constant_ticks);
     ASSERT(mac->config->tail_constant_ticks == 80, "MAC tail constant ticks should be 80, was: %d", mac->config->tail_constant_ticks);
     ASSERT(mac->config->window_adjust_increment_ticks == 250, "MAC window adjust increment ticks should be 250, was: %d", mac->config->window_adjust_increment_ticks);
-    ASSERT(mac->config->window_adjustment_period == 2, "MAC window adjust period should be 2, was: %d", mac->config->window_adjustment_period);
+    ASSERT(mac->config->window_adjustment_threshold == 2, "MAC window adjust period should be 2, was: %d", mac->config->window_adjustment_threshold);
     ASSERT(mac->config->unauthenticated_mac_updates == 0, "MAC unauthenticated MAC updates should be 0, was: %d", mac->config->unauthenticated_mac_updates);
-    ASSERT(mac->config->shift_threshold_ticks == 10000, "MAC shift threshold ticks should be 10000, was: %d", mac->config->shift_threshold_ticks);
     
     // Assert values of the mac.
     ASSERT(mac->T0 == 0, "MAC T0 should be 0, was: %d", mac->T0);
@@ -76,7 +75,7 @@ TEST(mac_create_invalid_config){
     // Carrier sense ticks >= (config->minimum_window_length_ticks + config->gap_constant_ticks) results in carrier sense ticks = (config->minimum_window_length_ticks + config->gap_constant_ticks).
     config->carrier_sense_ticks = 1000;
     // Window adjustment period < 1 should result in 1 and > 4 should result in 4.
-    config->window_adjustment_period = 0;
+    config->window_adjustment_threshold = 0;
     // Remaining values have no checks so set defaults.
     config->gap_constant_ticks = 600;
     config->tail_constant_ticks = 80;
@@ -95,7 +94,7 @@ TEST(mac_create_invalid_config){
     ASSERT(mac->config->gap_constant_ticks == 600, "MAC gap constant ticks should be 600, was: %d", mac->config->gap_constant_ticks);
     ASSERT(mac->config->tail_constant_ticks == 80, "MAC tail constant ticks should be 80, was: %d", mac->config->tail_constant_ticks);
     ASSERT(mac->config->window_adjust_increment_ticks == 250, "MAC window adjust increment ticks should be 250, was: %d", mac->config->window_adjust_increment_ticks);
-    ASSERT(mac->config->window_adjustment_period == 1, "MAC window adjust period should be 1, was: %d", mac->config->window_adjustment_period);
+    ASSERT(mac->config->window_adjustment_threshold == 1, "MAC window adjust period should be 1, was: %d", mac->config->window_adjustment_threshold);
     ASSERT(mac->config->unauthenticated_mac_updates == 0, "MAC unauthenticated MAC updates should be 0, was: %d", mac->config->unauthenticated_mac_updates);
     ASSERT(mac->config->shift_threshold_ticks == 10000, "MAC shift threshold ticks should be 10000, was: %d", mac->config->shift_threshold_ticks);
 
@@ -117,7 +116,7 @@ TEST(mac_create_invalid_config){
     // Carrier sense ticks >= (config->minimum_window_length_ticks + config->gap_constant_ticks) results in carrier sense ticks = (config->minimum_window_length_ticks + config->gap_constant_ticks).
     config->carrier_sense_ticks = 2000;
     // Window adjustment period < 1 should result in 1 and > 4 should result in 4.
-    config->window_adjustment_period = 5;
+    config->window_adjustment_threshold = 5;
     // Remaining values have no checks so set defaults.
     config->gap_constant_ticks = 600;
     config->tail_constant_ticks = 80;
@@ -136,7 +135,7 @@ TEST(mac_create_invalid_config){
     ASSERT(mac->config->gap_constant_ticks == 600, "MAC gap constant ticks should be 600, was: %d", mac->config->gap_constant_ticks);
     ASSERT(mac->config->tail_constant_ticks == 80, "MAC tail constant ticks should be 80, was: %d", mac->config->tail_constant_ticks);
     ASSERT(mac->config->window_adjust_increment_ticks == 250, "MAC window adjust increment ticks should be 250, was: %d", mac->config->window_adjust_increment_ticks);
-    ASSERT(mac->config->window_adjustment_period == 4, "MAC window adjust period should be 4, was: %d", mac->config->window_adjustment_period);
+    ASSERT(mac->config->window_adjustment_threshold == 4, "MAC window adjust period should be 4, was: %d", mac->config->window_adjustment_threshold);
     ASSERT(mac->config->unauthenticated_mac_updates == 0, "MAC unauthenticated MAC updates should be 0, was: %d", mac->config->unauthenticated_mac_updates);
     ASSERT(mac->config->shift_threshold_ticks == 10000, "MAC shift threshold ticks should be 10000, was: %d", mac->config->shift_threshold_ticks);
 

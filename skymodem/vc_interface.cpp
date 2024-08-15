@@ -435,12 +435,11 @@ void set_config(const string &parameter, const string &value_)
 	set(protocol_handle, mac.minimum_window_length_ticks, value);
 	set(protocol_handle, mac.gap_constant_ticks, value);
 	set(protocol_handle, mac.tail_constant_ticks, value);
-	set(protocol_handle, mac.shift_threshold_ticks, value);
 	set(protocol_handle, mac.idle_timeout_ticks, value);
 	set(protocol_handle, mac.window_adjust_increment_ticks, value);
 	set(protocol_handle, mac.carrier_sense_ticks, value);
 	set(protocol_handle, mac.unauthenticated_mac_updates, value);
-	set(protocol_handle, mac.window_adjustment_period, value);
+	set(protocol_handle, mac.window_adjustment_threshold, value);
 	set(protocol_handle, mac.idle_frames_per_window, value);
 
 	set(protocol_handle, arq.timeout_ticks, value);
@@ -463,12 +462,11 @@ void VCInterface::VirtualChannelInterface::set_config(const string &parameter, c
 	CONFIG_I(mac.minimum_window_length_ticks);
 	CONFIG_I(mac.gap_constant_ticks);
 	CONFIG_I(mac.tail_constant_ticks);
-	CONFIG_I(mac.shift_threshold_ticks);
 	CONFIG_I(mac.idle_timeout_ticks);
 	CONFIG_I(mac.window_adjust_increment_ticks);
 	CONFIG_I(mac.carrier_sense_ticks);
 	CONFIG_I(mac.unauthenticated_mac_updates);
-	CONFIG_I(mac.window_adjustment_period);
+	CONFIG_I(mac.window_adjustment_threshold);
 	CONFIG_I(mac.idle_frames_per_window);
 
 	CONFIG_I(arq.timeout_ticks);

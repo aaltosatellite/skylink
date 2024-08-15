@@ -143,7 +143,7 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 	if ((parsed.hdr.flags & SKY_FLAG_HAS_PAYLOAD) != 0)
 		parsed.payload_len = frame->length - payload_start;
 	else if(parsed.hdr.flags & SKY_FLAG_AUTHENTICATED)
-		parsed.payload_len = 4; 
+		parsed.payload_len = 4; // HMAC KEY LENGTH 
 	else
 		parsed.payload_len = 0; // Ignore frame payload if payload flag is not set.
 

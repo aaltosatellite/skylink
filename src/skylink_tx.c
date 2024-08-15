@@ -41,13 +41,13 @@ static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to
 	if (can_send && !self->mac->window_on) {
 
 		// Indicate need to shrink window.
-		if(self->mac->window_adjust_counter <= -self->conf->mac.window_adjustment_period){
+		if(self->mac->window_adjust_counter <= -self->conf->mac.window_adjustment_threshold){
 			mac_shrink_window(self->mac, now);
 			self->mac->window_adjust_counter = 0;
 		}
 
 		// Indicate need to grow window.
-		if(self->mac->window_adjust_counter >= self->conf->mac.window_adjustment_period){
+		if(self->mac->window_adjust_counter >= self->conf->mac.window_adjustment_threshold){
 			mac_expand_window(self->mac, now);
 			self->mac->window_adjust_counter = 0;
 		}

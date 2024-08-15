@@ -21,7 +21,7 @@ void print_struct_alignments(){
 	printf("SKY: %ld\n", sizeof(SkyConfig));
 	SkyMACConfig mcc;
 	memset(&mcc, 0, sizeof(SkyMACConfig));
-	mcc.window_adjustment_period = 1;
+	mcc.window_adjustment_threshold = 1;
 	mcc.maximum_window_length_ticks = 1;
 	mcc.minimum_window_length_ticks = 1;
 	mcc.unauthenticated_mac_updates = 1;
@@ -30,7 +30,6 @@ void print_struct_alignments(){
 	mcc.carrier_sense_ticks = 1;
 	mcc.idle_frames_per_window = 1;
 	mcc.idle_timeout_ticks = 1;
-	mcc.shift_threshold_ticks = 1;
 	mcc.window_adjust_increment_ticks = 1;
 	uint8_t* p = (uint8_t*)(&mcc);
 	for (int i = 0; i < (int)sizeof(SkyMACConfig); ++i) {

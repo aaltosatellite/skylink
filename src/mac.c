@@ -60,10 +60,10 @@ SkyMAC* sky_mac_create(SkyMACConfig* config)
 		config->carrier_sense_ticks = config->minimum_window_length_ticks + config->gap_constant_ticks;
 
 	// Limit window adjusting period
-	if (config->window_adjustment_period < 1)
-		config->window_adjustment_period = 1;
-	if (config->window_adjustment_period > 4)
-		config->window_adjustment_period = 4;
+	if (config->window_adjustment_threshold < 1)
+		config->window_adjustment_threshold = 1;
+	if (config->window_adjustment_threshold > 4)
+		config->window_adjustment_threshold = 4;
 
 	//Allocate memory for the MAC struct.
 	SkyMAC* mac = SKY_MALLOC(sizeof(SkyMAC));

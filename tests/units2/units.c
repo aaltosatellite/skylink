@@ -46,9 +46,8 @@ void default_config(SkyConfig* config)
 	config->mac.minimum_window_length_ticks     = 250;
 	config->mac.maximum_window_length_ticks     = 1000;
 	config->mac.window_adjust_increment_ticks   = 250;
-	config->mac.window_adjustment_period        = 2;
+	config->mac.window_adjustment_threshold        = 2;
 	config->mac.unauthenticated_mac_updates     = 0;
-	config->mac.shift_threshold_ticks           = 10000;
 	config->mac.idle_frames_per_window          = 0;
 	config->mac.idle_timeout_ticks              = 30000;
 	config->mac.carrier_sense_ticks             = 200;
