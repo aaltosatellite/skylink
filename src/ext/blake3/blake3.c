@@ -340,7 +340,7 @@ INLINE void compress_subtree_to_parent_node(
   uint8_t cv_array[MAX_SIMD_DEGREE_OR_2 * BLAKE3_OUT_LEN];
   size_t num_cvs = blake3_compress_subtree_wide(input, input_len, key,
                                                 chunk_counter, flags, cv_array);
-  assert(num_cvs <= MAX_SIMD_DEGREE_OR_2);
+  //assert(num_cvs <= MAX_SIMD_DEGREE_OR_2); SKYLINK: Commented out libc assert which won't work.
 
   // If MAX_SIMD_DEGREE is greater than 2 and there's enough input,
   // compress_subtree_wide() returns more than 2 chaining values. Condense
