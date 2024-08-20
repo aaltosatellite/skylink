@@ -19,14 +19,52 @@
 #include "skylink/skylink.h"
 #include "tools.h"
 
+// Declare test suite groups
+DECLARE_GROUP(frames);
+DECLARE_GROUP(vc);
+DECLARE_GROUP(mac);
+DECLARE_GROUP(arq);
+DECLARE_GROUP(hmac);
+DECLARE_GROUP(fec);
+DECLARE_GROUP(crc);
+
+// Declare various parameters
+DECLARE_PARAM(ticks, sky_tick_t);
+DECLARE_PARAM(arq_sequence, sky_arq_sequence_t);
+DECLARE_PARAM(arq_mask, sky_arq_mask_t);
+DECLARE_PARAM(payload_length, unsigned int);
+DECLARE_PARAM(frame_length, unsigned int);
+
+
 #define ARRAY_SZ(array) (sizeof(array) / sizeof(array[0]))
 
 #define MAX_ARQ_SEQUENCE ((1 << (8 * sizeof(sky_arq_sequence_t))) - 1)
 
+
+extern const uint8_t key_a[32];
+extern const uint8_t key_b[32];
+
+extern const SkyHMACKey keys_a[1];
+extern const SkyHMACKey keys_b[1] ;
+extern const SkyHMACKey keys_ab[2];
+extern const SkyHMACKey keys_ba[2];
+
+
+extern const SkyConfig default_config;
 /*
  * Write the default configs
  */
-void default_config(SkyConfig* config);
+void default_configg(SkyConfig* config);
+
+/*
+ * Fill TX frame with
+ */
+void fill_random_payload(SkyTransmitFrame *tx_frame, unsigned int payload_len);
+
+/*
+ * Corrupt the given frame with exactly N byte errors.
+ */
+void corrupt_frame(SkyRadioFrame *frame, unsigned int byte_errors);
 
 /*
  * Corrupt the given data with exactly N byte errors.
@@ -36,7 +74,12 @@ void corrupt(uint8_t *data, unsigned int data_len, unsigned int byte_errors);
 /*
  * Initialize
  */
-void init_tx(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame);
+void units_init_tx_frame(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame);
+
+/*
+ * Force the length of the
+ */
+void units_set_tx_frame_length(SkyTransmitFrame* tx_frame, unsigned int frame_length);
 
 /*
  * Function to mimic bevahiour of sky_rx() function in the beginning.
@@ -49,5 +92,7 @@ int start_parsing(SkyRadioFrame *frame, SkyParsedFrame *parsed);
 u_int8_t *create_payload(int length);
 
 int get_cycle(SkyMAC *mac);
+
+void init_tx(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame);
 
 #endif /* __UNITS_H__ */

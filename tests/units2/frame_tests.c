@@ -9,6 +9,15 @@ const int valid_extension_lengths[6] = {
 	sizeof(ExtHMACSequenceReset)
 };
 
+// Ensure we agree the frame sizes with the compiler
+static_assert(sizeof(SkyStaticHeader) == 4);
+static_assert(sizeof(SkyHeaderExtension) == 1 + 5);
+static_assert(sizeof(ExtARQSeq) == sizeof(sky_arq_sequence_t));
+static_assert(sizeof(ExtARQReq) == sizeof(sky_arq_sequence_t) + sizeof(sky_arq_mask_t));
+static_assert(sizeof(ExtARQCtrl) == 2 * sizeof(sky_arq_sequence_t));
+static_assert(sizeof(ExtARQHandshake) == sizeof(uint8_t) + sizeof(uint32_t));
+static_assert(sizeof(ExtTDDControl) == 2 * sizeof(uint16_t));
+static_assert(sizeof(ExtHMACSequenceReset) == sizeof(uint16_t));
 
 /*
  * Test successful parsing of each extension type
@@ -312,10 +321,10 @@ TEST(extension_present_twice)
  */
 TEST(invalid_extension_length)
 {
+	int ret;
 	for (int ext_type = 0; ext_type < 6; ext_type++)
 	for (int ext_len = 0; ext_len < 16; ext_len++) {
 
-		int ret;
 		// Empty frame
 		SkyRadioFrame frame;
 		SkyTransmitFrame tx_frame;
@@ -382,8 +391,11 @@ TEST(too_short_frame_during_extension_parsing)
 	}
 }
 
-TEST(extension_effects){
-	// Test that when different extensions are received, skylink acts accordingly
+/*
+ * Test that when different extensions are received, skylink acts accordingly
+ */
+TEST(extension_effects)
+{
 	/*
 	Extension types:
 		ARQ Sequence
@@ -391,37 +403,47 @@ TEST(extension_effects){
 		ARQ Control
 		ARQ Handshake
 		MAC TDD Control
-		HMAC Sequence Reset: 
+		HMAC Sequence Reset:
 	*/
-	SkyRadioFrame frame;
-	SkyConfig config;
-    default_config(&config);
-	SkyConfig config2;
-	default_config(&config2);
-	// Handle of tx side
-    SkyHandle handle = sky_create(&config);
+
+	// Handle of TX side
+	SkyConfig config1 = default_config;
+	config1.vc[0].require_authentication = SKY_CONFIG_FLAG_AUTHENTICATE_TX | SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_REQUIRE_SEQUENCE;
+	SkyHandle handle = sky_create(&config1);
+	sky_hmac_set_keys(handle, keys_a, 1);
+
+
+
+	// Handle of RX side
+	SkyConfig config2 = default_config;
+	config2.vc[0].require_authentication = SKY_CONFIG_FLAG_AUTHENTICATE_TX | SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_REQUIRE_SEQUENCE;
 	memcpy(&config2.identity, "abcdefg", 7);
 	config2.identity_len = 7;
-	// Payload to add to have content to send.
-	u_int8_t *pl = create_payload(60);
-    const u_int8_t *pl_const = pl;
-	// Handle of rx side
 	SkyHandle handle2 = sky_create(&config2);
+	sky_hmac_set_keys(handle2, keys_a, 1);
+
+
+
+	// Payload to add to have content to send.
+	const unsigned int pl_len = 60;
+	uint8_t *pl = create_payload(pl_len);
 
 	// Add extension types through sky_tx and receive them through sky_rx, check that extensions have the desired effect in the receiving side.
 
 	// Extension 1: HMAC Sequence Reset
 	// Should be naturally added when this is set and sky_tx is called
-	handle->hmac->vc_enforcement_need[0] = 1;
-	handle->hmac->sequence_rx[0] = 1234; // Handle2 shoulld set its tx sequence to 1234 + 3 = 1237
-	sendRing_push_packet_to_send(handle->virtual_channels[0]->sendRing, handle->virtual_channels[0]->elementBuffer, pl_const, 60);
+	handle->hmac->vc[0].send_sequence_reset = 1;
+	handle->hmac->vc[0].sequence_rx = 1234; // Handle2 shoulld set its tx sequence to 1234 + 3 = 1237
+	sendRing_push_packet_to_send(handle->virtual_channels[0]->sendRing, handle->virtual_channels[0]->elementBuffer, (const uint8_t *)pl, pl_len);
+
+	SkyRadioFrame frame;
 	int ret = sky_tx(handle, &frame);
 	ASSERT(ret == 1, "ret: %d", ret);
 	// Receive the frame
 	ret = sky_rx(handle2, &frame);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 	// Check that the sequence is set correctly
-	ASSERT(handle2->hmac->sequence_tx[0] == 1237, "HMAC Sequence Reset failed, expected: 1237, got: %d", handle2->hmac->sequence_tx[0]);
+	ASSERT(handle2->hmac->vc[0].sequence_tx == 1237, "HMAC Sequence Reset failed, expected: 1237, got: %d", handle2->hmac->vc[0].sequence_tx);
 
 	// Extension 2: ARQ Handshake
 	// Should be naturally added when this is set and sky_tx is called
@@ -433,15 +455,16 @@ TEST(extension_effects){
 	handle->mac->frames_sent_in_current_window_per_vc[0] = 0;
 	ret = sky_tx(handle, &frame);
 	ASSERT(ret == 1, "ret: %d", ret);
+
 	// Receive the frame
 	ret = sky_rx(handle2, &frame);
-
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
+
 	// Check that ARQ State has changed
 	ASSERT(handle2->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON, "ARQ Handshake failed, expected: 2, got: %d", handle2->virtual_channels[0]->arq_state_flag);
 
 	// Also send handshake back
-	sendRing_push_packet_to_send(handle2->virtual_channels[0]->sendRing, handle2->virtual_channels[0]->elementBuffer, pl_const, 60);
+	sendRing_push_packet_to_send(handle2->virtual_channels[0]->sendRing, handle2->virtual_channels[0]->elementBuffer, (const uint8_t *)pl, pl_len);
 	// Tick by half a cycle to have handle2's window open
 	sky_tick_t now = 1000;
 	now += mac_time_to_own_window(handle2->mac, now);
@@ -462,10 +485,10 @@ TEST(extension_effects){
 	// ARQ sequence gets tested automatically, since it handles all of the sequence numbers within the rcvRing.
 
 	// ARQ control sends sendRing->tx_sequence and rcvRing->head_sequence
-	
+
 
 	for(int i = 0; i < 6; i++){
-		sendRing_push_packet_to_send(handle2->virtual_channels[0]->sendRing, handle2->virtual_channels[0]->elementBuffer, pl_const, 60);
+		sendRing_push_packet_to_send(handle2->virtual_channels[0]->sendRing, handle2->virtual_channels[0]->elementBuffer, (const uint8_t *)pl, pl_len);
 		ret = sky_tx(handle2, &frame);
 		ASSERT(ret == 1, "ret: %d", ret);
 		// To allow for ARQ Request to be sent leave out the 3rd frame (Sequence 4)
@@ -473,7 +496,7 @@ TEST(extension_effects){
 			// Receive the frame
 			ret = sky_rx(handle, &frame);
 			ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
-			rcvRing_read_next_received(handle->virtual_channels[0]->rcvRing, handle->virtual_channels[0]->elementBuffer, pl, 60);
+			rcvRing_read_next_received(handle->virtual_channels[0]->rcvRing, handle->virtual_channels[0]->elementBuffer, pl, pl_len);
 		}
 	}
 	// Back to handle 1 window
@@ -482,7 +505,7 @@ TEST(extension_effects){
 	sky_tick(now);
 	printf("SendRing tx_sequence: %d\n", handle->virtual_channels[0]->sendRing->tx_sequence);
 	printf("rcvRing head_sequence: %d\n", handle->virtual_channels[0]->rcvRing->head_sequence);
-	sendRing_push_packet_to_send(handle->virtual_channels[0]->sendRing, handle->virtual_channels[0]->elementBuffer, pl_const, 60);
+	sendRing_push_packet_to_send(handle->virtual_channels[0]->sendRing, handle->virtual_channels[0]->elementBuffer, (const uint8_t *)pl, pl_len);
 	ret = sky_tx(handle, &frame);
 	printf("ret: %d\n", ret);
 	ASSERT(ret == 1, "ret: %d", ret);

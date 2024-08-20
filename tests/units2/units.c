@@ -1,61 +1,106 @@
 #include "units.h"
 
-const uint8_t dummy_key1[32] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
-const uint8_t dummy_key2[32] = { 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f};
-const uint8_t *key_list[] = {dummy_key1, dummy_key2};
+const uint8_t key_a[32] = {
+	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+	0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+};
+
+const uint8_t key_b[32] = {
+	0xF0, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+	0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+};
+
+const SkyHMACKey keys_a[1] = { {.key = key_a, .len = sizeof(key_a)} };
+const SkyHMACKey keys_b[1] = { {.key = key_b, .len = sizeof(key_b)} };
+const SkyHMACKey keys_ab[2] = { {.key = key_a, .len = sizeof(key_a)}, {.key = key_b, .len = sizeof(key_b)} };
+const SkyHMACKey keys_ba[2] = { {.key = key_b, .len = sizeof(key_b)}, {.key = key_a, .len = sizeof(key_a)} };
 
 
-void default_config(SkyConfig* config)
-{
-	config->vc[0].horizon_width                 = 16;
-	config->vc[0].send_ring_len                 = 24;
-	config->vc[0].rcv_ring_len 	                = 22;
-	config->vc[0].usable_element_size           = 175;
+// Valid tick
+TEST_PARAM(ticks, sky_tick_t, { 0, 100, 0x7FFFFFFF, 0xFFFFFFFF });
 
-	config->vc[1].horizon_width                 = 16;
-	config->vc[1].send_ring_len                 = 24;
-	config->vc[1].rcv_ring_len 	                = 22;
-	config->vc[1].usable_element_size           = 175;
+// Valid ARQ sequence numbers
+TEST_PARAM(arq_sequence, sky_arq_sequence_t, { 0, 100, 0x7F, 0xFF });
 
-	config->vc[2].horizon_width                 = 6;
-	config->vc[2].send_ring_len                 = 12;
-	config->vc[2].rcv_ring_len 	                = 12;
-	config->vc[2].usable_element_size           = 175;
+// Valid ARQ masks numbers
+TEST_PARAM(arq_mask, sky_arq_mask_t, { 0x01, 0x82, 0x8421 });
 
-	config->vc[3].horizon_width                 = 6;
-	config->vc[3].send_ring_len                 = 12;
-	config->vc[3].rcv_ring_len 	                = 12;
-	config->vc[3].usable_element_size           = 175;
+// Valid payload lengths
+TEST_PARAM(payload_length, unsigned int, { 0, 1, 4, 65, 127, SKY_PAYLOAD_MAX_LEN });
 
-	config->vc[0].require_authentication        = SKY_CONFIG_FLAG_AUTHENTICATE_TX | SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_REQUIRE_SEQUENCE;
-	config->vc[1].require_authentication        = SKY_CONFIG_FLAG_AUTHENTICATE_TX | SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_REQUIRE_SEQUENCE;
-	config->vc[2].require_authentication        = 0;
-	config->vc[3].require_authentication        = 0;
-
-	config->arq.timeout_ticks                   = 26000;
-	config->arq.idle_frame_threshold            = config->arq.timeout_ticks / 4;
-	config->arq.idle_frames_per_window          = 1;
+// Valid radio frame lengths
+TEST_PARAM(frame_length, unsigned int, { 12, 14, 66, 196, 223 - 4 });
 
 
-	config->hmac.key_length = sizeof(dummy_key1);
-	memcpy(config->hmac.key, dummy_key1, sizeof(dummy_key1));
-	config->hmac.maximum_jump                   = 32;
+const SkyConfig default_config = {
+	.mac = {
+		.gap_constant_ticks              = 600,
+		.tail_constant_ticks             = 80,
+		.minimum_window_length_ticks     = 250,
+		.maximum_window_length_ticks     = 1000,
+		.window_adjust_increment_ticks   = 250,
+		.window_adjustment_threshold     = 2,
+		.unauthenticated_mac_updates     = 0,
+		.idle_frames_per_window          = 0,
+		.idle_timeout_ticks              = 30000,
+		.carrier_sense_ticks             = 200,
+	},
+	.hmac = {
+		.maximum_jump = 24,
+	},
+	.vc = {
+		{
+			.require_authentication      = 0,
+			.rcv_ring_len                = 22,
+			.horizon_width               = 16,
+			.send_ring_len               = 24,
+			.usable_element_size         = 175,
+			.tx_key                      = 0,
+			.rx_key                      = 0,
+		},
+		{
+			.require_authentication      = 0,
+			.rcv_ring_len                = 22,
+			.horizon_width               = 16,
+			.send_ring_len               = 24,
+			.usable_element_size         = 175,
+			.tx_key                      = 0,
+			.rx_key                      = 0,
+		},
+		{
+			.require_authentication      = 0,
+			.rcv_ring_len                = 22,
+			.horizon_width               = 16,
+			.send_ring_len               = 24,
+			.usable_element_size         = 175,
+			.tx_key                      = 0,
+			.rx_key                      = 0,
+		},
+		{
+			.require_authentication      = 0,
+			.rcv_ring_len                = 22,
+			.horizon_width               = 16,
+			.send_ring_len               = 24,
+			.usable_element_size         = 175,
+			.tx_key                      = 0,
+			.rx_key                      = 0,
+		},
+	},
+	.arq = {
+		.timeout_ticks                   = 26000,
+		.idle_frame_threshold            = 6500,
+		.idle_frames_per_window          = 1,
+	},
+	.identity = { 't', 'e', 's', 't', 'X', 'X', 'X' },
+	.identity_len = 4,
 
-	config->mac.gap_constant_ticks              = 600;
-	config->mac.tail_constant_ticks             = 80;
-	config->mac.minimum_window_length_ticks     = 250;
-	config->mac.maximum_window_length_ticks     = 1000;
-	config->mac.window_adjust_increment_ticks   = 250;
-	config->mac.window_adjustment_threshold        = 2;
-	config->mac.unauthenticated_mac_updates     = 0;
-	config->mac.idle_frames_per_window          = 0;
-	config->mac.idle_timeout_ticks              = 30000;
-	config->mac.carrier_sense_ticks             = 200;
+};
 
-    // Set
-    memcpy(config->identity, "testabc", 7);
-	config->identity_len = 4;
-}
+
 u_int8_t *create_payload(int length)
 {
     u_int8_t *pl = malloc(length);
@@ -70,6 +115,18 @@ u_int8_t *create_payload(int length)
     return pl;
 }
 
+
+void fill_random_payload(SkyTransmitFrame *tx_frame, unsigned int payload_len)
+{
+	for (unsigned int i = 0; i < payload_len; i++)
+		*(tx_frame->ptr++) = rand() % 255;
+	tx_frame->frame->length += payload_len;
+}
+
+void corrupt_frame(SkyRadioFrame *frame, unsigned int byte_errors)
+{
+	corrupt(frame->raw, frame->length, byte_errors);
+}
 
 void corrupt(uint8_t *data, unsigned int data_len, unsigned int byte_errors)
 {
@@ -88,6 +145,10 @@ again:
 		error_locations[i] = loc;
 		data[loc] ^= randint_i32(1, 255);
 	}
+}
+
+void units_init_tx_frame(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame) {
+	init_tx(frame, tx_frame);
 }
 
 void init_tx(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame)
@@ -109,6 +170,13 @@ void init_tx(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame)
 	tx_frame->hdr = (SkyStaticHeader *)&frame->raw[1 + identity_len];
 	memset(tx_frame->hdr, 0, sizeof(SkyStaticHeader));
 	tx_frame->ptr = &frame->raw[1 + identity_len + sizeof(SkyStaticHeader)];
+}
+
+void units_set_tx_frame_length(SkyTransmitFrame* tx_frame, unsigned int frame_length)
+{
+	SkyRadioFrame* frame = tx_frame->frame;
+	frame->length = frame_length;
+	tx_frame->ptr = &frame->raw[frame_length];
 }
 
 int start_parsing(SkyRadioFrame *frame, SkyParsedFrame *parsed)

@@ -73,13 +73,15 @@ static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to
 
 static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyTransmitFrame *tx_frame, uint8_t vc)
 {
-	if (self->hmac->vc_enforcement_need[vc] == 0)
-		return 0;
+	SkyHMACVChannel *vc_hmac = &self->hmac->vc[vc];
 
-	self->hmac->vc_enforcement_need[vc] = 0;
+	// HMAC reset requested?
+	if (vc_hmac->send_sequence_reset == 0)
+		return 0;
+	vc_hmac->send_sequence_reset = 0;
 
 	// +3 so that immediate sends don't invalidate what we give here. Jump constant must be bigger.
-	uint16_t sequence = self->hmac->sequence_rx[vc] + 3; // uint16 naturally overflows
+	uint16_t sequence = vc_hmac->sequence_rx + 3; // uint16 naturally overflows
 	sky_frame_add_extension_hmac_sequence_reset(tx_frame, sequence);
 	return 1;
 }
@@ -105,8 +107,8 @@ static int _sky_tx_pick_vc(SkyHandle self, sky_tick_t now)
 		// Get the VC. Check VC's in order starting from round robin start, looping to 0 at SKY_NUM_VIRTUAL_CHANNELS.
 		int vc = (self->mac->vc_round_robin_start + i) % SKY_NUM_VIRTUAL_CHANNELS;
 
-		// Pending HMAC sequence enforcement?
-		if (self->hmac->vc_enforcement_need[vc] != 0)
+		// Pending HMAC sequence reset?
+		if (self->hmac->vc[vc].send_sequence_reset != 0)
 			return vc;
 
 		// Something in the buffer?
@@ -197,12 +199,11 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	if (ret == 0)
 		SKY_PRINTF(SKY_DIAG_BUG, "Construction of new frame was started but there was nothing to transmit!\n");
 
-	/* Set HMAC state and sequence */
-	hdr->frame_sequence = sky_hmac_get_next_tx_sequence(self, vc);
-	hdr->frame_sequence = sky_hton16(hdr->frame_sequence);
+	/* Set frame sequence number */
+	hdr->frame_sequence = sky_hton16(sky_hmac_get_next_tx_sequence(self, vc));
 
-	/* Authenticate the frame. Ie. appends a hash digest to the end of the frame. */
-	if (vc_conf->require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX)
+	/* Authenticate the frame. Ie. append a hash digest to the end of the frame. */
+	if ((vc_conf->require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX) != 0)
 		sky_hmac_extend_with_authentication(self, &tx_frame);
 
 #if 0

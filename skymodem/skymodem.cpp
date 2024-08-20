@@ -65,24 +65,31 @@ SkyModem::SkyModem() :
 	config.vc[0].rcv_ring_len = 24;
 	config.vc[0].usable_element_size = 32;
 	config.vc[0].require_authentication = SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_AUTHENTICATE_TX;
+	config.vc[0].tx_key = 1;
+	config.vc[0].rx_key = 0;
+
 
 	config.vc[1].horizon_width = 16;
 	config.vc[1].send_ring_len = 24;
 	config.vc[1].rcv_ring_len = 24;
 	config.vc[1].usable_element_size = 32;
 	config.vc[1].require_authentication = SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_AUTHENTICATE_TX;
+	config.vc[1].tx_key = 1;
+	config.vc[1].rx_key = 0;
 
 	config.vc[2].horizon_width = 2;
 	config.vc[2].send_ring_len = 8;
 	config.vc[2].rcv_ring_len = 8;
 	config.vc[2].usable_element_size = 32;
 	config.vc[2].require_authentication = SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION | SKY_CONFIG_FLAG_AUTHENTICATE_TX;
+	config.vc[2].tx_key = config.vc[2].rx_key = 2;
 
 	config.vc[3].horizon_width = 2;
 	config.vc[3].send_ring_len = 8;
 	config.vc[3].rcv_ring_len = 8;
 	config.vc[3].usable_element_size = 32;
-	config.vc[3].require_authentication = 0;
+	config.vc[3].require_authentication = SKY_CONFIG_FLAG_USE_CRC32;
+	config.vc[3].tx_key = config.vc[3].rx_key = 0;
 
 	/*
 	 * ARQ configurations
@@ -91,10 +98,11 @@ SkyModem::SkyModem() :
 	config.arq.idle_frame_threshold = config.arq.timeout_ticks / 4; // [ticks]
 	config.arq.idle_frames_per_window = 1;
 
-
 	/*
 	 * HMAC configuration
 	 */
+	config.hmac.maximum_jump = 24;
+
 #ifdef EXTERNAL_SECRET
 #include "secret.hpp"
 #else
@@ -104,19 +112,19 @@ SkyModem::SkyModem() :
 		0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
 		0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
 	};
-	const unsigned int hmac_key_len = sizeof(hmac_key);
-#endif
-
-	config.hmac.key_length = hmac_key_len;
-	assert(hmac_key_len <= sizeof(config.hmac.key));
-	memcpy(config.hmac.key, hmac_key, hmac_key_len);
-	config.hmac.maximum_jump = 24;
+	const SkyHMACKey keys[1] = {
+		{.key = hmac_key, .len = sizeof(hmac_key)},
+		{.key = hmac_key, .len = sizeof(hmac_key)},
+		{.key = hmac_key, .len = sizeof(hmac_key)}
+	};
+#endifs
 
 	/*
 	 * Create the Skylink protocol instance
 	 */
 	handle = sky_create(&config);
 
+	sky_hmac_set_keys(handle, keys, sizeof(keys) / sizeof(SkyHMACKey));
 	load_sequence_numbers();
 	last_sequence_refresh = 0;
 
@@ -391,6 +399,7 @@ void SkyModem::tick(Timestamp now)
 
 void SkyModem::receiver_locked(bool locked, Timestamp now)
 {
+	(void)now;
 	//sdr->lock_tx(locked);
 
 	if (locked) {

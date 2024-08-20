@@ -56,7 +56,7 @@ struct sky_radio_frame
 	unsigned int length;
 
 	// Raw frame data
-	uint8_t raw[SKY_FRAME_MAX_LEN + 32 + 1];
+	uint8_t raw[3 + 255]; // Reserve space for the Golay code + RS message + RS paritys
 };
 
 /* frames ========================================================================================== */
@@ -131,7 +131,7 @@ typedef struct __attribute__((__packed__)) {
 	// https://stackoverflow.com/questions/6043483/why-bit-endianness-is-an-issue-in-bitfields
 
 	union {
-		struct {
+		struct __attribute__((__packed__)) {
 			/* Virtual channel number */
 			unsigned int vc : 2;
 

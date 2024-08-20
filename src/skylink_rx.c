@@ -170,7 +170,7 @@ static void sky_rx_process_ext_mac_control(SkyHandle self, int rx_time_ticks, Sk
 		return;
 
 	// No unauthenticated MAC updates and frame is not authenticated.
-	if (self->conf->mac.unauthenticated_mac_updates == 0 && (parsed->hdr.flags & SKY_FLAG_AUTHENTICATED) == 0)
+	if (self->conf->mac.unauthenticated_mac_updates == 0 && parsed->hdr.flag_authenticated == 0)
 		return;
 
 	// Get window and remaining time

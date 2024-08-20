@@ -568,15 +568,15 @@ TEST(mac_is_idle_frame_needed){
 
 // Test if the time until a frame can be sent after carrier sense is greater than carrier sense ticks.
 TEST(tx_after_carrier_sense){
-    bool tx_success = false;
-    // Init for test.
-    SkyConfig config;
-    default_config(&config);
-    SkyRadioFrame frame;
-    SkyHandle handle = sky_create(&config);
-    SkyMAC *mac = handle->mac;
-    struct timeval  tv;
-    // Get start time to measure time spent, add 1000 to allow for T0 to be set behind current time.
+	bool tx_success = false;
+	// Init for test.
+	SkyConfig config = default_config;
+	SkyRadioFrame frame;
+	SkyHandle handle = sky_create(&config);
+	sky_hmac_set_keys(handle, keys_a, 1);
+	SkyMAC *mac = handle->mac;
+	struct timeval  tv;
+	// Get start time to measure time spent, add 1000 to allow for T0 to be set behind current time.
     gettimeofday(&tv, NULL);
     double time_start_ms = 
             ((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000) - 1500;

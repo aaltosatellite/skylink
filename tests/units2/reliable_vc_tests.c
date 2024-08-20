@@ -4,49 +4,47 @@
 
 // Test getting sky state.
 TEST(sky_state){
-    // Create config
-    SkyConfig* config = malloc(sizeof(SkyConfig));
-    default_config(config);
-    SkyHandle handle = sky_create(config);
-    SkyState* state = malloc(sizeof(SkyState));
-    sky_get_state(handle, state);
-    // Loop all vc's for initial state
-    for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++){
-        ASSERT(state->vc[i].state == ARQ_STATE_OFF, "VC: %d state: %d", i, state->vc[i].state);
-        ASSERT(state->vc[i].tx_frames == 0, "VC: %d tx_frames: %d", i, state->vc[i].tx_frames);
-        ASSERT(state->vc[i].rx_frames == 0, "VC: %d rx_frames: %d", i, state->vc[i].rx_frames);
-        ASSERT(state->vc[i].free_tx_slots == (config->vc[i].send_ring_len-1), "VC: %d free_tx_slots: %d", i, (config->vc[i].send_ring_len-1));
-        ASSERT(state->vc[i].session_identifier == handle->virtual_channels[i]->arq_session_identifier, "VC: %d session_identifier: %d", i, state->vc[i].session_identifier);
-    }
-    // Time to add some tx and rx frames.
-    // Add 1 tx frame to vc 0
-    uint8_t *pl = create_payload(100);
-    const uint8_t *const_pl = pl;
-    for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++){
-        for (int j = 0; j < i+1; j++){
-            int sRing = sendRing_push_packet_to_send(handle->virtual_channels[i]->sendRing, handle->virtual_channels[i]->elementBuffer, const_pl, 100);
-            int rRing = rcvRing_push_rx_packet(handle->virtual_channels[i]->rcvRing, handle->virtual_channels[i]->elementBuffer, const_pl, 100, j);
-            ASSERT(sRing >= 0, "VC: %d sendRing_push_packet_to_send error: %d, J: %d", i, sRing, j);
-            ASSERT(rRing >= 0, "VC: %d rcvRing_push_rx_packet error: %d, J: %d", i, rRing, j);
-        }
-    }
-    sky_get_state(handle, state);
-    // Loop all vc's for updated state
-    for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++){
-        ASSERT(state->vc[i].state == ARQ_STATE_OFF, "VC: %d state: %d", i, state->vc[i].state);
-        ASSERT(state->vc[i].tx_frames == i+1, "VC: %d tx_frames: %d", i, state->vc[i].tx_frames);
-        ASSERT(state->vc[i].rx_frames == i+1, "VC: %d rx_frames: %d", i, state->vc[i].rx_frames);
-        ASSERT(state->vc[i].free_tx_slots == (config->vc[i].send_ring_len-1)-(i+1), "VC: %d free_tx_slots: %d", i, (config->vc[i].send_ring_len-1)-(i+1));
-        ASSERT(state->vc[i].session_identifier == handle->virtual_channels[i]->arq_session_identifier, "VC: %d session_identifier: %d", i, state->vc[i].session_identifier);
-    }
-    // Free payload.
-    free(pl);
-    // Free config.
-    free(config);
-    // Free state
-    free(state);
-    // Destroy handle.
-    sky_destroy(handle);
+	// Create config
+	SkyConfig config = default_config;
+	SkyHandle handle = sky_create(&config);
+
+	SkyState state;
+	sky_get_state(handle, &state);
+
+	// Loop all vc's for initial state
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++){
+		ASSERT(state.vc[i].state == ARQ_STATE_OFF, "VC: %d state: %d", i, state.vc[i].state);
+		ASSERT(state.vc[i].tx_frames == 0, "VC: %d tx_frames: %d", i, state.vc[i].tx_frames);
+		ASSERT(state.vc[i].rx_frames == 0, "VC: %d rx_frames: %d", i, state.vc[i].rx_frames);
+		ASSERT(state.vc[i].free_tx_slots == (config.vc[i].send_ring_len-1), "VC: %d free_tx_slots: %d", i, (config.vc[i].send_ring_len-1));
+		ASSERT(state.vc[i].session_identifier == handle->virtual_channels[i]->arq_session_identifier, "VC: %d session_identifier: %d", i, state.vc[i].session_identifier);
+	}
+	// Time to add some tx and rx frames.
+	// Add 1 tx frame to vc 0
+	uint8_t *pl = create_payload(100);
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++){
+		for (int j = 0; j < i+1; j++){
+			int sRing = sendRing_push_packet_to_send(handle->virtual_channels[i]->sendRing, handle->virtual_channels[i]->elementBuffer, (const uint8_t *)pl, 100);
+			int rRing = rcvRing_push_rx_packet(handle->virtual_channels[i]->rcvRing, handle->virtual_channels[i]->elementBuffer, (const uint8_t *)pl, 100, j);
+			ASSERT(sRing >= 0, "VC: %d sendRing_push_packet_to_send error: %d, J: %d", i, sRing, j);
+			ASSERT(rRing >= 0, "VC: %d rcvRing_push_rx_packet error: %d, J: %d", i, rRing, j);
+		}
+	}
+
+	sky_get_state(handle, &state);
+	// Loop all vc's for updated state
+	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; i++){
+		ASSERT(state.vc[i].state == ARQ_STATE_OFF, "VC: %d state: %d", i, state.vc[i].state);
+		ASSERT(state.vc[i].tx_frames == i+1, "VC: %d tx_frames: %d", i, state.vc[i].tx_frames);
+		ASSERT(state.vc[i].rx_frames == i+1, "VC: %d rx_frames: %d", i, state.vc[i].rx_frames);
+		ASSERT(state.vc[i].free_tx_slots == (config.vc[i].send_ring_len-1)-(i+1), "VC: %d free_tx_slots: %d", i, (config.vc[i].send_ring_len-1)-(i+1));
+		ASSERT(state.vc[i].session_identifier == handle->virtual_channels[i]->arq_session_identifier, "VC: %d session_identifier: %d", i, state.vc[i].session_identifier);
+	}
+
+	// Free payload.
+	free(pl);
+	// Destroy handle.
+	sky_destroy(handle);
 }
 
 // Test creating a virtual channel. Check that it is created correctly.

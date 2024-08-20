@@ -384,8 +384,8 @@ static void step_forward(int which, TXRXJob* job){
 		}
 		ASSERT(state_on1, "now:%ld   states_on:%d %d\n", job->now, state_on1, state_on2);
 		ASSERT(state_on2, "now:%ld   states_on:%d %d\n", job->now, state_on1, state_on2);
-		int hmac_diff1 = job->peer2.handle->hmac->sequence_tx[0] - job->peer1.handle->hmac->sequence_rx[0];
-		int hmac_diff2 = job->peer2.handle->hmac->sequence_rx[0] - job->peer1.handle->hmac->sequence_tx[0];
+		int hmac_diff1 = job->peer2.handle->hmac->vc[0].sequence_tx - job->peer1.handle->hmac->vc[0].sequence_rx;
+		int hmac_diff2 = job->peer2.handle->hmac->vc[0].sequence_rx - job->peer1.handle->hmac->vc[0].sequence_tx;
 		hmac_diff1 = hmac_diff1 * hmac_diff1;
 		hmac_diff2 = hmac_diff2 * hmac_diff2;
 		//if((hmac_diff1 > 150) || (hmac_diff2 > 150)){

@@ -75,7 +75,8 @@ typedef struct {
 	/* Is authentication code (HMAC) required for the virtual channel */
 	uint8_t require_authentication;
 
-	//uint8_t tx_key, rx_key;
+	/* HMAC transmitting and receiving key indices */
+	uint8_t tx_key, rx_key;
 
 } SkyVCConfig;
 
@@ -85,16 +86,10 @@ typedef struct {
  */
 typedef struct {
 
-	/* Length of the authentication key */
-	int32_t key_length;
-
 	/* Maximum allowed forward jump in sequence count.
 	 * Value should larger than expected number of lost frames aka ARQ window length.
 	 * Sensible values are between 16 and 64. Recommended value is 24. */
 	int32_t maximum_jump;
-
-	/* Authentication key */
-	uint8_t key[32];
 
 } SkyHMACConfig;
 

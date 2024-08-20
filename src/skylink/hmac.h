@@ -7,48 +7,45 @@
 
 
 /* HMAC trailer length */
-#define SKY_HMAC_LENGTH                 4 // bytes
+#define SKY_HMAC_LENGTH                 (4) // bytes
 
 
-#if 1
-/* HMAC runtime state */
-struct sky_hmac {
-	// TODO: Own key for each VC and direction
-	uint8_t* key;
-	int32_t key_len;
-	uint32_t nonce_seed;
+typedef struct {
+	const uint8_t* key;
+	const unsigned int len;
+} SkyHMACKey;
 
-	// Next transmitted sequence number
-	uint16_t sequence_tx[SKY_NUM_VIRTUAL_CHANNELS];
 
-	// Next expected received sequence number
-	uint16_t sequence_rx[SKY_NUM_VIRTUAL_CHANNELS];
+/* Per virtual channel HMAC state */
+typedef struct
+{
+	/* Flag to indicate need to transmit HMAC reset extension */
+	uint8_t send_sequence_reset;
 
-	// Flag to indicate need to transmit HMAC reset extension
-	uint8_t vc_enforcement_need[SKY_NUM_VIRTUAL_CHANNELS]; // TODO: bit field?
+	/* Current transmitting sequence number */
+	int32_t sequence_tx;
 
-	// Pointer to hash function's context object
-	void* ctx;
-};
-#else
+	/* Current receiving sequence number */
+	int32_t sequence_rx;
+} SkyHMACVChannel;
+
 
 /* HMAC runtime state */
 struct sky_hmac
 {
-	// TODO: Own key for each VC and direction
+	// HMAC keys
+	const SkyHMACKey *keys;
+	unsigned int num_keys;
+
+	/* Array of per virtual channel HMAC states */
+	SkyHMACVChannel vc[SKY_NUM_VIRTUAL_CHANNELS];
+
 	uint32_t nonce_seed;
-	uint8_t** key_list;
 
-	struct {
-		int32_t sequence_tx;
-		int32_t sequence_rx;
-		uint8_t vc_enforcement_need;
-	} vc[SKY_NUM_VIRTUAL_CHANNELS];
-
+	/* Internal Blake3 context object */
 	void *ctx;
 };
 
-#endif
 
 /* Allocate and initialize HMAC state instance */
 SkyHMAC *sky_hmac_create(SkyHMACConfig *config);
@@ -56,10 +53,15 @@ SkyHMAC *sky_hmac_create(SkyHMACConfig *config);
 /* Free HMAC resources */
 void sky_hmac_destroy(SkyHMAC *hmac);
 
+/* Set HMAC keys */
+void sky_hmac_set_keys(SkyHandle self, const SkyHMACKey *keys, unsigned int count);
+
 /* Get next sequence number from transmit counter and advance it by one. Sequence number naturally wraps around due to uint16 overflow. */
 int32_t sky_hmac_get_next_tx_sequence(SkyHandle self, unsigned int vc);
 
-/* Add authenticate trailer to a transmit frame. */
+/*
+ * Add authenticate trailer to a transmit frame.
+ */
 int sky_hmac_extend_with_authentication(SkyHandle self, SkyTransmitFrame* tx_frame);
 
 
@@ -80,15 +82,6 @@ void sky_hmac_load_sequences(SkyHandle self, const uint16_t* sequences);
  * Size of the array is 2 * SKY_NUM_VIRTUAL_CHANNELS.
  */
 void sky_hmac_dump_sequences(SkyHandle self, uint16_t* sequences);
-
-
-/* Marks a vc number as requiring hmac-sequence reset. This is used after a peer attempts authentication with too big sequence jump. */
-//int sky_hmac_mark_vc_for_enforcement(SkyHandle self, uint8_t vc);
-
-
-/* The obvious inverse of above function. */
-//int sky_hmac_clear_vc_of_enforcement(SkyHandle self, uint8_t vc);
-
 
 
 #endif /* __SKYLINK_HMAC_H__ */
