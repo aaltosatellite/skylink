@@ -45,6 +45,8 @@ TEST(successful_extension_parsing)
 		if (combination & 0x40)
 			ASSERT(sky_frame_extend_with_payload(&tx_frame, (uint8_t*)"Hello world", 11) == SKY_RET_OK);
 
+		//fill_random_payload(&tx_frame, payload_length);
+
 		// Start parsing the generated frame
 		SkyParsedFrame parsed;
 		int ret = start_parsing(&frame, &parsed);
@@ -77,14 +79,15 @@ TEST(successful_extension_parsing)
 /*
  * Test adding and parsing of ARQ Sequence extension
  */
-TEST(add_extension_arq_sequence)
+TEST(add_extension_arq_sequence, arq_sequence)
 {
+	GET_PARAM(arq_sequence);
+
 	SkyRadioFrame frame;
 	SkyTransmitFrame tx_frame;
 	init_tx(&frame, &tx_frame);
 
-	sky_arq_sequence_t sequence = 123; // TODO
-	int ret = sky_frame_add_extension_arq_sequence(&tx_frame, sequence);
+	int ret = sky_frame_add_extension_arq_sequence(&tx_frame, arq_sequence);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 
 	// Start parsing the generated frame
@@ -96,22 +99,22 @@ TEST(add_extension_arq_sequence)
 	ret = sky_frame_parse_extension_headers(&frame, &parsed);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 	ASSERT(parsed.arq_sequence != NULL, "Parsed frame does not contain ARQ Sequence extension");
-	ASSERT(parsed.arq_sequence->ARQSeq.sequence == sky_arq_seq_hton(sequence), "Parsed sequence: %d, expected: %d", parsed.arq_sequence->ARQSeq.sequence, sky_arq_seq_hton(sequence));
+	ASSERT(parsed.arq_sequence->ARQSeq.sequence == sky_arq_seq_hton(arq_sequence), "Parsed sequence: %d, expected: %d", parsed.arq_sequence->ARQSeq.sequence, sky_arq_seq_hton(arq_sequence));
 }
 
 /*
  * Test adding and parsing of ARQ Request extension
  */
-TEST(add_extension_arq_request)
+TEST(add_extension_arq_request, arq_sequence, arq_mask)
 {
+	GET_PARAM(arq_sequence);
+	GET_PARAM(arq_mask);
+
 	SkyRadioFrame frame;
 	SkyTransmitFrame tx_frame;
 	init_tx(&frame, &tx_frame);
 
-	sky_arq_sequence_t sequence = 123;
-	uint16_t mask = 0xF00D;
-
-	int ret = sky_frame_add_extension_arq_request(&tx_frame, sequence, mask);
+	int ret = sky_frame_add_extension_arq_request(&tx_frame, arq_sequence, arq_mask);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 
 	// Start parsing the generated frame
@@ -123,22 +126,26 @@ TEST(add_extension_arq_request)
 	ret = sky_frame_parse_extension_headers(&frame, &parsed);
 	ASSERT(ret == SKY_RET_OK, "ret: %d extension_length: %d", ret, tx_frame.hdr->extension_length);
 	ASSERT(parsed.arq_request != NULL, "Parsed frame does not contain ARQ Request extension");
-	ASSERT(parsed.arq_request->ARQReq.sequence == sky_arq_seq_hton(sequence), "Parsed sequence: %d, expected: %d", parsed.arq_request->ARQReq.sequence, sky_arq_seq_hton(sequence));
-	ASSERT(parsed.arq_request->ARQReq.mask == sky_arq_mask_hton(mask), "Parsed mask: %d, expected: %d", parsed.arq_request->ARQReq.mask, sky_arq_mask_hton(mask));
+	ASSERT(parsed.arq_request->ARQReq.sequence == sky_arq_seq_hton(arq_sequence),
+		"Parsed sequence: %d, expected: %d", sky_arq_seq_ntoh(parsed.arq_request->ARQReq.sequence), arq_sequence);
+	ASSERT(parsed.arq_request->ARQReq.mask == sky_arq_mask_hton(arq_mask),
+		"Parsed mask: %d, expected: %d", sky_arq_seq_ntoh(parsed.arq_request->ARQReq.mask), arq_mask);
 }
 
 /*
  * Test adding and parsing of ARQ Control extension
  */
-TEST(add_extension_arq_ctrl)
+TEST(add_extension_arq_ctrl, arq_sequence)
 {
+	GET_PARAM(arq_sequence);
+
 	int ret;
 	SkyRadioFrame frame;
 	SkyTransmitFrame tx_frame;
 	init_tx(&frame, &tx_frame);
 
-	sky_arq_sequence_t tx_sequence = 1234;
-	sky_arq_sequence_t rx_sequence = 4321;
+	const sky_arq_sequence_t tx_sequence = arq_sequence;
+	const sky_arq_sequence_t rx_sequence = ~arq_sequence + 13;
 
 	ret = sky_frame_add_extension_arq_ctrl(&tx_frame, tx_sequence, rx_sequence);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
@@ -360,7 +367,7 @@ TEST(too_short_frame_during_extension_parsing)
 {
 	const unsigned int truncations[] = { 1 };
 	for (int ext_type = 0; ext_type < 6; ext_type++)
-	for (int ti = 1; ti < ARRAY_SZ(truncations); ti++)
+	for (unsigned int ti = 1; ti < ARRAY_SZ(truncations); ti++)
 	{
 		int ret;
 		SkyRadioFrame frame;
@@ -461,7 +468,7 @@ TEST(extension_effects)
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 
 	// Check that ARQ State has changed
-	ASSERT(handle2->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON, "ARQ Handshake failed, expected: 2, got: %d", handle2->virtual_channels[0]->arq_state_flag);
+	ASSERT(handle2->virtual_channels[0]->arq_state == ARQ_STATE_ON, "ARQ Handshake failed, expected: 2, got: %d", handle2->virtual_channels[0]->arq_state);
 
 	// Also send handshake back
 	sendRing_push_packet_to_send(handle2->virtual_channels[0]->sendRing, handle2->virtual_channels[0]->elementBuffer, (const uint8_t *)pl, pl_len);
@@ -476,7 +483,7 @@ TEST(extension_effects)
 	ret = sky_rx(handle, &frame);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 	// Check that ARQ State has changed
-	ASSERT(handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON, "ARQ Handshake failed, expected: 2, got: %d", handle->virtual_channels[0]->arq_state_flag);
+	ASSERT(handle->virtual_channels[0]->arq_state == ARQ_STATE_ON, "ARQ Handshake failed, expected: 2, got: %d", handle->virtual_channels[0]->arq_state);
 	// Read packet from handshake
 	rcvRing_read_next_received(handle->virtual_channels[0]->rcvRing, handle->virtual_channels[0]->elementBuffer, pl, 60);
 

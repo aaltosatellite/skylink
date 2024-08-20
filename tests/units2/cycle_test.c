@@ -278,23 +278,21 @@ TEST(loss_test){
 
 
 TEST(test1_round){
-	SkyConfig* config1 = SKY_MALLOC(sizeof(SkyConfig));
-	SkyConfig* config2 = SKY_MALLOC(sizeof(SkyConfig));
-	default_config(config1);
-	default_config(config2);
-	config1->identity[0] = 1;
-	config2->identity[0] = 2;
+	SkyConfig config1 = default_config;
+	SkyConfig config2 = default_config;
+	config1.identity[0] = 1;
+	config2.identity[0] = 2;
 
-	SkyHandle handle1 = sky_create(config1);
-	SkyHandle handle2 = sky_create(config2);
+	SkyHandle handle1 = sky_create(&config1);
+	SkyHandle handle2 = sky_create(&config2);
 
 	mac_shift_windowing(handle1->mac, rand()%3200);
 	mac_shift_windowing(handle2->mac, rand()%3200);
 
-	handle1->hmac->sequence_tx[0] = randint_i32(0, HMAC_CYCLE_LENGTH-1);
-	handle1->hmac->sequence_rx[0] = randint_i32(0, HMAC_CYCLE_LENGTH-1);
-	handle2->hmac->sequence_tx[0] = randint_i32(0, HMAC_CYCLE_LENGTH-1);
-	handle2->hmac->sequence_rx[0] = randint_i32(0, HMAC_CYCLE_LENGTH-1);
+	handle1->hmac->vc[0].sequence_tx = randint_i32(0, HMAC_CYCLE_LENGTH-1);
+	handle1->hmac->vc[0].sequence_rx = randint_i32(0, HMAC_CYCLE_LENGTH-1);
+	handle2->hmac->vc[0].sequence_tx = randint_i32(0, HMAC_CYCLE_LENGTH-1);
+	handle2->hmac->vc[0].sequence_rx = randint_i32(0, HMAC_CYCLE_LENGTH-1);
 
 	TXRXJob job;
 	job.peer1.handle = handle1;
@@ -340,8 +338,6 @@ TEST(test1_round){
 	destroy_eframe_list(job.receivedFrames);
 	destroy_eframe_list(job.missedFrames);
 
-	free(config1);
-	free(config2);
 	sky_destroy(handle1);
 	sky_destroy(handle2);
 }
@@ -376,8 +372,8 @@ static void step_forward(int which, TXRXJob* job){
 	}
 
 	if(job->now > 15500){
-		int state_on1 = job->peer1.handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON;
-		int state_on2 = job->peer2.handle->virtual_channels[0]->arq_state_flag == ARQ_STATE_ON;
+		int state_on1 = job->peer1.handle->virtual_channels[0]->arq_state == ARQ_STATE_ON;
+		int state_on2 = job->peer2.handle->virtual_channels[0]->arq_state == ARQ_STATE_ON;
 		if(!state_on1 || !state_on2){
 			FAIL("ARQ state not on. now:%ld   states_on:%d %d\n", job->now, state_on1, state_on2);
 			//PRINTFF(0, "now:%ld   states_on:%d %d\n", job->now, state_on1, state_on2);

@@ -20,7 +20,7 @@ void sky_get_state(SkyHandle self, SkyState* state)
 		SkyVCState* vc_state = &state->vc[i];
 
 		// Update state information
-		vc_state->state = vc->arq_state_flag;
+		vc_state->state = vc->arq_state;
 		vc_state->free_tx_slots = sendRing_count_free_send_slots(vc->sendRing);
 		vc_state->tx_frames = sendRing_count_packets_to_send(vc->sendRing, 1);
 		vc_state->rx_frames = rcvRing_count_readable_packets(vc->rcvRing);
@@ -100,7 +100,7 @@ void sky_vc_wipe_to_arq_off_state(SkyVirtualChannel* vchannel)
 
 	// Reset VC and set arq state to off.
 	vchannel->need_recall = 0;
-	vchannel->arq_state_flag = ARQ_STATE_OFF;
+	vchannel->arq_state = ARQ_STATE_OFF;
 	vchannel->arq_session_identifier = 0;
 	vchannel->last_tx_tick = 0;
 	vchannel->last_rx_tick = 0;
@@ -118,7 +118,7 @@ void sky_vc_wipe_to_arq_init_state(SkyVirtualChannel *vchannel)
 
 	// Reset VC and set arq state to init.
 	vchannel->need_recall = 0;
-	vchannel->arq_state_flag = ARQ_STATE_IN_INIT;
+	vchannel->arq_state = ARQ_STATE_IN_INIT;
 	vchannel->arq_session_identifier = (uint32_t)sky_get_tick_time();
 	vchannel->last_tx_tick = sky_get_tick_time();
 	vchannel->last_rx_tick = sky_get_tick_time();
@@ -136,13 +136,13 @@ void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel *vchannel, uint32_t identifie
 
 	// Reset VC and set arq state to on.
 	vchannel->need_recall = 0;
-	vchannel->arq_state_flag = ARQ_STATE_ON;
+	vchannel->arq_state = ARQ_STATE_ON;
 	vchannel->arq_session_identifier = identifier;
 	vchannel->last_tx_tick = sky_get_tick_time();
 	vchannel->last_rx_tick = sky_get_tick_time();
 	vchannel->last_ctrl_send_tick = 0;
 	vchannel->unconfirmed_payloads = 0;
-	vchannel->handshake_send = 1;
+	vchannel->handshake_send = 1; // TODO: redundant
 }
 
 // Start the ARQ connection procedure.
@@ -165,7 +165,7 @@ int sky_vc_arq_disconnect(SkyVirtualChannel *vchannel)
 void sky_vc_check_timeouts(SkyVirtualChannel *vchannel, sky_tick_t now, sky_tick_t timeout)
 {
 	// If ARQ is off, so nothing to do here.
-	if (vchannel->arq_state_flag == ARQ_STATE_OFF)
+	if (vchannel->arq_state == ARQ_STATE_OFF)
 		return;
 
 	// Check timeouts
@@ -299,7 +299,7 @@ int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, const uint8_t* src, unsig
 }
 
 // Get sync status of the receive ring and act accordingly.
-void sky_vc_update_rx_sync(SkyVirtualChannel *vchannel, sky_arq_sequence_t peer_tx_head_sequence_by_ctrl, sky_tick_t now)
+/*static*/ void sky_vc_update_rx_sync(SkyVirtualChannel *vchannel, sky_arq_sequence_t peer_tx_head_sequence_by_ctrl, sky_tick_t now)
 {
 	int sync = rcvRing_get_sequence_sync_status(vchannel->rcvRing, peer_tx_head_sequence_by_ctrl);
 
@@ -311,7 +311,7 @@ void sky_vc_update_rx_sync(SkyVirtualChannel *vchannel, sky_arq_sequence_t peer_
 		vchannel->need_recall = 1;
 
 	else if(sync == SKY_RET_RING_SEQUENCES_DETACHED){
-		// vc->arq_state_flag = ARQ_STATE_BROKEN;
+		// vc->arq_state = ARQ_STATE_BROKEN;
 	}
 }
 //======================================================================================================================
@@ -325,7 +325,7 @@ Execution of function depends on the ARQ state of the virtual channel.
 */
 int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_tick_t now, uint16_t frames_sent_in_this_vc_window)
 {
-	switch (vchannel->arq_state_flag) {
+	switch (vchannel->arq_state) {
 	case ARQ_STATE_OFF:
 		/*
 		 * ARQ is off:
@@ -388,7 +388,7 @@ Returns boolean 0/1 as to if it actually wrote a frame.
 int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmitFrame *tx_frame, sky_tick_t now, uint16_t frames_sent_in_this_vc_window)
 {
 
-	switch (vchannel->arq_state_flag) {
+	switch (vchannel->arq_state) {
 	case ARQ_STATE_OFF: {
 		/*
 		 * ARQ is off.
@@ -400,6 +400,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 		if (length > 0)
 		{
 			SKY_ASSERT(length <= sky_frame_get_space_left(tx_frame->frame))
+
 
 			// Read the packet to the frame.
 			int read = sky_vc_read_packet_for_tx_monotonic(vchannel, tx_frame->ptr, &sequence);
@@ -430,7 +431,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 
 	case ARQ_STATE_ON: {
 		/*
-		 * ARQ is on,
+		 * ARQ is on.
 		 */
 
 		int ret = 0;
@@ -510,16 +511,18 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 }
 
 // Process a handshake recieved in a packet.
-int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint32_t identifier)
+/*static*/ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint32_t identifier)
 {
-	switch (vchannel->arq_state_flag) {
+	switch (vchannel->arq_state) {
 	case ARQ_STATE_OFF:
 		/*
 		 * Our ARQ state is off and we received a handshake.
 		 * Accept the handshake and set the handshake response flag-
 		 */
+		SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ hanshake %u\n", identifier);
 		sky_vc_wipe_to_arq_on_state(vchannel, identifier);
-		vchannel->handshake_send = 1;
+		// TODO: Copy identity to vchannel->peer_identity
+		vchannel->handshake_send = 1; // TODO:  tdd->arq_idle_frames
 		return 1;
 
 	case ARQ_STATE_IN_INIT:
@@ -527,9 +530,12 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 		 * Our ARQ has been initialized (we are the initiator)
 		 * and we received the handshake form the peer.
 		 */
-		if (identifier == vchannel->arq_session_identifier) {
+		// if (peer_state == ARQ_STATE_ON)
+		if (identifier == vchannel->arq_session_identifier)
+		{
 			// Matching session identifier so ARQ is now connected.
-			vchannel->arq_state_flag = ARQ_STATE_ON;
+			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received response ARQ hanshake %u\n", identifier);
+			vchannel->arq_state = ARQ_STATE_ON;
 			vchannel->handshake_send = 0;
 			return 1;
 		}
@@ -540,30 +546,40 @@ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uin
 			return 1;
 		}
 		else {
+			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received invalid ARQ hanshake %u\n", identifier);
 			// Invalid response identity
 			return 0;
 		}
 
 	case ARQ_STATE_ON:
 		/*
-		 * Our ARQ is on and we received a new handshake.
+		 * Our ARQ is on and we received a new handshake from somebody.
 		 */
+
+		/* Make sure the frame is from the correct peer. */
+		//if (memcpy(parsed->identity, vchannel->peer_identity, size) != 0) {
+
+		// peer_state != ARQ_STATE_OFF
 		if (identifier == vchannel->arq_session_identifier) {
+			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received repeated ARQ hanshake %u\n", identifier);
 			// Matching session identifier matches so this is just redundant re-transmitted handshake.
+			// This happens regularly because the initial handshake is retransmitted multiple times in a single TDD window.
 			vchannel->handshake_send = 0;
 			if (peer_state == ARQ_STATE_IN_INIT)
 				vchannel->handshake_send = 1;
 			return 0;
 		}
 		else {
+			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received newer ARQ hanshake %u\n", identifier);
 			// The peer is trying to reconnect to us so just accept the new handshake.
 			sky_vc_wipe_to_arq_on_state(vchannel, identifier);
 			vchannel->handshake_send = 1; // Needed?
 			return 1;
 		}
+		// peer_state == ARQ_STATE_OFF
 	}
 
-	return -1; // Invalid state
+	return SKY_RET_INVALID_ARQ_STATE;
 }
 
 // Process a parsed frame.
@@ -577,7 +593,7 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 		sky_vc_handle_handshake(vchannel, handshake->peer_state, handshake->identifier);
 	}
 
-	switch (vchannel->arq_state_flag) {
+	switch (vchannel->arq_state) {
 	case ARQ_STATE_OFF:
 		/*
 		 * ARQ is off.
@@ -598,6 +614,12 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 		 * ARQ is on, so parse and handle ARQ related extension headers and
 		 */
 
+		/* Make sure the frame is from the correct peer. */
+		if (0 /* memcpy(parsed->identity, vchannel->peer_identity, size) != 0*/) {
+			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_BUG, "Third player entered the game! :o\n");
+			return SKY_RET_INVALID_ARQ_STATE;
+		}
+
 		/* Handle ARQ control extension */
 		if (parsed->arq_ctrl != NULL)
 		{
@@ -610,7 +632,7 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 		}
 
 		/* Handle ARQ data packet */
-		if (parsed->payload_len > 0) // TODO: Only non-zero and positive lengths?
+		if (parsed->payload_len > 0)
 		{
 			/* Make sure we received ARQ sequence number header. */
 			if (parsed->arq_sequence == NULL)
@@ -638,7 +660,7 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 		break;
 
 	default: // INVALID STATE
-		return -1;
+		return SKY_RET_INVALID_ARQ_STATE;
 	}
-	return 0; // Success
+	return SKY_RET_OK; // Success
 }

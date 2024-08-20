@@ -57,7 +57,7 @@ void sky_print_link_state(SkyHandle self)
 
 
 		// ARQ state
-		switch (vc->arq_state_flag) {
+		switch (vc->arq_state) {
 		case ARQ_STATE_OFF:
 			SKY_PRINTF(SKY_DIAG_LINK_STATE, "OFF ");
 			break;

@@ -7,6 +7,7 @@
 
 
 /* ARQ states */
+// TODO: enum { ... } ARQState
 #define ARQ_STATE_OFF			0
 #define ARQ_STATE_IN_INIT		1
 #define ARQ_STATE_ON			2
@@ -17,18 +18,28 @@ struct sky_virtual_channel_s {
 	SkySendRing* sendRing;              // Sequence ring tracking sent payloads and their sequence numbering.
 	SkyRcvRing* rcvRing;                // Sequence ring tracking received payloads and their sequence numbering.
 
-	uint8_t arq_state_flag;             // A flag with 3 valid states: OFF/INIT/ON.
-	uint8_t handshake_send;	            // A flag set to indicate a need to send a handshake extension on next transmission window.
-	uint32_t arq_session_identifier;    // A unique identifier of the current arq session, if arq is on.
-	uint8_t need_recall;                // A flag set to indicate a need to send rend recall extension. *1
+	// A flag with 3 valid states: OFF/INIT/ON.
+	uint8_t arq_state; // TODO: enum
+
+	// A flag to indicate a need to send a response ARQ handshake extension on next transmission window.
+	uint8_t handshake_send; // TODO: Rename send_handshake
+
+	// A flag set to indicate a need to send rend recall extension.
+	// In the case where a received control extension reveals that the latest received payload is not the latest
+	// the peer has sent, we need to recall this packet, despite our horizon being empty.
+	uint8_t need_recall;
+
+	// A unique identifier of the current ARQ session, if ARQ is on.
+	uint32_t arq_session_identifier;
+
 	sky_tick_t last_tx_tick;            // Tick of last time peer confirmed new payloads received, or being in sync with us.
 	sky_tick_t last_rx_tick;            // Tick of last time a new continuous payloads was received, or we confirmed sync with peer.
 	sky_tick_t last_ctrl_send_tick;     // Tick of last time a control extension was transmitted.
-	int16_t unconfirmed_payloads;       //
+
+	// Helper counter for the number of received packets which we have not yet acknownledged.
+	int16_t unconfirmed_payloads;
 };
 
-// *1 In the case where a received control extension reveals that the latest received payload is not the latest
-// the peer has sent, we need to recall this packet, despite our horizon being empty.
 
 
 

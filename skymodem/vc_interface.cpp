@@ -79,7 +79,7 @@ void VCInterface::VirtualChannelInterface::check()
 	/*
 	 * Has ARQ changed the state?
 	 */
-	if (arq_expected_state != ARQ_STATE_OFF && vc_handle->arq_state_flag == ARQ_STATE_OFF)
+	if (arq_expected_state != ARQ_STATE_OFF && vc_handle->arq_state == ARQ_STATE_OFF)
 	{
 		// Has ARQ turned off
 		arq_expected_state = ARQ_STATE_OFF;
@@ -102,7 +102,7 @@ void VCInterface::VirtualChannelInterface::check()
 		publish_socket.send(zmq::buffer(frame_str), zmq::send_flags::dontwait);
 
 	}
-	else if (arq_expected_state != ARQ_STATE_ON && vc_handle->arq_state_flag == ARQ_STATE_ON)
+	else if (arq_expected_state != ARQ_STATE_ON && vc_handle->arq_state == ARQ_STATE_ON)
 	{
 		// Has ARQ been turned on
 		arq_expected_state = ARQ_STATE_ON;

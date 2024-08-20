@@ -13,16 +13,16 @@
 #define SKY_RET_OK                          (0)
 
 // RX
-#define SKY_RET_INVALID_ENCODED_LENGTH      (-2)
-#define SKY_RET_INVALID_PLAIN_LENGTH        (-3)
-#define SKY_RET_INVALID_VERSION             (-4)
-#define SKY_RET_INVALID_VC                  (-5)
-#define SKY_RET_INVALID_EXT_LENGTH          (-6)
-#define SKY_RET_REDUNDANT_EXTENSIONS        (-7)
-#define SKY_RET_FILTERED_BY_IDENTITY        (-8)
+#define SKY_RET_INVALID_ENCODED_LENGTH      (-1)
+#define SKY_RET_INVALID_PLAIN_LENGTH        (-2)
+#define SKY_RET_INVALID_VERSION             (-3)
+#define SKY_RET_INVALID_VC                  (-4)
+#define SKY_RET_INVALID_EXT_LENGTH          (-5)
+#define SKY_RET_REDUNDANT_EXTENSIONS        (-6)
+#define SKY_RET_FILTERED_BY_IDENTITY        (-7)
 
 // CRC
-#define SKY_RET_CRC_INVALID_LENGTH          (-9)
+#define SKY_RET_CRC_INVALID_LENGTH          (-8)
 #define SKY_RET_CRC_INVALID_CHECKSUM        (-9)
 
 // FEC
@@ -59,16 +59,18 @@
 #define SKY_RET_RING_INVALID_ACKNOWLEDGE    (-58)
 #define SKY_RET_RING_SEQUENCES_DETACHED     (-59)
 #define SKY_RET_RING_SEQUENCES_OUT_OF_SYNC  (-60)
-#define SKY_RET_TOO_LONG_PAYLOAD  			(-61)
+#define SKY_RET_TOO_LONG_PAYLOAD            (-61)
+#define SKY_RET_INVALID_ARQ_STATE           (-62)
+#define SKY_RET_INVALID_ARQ_FRAME           (-63)
 
 // SYSTEM
 #define SKY_RET_MALLOC_FAILED               (-70)
 
 // ELEMENT BUFFER
-#define SKY_RET_EBUFFER_INVALID_INDEX		(-110)
-#define SKY_RET_EBUFFER_CHAIN_CORRUPTED		(-111)
-#define SKY_RET_EBUFFER_NO_SPACE			(-112)
-#define SKY_RET_EBUFFER_TOO_LONG_PAYLOAD	(-113)
+#define SKY_RET_EBUFFER_INVALID_INDEX       (-110)
+#define SKY_RET_EBUFFER_CHAIN_CORRUPTED     (-111)
+#define SKY_RET_EBUFFER_NO_SPACE            (-112)
+#define SKY_RET_EBUFFER_TOO_LONG_PAYLOAD    (-113)
 
 
 
