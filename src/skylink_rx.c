@@ -140,6 +140,12 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 	parsed.payload = &frame->raw[payload_start];
 	parsed.payload_len = frame->length - payload_start;
 
+	// Validate CRC32 if present
+	if (parsed.hdr.flag_crced) {
+		if ((ret = sky_check_crc32(frame, &parsed)) < 0)
+			return ret;
+	}
+
 	// Parse and validate all extension headers
 	if ((ret = sky_frame_parse_extension_headers(frame, &parsed)) < 0)
 		return ret;

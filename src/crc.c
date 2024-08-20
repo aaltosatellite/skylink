@@ -97,12 +97,16 @@ uint32_t sky_crc32(const uint8_t *buf, unsigned int len)
 }
 
 // Extend a frame with CRC-32 checksum. Returns 0 on success or a negative error code.
-int sky_extend_with_crc32(SkyRadioFrame* frame)
+int sky_extend_with_crc32(SkyTransmitFrame* tx_frame)
 {
-	SKY_ASSERT(frame != NULL);
+	SKY_ASSERT(tx_frame != NULL);
+	SkyRadioFrame* frame = tx_frame->frame;
+
 	// Check if the CRC-32 extension would fit into the frame.
 	if (frame->length > SKY_FRAME_MAX_LEN - sizeof(uint32_t))
 		return SKY_RET_CRC_INVALID_LENGTH;
+
+	tx_frame->hdr->flag_crced = 1;
 
 	// Calculate checksum and append it to the end of the frame.
 	uint32_t crc = sky_hton32(sky_crc32(frame->raw, frame->length));
@@ -113,7 +117,7 @@ int sky_extend_with_crc32(SkyRadioFrame* frame)
 }
 
 // Check that the CRC-32 checksum of the frame is correct. Returns 0 on success or a negative error code.
-int sky_check_crc32(SkyRadioFrame *frame)
+int sky_check_crc32(const SkyRadioFrame *frame, SkyParsedFrame *parsed)
 {
 	SKY_ASSERT(frame != NULL);
 	// Check if the frame is long enough to contain the checksum.
@@ -137,8 +141,10 @@ int sky_check_crc32(SkyRadioFrame *frame)
 		return SKY_RET_CRC_INVALID_CHECKSUM;
 	}
 
+	parsed->hdr.flag_crced = 0;
+
 	// Remove the checksum from the frame.
-	frame->length = data_length;
+	parsed->payload_len = data_length;
 	return SKY_RET_OK;
 }
 

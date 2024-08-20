@@ -206,11 +206,9 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	if ((vc_conf->require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX) != 0)
 		sky_hmac_extend_with_authentication(self, &tx_frame);
 
-#if 0
 	/* Append CRC-32 checksum to the end of frame */
-	if (vc_conf->require_authentication & SKY_CONFIG_FLAG_USE_CRC32)
-		sky_extend_with_crc32(frame);
-#endif
+	if ((vc_conf->require_authentication & SKY_CONFIG_FLAG_USE_CRC32) != 0)
+		sky_extend_with_crc32(&tx_frame);
 
 	// Increment counters
 	self->mac->total_frames_sent_in_current_window++;

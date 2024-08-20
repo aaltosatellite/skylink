@@ -25,13 +25,13 @@
  * - sequence control: 2 bits
  */
 #define SKY_FLAG_ARQ_ON                 (0b00000100)
-#define SKY_FLAG_AUTHENTICATED          (0b00001000)
+//#define SKY_FLAG_AUTHENTICATED          (0b00001000)
 //#define SKY_FLAG_CRYPT
 
 typedef enum {
-	FragmentFirst  = 0,
-	FragmentMiddle = 1,
-	FragmentLast = 2,
+	FragmentMiddle = 0, // Continuing
+	FragmentFirst  = 1,
+	FragmentLast   = 2,
 	FragmentStandalone = 3,
 } FragmentControl;
 
@@ -133,16 +133,16 @@ typedef struct __attribute__((__packed__)) {
 	union {
 		struct __attribute__((__packed__)) {
 			/* Virtual channel number */
-			unsigned int vc : 2;
+			unsigned int vc : 2; // (LSB)
 
 			/* Flags */
 			unsigned int flag_arq_on : 1; // Avoid confusion with packets around ARQ disconnect event.
 			unsigned int flag_authenticated : 1;
 			//unsigned int flag_crypted : 1;
-			//unsigned int flag_crced : 1;
+			unsigned int flag_crced : 1;
 
 			unsigned int sequence_control : 2;
-			unsigned int reserved : 1;
+			unsigned int reserved : 1; // (MSB)
 		};
 		uint8_t flags;
 	};
