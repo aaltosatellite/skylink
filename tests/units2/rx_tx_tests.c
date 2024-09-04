@@ -25,18 +25,7 @@ static int _sky_tx_pick_vc(SkyHandle self, sky_tick_t now)
 	// No need to transmit.
 	return -1;
 }
-// SkyRadioFrame *create_frame()
-// {
-//     SkyRadioFrame *frame = SKY_MALLOC(sizeof(SkyRadioFrame));
-//     frame->length = 0;
-//     // Add valid identity.
-//     // VERSION_BYTE
-//     frame->raw[0] = SKYLINK_FRAME_VERSION_BYTE;
-//     frame->length += 1;
-//     // Header
 
-//     return frame;
-// }
 
 /*
  */
@@ -60,7 +49,7 @@ TEST(tx_rx_with_golay_and_fec)
 
 	SkyTransmitFrame TXframe;
 	SkyRadioFrame frame;
-	init_tx(&frame, &TXframe);
+	units_init_tx_frame(&frame, &TXframe);
 
 	handle1->mac->last_belief_update = 0;
 	sky_vc_wipe_to_arq_on_state(handle1->virtual_channels[0], 0);
@@ -117,7 +106,7 @@ TEST(tx_rx_with_fec)
 
 	SkyTransmitFrame TXframe;
 	SkyRadioFrame frame;
-	init_tx(&frame, &TXframe);
+	units_init_tx_frame(&frame, &TXframe);
 
 
 	sky_vc_wipe_to_arq_off_state(handle1->virtual_channels[0]);
@@ -171,7 +160,7 @@ TEST(tx_rx)
 
 	SkyTransmitFrame TXframe;
 	SkyRadioFrame frame;
-	init_tx(&frame, &TXframe);
+	units_init_tx_frame(&frame, &TXframe);
 
 
 
@@ -206,7 +195,7 @@ TEST(continuous_tx_rx)
 
 	SkyTransmitFrame TXframe;
 	SkyRadioFrame frame;
-	init_tx(&frame, &TXframe);
+	units_init_tx_frame(&frame, &TXframe);
 
 	// Create default config and handle.
 	SkyConfig config1 = default_config;

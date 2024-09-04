@@ -30,7 +30,7 @@ TEST(crc_extension, frame_length)
 	ASSERT(tx_frame.frame->length == frame_length + sizeof(uint32_t), "CRC extension failed. Length should be %d, was %d", 200 + sizeof(uint32_t), tx_frame.frame->length);
 
 	SkyParsedFrame parsed;
-	ret = start_parsing(&frame, &parsed);
+	ret = units_start_parsing(&frame, &parsed);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 
 	// Check that the CRC is correct.
@@ -78,7 +78,7 @@ TEST(invalid_crc)
 
 	// Start parsing
 	SkyParsedFrame parsed;
-	int ret = start_parsing(&frame, &parsed);
+	int ret = units_start_parsing(&frame, &parsed);
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 
 	// Check that the CRC is invalid.
@@ -122,11 +122,11 @@ TEST(crc_framing)
 	ASSERT(1);
 	SkyRadioFrame frame;
 
-	u_int8_t *pl = create_payload(60);
-    const u_int8_t *pl_const = pl;
-
-
-	sendRing_push_packet_to_send(handle1->virtual_channels[0]->sendRing, handle1->virtual_channels[0]->elementBuffer, pl_const, 60);
+	//
+	uint8_t payload[60];
+	fillrand(payload, sizeof(payload));
+	SkyVirtualChannel *vc = handle1->virtual_channels[0];
+	sendRing_push_packet_to_send(vc->sendRing, vc->elementBuffer, (const uint8_t*)payload, sizeof(payload));
 
 	// Transmit the frame
 	int ret = sky_tx(handle1, &frame);

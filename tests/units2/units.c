@@ -147,11 +147,7 @@ again:
 	}
 }
 
-void units_init_tx_frame(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame) {
-	init_tx(frame, tx_frame);
-}
-
-void init_tx(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame)
+void units_init_tx_frame(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame)
 {
 	tx_frame->frame = frame;
 
@@ -179,7 +175,7 @@ void units_set_tx_frame_length(SkyTransmitFrame* tx_frame, unsigned int frame_le
 	tx_frame->ptr = &frame->raw[frame_length];
 }
 
-int start_parsing(SkyRadioFrame *frame, SkyParsedFrame *parsed)
+int units_start_parsing(SkyRadioFrame *frame, SkyParsedFrame *parsed)
 {
 	// Some error checks
 	if (frame->length < SKY_FRAME_MIN_LEN)
@@ -227,4 +223,12 @@ int roll_chance(double const chance){
 }
 int get_cycle(SkyMAC* mac){
 	return mac->my_window_length + mac->config->gap_constant_ticks + mac->peer_window_length + mac->config->tail_constant_ticks;
+}
+
+extern sky_tick_t _global_ticks_now;
+
+sky_tick_t units_advance_ticks(sky_tick_t ticks)
+{
+	_global_ticks_now += ticks;
+	return _global_ticks_now;
 }

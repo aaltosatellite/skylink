@@ -1,6 +1,9 @@
 #ifndef __UNITS_H__
 #define __UNITS_H__
 
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "narwhal.h"
 
@@ -82,17 +85,22 @@ void units_init_tx_frame(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame);
 void units_set_tx_frame_length(SkyTransmitFrame* tx_frame, unsigned int frame_length);
 
 /*
+ *
+ */
+sky_tick_t units_advance_ticks(sky_tick_t ticks);
+
+/*
  * Function to mimic bevahiour of sky_rx() function in the beginning.
  * The function does basic checks for the header just like in sky_rx() and
  * initializes SkyParsedFrame for next processing steps.
  */
-int start_parsing(SkyRadioFrame *frame, SkyParsedFrame *parsed);
+
+int units_start_parsing(SkyRadioFrame *frame, SkyParsedFrame *parsed);
 
 // Create payload of given length.
 u_int8_t *create_payload(int length);
 
 int get_cycle(SkyMAC *mac);
 
-void init_tx(SkyRadioFrame *frame, SkyTransmitFrame *tx_frame);
 
 #endif /* __UNITS_H__ */

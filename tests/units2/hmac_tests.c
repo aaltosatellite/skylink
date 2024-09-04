@@ -73,7 +73,7 @@ TEST(hmac_successful, frame_length)
 
 	// Start parsing the generated frame
 	SkyParsedFrame parsed;
-	ret = start_parsing(&frame, &parsed);
+	ret = units_start_parsing(&frame, &parsed);
 
 	// Check authentication.
 	ret = sky_hmac_check_authentication(handle, tx_frame.frame, &parsed);
@@ -113,7 +113,7 @@ TEST(HMAC_invalid_key)
 	// Create a new transmit frame
 	SkyTransmitFrame tx_frame;
 	SkyRadioFrame frame;
-	init_tx(&frame, &tx_frame);
+	units_init_tx_frame(&frame, &tx_frame);
 
 	// Calculate hash for randomly filled data up to 200 bytes. Pointer is at byte after final written index.
 	units_set_tx_frame_length(&tx_frame, 200);
@@ -122,8 +122,8 @@ TEST(HMAC_invalid_key)
 
 	// Start parsing the generated frame
 	SkyParsedFrame parsed;
-	ret = start_parsing(&frame, &parsed);
-	ASSERT(ret == SKY_RET_OK, "start_parsing() returned %d", ret);
+	ret = units_start_parsing(&frame, &parsed);
+	ASSERT(ret == SKY_RET_OK, "units_start_parsing() returned %d", ret);
 
 
 	ASSERT(frame.length == 204, "frame.length = %d", frame.length); // Frame length OK?
@@ -168,7 +168,7 @@ TEST(no_authentication)
 	SkyRadioFrame frame;
 	SkyParsedFrame parsed;
 	memset(&parsed, 0, sizeof(SkyParsedFrame));
-	init_tx(&frame, &TXframe);
+	units_init_tx_frame(&frame, &TXframe);
 	parsed.hdr.flag_authenticated = 1;
 	parsed.hdr.vc = 0;
 	parsed.payload_len = 50;
@@ -237,6 +237,8 @@ TEST(hmac_sequence_numbers)
 	// for each sequence start
 	// - Not increased
 	// - Increased equal to {1, 4, max_jump}
+
+	sky_destroy(handle);
 }
 
 /*
@@ -297,7 +299,7 @@ TEST(both_hmac_and_crc)
 	// Generate random tx frame.
 	SkyRadioFrame frame;
 	SkyTransmitFrame tx_frame;
-	init_tx(&frame, &tx_frame);
+	units_init_tx_frame(&frame, &tx_frame);
 	units_set_tx_frame_length(&tx_frame, frame_length);
 
 	ASSERT(tx_frame.hdr->flag_authenticated == 0);
@@ -319,8 +321,8 @@ TEST(both_hmac_and_crc)
 
 	// Start parsing the frame
 	SkyParsedFrame parsed;
-	ret = start_parsing(&frame, &parsed);
-	ASSERT(ret == SKY_RET_OK, "start_parsing() returned %d", ret);
+	ret = units_start_parsing(&frame, &parsed);
+	ASSERT(ret == SKY_RET_OK, "units_start_parsing() returned %d", ret);
 	ASSERT(parsed.hdr.flag_authenticated == 1);
 	ASSERT(parsed.hdr.flag_crced == 1);
 

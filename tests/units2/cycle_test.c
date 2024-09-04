@@ -227,28 +227,28 @@ void payload_list_mark_as_received(PayloadList* payloadList, void* msg, int msg_
 			assert(pl->ts_rcv == 0);
 			pl->ts_rcv = ts_now;
 			found++;
-			//PRINTFF(0, "\t%d Acked pl of len %d\n", target, msg_len);
+			//printf("\t%d Acked pl of len %d\n", target, msg_len);
 		}
 	}
 	destroy_string(ref_string);
 	/*
 	if(found != 1){
-		PRINTFF(0,"\n%d receiving.\n", target);
-		PRINTFF(0, "found: %d. Msg_len:%d. byte0:%d byte1:%d time_now:%d\n",found, msg_len, ((uint8_t*)msg)[0], ((uint8_t*)msg)[1], ts_now);
+		printf(\n%d receiving.\n", target);
+		printf("found: %d. Msg_len:%d. byte0:%d byte1:%d time_now:%d\n",found, msg_len, ((uint8_t*)msg)[0], ((uint8_t*)msg)[1], ts_now);
 		int unrec = payload_list_count_unreceived(payloadList);
-		PRINTFF(0, "Peer unreceived:%d\n", unrec );
+		printf("Peer unreceived:%d\n", unrec );
 		for (int i = 0; i < unrec; ++i) {
 			Payload* nth_unrec = payloadList->array[payloadList->n - (unrec - i)];
-			PRINTFF(0, "\tLen of %dth unrec:%d\n", i, nth_unrec->msg->length );
+			printf("\tLen of %dth unrec:%d\n", i, nth_unrec->msg->length );
 		}
 	}
 	*/
 	assert(found == 1);
 }
 
-#define DISABLE_TEST_DISCOVERY 1
 
-TEST(loss_test){
+TEST(loss_test, SKIP)
+{
 	PRINTFF(0,"\n\t(testing loss function...");
 	for (int i = 0; i < 1000; ++i) {
 		uint64_t now_ms = 1;
@@ -277,7 +277,8 @@ TEST(loss_test){
 }
 
 
-TEST(test1_round){
+TEST(test1_round, SKIP)
+{
 	SkyConfig config1 = default_config;
 	SkyConfig config2 = default_config;
 	config1.identity[0] = 1;
@@ -341,7 +342,7 @@ TEST(test1_round){
 	sky_destroy(handle1);
 	sky_destroy(handle2);
 }
-#undef DISABLE_TEST_DISCOVERY
+
 
 static void step_forward(int which, TXRXJob* job){
 	//uint8_t tgt[1000];
@@ -361,13 +362,13 @@ static void step_forward(int which, TXRXJob* job){
 		pl->assigned_sequence = push_ret;
 		payload_list_append(plList, pl);
 		/*
-		PRINTFF(0, "%d Generated pl of len: %d. First bytes: ",which, pl->msg->length, pl->msg->data);
+		printf("%d Generated pl of len: %d. First bytes: ",which, pl->msg->length, pl->msg->data);
 		for (int i = 0; i < 2; ++i) {
 			if(i < pl->msg->length){
-				PRINTFF(0,"%d ", pl->msg->data[i]);
+				printf(%d ", pl->msg->data[i]);
 			}
 		}
-		PRINTFF(0,"\n");
+		printf(\n");
 		*/
 	}
 
@@ -376,7 +377,7 @@ static void step_forward(int which, TXRXJob* job){
 		int state_on2 = job->peer2.handle->virtual_channels[0]->arq_state == ARQ_STATE_ON;
 		if(!state_on1 || !state_on2){
 			FAIL("ARQ state not on. now:%ld   states_on:%d %d\n", job->now, state_on1, state_on2);
-			//PRINTFF(0, "now:%ld   states_on:%d %d\n", job->now, state_on1, state_on2);
+			//printf("now:%ld   states_on:%d %d\n", job->now, state_on1, state_on2);
 		}
 		ASSERT(state_on1, "now:%ld   states_on:%d %d\n", job->now, state_on1, state_on2);
 		ASSERT(state_on2, "now:%ld   states_on:%d %d\n", job->now, state_on1, state_on2);
@@ -385,7 +386,7 @@ static void step_forward(int which, TXRXJob* job){
 		hmac_diff1 = hmac_diff1 * hmac_diff1;
 		hmac_diff2 = hmac_diff2 * hmac_diff2;
 		//if((hmac_diff1 > 150) || (hmac_diff2 > 150)){
-		//	PRINTFF(0,"HMAC DIFFS : %d  %d !\n", hmac_diff1, hmac_diff2);
+		//	printf(HMAC DIFFS : %d  %d !\n", hmac_diff1, hmac_diff2);
 		//}
 		//assert(hmac_diff1 < 150);
 		//assert(hmac_diff2 < 150);
