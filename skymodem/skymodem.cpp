@@ -10,6 +10,25 @@ using namespace suo;
 
 const string sequence_filename = "sequences";
 
+
+#ifdef EXTERNAL_SECRET
+#include "secret.hpp"
+#else
+// Default key for authentication
+const uint8_t hmac_key[32] = {
+	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+	0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+};
+const SkyHMACKey keys[3] = {
+	{.key = hmac_key, .len = sizeof(hmac_key)},
+	{.key = hmac_key, .len = sizeof(hmac_key)},
+	{.key = hmac_key, .len = sizeof(hmac_key)}
+};
+#endif
+
+
 constexpr sky_tick_t convert_to_ticks(Timestamp now) {
 	return now / 1000000; // Convert nanoseconds to milliseconds
 }
@@ -102,22 +121,6 @@ SkyModem::SkyModem() :
 	 * HMAC configuration
 	 */
 	config.hmac.maximum_jump = 24;
-
-#ifdef EXTERNAL_SECRET
-#include "secret.hpp"
-#else
-	const uint8_t hmac_key[32] = {
-		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-		0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-		0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-		0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
-	};
-	const SkyHMACKey keys[1] = {
-		{.key = hmac_key, .len = sizeof(hmac_key)},
-		{.key = hmac_key, .len = sizeof(hmac_key)},
-		{.key = hmac_key, .len = sizeof(hmac_key)}
-	};
-#endifs
 
 	/*
 	 * Create the Skylink protocol instance
