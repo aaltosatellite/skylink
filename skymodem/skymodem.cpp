@@ -72,7 +72,7 @@ SkyModem::SkyModem() :
 	config.mac.window_adjust_increment_ticks = 250;
 	config.mac.window_adjustment_threshold = 2;
 	config.mac.unauthenticated_mac_updates = 0;
-	config.mac.idle_frames_per_window = 1;
+	config.mac.idle_frames_per_window = 0;
 	config.mac.idle_timeout_ticks = 10000;
 	config.mac.carrier_sense_ticks = 200;
 
@@ -211,15 +211,15 @@ SkyModem::SkyModem() :
 		deframer_19k2 = new GolayDeframer(deframer_conf);
 		receiver_19k2->sinkSymbol.connect_member(deframer_19k2, &GolayDeframer::sinkSymbol);
 		receiver_19k2->setMetadata.connect_member(deframer_19k2, &GolayDeframer::setMetadata);
-		sdr->sinkSamples.connect_member(receiver_19k2, &FSKMatchedFilterDemodulator::sinkSamples);
+		sdr->sinkSamples.connect_member(receiver_19k2, &GMSKContinousDemodulator::sinkSamples);
 
-		/* For 36400 baud */
-		receiver_conf.symbol_rate = 36400;
-		receiver_36k4 = new GMSKContinousDemodulator(receiver_conf);
-		deframer_36k4 = new GolayDeframer(deframer_conf);
-		receiver_36k4->sinkSymbol.connect_member(deframer_36k4, &GolayDeframer::sinkSymbol);
-		receiver_36k4->setMetadata.connect_member(deframer_36k4, &GolayDeframer::setMetadata);
-		sdr->sinkSamples.connect_member(receiver_36k4, &FSKMatchedFilterDemodulator::sinkSamples);
+		/* For 38400 baud */
+		receiver_conf.symbol_rate = 38400;
+		receiver_38k4 = new GMSKContinousDemodulator(receiver_conf);
+		deframer_38k4 = new GolayDeframer(deframer_conf);
+		receiver_38k4->sinkSymbol.connect_member(deframer_38k4, &GolayDeframer::sinkSymbol);
+		receiver_38k4->setMetadata.connect_member(deframer_38k4, &GolayDeframer::setMetadata);
+		sdr->sinkSamples.connect_member(receiver_38k4, &GMSKContinousDemodulator::sinkSamples);
 
 		deframer_9k6->syncDetected.connect( [&](bool locked, Timestamp now) {
 			cout << getCurrentISOTimestamp() << ": 9600 sync detected!" << endl;
@@ -243,14 +243,14 @@ SkyModem::SkyModem() :
 			frame_received(copy_frame, now);
 		});
 
-		deframer_36k4->syncDetected.connect( [&] (bool locked, Timestamp now) {
-			cout << getCurrentISOTimestamp() << ": 36400 sync detected!" << endl;
+		deframer_38k4->syncDetected.connect( [&] (bool locked, Timestamp now) {
+			cout << getCurrentISOTimestamp() << ": 38400 sync detected!" << endl;
 			receiver_locked(locked, now);
-			receiver_36k4->lockReceiver(locked, now);
+			receiver_38k4->lockReceiver(locked, now);
 		});
-		deframer_36k4->sinkFrame.connect( [&] (const Frame& frame, Timestamp now) {
+		deframer_38k4->sinkFrame.connect( [&] (const Frame& frame, Timestamp now) {
 			Frame copy_frame(frame);
-			copy_frame.setMetadata("mode", 364600);
+			copy_frame.setMetadata("mode", 38400);
 			frame_received(copy_frame, now);
 		});
 
@@ -326,7 +326,7 @@ SkyModem::SkyModem() :
 		tracker->setDownlinkFrequency.connect( [ center_frequency, this ] (float frequency) {
 			receiver_9k6->setFrequencyOffset(frequency - center_frequency);
 			receiver_19k2->setFrequencyOffset(frequency - center_frequency);
-			receiver_36k4->setFrequencyOffset(frequency - center_frequency);
+			receiver_38k4->setFrequencyOffset(frequency - center_frequency);
 		});
 #else
 		tracker->setDownlinkFrequency.connect( [ center_frequency, this ] (float frequency) {

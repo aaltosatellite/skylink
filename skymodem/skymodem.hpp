@@ -45,11 +45,13 @@ private:
 	suo::GMSKContinousDemodulator *receiver_9k6;
 	suo::GolayDeframer *deframer_9k6;
 
+#ifdef MULTIMODE
 	suo::GMSKContinousDemodulator *receiver_19k2;
 	suo::GolayDeframer *deframer_19k2;
 
-	suo::GMSKContinousDemodulator *receiver_36k4;
-	suo::GolayDeframer *deframer_36k4;
+	suo::GMSKContinousDemodulator *receiver_38k4;
+	suo::GolayDeframer *deframer_38k4;
+#endif
 
 	suo::GMSKModulator *modulator;
 	suo::GolayFramer *framer;
