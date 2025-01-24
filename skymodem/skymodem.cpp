@@ -183,7 +183,7 @@ SkyModem::SkyModem() :
 		 * Setup frame decoder
 		 */
 		GolayDeframer::Config deframer_conf;
-		deframer_conf.syncword = 0x1ACFFC1D;
+		deframer_conf.syncword = 0x1ACFFC1D; // EQM: 0x1ACFFC1D / proto: 0x1DFCCF1A
 		deframer_conf.syncword_len = 32; // [symbols/bits]
 		deframer_conf.sync_threshold = 3;
 		deframer_conf.use_viterbi = false;
