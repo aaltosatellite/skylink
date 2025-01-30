@@ -138,7 +138,7 @@ SkyModem::SkyModem() :
 
 	try {
 
-		const float center_frequency = 437.1233e6; // [Hz]
+		const float center_frequency = 437.1233e6; // [Hz]	// nominally 437.125 MHz :: for radio char. 437.110 MHz :: for proto 437.140 MHz
 
 		/*
 		 * SDR
@@ -183,7 +183,7 @@ SkyModem::SkyModem() :
 		 * Setup frame decoder
 		 */
 		GolayDeframer::Config deframer_conf;
-		deframer_conf.syncword = 0x1ACFFC1D; // EQM: 0x1ACFFC1D / proto: 0x1DFCCF1A
+		deframer_conf.syncword = 0x1ACFFC1D; 
 		deframer_conf.syncword_len = 32; // [symbols/bits]
 		deframer_conf.sync_threshold = 3;
 		deframer_conf.use_viterbi = false;
