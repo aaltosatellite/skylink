@@ -91,7 +91,7 @@ cdef class SkyLink:
 			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication
 
 		cdef int id_len = 0;
-		id_len = min( len(conf_override.identity), c_skylink.SKY_MAX_IDENTITY_LEN )
+		id_len = min(len(conf_override.identity), c_skylink.SKY_MAX_IDENTITY_LEN)
 		memcpy(self.conf.identity, <uint8_t*> conf_override.identity, id_len)
 		#self.conf.identity[0:min(c_skylink.SKY_MAX_IDENTITY_LEN, len(conf_override.identity))] = conf_override.identity
 		self.conf.identity_len = id_len
@@ -116,10 +116,10 @@ cdef class SkyLink:
 	cdef _set_hmac_keys(self, uint8_t* keydata, int keycount):
 		# assert keycount > 1, <= nmax
 		cdef c_skylink.SkyHMACKey* keys;
-		keys = <c_skylink.SkyHMACKey*> malloc(sizeof(c_skylink.SkyHMACKey)*4)
+		keys = <c_skylink.SkyHMACKey*> malloc(sizeof(c_skylink.SkyHMACKey) * 4)
 		for i in range(keycount):
 			keys[i].len = c_skylink.BLAKE3_KEY_LEN
-			memcpy(keys[i].key, <uint8_t*> &keydata[i*c_skylink.BLAKE3_KEY_LEN] , c_skylink.BLAKE3_KEY_LEN)
+			memcpy(keys[i].key, <uint8_t*> &keydata[i * c_skylink.BLAKE3_KEY_LEN], c_skylink.BLAKE3_KEY_LEN)
 		c_skylink.sky_hmac_set_keys(self.handle, keys, keycount)
 		free(keys)
 
@@ -136,7 +136,7 @@ cdef class SkyLink:
 	cdef _get_hmac_key(self, int ichannel):
 		cdef uint8_t* key;
 		key = self.handle.hmac.keys[ichannel].key
-		k = bytes( key[0:c_skylink.BLAKE3_KEY_LEN] )
+		k = bytes(key[0:c_skylink.BLAKE3_KEY_LEN])
 		return k
 
 	def get_hmac_key(self, ichannel):
@@ -331,7 +331,7 @@ cdef class SkyLink:
 
 
 	def get_tick_time(self):
-		return int( c_skylink.sky_get_tick_time() )
+		return int(c_skylink.sky_get_tick_time())
 
 	def sky_tick(self, ticks):
 		cdef sky_tick_t tick_t_tick;

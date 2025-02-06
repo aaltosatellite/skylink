@@ -5,7 +5,7 @@ import time, pickle
 
 fft_mask_dict = dict()
 import os
-if "fft-mask-dict.dat" in os.listdir("."):
+if "fft-mask-dict.dat" in os.listdir(""):
 	try:
 		f = open("./fft-mask-dict.dat", "rb")
 		rd = f.read()

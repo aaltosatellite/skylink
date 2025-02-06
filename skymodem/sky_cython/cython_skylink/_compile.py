@@ -2,7 +2,7 @@ from setuptools import setup, Extension
 from Cython.Build import cythonize
 import os
 
-SKYLINK_PATH = "../../"
+SKYLINK_PATH = "../../../"
 SRC_PATH = SKYLINK_PATH + "/src/"
 SKYLINK_INCL_PATH = SKYLINK_PATH + "/src/skylink/"
 BLAKE3_PATH = SKYLINK_PATH+ "/src/ext/blake3/"

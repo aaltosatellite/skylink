@@ -16,11 +16,11 @@ __pycache__/
 .vscode/
 
 
-sky_cython/build/
-sky_cython/build/*
+skymodem/sky_cython/build/
+skymodem/sky_cython/build/*
 
-sky_cython/cython_skylink/build/
-sky_cython/cython_skylink/build/*
+skymodem/sky_cython/cython_skylink/build/
+skymodem/sky_cython/cython_skylink/build/*
 
 /.idea/
 /.idea/*

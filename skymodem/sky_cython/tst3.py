@@ -1,4 +1,3 @@
-import time
 from cython_skylink import c_skylink
 from cython_skylink.c_skylink import SkyConfiguration, SkyLink
 

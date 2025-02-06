@@ -36,6 +36,23 @@ For example from apt on Debian based distros.
 $ sudo apt install libzmq3-dev
 ```
 
+You will also need to enter your Python environment and install the rocket-fft package. This makes Numba recognize numpy's FFT functions.
+
+```
+$ pip install rocket-fft
+```
+
+then you can build the project with the following commands:
+
+```
+$ pip install -e .
+```
+
+
+
+## LEGACY BELOW
+
+
 Also, download and install [Suo Modem library](https://github.com/petrinm/suo) according to its instructions.
 If the So library is installed to the system directories, the build system should be capable of locating it
 automatically. Otherwise, the location of the Suo git repository needs to be hinted to the Cmake by giving
