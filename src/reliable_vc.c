@@ -271,7 +271,7 @@ int sky_vc_count_readable_rcv_packets(SkyVirtualChannel* vchannel)
 }
 
 // sky_vc_read_from_receive_buffer()
-// Read next message to tgt buffer. Return zero on success, or negative error code.
+// Read next message to tgt buffer. Return number of bytes read on success, or negative error code.
 int sky_vc_read_next_received(SkyVirtualChannel* vchannel, uint8_t* tgt, unsigned int max_length)
 {
 	return rcvRing_read_next_received(vchannel->rcvRing, vchannel->elementBuffer, tgt, max_length);

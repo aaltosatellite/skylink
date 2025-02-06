@@ -193,6 +193,8 @@ void mac_update_belief(SkyMAC* mac, const sky_tick_t now, sky_tick_t receive_tim
 
 	if (peer_mac_remaining > peer_mac_length)
 		peer_mac_remaining = peer_mac_length;
+	if (peer_mac_remaining < 0)
+		peer_mac_remaining = 0;
 
 
 	sky_tick_t now_ = now;

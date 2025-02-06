@@ -1,0 +1,74 @@
+
+resample_sequence without njit:
+	dt_per:         97.524 µs
+	call speed:     10.254 k/s
+	proces.speed:   10.254 M/s
+
+with njit:
+	dt_per:         87.438 µs
+	call speed:     11.437 k/s
+	proces.speed:   11.437 M/s
+
+
+resampler:
+
+dt2 execute:  0.017 ms
+dt2 execute:  0.087 µs per sample
+Implying:     11.47 Msample/s
+
+stream:
+dt2 execute:  0.017 ms
+dt2 execute:  0.087 µs per sample
+Implying:     11.44 Msample/s
+
+
+
+Average: (with integer conversion)
+2295422.2320810673
+
+Average: (without iteger coversion)
+2310477.6527233273
+
+
+
+==========================================================
+T_decode:            0.017 ms
+decode speed:        58.038 kmsg/s
+decode speed:        12.943 Mbyte/s
+decode speed:        103.54 Mbit/s
+==========================================================
+
+
+
+==========================================================
+T_decode:            0.016 ms
+decode speed:        63.127 kmsg/s
+decode speed:        14.077 Mbyte/s
+decode speed:        112.619 Mbit/s
+==========================================================
+
+
+==========================================================
+T_decode:            0.016 ms
+decode speed:        63.418 kmsg/s
+decode speed:        14.142 Mbyte/s
+decode speed:        113.137 Mbit/s
+==========================================================
+
+
+==========================================================
+T_decode:            15.714 µs
+decode speed:        63.638 kmsg/s
+decode speed:        14.191 Mbyte/s
+decode speed:        113.53 Mbit/s
+==========================================================
+
+(without njit)
+==========================================================
+T_decode:            3650.114 µs
+decode speed:        0.274 kmsg/s
+decode speed:        0.061 Mbyte/s
+decode speed:        0.489 Mbit/s
+==========================================================
+
+numba speedup: ~ 232x

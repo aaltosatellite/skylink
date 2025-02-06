@@ -47,6 +47,7 @@ void sky_hmac_destroy(SkyHMAC* hmac)
 // Set HMAC keys
 void sky_hmac_set_keys(SkyHandle self, const SkyHMACKey *keys, unsigned int count)
 {
+	SKY_ASSERT(count <= SKY_MAX_HMAC_KEY_COUNT)
 	for (unsigned int i = 0; i < count; i++) {
 		SKY_ASSERT(keys[i].len == BLAKE3_KEY_LEN);
 	}
@@ -57,9 +58,14 @@ void sky_hmac_set_keys(SkyHandle self, const SkyHMACKey *keys, unsigned int coun
 	}
 
 	// Store keys
-	SkyHMAC *hmac = self->hmac;
-	hmac->keys = keys;
-	hmac->num_keys = count;
+	self->hmac->num_keys = count;
+	for (unsigned int i = 0; i < count; ++i) {
+		self->hmac->keys[i].len = keys[i].len;
+		memcpy(self->hmac->keys[i].key, keys[i].key, keys[i].len);
+	}
+	// SkyHMAC *hmac = self->hmac;
+	// hmac->keys = keys;
+	// hmac->num_keys = count;
 }
 
 // Get next sequence number from transmit counter and advance it by one. Sequence number naturally wraps around due to uint16 overflow.

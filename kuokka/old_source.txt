@@ -1,0 +1,95 @@
+
+
+
+def create_demod_synch_statemx(ntaps, lp_cutoff, synch_delay_i):
+	lp_taps = firwin(numtaps=ntaps, cutoff=lp_cutoff, fs=1.0, pass_zero=True)
+	demodmx = np.zeros( (3, len(lp_taps)), dtype=np.complex128 )
+	demodmx[0,0] = 0.0						# f_shift phase.
+	demodmx[0,1] = 1.0						# lowpass prev sample.
+	demodmx[0,2] = 0.0						# dmd_opt_idx_f
+	demodmx[0,3] = int(synch_delay_i)		# synch delay samplecount.
+	demodmx[2,:] = lp_taps
+	return demodmx
+
+@njit(cache=True)
+def demod_n_synch1(rs_arr, ii0, dmd_arr, synch_arr, io0, nsamples, f_center, JPLstatemx, demodmx):
+	assert np.iscomplexobj(demodmx)
+	assert len(dmd_arr.shape) == 1
+	shift_phase = 1.0j * demodmx[0,0].imag
+	s_lpd_prev = demodmx[0,1]
+	lp_window = demodmx[1,:]
+	lp_taps = demodmx[2,:]
+	io = io0
+	for ii in range(ii0,ii0+nsamples):
+		s_shifted = rs_arr[ii] * np.exp(shift_phase)
+		shift_phase += 2j*np.pi*f_center
+		lp_window = np.roll(lp_window, -1)     # 0.73 -> 0.41 µs
+		lp_window[-1] = s_shifted
+		s_lpd = np.sum(lp_window * lp_taps)  # 0.73 -> 0.47 µs
+		#s_lpd = s_shifted / 2
+		zz = s_lpd * np.conj(s_lpd_prev)
+		s_lpd_prev = s_lpd
+		s_dmd = np.arctan2(zz.imag, zz.real)
+		synch_amax, synch_iring = general_JPL_synch_step_1(sample=s_dmd, statemx=JPLstatemx)
+		dmd_arr[io] = s_dmd
+		synch_arr[io] = synch_amax, synch_iring, ii
+		io += 1
+	demodmx[0,0] = shift_phase
+	demodmx[0,1] = s_lpd_prev
+	demodmx[1,:] = lp_window
+	return io
+
+
+
+
+
+"""
+@njit(cache=True, parallel=False)
+def demod_synch_decide(rs_arr, ii0, dmd_arr, io0, nsamples, f_center, JPLstatemx, demodmx):
+	assert np.iscomplexobj(demodmx)
+	assert dmd_arr.shape[1] == 4
+	assert demodmx.shape[0] == demodmx.shape[1]+2
+	shift_phase = 1.0j * demodmx[0,0].imag
+	s_lpd_prev = demodmx[0,1]
+	synch_delay_i = int(demodmx[0,3].real)
+	assert synch_delay_i > 0
+	lp_taps = demodmx[2:,:]
+	ntaps = len(demodmx[0])
+	io = io0
+	for ii in range(ii0,ii0+nsamples):
+		i_tap_phase = ii % ntaps
+		s_shifted = rs_arr[ii] * np.exp(shift_phase)
+		shift_phase += 2j*np.pi*f_center
+		demodmx[1][i_tap_phase] = s_shifted
+
+		s_lpd = 0.0
+		for jj in range(ntaps):
+			s_lpd += demodmx[1][jj] * lp_taps[i_tap_phase][jj]
+		#s_lpd = np.sum(demodmx[1] * lp_taps[i_tap_phase])
+
+		zz = s_lpd * np.conj(s_lpd_prev)
+		s_lpd_prev = s_lpd
+		s_dmd = np.arctan2(zz.imag, zz.real)
+		synch_amax, synch_iring = classic_JPL_synch_step(sample=s_dmd, sample_abs_idx=ii, statemx=JPLstatemx)
+		dmd_arr[io] = s_dmd , float(synch_amax), float(synch_iring), float(ii)  # float conversion ~no effect on speed
+		io += 1
+	demodmx[0,0] = shift_phase
+	demodmx[0,1] = s_lpd_prev
+
+	dmd_opt_idx_f = demodmx[0,2].real
+	Neps = JPLstatemx.shape[1]
+	sps_f = float(Neps)
+	bitarr = np.zeros(int(1.2*nsamples/sps_f)+2)
+	ibit = 0
+	while True:
+		vsym, i_opt = symbol_decision(dmd_arr=dmd_arr[:, 0], synch_out_arr=dmd_arr[:, 1:], prev_dmd_idx_f=dmd_opt_idx_f, sps_f=sps_f, dmd_head_i=io, synch_head_i=io, synch_delay_i=synch_delay_i, N_eps_i=Neps)
+		if i_opt < 0:
+			break
+		dmd_opt_idx_f = i_opt
+		bitarr[ibit] = np.sign(vsym)
+		ibit += 1
+	demodmx[0,2] = dmd_opt_idx_f
+	return io, bitarr[0:ibit]
+"""
+
+
