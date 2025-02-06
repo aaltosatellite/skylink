@@ -7,35 +7,35 @@
         "extra_compile_args": [
             "-O3",
             "-fPIC",
-            "-I/home/elmore/fs1p/skylink//src/",
-            "-I/home/elmore/fs1p/skylink//src/skylink/",
-            "-I/home/elmore/fs1p/skylink//src/ext/blake3/",
-            "-I/home/elmore/fs1p/skylink//src/ext/gr-satellites/",
-            "-I/home/elmore/fs1p/skylink//src/ext/libfec/",
-            "-I/home/elmore/fs1p/skylink//platforms/linux/"
+            "-I../..//src/",
+            "-I../..//src/skylink/",
+            "-I../..//src/ext/blake3/",
+            "-I../..//src/ext/gr-satellites/",
+            "-I../..//src/ext/libfec/",
+            "-I../..//platforms/linux/"
         ],
         "name": "c_skylink",
         "sources": [
             "c_skylink.pyx",
-            "/home/elmore/fs1p/skylink//src//crc.c",
-            "/home/elmore/fs1p/skylink//src//diag.c",
-            "/home/elmore/fs1p/skylink//src//element_buffer.c",
-            "/home/elmore/fs1p/skylink//src//fec.c",
-            "/home/elmore/fs1p/skylink//src//frame.c",
-            "/home/elmore/fs1p/skylink//src//hmac.c",
-            "/home/elmore/fs1p/skylink//src//mac.c",
-            "/home/elmore/fs1p/skylink//src//reliable_vc.c",
-            "/home/elmore/fs1p/skylink//src//sequence_ring.c",
-            "/home/elmore/fs1p/skylink//src//skylink_rx.c",
-            "/home/elmore/fs1p/skylink//src//skylink_tx.c",
-            "/home/elmore/fs1p/skylink//src//utilities.c",
-            "/home/elmore/fs1p/skylink//src/ext/blake3/blake3.c",
-            "/home/elmore/fs1p/skylink//src/ext/blake3/blake3_dispatch.c",
-            "/home/elmore/fs1p/skylink//src/ext/blake3/blake3_portable.c",
-            "/home/elmore/fs1p/skylink//src/ext/gr-satellites/golay24.c",
-            "/home/elmore/fs1p/skylink//src/ext/libfec/ccsds_tab.c",
-            "/home/elmore/fs1p/skylink//src/ext/libfec/decode_rs_8.c",
-            "/home/elmore/fs1p/skylink//src/ext/libfec/encode_rs_8.c"
+            "../..//src//crc.c",
+            "../..//src//diag.c",
+            "../..//src//element_buffer.c",
+            "../..//src//fec.c",
+            "../..//src//frame.c",
+            "../..//src//hmac.c",
+            "../..//src//mac.c",
+            "../..//src//reliable_vc.c",
+            "../..//src//sequence_ring.c",
+            "../..//src//skylink_rx.c",
+            "../..//src//skylink_tx.c",
+            "../..//src//utilities.c",
+            "../..//src/ext/blake3/blake3.c",
+            "../..//src/ext/blake3/blake3_dispatch.c",
+            "../..//src/ext/blake3/blake3_portable.c",
+            "../..//src/ext/gr-satellites/golay24.c",
+            "../..//src/ext/libfec/ccsds_tab.c",
+            "../..//src/ext/libfec/decode_rs_8.c",
+            "../..//src/ext/libfec/encode_rs_8.c"
         ]
     },
     "module_name": "c_skylink"
@@ -6107,8 +6107,8 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__init0(struct __pyx_obj_9c_skylink_
  * 		pass
  * 
  * 	def __cinit__(self, conf_override): #Run before __init__             # <<<<<<<<<<<<<<
- * 		#cdef c_skylink.SkyConfig conf
- * 		#conf.arq.timeout_ticks = conf_override.arq.timeout_ticks
+ * 		# cdef c_skylink.SkyConfig conf
+ * 		# conf.arq.timeout_ticks = conf_override.arq.timeout_ticks
  */
 
 /* Python wrapper */

@@ -1,8 +1,8 @@
 from setuptools import setup, Extension
 from Cython.Build import cythonize
+import os
 
-
-SKYLINK_PATH = "/home/elmore/fs1p/skylink/"
+SKYLINK_PATH = "../../"
 SRC_PATH = SKYLINK_PATH + "/src/"
 SKYLINK_INCL_PATH = SKYLINK_PATH + "/src/skylink/"
 BLAKE3_PATH = SKYLINK_PATH+ "/src/ext/blake3/"
@@ -10,7 +10,12 @@ GR_SATELLITES_PATH = SKYLINK_PATH+ "/src/ext/gr-satellites/"
 LIBFEC_PATH = SKYLINK_PATH+ "/src/ext/libfec/"
 PLATFORMS_PATH = SKYLINK_PATH + "/platforms/linux/"
 
-
+assert os.path.isdir(SRC_PATH)
+assert os.path.isdir(SKYLINK_INCL_PATH)
+assert os.path.isdir(BLAKE3_PATH)
+assert os.path.isdir(GR_SATELLITES_PATH)
+assert os.path.isdir(LIBFEC_PATH)
+assert os.path.isdir(PLATFORMS_PATH)
 
 include_paths = [
 	SRC_PATH,
