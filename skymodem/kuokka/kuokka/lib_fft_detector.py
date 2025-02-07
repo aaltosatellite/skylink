@@ -1,39 +1,17 @@
 import numpy as np
-from numba import njit
+from numba import njit, objmode
 from .lib_tools import make_samples
-import time, pickle
+import time
 
-fft_mask_dict = dict()
-import os
-if "fft-mask-dict.dat" in os.listdir(""):
-	try:
-		f = open("./fft-mask-dict.dat", "rb")
-		rd = f.read()
-		f.close()
-		rd = pickle.loads(rd)
-		assert type(rd) == dict
-		for key,val in rd.items():
-			assert type(key) == tuple
-			assert len(key) == 6  # (sps, mod_idx, BT_prod, fftlen, masklen, nn)
-			for ikey in (0,3,4,5):
-				assert type(key[ikey]) == int
-			assert type(key[1]) == float
-			assert (type(key[2]) == float) or key[2] == -1
-			assert type(val) == np.ndarray
-			assert len(val.shape) == 1
-			assert val.dtype == np.float64
-			fft_mask_dict.update(rd)
-	except:
-		pass
+_fft_mask_dict = dict()
+
 
 
 def construct_fft_mask(sps, mod_index, BT, fftlen, masklen, nn):
-
-	for key,val in fft_mask_dict.items():
+	for key,val in _fft_mask_dict.items():
 		k_sps, k_mod_idx, k_BT, k_fftlen, k_masklen, k_nn = key
-		if (sps != k_sps) or (mod_index != k_mod_idx) or (BT != k_BT) or (fftlen != k_fftlen) or (masklen != k_masklen) or (nn > k_nn):
-			continue
-		return val
+		if (sps == k_sps) and (mod_index == k_mod_idx) and (BT == k_BT) and (fftlen == k_fftlen) and (masklen == k_masklen) and (nn <= k_nn):
+			return val
 
 	assert (masklen % 2) == 1
 	nbits = int((fftlen*6 + sps*3 +1) / sps) + 1
@@ -65,7 +43,7 @@ def construct_fft_mask(sps, mod_index, BT, fftlen, masklen, nn):
 	mask = mask / np.max(mask)
 	T_construct = (time.perf_counter() - t0)
 	print("Constructed fft mask in {} s".format(T_construct))
-	fft_mask_dict[ (sps, mod_index, BT, fftlen, masklen, nn) ] = mask
+	_fft_mask_dict[ (sps, mod_index, BT, fftlen, masklen, nn) ] = mask
 	return mask
 
 
@@ -140,12 +118,21 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_tr
 	if mask_mode == 0:
 		statemx[6, 0:masklen]	+= 1.0		# band mask constant term
 	else:
-		statemx[6, 0:masklen]  	+= construct_fft_mask(sps=sps, mod_index=mod_index, BT=BT, fftlen=fftlen, masklen=masklen, nn=500) # empiric mask
+		statemx[6, 0:masklen]  	+= construct_fft_mask(sps=sps, mod_index=mod_index, BT=BT, fftlen=fftlen, masklen=masklen, nn=1000) # empiric mask
 	return statemx
 
 
 
-@njit(cache=True, parallel=False)
+@njit(cache=True)
+def compute_fft(x):
+	#y = np.zeros_like(x, dtype=np.complex128)
+	with objmode(y='complex128[:]'):
+		y = np.complex128(np.fft.fft(x))
+	return y
+
+
+
+@njit(cache=True)
 def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, center_f_head0, statemx, instr_arr):
 	fftlen 			= int(statemx[0,0])
 	jumplen 		= int(statemx[0,1])
@@ -180,7 +167,8 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 		idx += 1
 		if idx == fftlen:
 			idx = fftlen - jumplen
-			fft = np.abs(np.fft.fftshift(np.fft.fft(window)))
+			#fft = np.abs(np.fft.fftshift(np.fft.fft(window)))
+			fft = np.abs(np.fft.fftshift(compute_fft(window)))
 			statemx[2,:] = fft
 			for i_search in range(n_search): # 0, fftlen - masklen + 1
 				i_fft = int(search_indexes[i_search])

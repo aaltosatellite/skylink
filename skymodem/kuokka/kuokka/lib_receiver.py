@@ -116,7 +116,7 @@ class ReceiverSettings:
 	def get_search_space_triplet(self):
 		if (self.f_tune == -1) and (self.f_expected == -1):
 			return -1, -1, -1
-		f_doppler = self.f_expected * (((3e8+7500)/3e8) - 1) * 1.0
+		f_doppler = self.f_expected * (((3e8+7500)/3e8) - 1) * 1.5
 		triplet = self.f_tune, self.f_expected-f_doppler*1.0, self.f_expected+f_doppler*1.0
 		#print("Triplet generated: ",triplet)
 		return triplet
@@ -161,6 +161,14 @@ class Receiver:
 		self.rs_cfg 			= rs_cfg
 		self.dt_array			= np.zeros(5, dtype=np.float64)
 		self._setup()
+		# This series of baudrate switches pre-generates correlation masks to memory.
+		_br = self.settings.baudrate
+		_sps = self.settings.sps
+		self.switch_baudrate(baudrate=9600, sps=_sps)
+		self.switch_baudrate(baudrate=9600*2, sps=_sps)
+		self.switch_baudrate(baudrate=9600*2*2, sps=_sps)
+		self.switch_baudrate(baudrate=4800, sps=_sps)
+		self.switch_baudrate(baudrate=_br, sps=_sps)
 
 
 	def _setup(self):
@@ -180,8 +188,6 @@ class Receiver:
 		b = int((settings.start_margin_mpr + settings.end_margin_mpr) * (settings.fftlen+settings.jumplen))
 		self.buffer_roll_limit 	= self.bufferlen - (a + b + 4)
 		assert self.buffer_roll_limit > (self.bufferlen * 0.9), self.buffer_roll_limit/self.bufferlen
-
-
 
 
 	def switch_baudrate(self, baudrate, sps):
@@ -223,11 +229,10 @@ class Receiver:
 
 		t0 = time.perf_counter()
 		if bit_head_new > 0:
-			bits = self.bit_array[:bit_head_new] #* -1
+			bits = self.bit_array[:bit_head_new]
 			#print("got bits", bits[0:4])
 			if not give_bits:
 				bits = np.clip(bits, 0, 1)
-				#bits = (bits+1) // 2
 				payloads, payload_delimits = deframe(bits=bits, deframer_mx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
 				if len(payload_delimits) > 0:
 					ret = self.split_payloads(payloads=payloads, delimits=payload_delimits)

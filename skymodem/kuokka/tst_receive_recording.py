@@ -8,7 +8,7 @@ import time
 
 
 def tst0():
-	from _draw_lab_spams import get_samples, get_samples2
+	from _draw_lab_spams import get_samples2
 	samples = get_samples2(0)
 	sr0 = 1e6
 	nsamples = len(samples)
@@ -87,14 +87,15 @@ def tst0():
 		batch = samples[feed_head : feed_head+batchlen]
 
 		t0 = time.perf_counter()
-		ret = rx.push_samples(batch=batch, give_bits=True)
+		ret_pl = rx.push_samples(batch=batch, give_bits=False)
 		dt_total += (time.perf_counter() - t0)
 
-		ret2 = rx2.push_samples(batch=batch, give_bits=False)
-		if ret2:
-			pl_list.extend(ret2)
+		ret_b = rx2.push_samples(batch=batch, give_bits=True)
 
-		bits = np.concatenate( (bits, ret) )
+		if ret_pl:
+			pl_list.extend(ret_pl)
+
+		bits = np.concatenate( (bits, ret_b) )
 		feed_head += batchlen
 	speed = nsamples / dt_total
 	overmatch = speed / sr0
