@@ -143,7 +143,7 @@ void mac_reset(SkyMAC* mac, sky_tick_t now);
  * BE CAREFUL: mac_update_belief is generally invoked only by authenticated messages to prevent 'shut-up-attack'.
  * This function in principle gets invoked before any authentication can take place. Therefore use sparingly.
  */
-void sky_mac_carrier_sensed(SkyMAC* mac, sky_tick_t now);
+// void sky_mac_carrier_sensed(SkyMAC* mac, sky_tick_t now);
 
 
 /*

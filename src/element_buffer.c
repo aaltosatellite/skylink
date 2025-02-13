@@ -433,7 +433,7 @@ int sky_element_buffer_read(SkyElementBuffer* buffer, uint8_t* target, sky_eleme
 		return SKY_RET_EBUFFER_INVALID_INDEX;
 
 	// Check if target buffer is long enough and store the length of the data in the variable leng.
-	int32_t element_length = *(sky_element_length_t*)(el.data);
+	sky_element_length_t element_length = *(sky_element_length_t*)(el.data);
 	if (element_length > max_len)
 		return SKY_RET_EBUFFER_TOO_LONG_PAYLOAD;
 
