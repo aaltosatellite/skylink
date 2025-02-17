@@ -138,7 +138,7 @@ def get_center_frequency_estimate(statemx, f_tune):
 def compute_fft(x):
 	#y = np.zeros_like(x, dtype=np.complex128)
 	with objmode(y='complex128[:]'):
-		y = np.complex128(np.fft.fft(x))
+		y = np.complex128(np.fft.fftshift(np.fft.fft(x)))
 	return y
 
 
@@ -179,7 +179,7 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 		if idx == fftlen:
 			idx = fftlen - jumplen
 			#fft = np.abs(np.fft.fftshift(np.fft.fft(window)))
-			fft = np.abs(np.fft.fftshift(compute_fft(window)))
+			fft = np.abs(compute_fft(window))
 			statemx[2,:] = fft
 			for i_search in range(n_search):
 				i_fft = int(search_indexes[i_search])
