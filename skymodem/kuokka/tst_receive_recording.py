@@ -4,11 +4,11 @@ from mtools.tools_dsp import create_resampler, resampler_execute
 from mtools.tools_dsp import waterfall_mx
 from matplotlib import pyplot as plt
 import time
-
+from _draw_lab_spams import get_samples2
 
 
 def tst0():
-	from _draw_lab_spams import get_samples2
+
 	samples = get_samples2(0)
 	sr0 = 1e6
 	nsamples = len(samples)

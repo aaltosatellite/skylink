@@ -355,7 +355,7 @@ def tst2_pl_mode(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 	payloads = list()
 	for i_packet in range(n_packets):
 		pl_ints = np.random.randint(0, 256, 100)
-		bitstring = frame_packet(pl=pl_ints, synchword=DEFAULT_SYNCHWORD, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
+		bitstring = frame_packet(pl=pl_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
 		bitstring = np.concatenate( (np.array((1,0,1,0,1,0,1,0,1,0)), bitstring) )
 		bitstring = bitstring*2 -1
 		signal = make_samples(sps_f=sps0, bitstring=bitstring, f_offset=f_offset0_rel, power=1, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=BT_prod, shaper_n_taps=int(10*sps0)+1)

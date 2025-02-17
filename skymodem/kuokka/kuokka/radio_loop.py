@@ -1,12 +1,13 @@
 import uhd
-import time
 import numpy as np
 import threading
 from .lib_receiver import ReceiverSettings, Receiver
-from .lib_tools import make_samples, bytes_to_bits, ints_to_bits, DEFAULT_SYNCHWORD
+from .lib_tools import make_samples, ints_to_bits, DEFAULT_SYNCHWORD
 from .lib_framing import frame_packet
 from .lib_reedsolomon import get_default_rs
 from queue import Queue, Empty
+import SoapySDR
+from SoapySDR import  SOAPY_SDR_ABI_VERSION, SOAPY_SDR_RX, SOAPY_SDR_TX, SOAPY_SDR_CF32
 
 def get_default_settings(sr, baudrate, f_tune, f_signal):
 	#baudrate			= 9600			# tx param
@@ -44,9 +45,9 @@ def get_default_settings(sr, baudrate, f_tune, f_signal):
 
 
 
-class Modem:
+class RadioLoop:
 	def __init__(self, rx_settings:ReceiverSettings):
-		self.preamble_bits = ints_to_bits( (0xaa, 0xaa, 0xaa), bits_per_int=8) * 2 -1
+		self.preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
 		rs_mx, rs_cfg = get_default_rs()
 		self.rs_mx = rs_mx
 		self.rs_cfg = rs_cfg
@@ -63,12 +64,38 @@ class Modem:
 		self.exception_counter = 0
 		self.warning_vector = [0,0]
 
+
+
+	def soapystart(self):
+		args = dict(device="uhd")
+		sdr = SoapySDR.Device(args)
+		sdr.setSampleRate(SOAPY_SDR_RX, 0, 1e6)
+		sdr.setFrequency(SOAPY_SDR_RX, 0, 912.3e6)
+
+		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
+		sdr.activateStream(rxStream) #start streaming
+		#create a re-usable buffer for rx samples
+		buff = np.array([0]*1024, np.complex64)
+		while True:
+			ret = sdr.readStream(rxStream, [buff], len(buff))
+			print(ret.ret) #num samples or error code
+			print(ret.flags) #flags set by receive operation
+			print(ret.timeNs) #timestamp for receive buffer
+			break
+		sdr.deactivateStream(rxStream) #stop streaming
+		sdr.closeStream(rxStream)
+		# TODO implement soapy version
+
+
+
+
 	def start(self):
 		self.rx = Receiver(settings=self.rx_settings)
 
 		# This noise injection enforces the jit-compilation of much of the signal processing pipeline before the loop starts.
-		noise = np.random.normal(0,0.1,1000) + np.random.normal(0, 0.1, 1000)*1j
-		self.rx.push_samples(batch=noise)
+		noise = np.random.normal(0,0.1,10000) + np.random.normal(0, 0.1, 10000)*1j
+		rx0 = Receiver(settings=self.rx_settings)
+		rx0.push_samples(batch=noise)
 
 		center_freq = self.rx_settings.f_tune # Hz
 		sample_rate = self.rx_settings.sr0 # Hz
@@ -78,15 +105,16 @@ class Modem:
 		usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(center_freq), 0)
 		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(center_freq), 0)
 		usrp.set_rx_gain(gain, 0) #print("rx gain range",usrp.get_rx_gain_range())
-		self.rx_thread = threading.Thread(target=self.rx_loop, args=(usrp, 8000))
+		#usrp.set_tx_gain(gain, 0) #TODO do this?
+		self.rx_thread = threading.Thread(target=self.rx_loop, args=(usrp, 8000)) #TODO bufferlen as setting?
 		self.rx_process_thread = threading.Thread(target=self.rx_process_loop, args=tuple())
-		self.tx_thread = threading.Thread(target=self.tx_loop, args=(usrp, 8000))
+		self.tx_thread = threading.Thread(target=self.tx_loop, args=(usrp, 8000)) #TODO bufferlen as setting?
 		self.on = True
 		self.rx_thread.start()
 		self.rx_process_thread.start()
 		self.tx_thread.start()
 
-	def rx_loop(self, usrp:uhd.usrp.MultiUSRP, rx_buffer_len=8000):
+	def rx_loop(self, usrp:uhd.usrp.MultiUSRP, rx_buffer_len):
 		# Set up the stream and receive buffer
 		st_args = uhd.usrp.StreamArgs("fc32", "sc16")
 		st_args.channels = [0]
@@ -135,17 +163,19 @@ class Modem:
 	def compose_samples(self, payload):
 		pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
 		#pl_chars = np.random.randint(0,255, 122)
-		bits = frame_packet(pl=pl_char_ints, synchword=DEFAULT_SYNCHWORD, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
+		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (self.preamble_bits, bits) )
 		sps = self.rx_settings.sr0 / self.rx_settings.baudrate
-		f_offset = self.rx_settings.f_expected - self.rx_settings.f_tune  # TODO: this should come from receiver's center freq.
+		f_offset = (self.rx.center_frequency_estimate() - self.rx_settings.f_tune) / self.rx_settings.sr0
+		n_silence_start = int(self.rx_settings.sr0 * 5e-3) # TODO: this should be a setting
 		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset, power=1.0,
-					 			mod_index=self.rx_settings.mod_index, shaper_mode=1,
-							   	shaper_BT_prod=self.rx_settings.BT, shaper_n_taps=201)
+					 		   mod_index=self.rx_settings.mod_index, shaper_mode=1,
+							   shaper_BT_prod=self.rx_settings.BT, shaper_n_taps=int(sps*4)+1,
+							   n_silence_start=n_silence_start, n_silence_end=0)
 		return samples
 
 
-	def tx_loop(self, usrp:uhd.usrp.MultiUSRP, tx_batch_len=8000):
+	def tx_loop(self, usrp:uhd.usrp.MultiUSRP, tx_batch_len):
 		tx_stream_args = uhd.usrp.StreamArgs("fc32", "sc16")
 		#stream_args.args = "spp=200" # Note this setting is not valid for all USRPs
 		tx_stream_args.channels = [0]

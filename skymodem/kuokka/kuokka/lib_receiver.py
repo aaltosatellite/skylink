@@ -4,7 +4,7 @@ import numpy as np
 #from matplotlib import pyplot as plt
 from .lib_demodulation import demodulation_sequence, create_DSD_statemx, DSD_buffer_roll
 from .lib_symsynching import create_classic_JPL_statemx
-from .lib_fft_detector import fft_detect_and_freq_determ, create_fft_centering_statemx
+from .lib_fft_detector import fft_detect_and_freq_determ, create_fft_centering_statemx, get_center_frequency_estimate
 from .lib_framing import create_deframer, deframe, RS_MAX_PL_LEN, RS_MAX_ENCODED_LEN
 from .lib_tools import DEFAULT_SYNCHWORD
 from .lib_reedsolomon import get_default_rs
@@ -14,17 +14,17 @@ from .lib_resampler import resampler_execute_stream, create_resampler
 class ReceiverSettings:
 	def __init__(self, sr0, baudrate, bufferlen, batch_maxlen, f_tune, f_expected):
 		assert sr0 > (baudrate * 2)
-		self.f_tune 			= f_tune
-		self.f_expected 		= f_expected
-		self.sr0 				= sr0
-		self.baudrate			= baudrate
+		self.f_tune 			= f_tune		# tuned frequency of the radio in absolute Hz (for example 350.0e6)
+		self.f_expected 		= f_expected	# expected frequency of the transmissions in absolute Hz (for example 350.12e6)
+		self.sr0 				= sr0			# raw samplerate of the radio. Will be downsampled with a rate of baudrate*sps/sr0
+		self.baudrate			= baudrate		# baudrate of the transmission
 		self.bufferlen			= bufferlen
 		self.batch_maxlen		= batch_maxlen
 		# resampling ---------------------------------------
-		self.sps 				= 17			# !
+		self.sps 				= 17			# !			# sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate.
 		self.m_halflen 			= 17			# !
 		self.n_banks 			= 64
-		self.rs_f_cutoff_coeff 	= 0.499
+		self.rs_f_cutoff_coeff 	= 0.499						# determines lowpass associated with the resampling. In interval (0 : 0.5)
 		# --------------------------------------------------
 		# fft detection ------------------------------------
 		self.fftlen 			= 1024			# ~
@@ -56,9 +56,12 @@ class ReceiverSettings:
 		# --------------------------------------------------
 
 	def check_validity(self):
-		if not (self.f_tune == -1) and (self.f_expected == -1):
+		if not ((self.f_tune == -1) and (self.f_expected == -1)):
 			assert self.f_tune >= 0
 			assert self.f_expected >= 0
+			assert abs(self.f_tune - self.f_expected) < (0.5 * self.sps * self.baudrate)
+			fft_df = (self.sps * self.baudrate) / self.fftlen
+			assert abs(self.f_tune - self.f_expected) < ((0.5 * self.sps * self.baudrate) - ((self.get_masklen()//2)*fft_df))
 			assert (abs(self.f_tune - self.f_expected) + (0.5*self.baudrate*max(self.mod_index,1))) < (self.rs_f_cutoff_coeff*self.sps*self.baudrate)
 		assert 1e3 < self.sr0 < 12e6
 		assert 0 < self.baudrate < (self.sr0/2)
@@ -113,12 +116,12 @@ class ReceiverSettings:
 		# = lp_cutoff_coeff / sps
 		return self.lp_cutoff_coeff / self.sps
 
-	def get_search_space_triplet(self):
+	def get_search_space_triplet(self):  #returns (f_tune, minimum_possible_center_frequency, maximum_possible_center_frequency)
 		if (self.f_tune == -1) and (self.f_expected == -1):
 			return -1, -1, -1
-		f_doppler = self.f_expected * (((3e8+7500)/3e8) - 1) * 1.5
-		triplet = self.f_tune, self.f_expected-f_doppler*1.0, self.f_expected+f_doppler*1.0
-		#print("Triplet generated: ",triplet)
+		df_doppler = self.f_expected * (((3e8+7500)/3e8) - 1)  # approximate maximum doppler shift for LEO orbital speed
+		df_search_sideband = df_doppler * 1.2
+		triplet = self.f_tune, self.f_expected - df_search_sideband, self.f_expected + df_search_sideband
 		return triplet
 
 
@@ -167,7 +170,7 @@ class Receiver:
 		self.switch_baudrate(baudrate=9600, sps=_sps)
 		self.switch_baudrate(baudrate=9600*2, sps=_sps)
 		self.switch_baudrate(baudrate=9600*2*2, sps=_sps)
-		self.switch_baudrate(baudrate=4800, sps=_sps)
+		#self.switch_baudrate(baudrate=4800, sps=_sps)
 		self.switch_baudrate(baudrate=_br, sps=_sps)
 
 
@@ -176,14 +179,16 @@ class Receiver:
 		settings = self.settings
 		f_cutoff = settings.get_r_rate() * settings.rs_f_cutoff_coeff
 		self.resampler_statemx = create_resampler(m_halflen=settings.m_halflen, n_banks=settings.n_banks, r_rate=settings.get_r_rate(), f_cutoff=f_cutoff, allow_aliasing=False)
-		self.FFTstatemx = create_fft_centering_statemx(fftlen=settings.fftlen, jumplen=settings.jumplen, sps=settings.sps, baudrate=settings.baudrate, search_space_triplet=settings.get_search_space_triplet(),
-													   mod_index=settings.mod_index, BT=settings.BT, c_stat_update=settings.c_stat_update, c_f_update_minimum=settings.c_f_update_minimum,
+		self.FFTstatemx = create_fft_centering_statemx(fftlen=settings.fftlen, jumplen=settings.jumplen, sps=settings.sps, baudrate=settings.baudrate,
+													   search_space_triplet=settings.get_search_space_triplet(), mod_index=settings.mod_index,
+													   BT=settings.BT, c_stat_update=settings.c_stat_update, c_f_update_minimum=settings.c_f_update_minimum,
 													   T_f_upd_recovery=settings.T_f_upd_recovery, fft_trigger_on_level=settings.fft_trigger_on_level,
 													   fft_trigger_off_level=settings.fft_trigger_off_level, masklen=settings.get_masklen(), avg0=0.0, var0=1.0,
 													   mask_mode=settings.mask_mode, start_margin_mpr=settings.start_margin_mpr, end_margin_mpr=settings.end_margin_mpr)
 		self.JPLstatemx = create_classic_JPL_statemx(N_eps=settings.sps, n_decay=settings.JPL_n_decay)
 		self.DPDstatemx = create_DSD_statemx(lp_ntaps=settings.lp_ntaps, lp_cutoff=settings.get_lp_cutoff(), synch_delay_mpr_f=settings.synch_delay_mpr, sps_f=settings.sps, f_center=0)
-		self.deframermx = create_deframer(use_scrambler=settings.use_scrambler, use_rs=settings.use_rs, data_maxlen=settings.data_maxlen, synchword=DEFAULT_SYNCHWORD, synchword_len=32, synch_threshold=settings.synch_threshold)
+		self.deframermx = create_deframer(use_scrambler=settings.use_scrambler, use_rs=settings.use_rs, data_maxlen=settings.data_maxlen,
+										  synchword=DEFAULT_SYNCHWORD, synchword_len=32, synch_threshold=settings.synch_threshold)
 		a = int(settings.batch_maxlen * settings.get_r_rate() * 2)
 		b = int((settings.start_margin_mpr + settings.end_margin_mpr) * (settings.fftlen+settings.jumplen))
 		self.buffer_roll_limit 	= self.bufferlen - (a + b + 4)
@@ -199,7 +204,14 @@ class Receiver:
 		self._setup()
 
 
-	def split_payloads(self, payloads, delimits):
+	def center_frequency_estimate(self):
+		f_center, is_active = get_center_frequency_estimate(self.FFTstatemx, f_tune=self.settings.f_tune)
+		if is_active:
+			return f_center
+		return self.settings.f_expected
+
+
+	def _split_payloads(self, payloads, delimits):
 		pl_list = list()
 		for (i0,i1) in delimits:
 			pl_list.append( bytes(payloads[i0:i1]) )
@@ -235,7 +247,7 @@ class Receiver:
 				bits = np.clip(bits, 0, 1)
 				payloads, payload_delimits = deframe(bits=bits, deframer_mx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
 				if len(payload_delimits) > 0:
-					ret = self.split_payloads(payloads=payloads, delimits=payload_delimits)
+					ret = self._split_payloads(payloads=payloads, delimits=payload_delimits)
 		self.dt_array[3] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()

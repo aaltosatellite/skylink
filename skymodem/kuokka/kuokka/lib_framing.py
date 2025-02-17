@@ -134,7 +134,7 @@ def step8(r, e):
 ## FRAMING ===================================================================================================================================================================================
 ## FRAMING ===================================================================================================================================================================================
 @njit(cache=True)
-def frame_packet(pl, synchword, synchword_len, use_scrambler, use_rs, rs_mx, rs_cfg, nrz_shift):
+def frame_packet(pl, synchword_int, synchword_len, use_scrambler, use_rs, rs_mx, rs_cfg, nrz_shift):
 	if use_rs:
 		assert len(pl) <= RS_MAX_PL_LEN
 	if use_rs:
@@ -148,7 +148,7 @@ def frame_packet(pl, synchword, synchword_len, use_scrambler, use_rs, rs_mx, rs_
 
 	ibit = 0
 	for i in range(synchword_len-1, -1, -1):
-		bits[ibit] = (synchword >> i) & 1
+		bits[ibit] = (synchword_int >> i) & 1
 		ibit += 1
 
 	golay = encode_golay24(n_chars)

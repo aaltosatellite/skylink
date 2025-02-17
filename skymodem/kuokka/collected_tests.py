@@ -80,7 +80,7 @@ def test_ccsds_whitener(do_print):
 
 
 
-def test_symrate_conf(do_plot):
+def test_chip_symrate_configuration_math(do_plot):
 	print("")
 	print("## Testing symbolrate configuration math is consistent =========")
 	max_E = 0x0a
@@ -462,7 +462,7 @@ def test_framing_1():
 		for n_corrupt in range(0, 16+1):
 			for _ in range(24):
 				pl_chars = np.random.randint(0,255, pl_len)
-				bits = frame_packet(pl=pl_chars, synchword=synchword, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
+				bits = frame_packet(pl=pl_chars, synchword_int=synchword, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
 				bits[:32] = corrupt_n_bits_of_bitarr(bitarr=bits[:32], n_corrupt=rint(0,4))
 				bits[32:56] = corrupt_n_bits_of_bitarr(bitarr=bits[32:56], n_corrupt=rint(0,4))
 				bits[56:] = corrupt_n_bits_of_bitarr(bitarr=bits[56:], n_corrupt=n_corrupt)
@@ -489,8 +489,8 @@ def test_framing_2():
 		synchword = DEFAULT_SYNCHWORD
 		pl_chars1 = np.random.randint(0,255, rint(0,223+1))
 		pl_chars2 = np.random.randint(0,255, rint(0,223+1))
-		bits1 = frame_packet(pl=pl_chars1, synchword=synchword, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
-		bits2 = frame_packet(pl=pl_chars2, synchword=synchword, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
+		bits1 = frame_packet(pl=pl_chars1, synchword_int=synchword, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
+		bits2 = frame_packet(pl=pl_chars2, synchword_int=synchword, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
 
 		bits1[:32] = corrupt_n_bits_of_bitarr(bitarr=bits1[:32], n_corrupt=rint(0,4))
 		bits2[:32] = corrupt_n_bits_of_bitarr(bitarr=bits2[:32], n_corrupt=rint(0,4))
@@ -537,12 +537,12 @@ def speedbench_framing():
 	rs_mx, rs_cfg = get_default_rs()
 	synchword = DEFAULT_SYNCHWORD
 	pl_chars = np.random.randint(0,255, 122)
-	bits = frame_packet(pl=pl_chars, synchword=synchword, synchword_len=32, use_scrambler=use_scrambler, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
-	_ = frame_packet(pl=pl_chars, synchword=synchword, synchword_len=32, use_scrambler=use_scrambler, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
-	_ = frame_packet(pl=pl_chars, synchword=synchword, synchword_len=32, use_scrambler=use_scrambler, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
+	bits = frame_packet(pl=pl_chars, synchword_int=synchword, synchword_len=32, use_scrambler=use_scrambler, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
+	_ = frame_packet(pl=pl_chars, synchword_int=synchword, synchword_len=32, use_scrambler=use_scrambler, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
+	_ = frame_packet(pl=pl_chars, synchword_int=synchword, synchword_len=32, use_scrambler=use_scrambler, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
 	t0 = time.perf_counter()
 	for _ in range(nreps):
-		_ = frame_packet(pl=pl_chars, synchword=synchword, synchword_len=32, use_scrambler=use_scrambler, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
+		_ = frame_packet(pl=pl_chars, synchword_int=synchword, synchword_len=32, use_scrambler=use_scrambler, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
 	T_frame = (time.perf_counter() - t0) / nreps
 	speed_packets = 1 / T_frame
 	speed_bytes = len(pl_chars) / T_frame
@@ -591,7 +591,7 @@ def speedbench_framing():
 
 
 test_ccsds_whitener(do_print=False)
-test_symrate_conf(do_plot=False)
+test_chip_symrate_configuration_math(do_plot=False)
 test_peak_deviation_algos_cohere()
 #plot_peak_deviations()
 

@@ -65,7 +65,7 @@ def get_frequency_search_space_indexing(fftlen, sr, masklen, f_tune, f_center_mi
 		if (f >= (f_center_min-df)) and (f <= (f_center_max+df)):
 			indexes[n_idxs] = i_fft
 			n_idxs += 1
-	assert n_idxs > 0, (f_center_min, f_center_max, f_center_max - f_center_min, freqs[1]-freqs[0])
+	assert n_idxs > 0, (f_center_min, f_center_max, f_center_max - f_center_min, freqs[1]-freqs[0], fftlen - masklen +1, f_center_max > freqs[masklen//2], f_center_min < freqs[fftlen - masklen//2])
 	#print("n_idx: ",n_idxs)
 	return indexes[:n_idxs]
 
@@ -97,6 +97,7 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_tr
 	statemx[0,8]  = int(start_margin_mpr * (fftlen+jumplen))
 	statemx[0,9]  = int(end_margin_mpr * (fftlen+jumplen))
 	statemx[0,10] = n_search
+	statemx[0,11] = sps*baudrate
 
 	statemx[0,20] = 0 		# idx  (this runs from (fftlen-jumplen) to fftlen-1 and then an fft is called)
 	statemx[0,21] = -1.0	# f_center
@@ -121,6 +122,16 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_tr
 		statemx[6, 0:masklen]  	+= construct_fft_mask(sps=sps, mod_index=mod_index, BT=BT, fftlen=fftlen, masklen=masklen, nn=1000) # empiric mask
 	return statemx
 
+
+
+@njit(cache=True)
+def get_center_frequency_estimate(statemx, f_tune):
+	c_f_update_long = statemx[0,27]
+	is_active = c_f_update_long < 0.999
+	f_center_long_normalized = statemx[0,26]  # [0.5 : 0.5)
+	sr  = statemx[0,11]
+	f_center = f_tune + sr * f_center_long_normalized
+	return f_center, is_active
 
 
 @njit(cache=True)
@@ -170,10 +181,14 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 			#fft = np.abs(np.fft.fftshift(np.fft.fft(window)))
 			fft = np.abs(np.fft.fftshift(compute_fft(window)))
 			statemx[2,:] = fft
-			for i_search in range(n_search): # 0, fftlen - masklen + 1
+			for i_search in range(n_search):
 				i_fft = int(search_indexes[i_search])
 				i0 = i_fft - masklen//2
 				i1 = i_fft + masklen//2 + 1
+				assert i0 >= 0
+				assert i0 <= (fftlen-masklen)
+				assert i1 >= masklen
+				assert i1 <= fftlen
 				statemx[3,i_fft] = np.sum(statemx[2,i0:i1] * statemx[6,0:masklen])
 
 			if not tx_on:
