@@ -6,6 +6,9 @@ import numpy as np
 from kuokka.radio_loop import get_default_settings, RadioLoop
 from mtools.tools_dsp import waterfall_mx
 from matplotlib import pyplot as plt
+from scipy.signal import firwin
+
+
 
 
 
@@ -37,6 +40,8 @@ def test_sample_modulation_speed(sr, baudrate, BT):
 	print("speed ratio:    {}".format( round(speed_ratio, 1) ))
 	print("="*40)
 	print("")
+
+
 
 
 
@@ -73,6 +78,7 @@ def test_packet_generation_speed(sr, baudrate, BT):
 
 
 
+
 def compare_generated_to_recording():
 	recorded = get_samples2(0)
 	recorded = recorded / np.average( np.abs(recorded))
@@ -83,10 +89,9 @@ def compare_generated_to_recording():
 	settings.mod_index = 0.5
 	radioloop = RadioLoop(rx_settings=settings)
 	n_init_silence = int(1e6 * (0.0414 + 0.1))
-	n_gap = int(1e6 * 0.005)
 	samples = np.zeros( n_init_silence, dtype=np.complex128 )
+	pl = os.urandom(36)
 	for _ in range(7):
-		pl = os.urandom(36)
 		gen_samples = radioloop.compose_samples(payload=pl)
 		samples = np.concatenate( (samples, gen_samples) )
 		#samples = np.concatenate( (samples, np.zeros(n_gap, dtype=np.complex128)) )
@@ -109,8 +114,6 @@ def plot_fmdemod_of_recording():
 	recorded = recorded * np.exp(2j * np.pi * np.arange(len(recorded)) * (1/1e6) * -0.1244e6)
 	waterfall_mx(recorded, fftlen=2048, fft_jump=1024, srate=1e6, plot_and_show=True, y_is_time=True)
 
-
-	from scipy.signal import firwin
 	lpfilter = firwin(numtaps=201, cutoff=0.63 * 3 * 9600 / 1e6, pass_zero=True)
 	recorded = np.convolve(recorded, lpfilter)
 	waterfall_mx(recorded, fftlen=2048, fft_jump=1024, srate=1e6, plot_and_show=True, y_is_time=True)
@@ -125,7 +128,6 @@ def plot_fmdemod_of_recording():
 		0.04218,
 		0.11675,
 	]
-	tgap00 = 0.04218
 
 	fig = plt.figure(figsize=(14,14))
 	ax = fig.add_subplot(111)
@@ -155,8 +157,13 @@ test_sample_modulation_speed(sr=1e6, baudrate=8*9600,  BT=-1)
 test_sample_modulation_speed(sr=1e6, baudrate=16*9600, BT=-1)
 test_sample_modulation_speed(sr=1e6, baudrate=9600,    BT=0.5)
 test_sample_modulation_speed(sr=1e6, baudrate=9600*2,  BT=0.5)
-
 print("################################################")
+print("")
+print("")
+
+a = np.identity(3)
+k = np.cross(np.ones(3), np.ones(3))
+x = np.cross(np.ones(3), np.ones(3))
 
 test_packet_generation_speed(sr=1e6, baudrate=1*9600, BT=-1)
 test_packet_generation_speed(sr=1e6, baudrate=2*9600, BT=-1)
@@ -164,9 +171,12 @@ test_packet_generation_speed(sr=1e6, baudrate=4*9600, BT=-1)
 test_packet_generation_speed(sr=1e6, baudrate=8*9600, BT=-1)
 test_packet_generation_speed(sr=1e6, baudrate=1*9600, BT=0.5)
 test_packet_generation_speed(sr=1e6, baudrate=2*9600, BT=0.5)
+print("################################################")
+print("")
+print("")
+
 
 compare_generated_to_recording()
-
 #plot_fmdemod_of_recording()
 
 
