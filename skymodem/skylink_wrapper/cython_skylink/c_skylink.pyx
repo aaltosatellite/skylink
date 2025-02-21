@@ -8,6 +8,7 @@ _STUFF = "Hi"
 num_virtual_channels 	= c_skylink.SKY_NUM_VIRTUAL_CHANNELS
 max_identity_len 		= c_skylink.SKY_MAX_IDENTITY_LEN
 mod_time_ticks 			= c_skylink.MOD_TIME_TICKS
+blake3_key_len 			= c_skylink.BLAKE3_KEY_LEN
 
 auth_flag_auth_tx 		= c_skylink.SKY_CONFIG_FLAG_AUTHENTICATE_TX
 auth_flag_require_auth 	= c_skylink.SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION

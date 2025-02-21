@@ -7,35 +7,35 @@
         "extra_compile_args": [
             "-O3",
             "-fPIC",
-            "-I../..//src/",
-            "-I../..//src/skylink/",
-            "-I../..//src/ext/blake3/",
-            "-I../..//src/ext/gr-satellites/",
-            "-I../..//src/ext/libfec/",
-            "-I../..//platforms/linux/"
+            "-I../../..//src/",
+            "-I../../..//src/skylink/",
+            "-I../../..//src/ext/blake3/",
+            "-I../../..//src/ext/gr-satellites/",
+            "-I../../..//src/ext/libfec/",
+            "-I../../..//platforms/linux/"
         ],
         "name": "c_skylink",
         "sources": [
             "c_skylink.pyx",
-            "../..//src//crc.c",
-            "../..//src//diag.c",
-            "../..//src//element_buffer.c",
-            "../..//src//fec.c",
-            "../..//src//frame.c",
-            "../..//src//hmac.c",
-            "../..//src//mac.c",
-            "../..//src//reliable_vc.c",
-            "../..//src//sequence_ring.c",
-            "../..//src//skylink_rx.c",
-            "../..//src//skylink_tx.c",
-            "../..//src//utilities.c",
-            "../..//src/ext/blake3/blake3.c",
-            "../..//src/ext/blake3/blake3_dispatch.c",
-            "../..//src/ext/blake3/blake3_portable.c",
-            "../..//src/ext/gr-satellites/golay24.c",
-            "../..//src/ext/libfec/ccsds_tab.c",
-            "../..//src/ext/libfec/decode_rs_8.c",
-            "../..//src/ext/libfec/encode_rs_8.c"
+            "../../..//src//crc.c",
+            "../../..//src//diag.c",
+            "../../..//src//element_buffer.c",
+            "../../..//src//fec.c",
+            "../../..//src//frame.c",
+            "../../..//src//hmac.c",
+            "../../..//src//mac.c",
+            "../../..//src//reliable_vc.c",
+            "../../..//src//sequence_ring.c",
+            "../../..//src//skylink_rx.c",
+            "../../..//src//skylink_tx.c",
+            "../../..//src//utilities.c",
+            "../../..//src/ext/blake3/blake3.c",
+            "../../..//src/ext/blake3/blake3_dispatch.c",
+            "../../..//src/ext/blake3/blake3_portable.c",
+            "../../..//src/ext/gr-satellites/golay24.c",
+            "../../..//src/ext/libfec/ccsds_tab.c",
+            "../../..//src/ext/libfec/decode_rs_8.c",
+            "../../..//src/ext/libfec/encode_rs_8.c"
         ]
     },
     "module_name": "c_skylink"
@@ -1621,7 +1621,7 @@ typedef int8_t __pyx_t_9c_skylink_int8_t;
 /*--- Type declarations ---*/
 struct __pyx_obj_9c_skylink_SkyLink;
 
-/* "c_skylink.pyx":56
+/* "c_skylink.pyx":57
  * 
  * 
  * cdef class SkyLink:             # <<<<<<<<<<<<<<
@@ -2610,6 +2610,7 @@ static const char __pyx_k_timeout_ticks[] = "timeout_ticks";
 static const char __pyx_k_AssertionError[] = "AssertionError";
 static const char __pyx_k_SkyLink_sky_rx[] = "SkyLink.sky_rx";
 static const char __pyx_k_SkyLink_sky_tx[] = "SkyLink.sky_tx";
+static const char __pyx_k_blake3_key_len[] = "blake3_key_len";
 static const char __pyx_k_carrier_sensed[] = "carrier_sensed";
 static const char __pyx_k_include_resend[] = "include_resend";
 static const char __pyx_k_mod_time_ticks[] = "mod_time_ticks";
@@ -2796,6 +2797,7 @@ typedef struct {
   PyObject *__pyx_n_s_auth_flag_require_auth;
   PyObject *__pyx_n_s_auth_flag_require_seq;
   PyObject *__pyx_n_s_auth_flag_use_crc32;
+  PyObject *__pyx_n_s_blake3_key_len;
   PyObject *__pyx_n_s_boolean_variable;
   PyObject *__pyx_n_s_c_skylink;
   PyObject *__pyx_kp_s_c_skylink_pyx;
@@ -3065,6 +3067,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_auth_flag_require_auth);
   Py_CLEAR(clear_module_state->__pyx_n_s_auth_flag_require_seq);
   Py_CLEAR(clear_module_state->__pyx_n_s_auth_flag_use_crc32);
+  Py_CLEAR(clear_module_state->__pyx_n_s_blake3_key_len);
   Py_CLEAR(clear_module_state->__pyx_n_s_boolean_variable);
   Py_CLEAR(clear_module_state->__pyx_n_s_c_skylink);
   Py_CLEAR(clear_module_state->__pyx_kp_s_c_skylink_pyx);
@@ -3312,6 +3315,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_auth_flag_require_auth);
   Py_VISIT(traverse_module_state->__pyx_n_s_auth_flag_require_seq);
   Py_VISIT(traverse_module_state->__pyx_n_s_auth_flag_use_crc32);
+  Py_VISIT(traverse_module_state->__pyx_n_s_blake3_key_len);
   Py_VISIT(traverse_module_state->__pyx_n_s_boolean_variable);
   Py_VISIT(traverse_module_state->__pyx_n_s_c_skylink);
   Py_VISIT(traverse_module_state->__pyx_kp_s_c_skylink_pyx);
@@ -3577,6 +3581,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_auth_flag_require_auth __pyx_mstate_global->__pyx_n_s_auth_flag_require_auth
 #define __pyx_n_s_auth_flag_require_seq __pyx_mstate_global->__pyx_n_s_auth_flag_require_seq
 #define __pyx_n_s_auth_flag_use_crc32 __pyx_mstate_global->__pyx_n_s_auth_flag_use_crc32
+#define __pyx_n_s_blake3_key_len __pyx_mstate_global->__pyx_n_s_blake3_key_len
 #define __pyx_n_s_boolean_variable __pyx_mstate_global->__pyx_n_s_boolean_variable
 #define __pyx_n_s_c_skylink __pyx_mstate_global->__pyx_n_s_c_skylink
 #define __pyx_kp_s_c_skylink_pyx __pyx_mstate_global->__pyx_kp_s_c_skylink_pyx
@@ -5097,7 +5102,7 @@ static SkyState __pyx_convert__from_py_SkyState(PyObject *__pyx_v_obj) {
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":48
+/* "c_skylink.pyx":49
  * 
  * class SkyConfiguration:
  * 	def __init__(self):             # <<<<<<<<<<<<<<
@@ -5158,12 +5163,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 48, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 49, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "__init__") < 0)) __PYX_ERR(0, 48, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "__init__") < 0)) __PYX_ERR(0, 49, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -5174,7 +5179,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__init__", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 48, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("__init__", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 49, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -5216,14 +5221,14 @@ static PyObject *__pyx_pf_9c_skylink_16SkyConfiguration___init__(CYTHON_UNUSED P
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__init__", 1);
 
-  /* "c_skylink.pyx":49
+  /* "c_skylink.pyx":50
  * class SkyConfiguration:
  * 	def __init__(self):
  * 		self.vc = [VCConfig(), VCConfig(), VCConfig(), VCConfig()]             # <<<<<<<<<<<<<<
  * 		self.mac = MACConfig()
  * 		self.hmac = HMACConfig()
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_VCConfig); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_VCConfig); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 50, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   __pyx_t_4 = 0;
@@ -5243,11 +5248,11 @@ static PyObject *__pyx_pf_9c_skylink_16SkyConfiguration___init__(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_3, NULL};
     __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_2, __pyx_callargs+1-__pyx_t_4, 0+__pyx_t_4);
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 49, __pyx_L1_error)
+    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 50, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   }
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_VCConfig); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_VCConfig); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 50, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_5 = NULL;
   __pyx_t_4 = 0;
@@ -5267,11 +5272,11 @@ static PyObject *__pyx_pf_9c_skylink_16SkyConfiguration___init__(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_5, NULL};
     __pyx_t_2 = __Pyx_PyObject_FastCall(__pyx_t_3, __pyx_callargs+1-__pyx_t_4, 0+__pyx_t_4);
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 49, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 50, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   }
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_VCConfig); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_VCConfig); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 50, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __pyx_t_6 = NULL;
   __pyx_t_4 = 0;
@@ -5291,11 +5296,11 @@ static PyObject *__pyx_pf_9c_skylink_16SkyConfiguration___init__(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_6, NULL};
     __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_5, __pyx_callargs+1-__pyx_t_4, 0+__pyx_t_4);
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 49, __pyx_L1_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 50, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
-  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_VCConfig); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_VCConfig); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 50, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __pyx_t_7 = NULL;
   __pyx_t_4 = 0;
@@ -5315,69 +5320,35 @@ static PyObject *__pyx_pf_9c_skylink_16SkyConfiguration___init__(CYTHON_UNUSED P
     PyObject *__pyx_callargs[2] = {__pyx_t_7, NULL};
     __pyx_t_5 = __Pyx_PyObject_FastCall(__pyx_t_6, __pyx_callargs+1-__pyx_t_4, 0+__pyx_t_4);
     __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
-    if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 49, __pyx_L1_error)
+    if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 50, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   }
-  __pyx_t_6 = PyList_New(4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __pyx_t_6 = PyList_New(4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 50, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_GIVEREF(__pyx_t_1);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_6, 0, __pyx_t_1)) __PYX_ERR(0, 49, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_6, 0, __pyx_t_1)) __PYX_ERR(0, 50, __pyx_L1_error);
   __Pyx_GIVEREF(__pyx_t_2);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_6, 1, __pyx_t_2)) __PYX_ERR(0, 49, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_6, 1, __pyx_t_2)) __PYX_ERR(0, 50, __pyx_L1_error);
   __Pyx_GIVEREF(__pyx_t_3);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_6, 2, __pyx_t_3)) __PYX_ERR(0, 49, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_6, 2, __pyx_t_3)) __PYX_ERR(0, 50, __pyx_L1_error);
   __Pyx_GIVEREF(__pyx_t_5);
-  if (__Pyx_PyList_SET_ITEM(__pyx_t_6, 3, __pyx_t_5)) __PYX_ERR(0, 49, __pyx_L1_error);
+  if (__Pyx_PyList_SET_ITEM(__pyx_t_6, 3, __pyx_t_5)) __PYX_ERR(0, 50, __pyx_L1_error);
   __pyx_t_1 = 0;
   __pyx_t_2 = 0;
   __pyx_t_3 = 0;
   __pyx_t_5 = 0;
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_vc, __pyx_t_6) < 0) __PYX_ERR(0, 49, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_vc, __pyx_t_6) < 0) __PYX_ERR(0, 50, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-  /* "c_skylink.pyx":50
+  /* "c_skylink.pyx":51
  * 	def __init__(self):
  * 		self.vc = [VCConfig(), VCConfig(), VCConfig(), VCConfig()]
  * 		self.mac = MACConfig()             # <<<<<<<<<<<<<<
  * 		self.hmac = HMACConfig()
  * 		self.arq = ArqConfig()
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_MACConfig); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 50, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_3 = NULL;
-  __pyx_t_4 = 0;
-  #if CYTHON_UNPACK_METHODS
-  if (unlikely(PyMethod_Check(__pyx_t_5))) {
-    __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_5);
-    if (likely(__pyx_t_3)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
-      __Pyx_INCREF(__pyx_t_3);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_5, function);
-      __pyx_t_4 = 1;
-    }
-  }
-  #endif
-  {
-    PyObject *__pyx_callargs[2] = {__pyx_t_3, NULL};
-    __pyx_t_6 = __Pyx_PyObject_FastCall(__pyx_t_5, __pyx_callargs+1-__pyx_t_4, 0+__pyx_t_4);
-    __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-    if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 50, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_6);
-    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  }
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_mac, __pyx_t_6) < 0) __PYX_ERR(0, 50, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-
-  /* "c_skylink.pyx":51
- * 		self.vc = [VCConfig(), VCConfig(), VCConfig(), VCConfig()]
- * 		self.mac = MACConfig()
- * 		self.hmac = HMACConfig()             # <<<<<<<<<<<<<<
- * 		self.arq = ArqConfig()
- * 		self.identity = b"tstID"
- */
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_HMACConfig); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_MACConfig); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 51, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __pyx_t_3 = NULL;
   __pyx_t_4 = 0;
@@ -5401,17 +5372,17 @@ static PyObject *__pyx_pf_9c_skylink_16SkyConfiguration___init__(CYTHON_UNUSED P
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_hmac, __pyx_t_6) < 0) __PYX_ERR(0, 51, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_mac, __pyx_t_6) < 0) __PYX_ERR(0, 51, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
   /* "c_skylink.pyx":52
+ * 		self.vc = [VCConfig(), VCConfig(), VCConfig(), VCConfig()]
  * 		self.mac = MACConfig()
- * 		self.hmac = HMACConfig()
- * 		self.arq = ArqConfig()             # <<<<<<<<<<<<<<
+ * 		self.hmac = HMACConfig()             # <<<<<<<<<<<<<<
+ * 		self.arq = ArqConfig()
  * 		self.identity = b"tstID"
- * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_ArqConfig); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 52, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_HMACConfig); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 52, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __pyx_t_3 = NULL;
   __pyx_t_4 = 0;
@@ -5435,19 +5406,53 @@ static PyObject *__pyx_pf_9c_skylink_16SkyConfiguration___init__(CYTHON_UNUSED P
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_arq, __pyx_t_6) < 0) __PYX_ERR(0, 52, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_hmac, __pyx_t_6) < 0) __PYX_ERR(0, 52, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
   /* "c_skylink.pyx":53
+ * 		self.mac = MACConfig()
+ * 		self.hmac = HMACConfig()
+ * 		self.arq = ArqConfig()             # <<<<<<<<<<<<<<
+ * 		self.identity = b"tstID"
+ * 
+ */
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_ArqConfig); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 53, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_3 = NULL;
+  __pyx_t_4 = 0;
+  #if CYTHON_UNPACK_METHODS
+  if (unlikely(PyMethod_Check(__pyx_t_5))) {
+    __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_5);
+    if (likely(__pyx_t_3)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
+      __Pyx_INCREF(__pyx_t_3);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_5, function);
+      __pyx_t_4 = 1;
+    }
+  }
+  #endif
+  {
+    PyObject *__pyx_callargs[2] = {__pyx_t_3, NULL};
+    __pyx_t_6 = __Pyx_PyObject_FastCall(__pyx_t_5, __pyx_callargs+1-__pyx_t_4, 0+__pyx_t_4);
+    __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+    if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 53, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_6);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  }
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_arq, __pyx_t_6) < 0) __PYX_ERR(0, 53, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+
+  /* "c_skylink.pyx":54
  * 		self.hmac = HMACConfig()
  * 		self.arq = ArqConfig()
  * 		self.identity = b"tstID"             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_identity, __pyx_n_b_tstID) < 0) __PYX_ERR(0, 53, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_identity, __pyx_n_b_tstID) < 0) __PYX_ERR(0, 54, __pyx_L1_error)
 
-  /* "c_skylink.pyx":48
+  /* "c_skylink.pyx":49
  * 
  * class SkyConfiguration:
  * 	def __init__(self):             # <<<<<<<<<<<<<<
@@ -5473,7 +5478,7 @@ static PyObject *__pyx_pf_9c_skylink_16SkyConfiguration___init__(CYTHON_UNUSED P
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":62
+/* "c_skylink.pyx":63
  * 	#	object conf_override
  * 
  * 	def __init__(self, conf_override): #runs after __cinit__             # <<<<<<<<<<<<<<
@@ -5517,12 +5522,12 @@ static int __pyx_pw_9c_skylink_7SkyLink_1__init__(PyObject *__pyx_v_self, PyObje
           (void)__Pyx_Arg_NewRef_VARARGS(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 62, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 63, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "__init__") < 0)) __PYX_ERR(0, 62, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "__init__") < 0)) __PYX_ERR(0, 63, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -5533,7 +5538,7 @@ static int __pyx_pw_9c_skylink_7SkyLink_1__init__(PyObject *__pyx_v_self, PyObje
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__init__", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 62, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("__init__", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 63, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -5569,18 +5574,18 @@ static int __pyx_pf_9c_skylink_7SkyLink___init__(struct __pyx_obj_9c_skylink_Sky
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__init__", 1);
 
-  /* "c_skylink.pyx":63
+  /* "c_skylink.pyx":64
  * 
  * 	def __init__(self, conf_override): #runs after __cinit__
  * 		self._init0(conf_override)             # <<<<<<<<<<<<<<
  * 
  * 	cdef _init0(self, conf_override):
  */
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_init0(__pyx_v_self, __pyx_v_conf_override); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 63, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_init0(__pyx_v_self, __pyx_v_conf_override); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 64, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "c_skylink.pyx":62
+  /* "c_skylink.pyx":63
  * 	#	object conf_override
  * 
  * 	def __init__(self, conf_override): #runs after __cinit__             # <<<<<<<<<<<<<<
@@ -5600,7 +5605,7 @@ static int __pyx_pf_9c_skylink_7SkyLink___init__(struct __pyx_obj_9c_skylink_Sky
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":65
+/* "c_skylink.pyx":66
  * 		self._init0(conf_override)
  * 
  * 	cdef _init0(self, conf_override):             # <<<<<<<<<<<<<<
@@ -5632,231 +5637,231 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__init0(struct __pyx_obj_9c_skylink_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_init0", 1);
 
-  /* "c_skylink.pyx":66
+  /* "c_skylink.pyx":67
  * 
  * 	cdef _init0(self, conf_override):
  * 		self.conf.arq.timeout_ticks = conf_override.arq.timeout_ticks             # <<<<<<<<<<<<<<
  * 		self.conf.arq.idle_frame_threshold = conf_override.arq.idle_frame_threshold
  * 		self.conf.arq.idle_frames_per_window = conf_override.arq.idle_frames_per_window
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_arq); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 66, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_arq); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 67, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_timeout_ticks); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 66, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_timeout_ticks); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 67, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_2); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 66, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_2); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 67, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_self->conf.arq.timeout_ticks = __pyx_t_3;
 
-  /* "c_skylink.pyx":67
+  /* "c_skylink.pyx":68
  * 	cdef _init0(self, conf_override):
  * 		self.conf.arq.timeout_ticks = conf_override.arq.timeout_ticks
  * 		self.conf.arq.idle_frame_threshold = conf_override.arq.idle_frame_threshold             # <<<<<<<<<<<<<<
  * 		self.conf.arq.idle_frames_per_window = conf_override.arq.idle_frames_per_window
  * 
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_arq); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 67, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_arq); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 68, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_idle_frame_threshold); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 67, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_idle_frame_threshold); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 68, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 67, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 68, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_self->conf.arq.idle_frame_threshold = __pyx_t_3;
 
-  /* "c_skylink.pyx":68
+  /* "c_skylink.pyx":69
  * 		self.conf.arq.timeout_ticks = conf_override.arq.timeout_ticks
  * 		self.conf.arq.idle_frame_threshold = conf_override.arq.idle_frame_threshold
  * 		self.conf.arq.idle_frames_per_window = conf_override.arq.idle_frames_per_window             # <<<<<<<<<<<<<<
  * 
  * 		self.conf.hmac.maximum_jump = conf_override.hmac.maximum_jump
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_arq); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 68, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_arq); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_idle_frames_per_window); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 68, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_idle_frames_per_window); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_4 = __Pyx_PyInt_As_int8_t(__pyx_t_2); if (unlikely((__pyx_t_4 == ((int8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 68, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_int8_t(__pyx_t_2); if (unlikely((__pyx_t_4 == ((int8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_self->conf.arq.idle_frames_per_window = __pyx_t_4;
 
-  /* "c_skylink.pyx":70
+  /* "c_skylink.pyx":71
  * 		self.conf.arq.idle_frames_per_window = conf_override.arq.idle_frames_per_window
  * 
  * 		self.conf.hmac.maximum_jump = conf_override.hmac.maximum_jump             # <<<<<<<<<<<<<<
  * 
  * 		self.conf.mac.carrier_sense_ticks = conf_override.mac.carrier_sense_ticks
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_hmac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 70, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_hmac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 71, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_maximum_jump); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 70, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_maximum_jump); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 71, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 70, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 71, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_self->conf.hmac.maximum_jump = __pyx_t_3;
 
-  /* "c_skylink.pyx":72
+  /* "c_skylink.pyx":73
  * 		self.conf.hmac.maximum_jump = conf_override.hmac.maximum_jump
  * 
  * 		self.conf.mac.carrier_sense_ticks = conf_override.mac.carrier_sense_ticks             # <<<<<<<<<<<<<<
  * 		self.conf.mac.gap_constant_ticks = conf_override.mac.gap_constant_ticks
  * 		self.conf.mac.idle_frames_per_window = conf_override.mac.idle_frames_per_window
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 72, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 73, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_carrier_sense_ticks); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 72, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_carrier_sense_ticks); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 73, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_5 = __Pyx_PyInt_As_int16_t(__pyx_t_2); if (unlikely((__pyx_t_5 == ((int16_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 72, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyInt_As_int16_t(__pyx_t_2); if (unlikely((__pyx_t_5 == ((int16_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 73, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_self->conf.mac.carrier_sense_ticks = __pyx_t_5;
 
-  /* "c_skylink.pyx":73
+  /* "c_skylink.pyx":74
  * 
  * 		self.conf.mac.carrier_sense_ticks = conf_override.mac.carrier_sense_ticks
  * 		self.conf.mac.gap_constant_ticks = conf_override.mac.gap_constant_ticks             # <<<<<<<<<<<<<<
  * 		self.conf.mac.idle_frames_per_window = conf_override.mac.idle_frames_per_window
  * 		self.conf.mac.idle_timeout_ticks = conf_override.mac.idle_timeout_ticks
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 73, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 74, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_gap_constant_ticks); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 73, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_gap_constant_ticks); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 74, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 73, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_self->conf.mac.gap_constant_ticks = __pyx_t_3;
 
-  /* "c_skylink.pyx":74
+  /* "c_skylink.pyx":75
  * 		self.conf.mac.carrier_sense_ticks = conf_override.mac.carrier_sense_ticks
  * 		self.conf.mac.gap_constant_ticks = conf_override.mac.gap_constant_ticks
  * 		self.conf.mac.idle_frames_per_window = conf_override.mac.idle_frames_per_window             # <<<<<<<<<<<<<<
  * 		self.conf.mac.idle_timeout_ticks = conf_override.mac.idle_timeout_ticks
  * 		self.conf.mac.maximum_window_length_ticks = conf_override.mac.maximum_window_length_ticks
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 74, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 75, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_idle_frames_per_window); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 74, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_idle_frames_per_window); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 75, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_2); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_2); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 75, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_self->conf.mac.idle_frames_per_window = __pyx_t_6;
 
-  /* "c_skylink.pyx":75
+  /* "c_skylink.pyx":76
  * 		self.conf.mac.gap_constant_ticks = conf_override.mac.gap_constant_ticks
  * 		self.conf.mac.idle_frames_per_window = conf_override.mac.idle_frames_per_window
  * 		self.conf.mac.idle_timeout_ticks = conf_override.mac.idle_timeout_ticks             # <<<<<<<<<<<<<<
  * 		self.conf.mac.maximum_window_length_ticks = conf_override.mac.maximum_window_length_ticks
  * 		self.conf.mac.minimum_window_length_ticks = conf_override.mac.minimum_window_length_ticks
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 75, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 76, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_idle_timeout_ticks); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 75, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_idle_timeout_ticks); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 76, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 75, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 76, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_self->conf.mac.idle_timeout_ticks = __pyx_t_3;
 
-  /* "c_skylink.pyx":76
+  /* "c_skylink.pyx":77
  * 		self.conf.mac.idle_frames_per_window = conf_override.mac.idle_frames_per_window
  * 		self.conf.mac.idle_timeout_ticks = conf_override.mac.idle_timeout_ticks
  * 		self.conf.mac.maximum_window_length_ticks = conf_override.mac.maximum_window_length_ticks             # <<<<<<<<<<<<<<
  * 		self.conf.mac.minimum_window_length_ticks = conf_override.mac.minimum_window_length_ticks
  * 		self.conf.mac.tail_constant_ticks = conf_override.mac.tail_constant_ticks
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 77, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_maximum_window_length_ticks); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_maximum_window_length_ticks); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 77, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_2); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 76, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_2); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 77, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_self->conf.mac.maximum_window_length_ticks = __pyx_t_3;
 
-  /* "c_skylink.pyx":77
+  /* "c_skylink.pyx":78
  * 		self.conf.mac.idle_timeout_ticks = conf_override.mac.idle_timeout_ticks
  * 		self.conf.mac.maximum_window_length_ticks = conf_override.mac.maximum_window_length_ticks
  * 		self.conf.mac.minimum_window_length_ticks = conf_override.mac.minimum_window_length_ticks             # <<<<<<<<<<<<<<
  * 		self.conf.mac.tail_constant_ticks = conf_override.mac.tail_constant_ticks
  * 		self.conf.mac.unauthenticated_mac_updates = conf_override.mac.unauthenticated_mac_updates
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 77, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 78, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_minimum_window_length_ticks); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 77, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_minimum_window_length_ticks); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 78, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 77, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 78, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_self->conf.mac.minimum_window_length_ticks = __pyx_t_3;
 
-  /* "c_skylink.pyx":78
+  /* "c_skylink.pyx":79
  * 		self.conf.mac.maximum_window_length_ticks = conf_override.mac.maximum_window_length_ticks
  * 		self.conf.mac.minimum_window_length_ticks = conf_override.mac.minimum_window_length_ticks
  * 		self.conf.mac.tail_constant_ticks = conf_override.mac.tail_constant_ticks             # <<<<<<<<<<<<<<
  * 		self.conf.mac.unauthenticated_mac_updates = conf_override.mac.unauthenticated_mac_updates
  * 		self.conf.mac.window_adjust_increment_ticks = conf_override.mac.window_adjust_increment_ticks
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 78, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 79, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_tail_constant_ticks); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 78, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_tail_constant_ticks); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 79, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_2); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 78, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_As_int32_t(__pyx_t_2); if (unlikely((__pyx_t_3 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 79, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_self->conf.mac.tail_constant_ticks = __pyx_t_3;
 
-  /* "c_skylink.pyx":79
+  /* "c_skylink.pyx":80
  * 		self.conf.mac.minimum_window_length_ticks = conf_override.mac.minimum_window_length_ticks
  * 		self.conf.mac.tail_constant_ticks = conf_override.mac.tail_constant_ticks
  * 		self.conf.mac.unauthenticated_mac_updates = conf_override.mac.unauthenticated_mac_updates             # <<<<<<<<<<<<<<
  * 		self.conf.mac.window_adjust_increment_ticks = conf_override.mac.window_adjust_increment_ticks
  * 		self.conf.mac.window_adjustment_threshold = conf_override.mac.window_adjustment_threshold
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 79, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 80, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_unauthenticated_mac_updates); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 79, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_unauthenticated_mac_updates); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 80, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_1); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 79, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_1); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 80, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_self->conf.mac.unauthenticated_mac_updates = __pyx_t_6;
 
-  /* "c_skylink.pyx":80
+  /* "c_skylink.pyx":81
  * 		self.conf.mac.tail_constant_ticks = conf_override.mac.tail_constant_ticks
  * 		self.conf.mac.unauthenticated_mac_updates = conf_override.mac.unauthenticated_mac_updates
  * 		self.conf.mac.window_adjust_increment_ticks = conf_override.mac.window_adjust_increment_ticks             # <<<<<<<<<<<<<<
  * 		self.conf.mac.window_adjustment_threshold = conf_override.mac.window_adjustment_threshold
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 80, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_window_adjust_increment_ticks); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 80, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_window_adjust_increment_ticks); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_5 = __Pyx_PyInt_As_int16_t(__pyx_t_2); if (unlikely((__pyx_t_5 == ((int16_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 80, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyInt_As_int16_t(__pyx_t_2); if (unlikely((__pyx_t_5 == ((int16_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_self->conf.mac.window_adjust_increment_ticks = __pyx_t_5;
 
-  /* "c_skylink.pyx":81
+  /* "c_skylink.pyx":82
  * 		self.conf.mac.unauthenticated_mac_updates = conf_override.mac.unauthenticated_mac_updates
  * 		self.conf.mac.window_adjust_increment_ticks = conf_override.mac.window_adjust_increment_ticks
  * 		self.conf.mac.window_adjustment_threshold = conf_override.mac.window_adjustment_threshold             # <<<<<<<<<<<<<<
  * 
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_mac); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_window_adjustment_threshold); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_window_adjustment_threshold); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_4 = __Pyx_PyInt_As_int8_t(__pyx_t_1); if (unlikely((__pyx_t_4 == ((int8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_int8_t(__pyx_t_1); if (unlikely((__pyx_t_4 == ((int8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 82, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_self->conf.mac.window_adjustment_threshold = __pyx_t_4;
 
-  /* "c_skylink.pyx":83
+  /* "c_skylink.pyx":84
  * 		self.conf.mac.window_adjustment_threshold = conf_override.mac.window_adjustment_threshold
  * 
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):             # <<<<<<<<<<<<<<
@@ -5868,179 +5873,179 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__init0(struct __pyx_obj_9c_skylink_
   for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_8; __pyx_t_9+=1) {
     __pyx_v_i = __pyx_t_9;
 
-    /* "c_skylink.pyx":84
+    /* "c_skylink.pyx":85
  * 
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
  * 			self.conf.vc[i].horizon_width = conf_override.vc[i].horizon_width             # <<<<<<<<<<<<<<
  * 			self.conf.vc[i].rcv_ring_len = conf_override.vc[i].rcv_ring_len
  * 			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 84, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 85, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 84, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 85, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_horizon_width); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 84, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_horizon_width); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 85, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 84, __pyx_L1_error)
+    __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 85, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     (__pyx_v_self->conf.vc[__pyx_v_i]).horizon_width = __pyx_t_10;
 
-    /* "c_skylink.pyx":85
+    /* "c_skylink.pyx":86
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
  * 			self.conf.vc[i].horizon_width = conf_override.vc[i].horizon_width
  * 			self.conf.vc[i].rcv_ring_len = conf_override.vc[i].rcv_ring_len             # <<<<<<<<<<<<<<
  * 			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication
  * 			self.conf.vc[i].send_ring_len = conf_override.vc[i].send_ring_len
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 85, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 85, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_rcv_ring_len); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 85, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_rcv_ring_len); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 85, __pyx_L1_error)
+    __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     (__pyx_v_self->conf.vc[__pyx_v_i]).rcv_ring_len = __pyx_t_10;
 
-    /* "c_skylink.pyx":86
+    /* "c_skylink.pyx":87
  * 			self.conf.vc[i].horizon_width = conf_override.vc[i].horizon_width
  * 			self.conf.vc[i].rcv_ring_len = conf_override.vc[i].rcv_ring_len
  * 			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication             # <<<<<<<<<<<<<<
  * 			self.conf.vc[i].send_ring_len = conf_override.vc[i].send_ring_len
  * 			self.conf.vc[i].tx_key = conf_override.vc[i].tx_key
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 86, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 87, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 86, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 87, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_require_authentication); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 86, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_require_authentication); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 87, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_1); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 86, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_1); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 87, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     (__pyx_v_self->conf.vc[__pyx_v_i]).require_authentication = __pyx_t_6;
 
-    /* "c_skylink.pyx":87
+    /* "c_skylink.pyx":88
  * 			self.conf.vc[i].rcv_ring_len = conf_override.vc[i].rcv_ring_len
  * 			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication
  * 			self.conf.vc[i].send_ring_len = conf_override.vc[i].send_ring_len             # <<<<<<<<<<<<<<
  * 			self.conf.vc[i].tx_key = conf_override.vc[i].tx_key
  * 			self.conf.vc[i].rx_key = conf_override.vc[i].rx_key
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 87, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 88, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 87, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 88, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_send_ring_len); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 87, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_send_ring_len); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 88, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 87, __pyx_L1_error)
+    __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 88, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     (__pyx_v_self->conf.vc[__pyx_v_i]).send_ring_len = __pyx_t_10;
 
-    /* "c_skylink.pyx":88
+    /* "c_skylink.pyx":89
  * 			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication
  * 			self.conf.vc[i].send_ring_len = conf_override.vc[i].send_ring_len
  * 			self.conf.vc[i].tx_key = conf_override.vc[i].tx_key             # <<<<<<<<<<<<<<
  * 			self.conf.vc[i].rx_key = conf_override.vc[i].rx_key
  * 			self.conf.vc[i].usable_element_size = conf_override.vc[i].usable_element_size
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 88, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 89, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 88, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 89, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_tx_key); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 88, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_tx_key); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 89, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_1); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 88, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_1); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 89, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     (__pyx_v_self->conf.vc[__pyx_v_i]).tx_key = __pyx_t_6;
 
-    /* "c_skylink.pyx":89
+    /* "c_skylink.pyx":90
  * 			self.conf.vc[i].send_ring_len = conf_override.vc[i].send_ring_len
  * 			self.conf.vc[i].tx_key = conf_override.vc[i].tx_key
  * 			self.conf.vc[i].rx_key = conf_override.vc[i].rx_key             # <<<<<<<<<<<<<<
  * 			self.conf.vc[i].usable_element_size = conf_override.vc[i].usable_element_size
  * 			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 89, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 90, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 89, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 90, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_rx_key); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 89, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_rx_key); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 90, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_1); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 89, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_1); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 90, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     (__pyx_v_self->conf.vc[__pyx_v_i]).rx_key = __pyx_t_6;
 
-    /* "c_skylink.pyx":90
+    /* "c_skylink.pyx":91
  * 			self.conf.vc[i].tx_key = conf_override.vc[i].tx_key
  * 			self.conf.vc[i].rx_key = conf_override.vc[i].rx_key
  * 			self.conf.vc[i].usable_element_size = conf_override.vc[i].usable_element_size             # <<<<<<<<<<<<<<
  * 			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication
  * 
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 90, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 91, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 90, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 91, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_usable_element_size); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 90, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_usable_element_size); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 91, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 90, __pyx_L1_error)
+    __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 91, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     (__pyx_v_self->conf.vc[__pyx_v_i]).usable_element_size = __pyx_t_10;
 
-    /* "c_skylink.pyx":91
+    /* "c_skylink.pyx":92
  * 			self.conf.vc[i].rx_key = conf_override.vc[i].rx_key
  * 			self.conf.vc[i].usable_element_size = conf_override.vc[i].usable_element_size
  * 			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication             # <<<<<<<<<<<<<<
  * 
  * 		cdef int id_len = 0;
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 91, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_vc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 92, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 91, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_1, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 92, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_require_authentication); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 91, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_require_authentication); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 92, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_1); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 91, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyInt_As_uint8_t(__pyx_t_1); if (unlikely((__pyx_t_6 == ((uint8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 92, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     (__pyx_v_self->conf.vc[__pyx_v_i]).require_authentication = __pyx_t_6;
   }
 
-  /* "c_skylink.pyx":93
+  /* "c_skylink.pyx":94
  * 			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication
  * 
  * 		cdef int id_len = 0;             # <<<<<<<<<<<<<<
- * 		id_len = min( len(conf_override.identity), c_skylink.SKY_MAX_IDENTITY_LEN )
+ * 		id_len = min(len(conf_override.identity), c_skylink.SKY_MAX_IDENTITY_LEN)
  * 		memcpy(self.conf.identity, <uint8_t*> conf_override.identity, id_len)
  */
   __pyx_v_id_len = 0;
 
-  /* "c_skylink.pyx":94
+  /* "c_skylink.pyx":95
  * 
  * 		cdef int id_len = 0;
- * 		id_len = min( len(conf_override.identity), c_skylink.SKY_MAX_IDENTITY_LEN )             # <<<<<<<<<<<<<<
+ * 		id_len = min(len(conf_override.identity), c_skylink.SKY_MAX_IDENTITY_LEN)             # <<<<<<<<<<<<<<
  * 		memcpy(self.conf.identity, <uint8_t*> conf_override.identity, id_len)
  * 		#self.conf.identity[0:min(c_skylink.SKY_MAX_IDENTITY_LEN, len(conf_override.identity))] = conf_override.identity
  */
   __pyx_t_7 = SKY_MAX_IDENTITY_LEN;
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_identity); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 94, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_identity); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 95, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_11 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_11 == ((Py_ssize_t)-1))) __PYX_ERR(0, 94, __pyx_L1_error)
+  __pyx_t_11 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_11 == ((Py_ssize_t)-1))) __PYX_ERR(0, 95, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_13 = (__pyx_t_7 < __pyx_t_11);
   if (__pyx_t_13) {
@@ -6050,20 +6055,20 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__init0(struct __pyx_obj_9c_skylink_
   }
   __pyx_v_id_len = __pyx_t_12;
 
-  /* "c_skylink.pyx":95
+  /* "c_skylink.pyx":96
  * 		cdef int id_len = 0;
- * 		id_len = min( len(conf_override.identity), c_skylink.SKY_MAX_IDENTITY_LEN )
+ * 		id_len = min(len(conf_override.identity), c_skylink.SKY_MAX_IDENTITY_LEN)
  * 		memcpy(self.conf.identity, <uint8_t*> conf_override.identity, id_len)             # <<<<<<<<<<<<<<
  * 		#self.conf.identity[0:min(c_skylink.SKY_MAX_IDENTITY_LEN, len(conf_override.identity))] = conf_override.identity
  * 		self.conf.identity_len = id_len
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_identity); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 95, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf_override, __pyx_n_s_identity); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 96, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_14 = __Pyx_PyObject_AsWritableUString(__pyx_t_1); if (unlikely((!__pyx_t_14) && PyErr_Occurred())) __PYX_ERR(0, 95, __pyx_L1_error)
+  __pyx_t_14 = __Pyx_PyObject_AsWritableUString(__pyx_t_1); if (unlikely((!__pyx_t_14) && PyErr_Occurred())) __PYX_ERR(0, 96, __pyx_L1_error)
   (void)(memcpy(__pyx_v_self->conf.identity, ((__pyx_t_9c_skylink_uint8_t *)__pyx_t_14), __pyx_v_id_len));
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "c_skylink.pyx":97
+  /* "c_skylink.pyx":98
  * 		memcpy(self.conf.identity, <uint8_t*> conf_override.identity, id_len)
  * 		#self.conf.identity[0:min(c_skylink.SKY_MAX_IDENTITY_LEN, len(conf_override.identity))] = conf_override.identity
  * 		self.conf.identity_len = id_len             # <<<<<<<<<<<<<<
@@ -6072,7 +6077,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__init0(struct __pyx_obj_9c_skylink_
  */
   __pyx_v_self->conf.identity_len = __pyx_v_id_len;
 
-  /* "c_skylink.pyx":98
+  /* "c_skylink.pyx":99
  * 		#self.conf.identity[0:min(c_skylink.SKY_MAX_IDENTITY_LEN, len(conf_override.identity))] = conf_override.identity
  * 		self.conf.identity_len = id_len
  * 		self.handle = c_skylink.sky_create(&self.conf)             # <<<<<<<<<<<<<<
@@ -6081,7 +6086,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__init0(struct __pyx_obj_9c_skylink_
  */
   __pyx_v_self->handle = sky_create((&__pyx_v_self->conf));
 
-  /* "c_skylink.pyx":65
+  /* "c_skylink.pyx":66
  * 		self._init0(conf_override)
  * 
  * 	cdef _init0(self, conf_override):             # <<<<<<<<<<<<<<
@@ -6103,7 +6108,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__init0(struct __pyx_obj_9c_skylink_
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":101
+/* "c_skylink.pyx":102
  * 		pass
  * 
  * 	def __cinit__(self, conf_override): #Run before __init__             # <<<<<<<<<<<<<<
@@ -6147,12 +6152,12 @@ static int __pyx_pw_9c_skylink_7SkyLink_3__cinit__(PyObject *__pyx_v_self, PyObj
           (void)__Pyx_Arg_NewRef_VARARGS(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 101, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 102, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "__cinit__") < 0)) __PYX_ERR(0, 101, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "__cinit__") < 0)) __PYX_ERR(0, 102, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -6163,7 +6168,7 @@ static int __pyx_pw_9c_skylink_7SkyLink_3__cinit__(PyObject *__pyx_v_self, PyObj
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 101, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 102, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -6198,7 +6203,7 @@ static int __pyx_pf_9c_skylink_7SkyLink_2__cinit__(CYTHON_UNUSED struct __pyx_ob
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":107
+/* "c_skylink.pyx":108
  * 		pass
  * 
  * 	def __dealloc__(self):             # <<<<<<<<<<<<<<
@@ -6227,18 +6232,18 @@ static void __pyx_pf_9c_skylink_7SkyLink_4__dealloc__(struct __pyx_obj_9c_skylin
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__dealloc__", 1);
 
-  /* "c_skylink.pyx":108
+  /* "c_skylink.pyx":109
  * 
  * 	def __dealloc__(self):
  * 		self._destruct()             # <<<<<<<<<<<<<<
  * 
  * 	cdef _destruct(self):
  */
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_destruct(__pyx_v_self); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 108, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_destruct(__pyx_v_self); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 109, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "c_skylink.pyx":107
+  /* "c_skylink.pyx":108
  * 		pass
  * 
  * 	def __dealloc__(self):             # <<<<<<<<<<<<<<
@@ -6255,7 +6260,7 @@ static void __pyx_pf_9c_skylink_7SkyLink_4__dealloc__(struct __pyx_obj_9c_skylin
   __Pyx_RefNannyFinishContext();
 }
 
-/* "c_skylink.pyx":110
+/* "c_skylink.pyx":111
  * 		self._destruct()
  * 
  * 	cdef _destruct(self):             # <<<<<<<<<<<<<<
@@ -6268,7 +6273,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__destruct(struct __pyx_obj_9c_skyli
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("_destruct", 1);
 
-  /* "c_skylink.pyx":111
+  /* "c_skylink.pyx":112
  * 
  * 	cdef _destruct(self):
  * 		c_skylink.sky_destroy(self.handle)             # <<<<<<<<<<<<<<
@@ -6277,7 +6282,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__destruct(struct __pyx_obj_9c_skyli
  */
   sky_destroy(__pyx_v_self->handle);
 
-  /* "c_skylink.pyx":110
+  /* "c_skylink.pyx":111
  * 		self._destruct()
  * 
  * 	cdef _destruct(self):             # <<<<<<<<<<<<<<
@@ -6292,7 +6297,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__destruct(struct __pyx_obj_9c_skyli
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":116
+/* "c_skylink.pyx":117
  * 
  * 	# === HMAC-KEYS ========================================================================================================================
  * 	cdef _set_hmac_keys(self, uint8_t* keydata, int keycount):             # <<<<<<<<<<<<<<
@@ -6317,25 +6322,25 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__set_hmac_keys(struct __pyx_obj_9c_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_set_hmac_keys", 1);
 
-  /* "c_skylink.pyx":119
+  /* "c_skylink.pyx":120
  * 		# assert keycount > 1, <= nmax
  * 		cdef c_skylink.SkyHMACKey* keys;
- * 		keys = <c_skylink.SkyHMACKey*> malloc(sizeof(c_skylink.SkyHMACKey)*4)             # <<<<<<<<<<<<<<
+ * 		keys = <c_skylink.SkyHMACKey*> malloc(sizeof(c_skylink.SkyHMACKey) * 4)             # <<<<<<<<<<<<<<
  * 		for i in range(keycount):
  * 			keys[i].len = c_skylink.BLAKE3_KEY_LEN
  */
   __pyx_v_keys = ((SkyHMACKey *)malloc(((sizeof(SkyHMACKey)) * 4)));
 
-  /* "c_skylink.pyx":120
+  /* "c_skylink.pyx":121
  * 		cdef c_skylink.SkyHMACKey* keys;
- * 		keys = <c_skylink.SkyHMACKey*> malloc(sizeof(c_skylink.SkyHMACKey)*4)
+ * 		keys = <c_skylink.SkyHMACKey*> malloc(sizeof(c_skylink.SkyHMACKey) * 4)
  * 		for i in range(keycount):             # <<<<<<<<<<<<<<
  * 			keys[i].len = c_skylink.BLAKE3_KEY_LEN
- * 			memcpy(keys[i].key, <uint8_t*> &keydata[i*c_skylink.BLAKE3_KEY_LEN] , c_skylink.BLAKE3_KEY_LEN)
+ * 			memcpy(keys[i].key, <uint8_t*> &keydata[i * c_skylink.BLAKE3_KEY_LEN], c_skylink.BLAKE3_KEY_LEN)
  */
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_keycount); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 120, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_keycount); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 121, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_builtin_range, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 120, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_builtin_range, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 121, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   if (likely(PyList_CheckExact(__pyx_t_2)) || PyTuple_CheckExact(__pyx_t_2)) {
@@ -6343,9 +6348,9 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__set_hmac_keys(struct __pyx_obj_9c_
     __pyx_t_3 = 0;
     __pyx_t_4 = NULL;
   } else {
-    __pyx_t_3 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 120, __pyx_L1_error)
+    __pyx_t_3 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 121, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_4 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 120, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 121, __pyx_L1_error)
   }
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   for (;;) {
@@ -6354,28 +6359,28 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__set_hmac_keys(struct __pyx_obj_9c_
         {
           Py_ssize_t __pyx_temp = __Pyx_PyList_GET_SIZE(__pyx_t_1);
           #if !CYTHON_ASSUME_SAFE_MACROS
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 120, __pyx_L1_error)
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 121, __pyx_L1_error)
           #endif
           if (__pyx_t_3 >= __pyx_temp) break;
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_2 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_3); __Pyx_INCREF(__pyx_t_2); __pyx_t_3++; if (unlikely((0 < 0))) __PYX_ERR(0, 120, __pyx_L1_error)
+        __pyx_t_2 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_3); __Pyx_INCREF(__pyx_t_2); __pyx_t_3++; if (unlikely((0 < 0))) __PYX_ERR(0, 121, __pyx_L1_error)
         #else
-        __pyx_t_2 = __Pyx_PySequence_ITEM(__pyx_t_1, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 120, __pyx_L1_error)
+        __pyx_t_2 = __Pyx_PySequence_ITEM(__pyx_t_1, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 121, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
         #endif
       } else {
         {
           Py_ssize_t __pyx_temp = __Pyx_PyTuple_GET_SIZE(__pyx_t_1);
           #if !CYTHON_ASSUME_SAFE_MACROS
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 120, __pyx_L1_error)
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 121, __pyx_L1_error)
           #endif
           if (__pyx_t_3 >= __pyx_temp) break;
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_2 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_3); __Pyx_INCREF(__pyx_t_2); __pyx_t_3++; if (unlikely((0 < 0))) __PYX_ERR(0, 120, __pyx_L1_error)
+        __pyx_t_2 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_3); __Pyx_INCREF(__pyx_t_2); __pyx_t_3++; if (unlikely((0 < 0))) __PYX_ERR(0, 121, __pyx_L1_error)
         #else
-        __pyx_t_2 = __Pyx_PySequence_ITEM(__pyx_t_1, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 120, __pyx_L1_error)
+        __pyx_t_2 = __Pyx_PySequence_ITEM(__pyx_t_1, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 121, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
         #endif
       }
@@ -6385,7 +6390,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__set_hmac_keys(struct __pyx_obj_9c_
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 120, __pyx_L1_error)
+          else __PYX_ERR(0, 121, __pyx_L1_error)
         }
         break;
       }
@@ -6394,54 +6399,54 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__set_hmac_keys(struct __pyx_obj_9c_
     __Pyx_XDECREF_SET(__pyx_v_i, __pyx_t_2);
     __pyx_t_2 = 0;
 
-    /* "c_skylink.pyx":121
- * 		keys = <c_skylink.SkyHMACKey*> malloc(sizeof(c_skylink.SkyHMACKey)*4)
+    /* "c_skylink.pyx":122
+ * 		keys = <c_skylink.SkyHMACKey*> malloc(sizeof(c_skylink.SkyHMACKey) * 4)
  * 		for i in range(keycount):
  * 			keys[i].len = c_skylink.BLAKE3_KEY_LEN             # <<<<<<<<<<<<<<
- * 			memcpy(keys[i].key, <uint8_t*> &keydata[i*c_skylink.BLAKE3_KEY_LEN] , c_skylink.BLAKE3_KEY_LEN)
+ * 			memcpy(keys[i].key, <uint8_t*> &keydata[i * c_skylink.BLAKE3_KEY_LEN], c_skylink.BLAKE3_KEY_LEN)
  * 		c_skylink.sky_hmac_set_keys(self.handle, keys, keycount)
  */
-    __pyx_t_5 = __Pyx_PyIndex_AsSsize_t(__pyx_v_i); if (unlikely((__pyx_t_5 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 121, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyIndex_AsSsize_t(__pyx_v_i); if (unlikely((__pyx_t_5 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 122, __pyx_L1_error)
     (__pyx_v_keys[__pyx_t_5]).len = BLAKE3_KEY_LEN;
 
-    /* "c_skylink.pyx":122
+    /* "c_skylink.pyx":123
  * 		for i in range(keycount):
  * 			keys[i].len = c_skylink.BLAKE3_KEY_LEN
- * 			memcpy(keys[i].key, <uint8_t*> &keydata[i*c_skylink.BLAKE3_KEY_LEN] , c_skylink.BLAKE3_KEY_LEN)             # <<<<<<<<<<<<<<
+ * 			memcpy(keys[i].key, <uint8_t*> &keydata[i * c_skylink.BLAKE3_KEY_LEN], c_skylink.BLAKE3_KEY_LEN)             # <<<<<<<<<<<<<<
  * 		c_skylink.sky_hmac_set_keys(self.handle, keys, keycount)
  * 		free(keys)
  */
-    __pyx_t_5 = __Pyx_PyIndex_AsSsize_t(__pyx_v_i); if (unlikely((__pyx_t_5 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 122, __pyx_L1_error)
-    __pyx_t_2 = __Pyx_PyInt_From_int(BLAKE3_KEY_LEN); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 122, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyIndex_AsSsize_t(__pyx_v_i); if (unlikely((__pyx_t_5 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 123, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyInt_From_int(BLAKE3_KEY_LEN); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 123, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_6 = PyNumber_Multiply(__pyx_v_i, __pyx_t_2); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 122, __pyx_L1_error)
+    __pyx_t_6 = PyNumber_Multiply(__pyx_v_i, __pyx_t_2); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 123, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_7 = __Pyx_PyIndex_AsSsize_t(__pyx_t_6); if (unlikely((__pyx_t_7 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 122, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyIndex_AsSsize_t(__pyx_t_6); if (unlikely((__pyx_t_7 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 123, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     (void)(memcpy((__pyx_v_keys[__pyx_t_5]).key, ((__pyx_t_9c_skylink_uint8_t *)(&(__pyx_v_keydata[__pyx_t_7]))), BLAKE3_KEY_LEN));
 
-    /* "c_skylink.pyx":120
+    /* "c_skylink.pyx":121
  * 		cdef c_skylink.SkyHMACKey* keys;
- * 		keys = <c_skylink.SkyHMACKey*> malloc(sizeof(c_skylink.SkyHMACKey)*4)
+ * 		keys = <c_skylink.SkyHMACKey*> malloc(sizeof(c_skylink.SkyHMACKey) * 4)
  * 		for i in range(keycount):             # <<<<<<<<<<<<<<
  * 			keys[i].len = c_skylink.BLAKE3_KEY_LEN
- * 			memcpy(keys[i].key, <uint8_t*> &keydata[i*c_skylink.BLAKE3_KEY_LEN] , c_skylink.BLAKE3_KEY_LEN)
+ * 			memcpy(keys[i].key, <uint8_t*> &keydata[i * c_skylink.BLAKE3_KEY_LEN], c_skylink.BLAKE3_KEY_LEN)
  */
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "c_skylink.pyx":123
+  /* "c_skylink.pyx":124
  * 			keys[i].len = c_skylink.BLAKE3_KEY_LEN
- * 			memcpy(keys[i].key, <uint8_t*> &keydata[i*c_skylink.BLAKE3_KEY_LEN] , c_skylink.BLAKE3_KEY_LEN)
+ * 			memcpy(keys[i].key, <uint8_t*> &keydata[i * c_skylink.BLAKE3_KEY_LEN], c_skylink.BLAKE3_KEY_LEN)
  * 		c_skylink.sky_hmac_set_keys(self.handle, keys, keycount)             # <<<<<<<<<<<<<<
  * 		free(keys)
  * 
  */
   sky_hmac_set_keys(__pyx_v_self->handle, __pyx_v_keys, __pyx_v_keycount);
 
-  /* "c_skylink.pyx":124
- * 			memcpy(keys[i].key, <uint8_t*> &keydata[i*c_skylink.BLAKE3_KEY_LEN] , c_skylink.BLAKE3_KEY_LEN)
+  /* "c_skylink.pyx":125
+ * 			memcpy(keys[i].key, <uint8_t*> &keydata[i * c_skylink.BLAKE3_KEY_LEN], c_skylink.BLAKE3_KEY_LEN)
  * 		c_skylink.sky_hmac_set_keys(self.handle, keys, keycount)
  * 		free(keys)             # <<<<<<<<<<<<<<
  * 
@@ -6449,7 +6454,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__set_hmac_keys(struct __pyx_obj_9c_
  */
   free(__pyx_v_keys);
 
-  /* "c_skylink.pyx":116
+  /* "c_skylink.pyx":117
  * 
  * 	# === HMAC-KEYS ========================================================================================================================
  * 	cdef _set_hmac_keys(self, uint8_t* keydata, int keycount):             # <<<<<<<<<<<<<<
@@ -6473,7 +6478,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__set_hmac_keys(struct __pyx_obj_9c_
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":126
+/* "c_skylink.pyx":127
  * 		free(keys)
  * 
  * 	def set_hmac_keys(self, key_list):             # <<<<<<<<<<<<<<
@@ -6534,12 +6539,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 126, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 127, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "set_hmac_keys") < 0)) __PYX_ERR(0, 126, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "set_hmac_keys") < 0)) __PYX_ERR(0, 127, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -6550,7 +6555,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("set_hmac_keys", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 126, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("set_hmac_keys", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 127, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -6594,7 +6599,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_hmac_keys", 1);
 
-  /* "c_skylink.pyx":127
+  /* "c_skylink.pyx":128
  * 
  * 	def set_hmac_keys(self, key_list):
  * 		assert 0 < len(key_list) <= c_skylink.SKY_NUM_VIRTUAL_CHANNELS             # <<<<<<<<<<<<<<
@@ -6603,21 +6608,21 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(__pyx_assertions_enabled())) {
-    __pyx_t_1 = PyObject_Length(__pyx_v_key_list); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 127, __pyx_L1_error)
+    __pyx_t_1 = PyObject_Length(__pyx_v_key_list); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 128, __pyx_L1_error)
     __pyx_t_2 = (0 < __pyx_t_1);
     if (__pyx_t_2) {
       __pyx_t_2 = (__pyx_t_1 <= SKY_NUM_VIRTUAL_CHANNELS);
     }
     if (unlikely(!__pyx_t_2)) {
       __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
-      __PYX_ERR(0, 127, __pyx_L1_error)
+      __PYX_ERR(0, 128, __pyx_L1_error)
     }
   }
   #else
-  if ((1)); else __PYX_ERR(0, 127, __pyx_L1_error)
+  if ((1)); else __PYX_ERR(0, 128, __pyx_L1_error)
   #endif
 
-  /* "c_skylink.pyx":128
+  /* "c_skylink.pyx":129
  * 	def set_hmac_keys(self, key_list):
  * 		assert 0 < len(key_list) <= c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		for key in key_list:             # <<<<<<<<<<<<<<
@@ -6629,9 +6634,9 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
     __pyx_t_1 = 0;
     __pyx_t_4 = NULL;
   } else {
-    __pyx_t_1 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_v_key_list); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 128, __pyx_L1_error)
+    __pyx_t_1 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_v_key_list); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 129, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 128, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 129, __pyx_L1_error)
   }
   for (;;) {
     if (likely(!__pyx_t_4)) {
@@ -6639,28 +6644,28 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
         {
           Py_ssize_t __pyx_temp = __Pyx_PyList_GET_SIZE(__pyx_t_3);
           #if !CYTHON_ASSUME_SAFE_MACROS
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 128, __pyx_L1_error)
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 129, __pyx_L1_error)
           #endif
           if (__pyx_t_1 >= __pyx_temp) break;
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_5 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely((0 < 0))) __PYX_ERR(0, 128, __pyx_L1_error)
+        __pyx_t_5 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely((0 < 0))) __PYX_ERR(0, 129, __pyx_L1_error)
         #else
-        __pyx_t_5 = __Pyx_PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 128, __pyx_L1_error)
+        __pyx_t_5 = __Pyx_PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 129, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         #endif
       } else {
         {
           Py_ssize_t __pyx_temp = __Pyx_PyTuple_GET_SIZE(__pyx_t_3);
           #if !CYTHON_ASSUME_SAFE_MACROS
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 128, __pyx_L1_error)
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 129, __pyx_L1_error)
           #endif
           if (__pyx_t_1 >= __pyx_temp) break;
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_5 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely((0 < 0))) __PYX_ERR(0, 128, __pyx_L1_error)
+        __pyx_t_5 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely((0 < 0))) __PYX_ERR(0, 129, __pyx_L1_error)
         #else
-        __pyx_t_5 = __Pyx_PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 128, __pyx_L1_error)
+        __pyx_t_5 = __Pyx_PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 129, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         #endif
       }
@@ -6670,7 +6675,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 128, __pyx_L1_error)
+          else __PYX_ERR(0, 129, __pyx_L1_error)
         }
         break;
       }
@@ -6679,7 +6684,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
     __Pyx_XDECREF_SET(__pyx_v_key, __pyx_t_5);
     __pyx_t_5 = 0;
 
-    /* "c_skylink.pyx":129
+    /* "c_skylink.pyx":130
  * 		assert 0 < len(key_list) <= c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		for key in key_list:
  * 			assert type(key) == bytes             # <<<<<<<<<<<<<<
@@ -6688,29 +6693,9 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
  */
     #ifndef CYTHON_WITHOUT_ASSERTIONS
     if (unlikely(__pyx_assertions_enabled())) {
-      __pyx_t_5 = PyObject_RichCompare(((PyObject *)Py_TYPE(__pyx_v_key)), ((PyObject *)(&PyBytes_Type)), Py_EQ); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 129, __pyx_L1_error)
-      __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely((__pyx_t_2 < 0))) __PYX_ERR(0, 129, __pyx_L1_error)
+      __pyx_t_5 = PyObject_RichCompare(((PyObject *)Py_TYPE(__pyx_v_key)), ((PyObject *)(&PyBytes_Type)), Py_EQ); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 130, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely((__pyx_t_2 < 0))) __PYX_ERR(0, 130, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-      if (unlikely(!__pyx_t_2)) {
-        __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
-        __PYX_ERR(0, 129, __pyx_L1_error)
-      }
-    }
-    #else
-    if ((1)); else __PYX_ERR(0, 129, __pyx_L1_error)
-    #endif
-
-    /* "c_skylink.pyx":130
- * 		for key in key_list:
- * 			assert type(key) == bytes
- * 			assert len(key) == c_skylink.BLAKE3_KEY_LEN             # <<<<<<<<<<<<<<
- * 		keydata = b""
- * 		for key in key_list:
- */
-    #ifndef CYTHON_WITHOUT_ASSERTIONS
-    if (unlikely(__pyx_assertions_enabled())) {
-      __pyx_t_6 = PyObject_Length(__pyx_v_key); if (unlikely(__pyx_t_6 == ((Py_ssize_t)-1))) __PYX_ERR(0, 130, __pyx_L1_error)
-      __pyx_t_2 = (__pyx_t_6 == BLAKE3_KEY_LEN);
       if (unlikely(!__pyx_t_2)) {
         __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
         __PYX_ERR(0, 130, __pyx_L1_error)
@@ -6720,7 +6705,27 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
     if ((1)); else __PYX_ERR(0, 130, __pyx_L1_error)
     #endif
 
-    /* "c_skylink.pyx":128
+    /* "c_skylink.pyx":131
+ * 		for key in key_list:
+ * 			assert type(key) == bytes
+ * 			assert len(key) == c_skylink.BLAKE3_KEY_LEN             # <<<<<<<<<<<<<<
+ * 		keydata = b""
+ * 		for key in key_list:
+ */
+    #ifndef CYTHON_WITHOUT_ASSERTIONS
+    if (unlikely(__pyx_assertions_enabled())) {
+      __pyx_t_6 = PyObject_Length(__pyx_v_key); if (unlikely(__pyx_t_6 == ((Py_ssize_t)-1))) __PYX_ERR(0, 131, __pyx_L1_error)
+      __pyx_t_2 = (__pyx_t_6 == BLAKE3_KEY_LEN);
+      if (unlikely(!__pyx_t_2)) {
+        __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
+        __PYX_ERR(0, 131, __pyx_L1_error)
+      }
+    }
+    #else
+    if ((1)); else __PYX_ERR(0, 131, __pyx_L1_error)
+    #endif
+
+    /* "c_skylink.pyx":129
  * 	def set_hmac_keys(self, key_list):
  * 		assert 0 < len(key_list) <= c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		for key in key_list:             # <<<<<<<<<<<<<<
@@ -6730,7 +6735,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "c_skylink.pyx":131
+  /* "c_skylink.pyx":132
  * 			assert type(key) == bytes
  * 			assert len(key) == c_skylink.BLAKE3_KEY_LEN
  * 		keydata = b""             # <<<<<<<<<<<<<<
@@ -6740,7 +6745,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
   __Pyx_INCREF(__pyx_kp_b__7);
   __pyx_v_keydata = __pyx_kp_b__7;
 
-  /* "c_skylink.pyx":132
+  /* "c_skylink.pyx":133
  * 			assert len(key) == c_skylink.BLAKE3_KEY_LEN
  * 		keydata = b""
  * 		for key in key_list:             # <<<<<<<<<<<<<<
@@ -6752,9 +6757,9 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
     __pyx_t_1 = 0;
     __pyx_t_4 = NULL;
   } else {
-    __pyx_t_1 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_v_key_list); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 132, __pyx_L1_error)
+    __pyx_t_1 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_v_key_list); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 133, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 132, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetIterNextFunc(__pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 133, __pyx_L1_error)
   }
   for (;;) {
     if (likely(!__pyx_t_4)) {
@@ -6762,28 +6767,28 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
         {
           Py_ssize_t __pyx_temp = __Pyx_PyList_GET_SIZE(__pyx_t_3);
           #if !CYTHON_ASSUME_SAFE_MACROS
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 132, __pyx_L1_error)
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 133, __pyx_L1_error)
           #endif
           if (__pyx_t_1 >= __pyx_temp) break;
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_5 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely((0 < 0))) __PYX_ERR(0, 132, __pyx_L1_error)
+        __pyx_t_5 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely((0 < 0))) __PYX_ERR(0, 133, __pyx_L1_error)
         #else
-        __pyx_t_5 = __Pyx_PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 132, __pyx_L1_error)
+        __pyx_t_5 = __Pyx_PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 133, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         #endif
       } else {
         {
           Py_ssize_t __pyx_temp = __Pyx_PyTuple_GET_SIZE(__pyx_t_3);
           #if !CYTHON_ASSUME_SAFE_MACROS
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 132, __pyx_L1_error)
+          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 133, __pyx_L1_error)
           #endif
           if (__pyx_t_1 >= __pyx_temp) break;
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_5 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely((0 < 0))) __PYX_ERR(0, 132, __pyx_L1_error)
+        __pyx_t_5 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely((0 < 0))) __PYX_ERR(0, 133, __pyx_L1_error)
         #else
-        __pyx_t_5 = __Pyx_PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 132, __pyx_L1_error)
+        __pyx_t_5 = __Pyx_PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 133, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         #endif
       }
@@ -6793,7 +6798,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 132, __pyx_L1_error)
+          else __PYX_ERR(0, 133, __pyx_L1_error)
         }
         break;
       }
@@ -6802,19 +6807,19 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
     __Pyx_XDECREF_SET(__pyx_v_key, __pyx_t_5);
     __pyx_t_5 = 0;
 
-    /* "c_skylink.pyx":133
+    /* "c_skylink.pyx":134
  * 		keydata = b""
  * 		for key in key_list:
  * 			keydata += key             # <<<<<<<<<<<<<<
  * 		self._set_hmac_keys(<uint8_t*> keydata, <int> len(key_list))
  * 
  */
-    __pyx_t_5 = PyNumber_InPlaceAdd(__pyx_v_keydata, __pyx_v_key); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 133, __pyx_L1_error)
+    __pyx_t_5 = PyNumber_InPlaceAdd(__pyx_v_keydata, __pyx_v_key); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 134, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF_SET(__pyx_v_keydata, __pyx_t_5);
     __pyx_t_5 = 0;
 
-    /* "c_skylink.pyx":132
+    /* "c_skylink.pyx":133
  * 			assert len(key) == c_skylink.BLAKE3_KEY_LEN
  * 		keydata = b""
  * 		for key in key_list:             # <<<<<<<<<<<<<<
@@ -6824,20 +6829,20 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "c_skylink.pyx":134
+  /* "c_skylink.pyx":135
  * 		for key in key_list:
  * 			keydata += key
  * 		self._set_hmac_keys(<uint8_t*> keydata, <int> len(key_list))             # <<<<<<<<<<<<<<
  * 
  * 	cdef _get_hmac_key(self, int ichannel):
  */
-  __pyx_t_7 = __Pyx_PyObject_AsWritableUString(__pyx_v_keydata); if (unlikely((!__pyx_t_7) && PyErr_Occurred())) __PYX_ERR(0, 134, __pyx_L1_error)
-  __pyx_t_1 = PyObject_Length(__pyx_v_key_list); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 134, __pyx_L1_error)
-  __pyx_t_3 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_set_hmac_keys(__pyx_v_self, ((__pyx_t_9c_skylink_uint8_t *)__pyx_t_7), ((int)__pyx_t_1)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 134, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_AsWritableUString(__pyx_v_keydata); if (unlikely((!__pyx_t_7) && PyErr_Occurred())) __PYX_ERR(0, 135, __pyx_L1_error)
+  __pyx_t_1 = PyObject_Length(__pyx_v_key_list); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 135, __pyx_L1_error)
+  __pyx_t_3 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_set_hmac_keys(__pyx_v_self, ((__pyx_t_9c_skylink_uint8_t *)__pyx_t_7), ((int)__pyx_t_1)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 135, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "c_skylink.pyx":126
+  /* "c_skylink.pyx":127
  * 		free(keys)
  * 
  * 	def set_hmac_keys(self, key_list):             # <<<<<<<<<<<<<<
@@ -6861,7 +6866,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_6set_hmac_keys(struct __pyx_obj_9c
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":136
+/* "c_skylink.pyx":137
  * 		self._set_hmac_keys(<uint8_t*> keydata, <int> len(key_list))
  * 
  * 	cdef _get_hmac_key(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -6882,34 +6887,34 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__get_hmac_key(struct __pyx_obj_9c_s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_get_hmac_key", 1);
 
-  /* "c_skylink.pyx":138
+  /* "c_skylink.pyx":139
  * 	cdef _get_hmac_key(self, int ichannel):
  * 		cdef uint8_t* key;
  * 		key = self.handle.hmac.keys[ichannel].key             # <<<<<<<<<<<<<<
- * 		k = bytes( key[0:c_skylink.BLAKE3_KEY_LEN] )
+ * 		k = bytes(key[0:c_skylink.BLAKE3_KEY_LEN])
  * 		return k
  */
   __pyx_t_1 = (__pyx_v_self->handle->hmac->keys[__pyx_v_ichannel]).key;
   __pyx_v_key = __pyx_t_1;
 
-  /* "c_skylink.pyx":139
+  /* "c_skylink.pyx":140
  * 		cdef uint8_t* key;
  * 		key = self.handle.hmac.keys[ichannel].key
- * 		k = bytes( key[0:c_skylink.BLAKE3_KEY_LEN] )             # <<<<<<<<<<<<<<
+ * 		k = bytes(key[0:c_skylink.BLAKE3_KEY_LEN])             # <<<<<<<<<<<<<<
  * 		return k
  * 
  */
-  __pyx_t_2 = __Pyx_PyBytes_FromStringAndSize(((const char*)__pyx_v_key) + 0, BLAKE3_KEY_LEN - 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyBytes_FromStringAndSize(((const char*)__pyx_v_key) + 0, BLAKE3_KEY_LEN - 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyBytes_Type)), __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyBytes_Type)), __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_k = ((PyObject*)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "c_skylink.pyx":140
+  /* "c_skylink.pyx":141
  * 		key = self.handle.hmac.keys[ichannel].key
- * 		k = bytes( key[0:c_skylink.BLAKE3_KEY_LEN] )
+ * 		k = bytes(key[0:c_skylink.BLAKE3_KEY_LEN])
  * 		return k             # <<<<<<<<<<<<<<
  * 
  * 	def get_hmac_key(self, ichannel):
@@ -6919,7 +6924,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__get_hmac_key(struct __pyx_obj_9c_s
   __pyx_r = __pyx_v_k;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":136
+  /* "c_skylink.pyx":137
  * 		self._set_hmac_keys(<uint8_t*> keydata, <int> len(key_list))
  * 
  * 	cdef _get_hmac_key(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -6940,7 +6945,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__get_hmac_key(struct __pyx_obj_9c_s
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":142
+/* "c_skylink.pyx":143
  * 		return k
  * 
  * 	def get_hmac_key(self, ichannel):             # <<<<<<<<<<<<<<
@@ -7001,12 +7006,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 142, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 143, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "get_hmac_key") < 0)) __PYX_ERR(0, 142, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "get_hmac_key") < 0)) __PYX_ERR(0, 143, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -7017,7 +7022,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("get_hmac_key", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 142, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("get_hmac_key", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 143, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -7056,7 +7061,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_8get_hmac_key(struct __pyx_obj_9c_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("get_hmac_key", 1);
 
-  /* "c_skylink.pyx":143
+  /* "c_skylink.pyx":144
  * 
  * 	def get_hmac_key(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS             # <<<<<<<<<<<<<<
@@ -7065,26 +7070,26 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_8get_hmac_key(struct __pyx_obj_9c_
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(__pyx_assertions_enabled())) {
-    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 143, __pyx_L1_error)
+    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 144, __pyx_L1_error)
     if (__Pyx_PyObject_IsTrue(__pyx_t_1)) {
       __Pyx_DECREF(__pyx_t_1);
-      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 143, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 144, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 143, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 144, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 143, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 144, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(!__pyx_t_3)) {
       __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
-      __PYX_ERR(0, 143, __pyx_L1_error)
+      __PYX_ERR(0, 144, __pyx_L1_error)
     }
   }
   #else
-  if ((1)); else __PYX_ERR(0, 143, __pyx_L1_error)
+  if ((1)); else __PYX_ERR(0, 144, __pyx_L1_error)
   #endif
 
-  /* "c_skylink.pyx":144
+  /* "c_skylink.pyx":145
  * 	def get_hmac_key(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return bytes(self._get_hmac_key( <int> ichannel))             # <<<<<<<<<<<<<<
@@ -7092,17 +7097,17 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_8get_hmac_key(struct __pyx_obj_9c_
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 144, __pyx_L1_error)
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_get_hmac_key(__pyx_v_self, ((int)__pyx_t_4)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 144, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_get_hmac_key(__pyx_v_self, ((int)__pyx_t_4)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyBytes_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 144, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyBytes_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_r = __pyx_t_2;
   __pyx_t_2 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":142
+  /* "c_skylink.pyx":143
  * 		return k
  * 
  * 	def get_hmac_key(self, ichannel):             # <<<<<<<<<<<<<<
@@ -7122,7 +7127,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_8get_hmac_key(struct __pyx_obj_9c_
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":150
+/* "c_skylink.pyx":151
  * 
  * 	# === RX/TX ============================================================================================================================
  * 	cdef _sky_rx(self, uint8_t* data, int leng):             # <<<<<<<<<<<<<<
@@ -7141,7 +7146,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_rx(struct __pyx_obj_9c_skylink
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_sky_rx", 1);
 
-  /* "c_skylink.pyx":152
+  /* "c_skylink.pyx":153
  * 	cdef _sky_rx(self, uint8_t* data, int leng):
  * 		cdef c_skylink.SkyRadioFrame frame;
  * 		cdef int iret = 0;             # <<<<<<<<<<<<<<
@@ -7150,7 +7155,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_rx(struct __pyx_obj_9c_skylink
  */
   __pyx_v_iret = 0;
 
-  /* "c_skylink.pyx":153
+  /* "c_skylink.pyx":154
  * 		cdef c_skylink.SkyRadioFrame frame;
  * 		cdef int iret = 0;
  * 		memcpy(frame.raw, data, leng)             # <<<<<<<<<<<<<<
@@ -7159,7 +7164,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_rx(struct __pyx_obj_9c_skylink
  */
   (void)(memcpy(__pyx_v_frame.raw, __pyx_v_data, __pyx_v_leng));
 
-  /* "c_skylink.pyx":154
+  /* "c_skylink.pyx":155
  * 		cdef int iret = 0;
  * 		memcpy(frame.raw, data, leng)
  * 		frame.length = leng             # <<<<<<<<<<<<<<
@@ -7168,7 +7173,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_rx(struct __pyx_obj_9c_skylink
  */
   __pyx_v_frame.length = __pyx_v_leng;
 
-  /* "c_skylink.pyx":155
+  /* "c_skylink.pyx":156
  * 		memcpy(frame.raw, data, leng)
  * 		frame.length = leng
  * 		iret = c_skylink.sky_rx(self.handle, &frame)             # <<<<<<<<<<<<<<
@@ -7177,7 +7182,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_rx(struct __pyx_obj_9c_skylink
  */
   __pyx_v_iret = sky_rx(__pyx_v_self->handle, (&__pyx_v_frame));
 
-  /* "c_skylink.pyx":156
+  /* "c_skylink.pyx":157
  * 		frame.length = leng
  * 		iret = c_skylink.sky_rx(self.handle, &frame)
  * 		return iret             # <<<<<<<<<<<<<<
@@ -7185,13 +7190,13 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_rx(struct __pyx_obj_9c_skylink
  * 	def sky_rx(self, raw_frame_bytes):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_iret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 156, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_iret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 157, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":150
+  /* "c_skylink.pyx":151
  * 
  * 	# === RX/TX ============================================================================================================================
  * 	cdef _sky_rx(self, uint8_t* data, int leng):             # <<<<<<<<<<<<<<
@@ -7210,7 +7215,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_rx(struct __pyx_obj_9c_skylink
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":158
+/* "c_skylink.pyx":159
  * 		return iret
  * 
  * 	def sky_rx(self, raw_frame_bytes):             # <<<<<<<<<<<<<<
@@ -7271,12 +7276,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 158, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 159, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_rx") < 0)) __PYX_ERR(0, 158, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_rx") < 0)) __PYX_ERR(0, 159, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -7287,7 +7292,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("sky_rx", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 158, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("sky_rx", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 159, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -7325,7 +7330,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_10sky_rx(struct __pyx_obj_9c_skyli
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_rx", 1);
 
-  /* "c_skylink.pyx":159
+  /* "c_skylink.pyx":160
  * 
  * 	def sky_rx(self, raw_frame_bytes):
  * 		return self._sky_rx(<uint8_t*> raw_frame_bytes, <int> len(raw_frame_bytes))             # <<<<<<<<<<<<<<
@@ -7333,15 +7338,15 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_10sky_rx(struct __pyx_obj_9c_skyli
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyObject_AsWritableUString(__pyx_v_raw_frame_bytes); if (unlikely((!__pyx_t_1) && PyErr_Occurred())) __PYX_ERR(0, 159, __pyx_L1_error)
-  __pyx_t_2 = PyObject_Length(__pyx_v_raw_frame_bytes); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 159, __pyx_L1_error)
-  __pyx_t_3 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_rx(__pyx_v_self, ((__pyx_t_9c_skylink_uint8_t *)__pyx_t_1), ((int)__pyx_t_2)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_AsWritableUString(__pyx_v_raw_frame_bytes); if (unlikely((!__pyx_t_1) && PyErr_Occurred())) __PYX_ERR(0, 160, __pyx_L1_error)
+  __pyx_t_2 = PyObject_Length(__pyx_v_raw_frame_bytes); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 160, __pyx_L1_error)
+  __pyx_t_3 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_rx(__pyx_v_self, ((__pyx_t_9c_skylink_uint8_t *)__pyx_t_1), ((int)__pyx_t_2)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 160, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_r = __pyx_t_3;
   __pyx_t_3 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":158
+  /* "c_skylink.pyx":159
  * 		return iret
  * 
  * 	def sky_rx(self, raw_frame_bytes):             # <<<<<<<<<<<<<<
@@ -7360,7 +7365,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_10sky_rx(struct __pyx_obj_9c_skyli
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":162
+/* "c_skylink.pyx":163
  * 
  * 
  * 	cdef _sky_tx(self):             # <<<<<<<<<<<<<<
@@ -7381,7 +7386,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_tx(struct __pyx_obj_9c_skylink
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_sky_tx", 1);
 
-  /* "c_skylink.pyx":164
+  /* "c_skylink.pyx":165
  * 	cdef _sky_tx(self):
  * 		cdef c_skylink.SkyRadioFrame frame;
  * 		frame.length = 0             # <<<<<<<<<<<<<<
@@ -7390,7 +7395,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_tx(struct __pyx_obj_9c_skylink
  */
   __pyx_v_frame.length = 0;
 
-  /* "c_skylink.pyx":165
+  /* "c_skylink.pyx":166
  * 		cdef c_skylink.SkyRadioFrame frame;
  * 		frame.length = 0
  * 		cdef int iret = 0;             # <<<<<<<<<<<<<<
@@ -7399,7 +7404,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_tx(struct __pyx_obj_9c_skylink
  */
   __pyx_v_iret = 0;
 
-  /* "c_skylink.pyx":167
+  /* "c_skylink.pyx":168
  * 		cdef int iret = 0;
  * 		#tgt = <uint8_t*> malloc( sizeof(c_skylink.SkyRadioFrame) )
  * 		iret = c_skylink.sky_tx(self.handle, &frame)             # <<<<<<<<<<<<<<
@@ -7408,22 +7413,22 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_tx(struct __pyx_obj_9c_skylink
  */
   __pyx_v_iret = sky_tx(__pyx_v_self->handle, (&__pyx_v_frame));
 
-  /* "c_skylink.pyx":168
+  /* "c_skylink.pyx":169
  * 		#tgt = <uint8_t*> malloc( sizeof(c_skylink.SkyRadioFrame) )
  * 		iret = c_skylink.sky_tx(self.handle, &frame)
  * 		frame_bytes = bytes( frame.raw[:frame.length] )             # <<<<<<<<<<<<<<
  * 		return iret, frame_bytes
  * 
  */
-  __pyx_t_1 = __Pyx_PyBytes_FromStringAndSize(((const char*)__pyx_v_frame.raw) + 0, __pyx_v_frame.length - 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 168, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyBytes_FromStringAndSize(((const char*)__pyx_v_frame.raw) + 0, __pyx_v_frame.length - 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 169, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyBytes_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 168, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyBytes_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 169, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_frame_bytes = ((PyObject*)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":169
+  /* "c_skylink.pyx":170
  * 		iret = c_skylink.sky_tx(self.handle, &frame)
  * 		frame_bytes = bytes( frame.raw[:frame.length] )
  * 		return iret, frame_bytes             # <<<<<<<<<<<<<<
@@ -7431,21 +7436,21 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_tx(struct __pyx_obj_9c_skylink
  * 	def sky_tx(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_iret); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 169, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_iret); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 170, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 169, __pyx_L1_error)
+  __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 170, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_GIVEREF(__pyx_t_2);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_2)) __PYX_ERR(0, 169, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_2)) __PYX_ERR(0, 170, __pyx_L1_error);
   __Pyx_INCREF(__pyx_v_frame_bytes);
   __Pyx_GIVEREF(__pyx_v_frame_bytes);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_v_frame_bytes)) __PYX_ERR(0, 169, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_v_frame_bytes)) __PYX_ERR(0, 170, __pyx_L1_error);
   __pyx_t_2 = 0;
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":162
+  /* "c_skylink.pyx":163
  * 
  * 
  * 	cdef _sky_tx(self):             # <<<<<<<<<<<<<<
@@ -7466,7 +7471,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_tx(struct __pyx_obj_9c_skylink
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":171
+/* "c_skylink.pyx":172
  * 		return iret, frame_bytes
  * 
  * 	def sky_tx(self):             # <<<<<<<<<<<<<<
@@ -7524,7 +7529,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_12sky_tx(struct __pyx_obj_9c_skyli
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_tx", 1);
 
-  /* "c_skylink.pyx":172
+  /* "c_skylink.pyx":173
  * 
  * 	def sky_tx(self):
  * 		return self._sky_tx()             # <<<<<<<<<<<<<<
@@ -7532,13 +7537,13 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_12sky_tx(struct __pyx_obj_9c_skyli
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_tx(__pyx_v_self); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 172, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_tx(__pyx_v_self); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 173, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":171
+  /* "c_skylink.pyx":172
  * 		return iret, frame_bytes
  * 
  * 	def sky_tx(self):             # <<<<<<<<<<<<<<
@@ -7557,7 +7562,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_12sky_tx(struct __pyx_obj_9c_skyli
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":179
+/* "c_skylink.pyx":180
  * 
  * 	# === SEND =============================================================================================================================
  * 	cdef _sky_vc_push_packet_to_send(self, int ichannel, uint8_t* data, int datalen):             # <<<<<<<<<<<<<<
@@ -7575,7 +7580,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_push_packet_to_send(struct 
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_sky_vc_push_packet_to_send", 1);
 
-  /* "c_skylink.pyx":180
+  /* "c_skylink.pyx":181
  * 	# === SEND =============================================================================================================================
  * 	cdef _sky_vc_push_packet_to_send(self, int ichannel, uint8_t* data, int datalen):
  * 		cdef int ret = 0;             # <<<<<<<<<<<<<<
@@ -7584,7 +7589,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_push_packet_to_send(struct 
  */
   __pyx_v_ret = 0;
 
-  /* "c_skylink.pyx":181
+  /* "c_skylink.pyx":182
  * 	cdef _sky_vc_push_packet_to_send(self, int ichannel, uint8_t* data, int datalen):
  * 		cdef int ret = 0;
  * 		ret = c_skylink.sky_vc_push_packet_to_send(self.handle.virtual_channels[ichannel], data, datalen)             # <<<<<<<<<<<<<<
@@ -7593,7 +7598,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_push_packet_to_send(struct 
  */
   __pyx_v_ret = sky_vc_push_packet_to_send((__pyx_v_self->handle->virtual_channels[__pyx_v_ichannel]), __pyx_v_data, __pyx_v_datalen);
 
-  /* "c_skylink.pyx":182
+  /* "c_skylink.pyx":183
  * 		cdef int ret = 0;
  * 		ret = c_skylink.sky_vc_push_packet_to_send(self.handle.virtual_channels[ichannel], data, datalen)
  * 		return ret             # <<<<<<<<<<<<<<
@@ -7601,13 +7606,13 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_push_packet_to_send(struct 
  * 	def sky_vc_push_packet_to_send(self, ichannel, data):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 182, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 183, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":179
+  /* "c_skylink.pyx":180
  * 
  * 	# === SEND =============================================================================================================================
  * 	cdef _sky_vc_push_packet_to_send(self, int ichannel, uint8_t* data, int datalen):             # <<<<<<<<<<<<<<
@@ -7626,7 +7631,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_push_packet_to_send(struct 
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":184
+/* "c_skylink.pyx":185
  * 		return ret
  * 
  * 	def sky_vc_push_packet_to_send(self, ichannel, data):             # <<<<<<<<<<<<<<
@@ -7690,7 +7695,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 184, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 185, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
         CYTHON_FALLTHROUGH;
         case  1:
@@ -7698,14 +7703,14 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[1]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 184, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 185, __pyx_L3_error)
         else {
-          __Pyx_RaiseArgtupleInvalid("sky_vc_push_packet_to_send", 1, 2, 2, 1); __PYX_ERR(0, 184, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("sky_vc_push_packet_to_send", 1, 2, 2, 1); __PYX_ERR(0, 185, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_push_packet_to_send") < 0)) __PYX_ERR(0, 184, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_push_packet_to_send") < 0)) __PYX_ERR(0, 185, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 2)) {
       goto __pyx_L5_argtuple_error;
@@ -7718,7 +7723,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("sky_vc_push_packet_to_send", 1, 2, 2, __pyx_nargs); __PYX_ERR(0, 184, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("sky_vc_push_packet_to_send", 1, 2, 2, __pyx_nargs); __PYX_ERR(0, 185, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -7759,7 +7764,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_14sky_vc_push_packet_to_send(struc
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_vc_push_packet_to_send", 1);
 
-  /* "c_skylink.pyx":185
+  /* "c_skylink.pyx":186
  * 
  * 	def sky_vc_push_packet_to_send(self, ichannel, data):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS             # <<<<<<<<<<<<<<
@@ -7768,26 +7773,26 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_14sky_vc_push_packet_to_send(struc
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(__pyx_assertions_enabled())) {
-    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 185, __pyx_L1_error)
+    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 186, __pyx_L1_error)
     if (__Pyx_PyObject_IsTrue(__pyx_t_1)) {
       __Pyx_DECREF(__pyx_t_1);
-      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 185, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 186, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 185, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 186, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 185, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 186, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(!__pyx_t_3)) {
       __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
-      __PYX_ERR(0, 185, __pyx_L1_error)
+      __PYX_ERR(0, 186, __pyx_L1_error)
     }
   }
   #else
-  if ((1)); else __PYX_ERR(0, 185, __pyx_L1_error)
+  if ((1)); else __PYX_ERR(0, 186, __pyx_L1_error)
   #endif
 
-  /* "c_skylink.pyx":186
+  /* "c_skylink.pyx":187
  * 	def sky_vc_push_packet_to_send(self, ichannel, data):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_push_packet_to_send(<int> ichannel, <uint8_t*> data, <int> len(data))             # <<<<<<<<<<<<<<
@@ -7795,16 +7800,16 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_14sky_vc_push_packet_to_send(struc
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 186, __pyx_L1_error)
-  __pyx_t_5 = __Pyx_PyObject_AsWritableUString(__pyx_v_data); if (unlikely((!__pyx_t_5) && PyErr_Occurred())) __PYX_ERR(0, 186, __pyx_L1_error)
-  __pyx_t_6 = PyObject_Length(__pyx_v_data); if (unlikely(__pyx_t_6 == ((Py_ssize_t)-1))) __PYX_ERR(0, 186, __pyx_L1_error)
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_push_packet_to_send(__pyx_v_self, ((int)__pyx_t_4), ((__pyx_t_9c_skylink_uint8_t *)__pyx_t_5), ((int)__pyx_t_6)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 186, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 187, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_AsWritableUString(__pyx_v_data); if (unlikely((!__pyx_t_5) && PyErr_Occurred())) __PYX_ERR(0, 187, __pyx_L1_error)
+  __pyx_t_6 = PyObject_Length(__pyx_v_data); if (unlikely(__pyx_t_6 == ((Py_ssize_t)-1))) __PYX_ERR(0, 187, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_push_packet_to_send(__pyx_v_self, ((int)__pyx_t_4), ((__pyx_t_9c_skylink_uint8_t *)__pyx_t_5), ((int)__pyx_t_6)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 187, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":184
+  /* "c_skylink.pyx":185
  * 		return ret
  * 
  * 	def sky_vc_push_packet_to_send(self, ichannel, data):             # <<<<<<<<<<<<<<
@@ -7824,7 +7829,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_14sky_vc_push_packet_to_send(struc
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":189
+/* "c_skylink.pyx":190
  * 
  * 
  * 	cdef _sky_vc_count_packets_to_tx(self, int ichannel, int include_resend):             # <<<<<<<<<<<<<<
@@ -7842,7 +7847,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_count_packets_to_tx(struct 
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_sky_vc_count_packets_to_tx", 1);
 
-  /* "c_skylink.pyx":190
+  /* "c_skylink.pyx":191
  * 
  * 	cdef _sky_vc_count_packets_to_tx(self, int ichannel, int include_resend):
  * 		cdef int ret = 0;             # <<<<<<<<<<<<<<
@@ -7851,7 +7856,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_count_packets_to_tx(struct 
  */
   __pyx_v_ret = 0;
 
-  /* "c_skylink.pyx":191
+  /* "c_skylink.pyx":192
  * 	cdef _sky_vc_count_packets_to_tx(self, int ichannel, int include_resend):
  * 		cdef int ret = 0;
  * 		ret = c_skylink.sky_vc_count_packets_to_tx(self.handle.virtual_channels[ichannel], include_resend)             # <<<<<<<<<<<<<<
@@ -7860,7 +7865,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_count_packets_to_tx(struct 
  */
   __pyx_v_ret = sky_vc_count_packets_to_tx((__pyx_v_self->handle->virtual_channels[__pyx_v_ichannel]), __pyx_v_include_resend);
 
-  /* "c_skylink.pyx":192
+  /* "c_skylink.pyx":193
  * 		cdef int ret = 0;
  * 		ret = c_skylink.sky_vc_count_packets_to_tx(self.handle.virtual_channels[ichannel], include_resend)
  * 		return ret             # <<<<<<<<<<<<<<
@@ -7868,13 +7873,13 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_count_packets_to_tx(struct 
  * 	def sky_vc_count_packets_to_tx(self, ichannel, include_resend):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 192, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 193, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":189
+  /* "c_skylink.pyx":190
  * 
  * 
  * 	cdef _sky_vc_count_packets_to_tx(self, int ichannel, int include_resend):             # <<<<<<<<<<<<<<
@@ -7893,7 +7898,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_count_packets_to_tx(struct 
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":194
+/* "c_skylink.pyx":195
  * 		return ret
  * 
  * 	def sky_vc_count_packets_to_tx(self, ichannel, include_resend):             # <<<<<<<<<<<<<<
@@ -7957,7 +7962,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 194, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 195, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
         CYTHON_FALLTHROUGH;
         case  1:
@@ -7965,14 +7970,14 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[1]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 194, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 195, __pyx_L3_error)
         else {
-          __Pyx_RaiseArgtupleInvalid("sky_vc_count_packets_to_tx", 1, 2, 2, 1); __PYX_ERR(0, 194, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("sky_vc_count_packets_to_tx", 1, 2, 2, 1); __PYX_ERR(0, 195, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_count_packets_to_tx") < 0)) __PYX_ERR(0, 194, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_count_packets_to_tx") < 0)) __PYX_ERR(0, 195, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 2)) {
       goto __pyx_L5_argtuple_error;
@@ -7985,7 +7990,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("sky_vc_count_packets_to_tx", 1, 2, 2, __pyx_nargs); __PYX_ERR(0, 194, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("sky_vc_count_packets_to_tx", 1, 2, 2, __pyx_nargs); __PYX_ERR(0, 195, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -8025,7 +8030,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_16sky_vc_count_packets_to_tx(struc
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_vc_count_packets_to_tx", 1);
 
-  /* "c_skylink.pyx":195
+  /* "c_skylink.pyx":196
  * 
  * 	def sky_vc_count_packets_to_tx(self, ichannel, include_resend):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS             # <<<<<<<<<<<<<<
@@ -8034,26 +8039,26 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_16sky_vc_count_packets_to_tx(struc
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(__pyx_assertions_enabled())) {
-    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 195, __pyx_L1_error)
+    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 196, __pyx_L1_error)
     if (__Pyx_PyObject_IsTrue(__pyx_t_1)) {
       __Pyx_DECREF(__pyx_t_1);
-      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 195, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 196, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 195, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 196, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 195, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 196, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(!__pyx_t_3)) {
       __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
-      __PYX_ERR(0, 195, __pyx_L1_error)
+      __PYX_ERR(0, 196, __pyx_L1_error)
     }
   }
   #else
-  if ((1)); else __PYX_ERR(0, 195, __pyx_L1_error)
+  if ((1)); else __PYX_ERR(0, 196, __pyx_L1_error)
   #endif
 
-  /* "c_skylink.pyx":196
+  /* "c_skylink.pyx":197
  * 	def sky_vc_count_packets_to_tx(self, ichannel, include_resend):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_count_packets_to_tx(<int> ichannel, <int> int(include_resend))             # <<<<<<<<<<<<<<
@@ -8061,18 +8066,18 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_16sky_vc_count_packets_to_tx(struc
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 196, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyNumber_Int(__pyx_v_include_resend); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 196, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 197, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyNumber_Int(__pyx_v_include_resend); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 197, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 196, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 197, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_count_packets_to_tx(__pyx_v_self, ((int)__pyx_t_4), ((int)__pyx_t_5)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 196, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_count_packets_to_tx(__pyx_v_self, ((int)__pyx_t_4), ((int)__pyx_t_5)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 197, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":194
+  /* "c_skylink.pyx":195
  * 		return ret
  * 
  * 	def sky_vc_count_packets_to_tx(self, ichannel, include_resend):             # <<<<<<<<<<<<<<
@@ -8092,7 +8097,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_16sky_vc_count_packets_to_tx(struc
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":199
+/* "c_skylink.pyx":200
  * 
  * 
  * 	def sky_vc_send_buffer_is_full(self, ichannel):             # <<<<<<<<<<<<<<
@@ -8153,12 +8158,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 199, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 200, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_send_buffer_is_full") < 0)) __PYX_ERR(0, 199, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_send_buffer_is_full") < 0)) __PYX_ERR(0, 200, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -8169,7 +8174,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("sky_vc_send_buffer_is_full", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 199, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("sky_vc_send_buffer_is_full", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 200, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -8209,7 +8214,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_18sky_vc_send_buffer_is_full(struc
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_vc_send_buffer_is_full", 1);
 
-  /* "c_skylink.pyx":200
+  /* "c_skylink.pyx":201
  * 
  * 	def sky_vc_send_buffer_is_full(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS             # <<<<<<<<<<<<<<
@@ -8218,26 +8223,26 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_18sky_vc_send_buffer_is_full(struc
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(__pyx_assertions_enabled())) {
-    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 200, __pyx_L1_error)
+    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 201, __pyx_L1_error)
     if (__Pyx_PyObject_IsTrue(__pyx_t_1)) {
       __Pyx_DECREF(__pyx_t_1);
-      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 200, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 201, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 200, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 201, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 200, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 201, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(!__pyx_t_3)) {
       __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
-      __PYX_ERR(0, 200, __pyx_L1_error)
+      __PYX_ERR(0, 201, __pyx_L1_error)
     }
   }
   #else
-  if ((1)); else __PYX_ERR(0, 200, __pyx_L1_error)
+  if ((1)); else __PYX_ERR(0, 201, __pyx_L1_error)
   #endif
 
-  /* "c_skylink.pyx":201
+  /* "c_skylink.pyx":202
  * 	def sky_vc_send_buffer_is_full(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		cdef int ret = 0;             # <<<<<<<<<<<<<<
@@ -8246,17 +8251,17 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_18sky_vc_send_buffer_is_full(struc
  */
   __pyx_v_ret = 0;
 
-  /* "c_skylink.pyx":202
+  /* "c_skylink.pyx":203
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		cdef int ret = 0;
  * 		ret = c_skylink.sky_vc_send_buffer_is_full(self.handle.virtual_channels[ichannel])             # <<<<<<<<<<<<<<
  * 		return ret
  * 	# === SEND =============================================================================================================================
  */
-  __pyx_t_4 = __Pyx_PyIndex_AsSsize_t(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 202, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyIndex_AsSsize_t(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 203, __pyx_L1_error)
   __pyx_v_ret = sky_vc_send_buffer_is_full((__pyx_v_self->handle->virtual_channels[__pyx_t_4]));
 
-  /* "c_skylink.pyx":203
+  /* "c_skylink.pyx":204
  * 		cdef int ret = 0;
  * 		ret = c_skylink.sky_vc_send_buffer_is_full(self.handle.virtual_channels[ichannel])
  * 		return ret             # <<<<<<<<<<<<<<
@@ -8264,13 +8269,13 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_18sky_vc_send_buffer_is_full(struc
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 203, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 204, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":199
+  /* "c_skylink.pyx":200
  * 
  * 
  * 	def sky_vc_send_buffer_is_full(self, ichannel):             # <<<<<<<<<<<<<<
@@ -8290,7 +8295,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_18sky_vc_send_buffer_is_full(struc
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":211
+/* "c_skylink.pyx":212
  * 
  * 	# === RECEIVE ==========================================================================================================================
  * 	cdef _sky_vc_count_readable_rcv_packets(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -8308,7 +8313,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_count_readable_rcv_packets(
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_sky_vc_count_readable_rcv_packets", 1);
 
-  /* "c_skylink.pyx":212
+  /* "c_skylink.pyx":213
  * 	# === RECEIVE ==========================================================================================================================
  * 	cdef _sky_vc_count_readable_rcv_packets(self, int ichannel):
  * 		cdef int ret = 0;             # <<<<<<<<<<<<<<
@@ -8317,7 +8322,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_count_readable_rcv_packets(
  */
   __pyx_v_ret = 0;
 
-  /* "c_skylink.pyx":213
+  /* "c_skylink.pyx":214
  * 	cdef _sky_vc_count_readable_rcv_packets(self, int ichannel):
  * 		cdef int ret = 0;
  * 		ret = c_skylink.sky_vc_count_readable_rcv_packets(self.handle.virtual_channels[ichannel])             # <<<<<<<<<<<<<<
@@ -8326,7 +8331,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_count_readable_rcv_packets(
  */
   __pyx_v_ret = sky_vc_count_readable_rcv_packets((__pyx_v_self->handle->virtual_channels[__pyx_v_ichannel]));
 
-  /* "c_skylink.pyx":214
+  /* "c_skylink.pyx":215
  * 		cdef int ret = 0;
  * 		ret = c_skylink.sky_vc_count_readable_rcv_packets(self.handle.virtual_channels[ichannel])
  * 		return ret             # <<<<<<<<<<<<<<
@@ -8334,13 +8339,13 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_count_readable_rcv_packets(
  * 	def sky_vc_count_readable_rcv_packets(self, ichannel):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 214, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 215, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":211
+  /* "c_skylink.pyx":212
  * 
  * 	# === RECEIVE ==========================================================================================================================
  * 	cdef _sky_vc_count_readable_rcv_packets(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -8359,7 +8364,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_count_readable_rcv_packets(
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":216
+/* "c_skylink.pyx":217
  * 		return ret
  * 
  * 	def sky_vc_count_readable_rcv_packets(self, ichannel):             # <<<<<<<<<<<<<<
@@ -8420,12 +8425,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 216, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 217, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_count_readable_rcv_packets") < 0)) __PYX_ERR(0, 216, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_count_readable_rcv_packets") < 0)) __PYX_ERR(0, 217, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -8436,7 +8441,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("sky_vc_count_readable_rcv_packets", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 216, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("sky_vc_count_readable_rcv_packets", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 217, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -8475,7 +8480,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_20sky_vc_count_readable_rcv_packet
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_vc_count_readable_rcv_packets", 1);
 
-  /* "c_skylink.pyx":217
+  /* "c_skylink.pyx":218
  * 
  * 	def sky_vc_count_readable_rcv_packets(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS             # <<<<<<<<<<<<<<
@@ -8484,26 +8489,26 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_20sky_vc_count_readable_rcv_packet
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(__pyx_assertions_enabled())) {
-    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 217, __pyx_L1_error)
+    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 218, __pyx_L1_error)
     if (__Pyx_PyObject_IsTrue(__pyx_t_1)) {
       __Pyx_DECREF(__pyx_t_1);
-      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 217, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 218, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 217, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 218, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 217, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 218, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(!__pyx_t_3)) {
       __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
-      __PYX_ERR(0, 217, __pyx_L1_error)
+      __PYX_ERR(0, 218, __pyx_L1_error)
     }
   }
   #else
-  if ((1)); else __PYX_ERR(0, 217, __pyx_L1_error)
+  if ((1)); else __PYX_ERR(0, 218, __pyx_L1_error)
   #endif
 
-  /* "c_skylink.pyx":218
+  /* "c_skylink.pyx":219
  * 	def sky_vc_count_readable_rcv_packets(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_count_readable_rcv_packets(<int> ichannel)             # <<<<<<<<<<<<<<
@@ -8511,14 +8516,14 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_20sky_vc_count_readable_rcv_packet
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 218, __pyx_L1_error)
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_count_readable_rcv_packets(__pyx_v_self, ((int)__pyx_t_4)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 218, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 219, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_count_readable_rcv_packets(__pyx_v_self, ((int)__pyx_t_4)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 219, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":216
+  /* "c_skylink.pyx":217
  * 		return ret
  * 
  * 	def sky_vc_count_readable_rcv_packets(self, ichannel):             # <<<<<<<<<<<<<<
@@ -8538,7 +8543,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_20sky_vc_count_readable_rcv_packet
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":221
+/* "c_skylink.pyx":222
  * 
  * 
  * 	cdef _sky_vc_read_next_received(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -8560,7 +8565,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_read_next_received(struct _
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_sky_vc_read_next_received", 1);
 
-  /* "c_skylink.pyx":222
+  /* "c_skylink.pyx":223
  * 
  * 	cdef _sky_vc_read_next_received(self, int ichannel):
  * 		cdef int ret = 0;             # <<<<<<<<<<<<<<
@@ -8569,7 +8574,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_read_next_received(struct _
  */
   __pyx_v_ret = 0;
 
-  /* "c_skylink.pyx":224
+  /* "c_skylink.pyx":225
  * 		cdef int ret = 0;
  * 		cdef uint8_t* tgt;
  * 		tgt = <uint8_t*> malloc(1024)             # <<<<<<<<<<<<<<
@@ -8578,7 +8583,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_read_next_received(struct _
  */
   __pyx_v_tgt = ((__pyx_t_9c_skylink_uint8_t *)malloc(0x400));
 
-  /* "c_skylink.pyx":225
+  /* "c_skylink.pyx":226
  * 		cdef uint8_t* tgt;
  * 		tgt = <uint8_t*> malloc(1024)
  * 		ret = c_skylink.sky_vc_read_next_received(self.handle.virtual_channels[ichannel], tgt, 1024)             # <<<<<<<<<<<<<<
@@ -8587,7 +8592,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_read_next_received(struct _
  */
   __pyx_v_ret = sky_vc_read_next_received((__pyx_v_self->handle->virtual_channels[__pyx_v_ichannel]), __pyx_v_tgt, 0x400);
 
-  /* "c_skylink.pyx":226
+  /* "c_skylink.pyx":227
  * 		tgt = <uint8_t*> malloc(1024)
  * 		ret = c_skylink.sky_vc_read_next_received(self.handle.virtual_channels[ichannel], tgt, 1024)
  * 		if ret < 0:             # <<<<<<<<<<<<<<
@@ -8597,7 +8602,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_read_next_received(struct _
   __pyx_t_1 = (__pyx_v_ret < 0);
   if (__pyx_t_1) {
 
-    /* "c_skylink.pyx":227
+    /* "c_skylink.pyx":228
  * 		ret = c_skylink.sky_vc_read_next_received(self.handle.virtual_channels[ichannel], tgt, 1024)
  * 		if ret < 0:
  * 			free(tgt)             # <<<<<<<<<<<<<<
@@ -8606,7 +8611,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_read_next_received(struct _
  */
     free(__pyx_v_tgt);
 
-    /* "c_skylink.pyx":228
+    /* "c_skylink.pyx":229
  * 		if ret < 0:
  * 			free(tgt)
  * 			return ret, b""             # <<<<<<<<<<<<<<
@@ -8614,21 +8619,21 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_read_next_received(struct _
  * 		free(tgt)
  */
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 228, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 229, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_3 = PyTuple_New(2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 228, __pyx_L1_error)
+    __pyx_t_3 = PyTuple_New(2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 229, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_GIVEREF(__pyx_t_2);
-    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_2)) __PYX_ERR(0, 228, __pyx_L1_error);
+    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_2)) __PYX_ERR(0, 229, __pyx_L1_error);
     __Pyx_INCREF(__pyx_kp_b__7);
     __Pyx_GIVEREF(__pyx_kp_b__7);
-    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 1, __pyx_kp_b__7)) __PYX_ERR(0, 228, __pyx_L1_error);
+    if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 1, __pyx_kp_b__7)) __PYX_ERR(0, 229, __pyx_L1_error);
     __pyx_t_2 = 0;
     __pyx_r = __pyx_t_3;
     __pyx_t_3 = 0;
     goto __pyx_L0;
 
-    /* "c_skylink.pyx":226
+    /* "c_skylink.pyx":227
  * 		tgt = <uint8_t*> malloc(1024)
  * 		ret = c_skylink.sky_vc_read_next_received(self.handle.virtual_channels[ichannel], tgt, 1024)
  * 		if ret < 0:             # <<<<<<<<<<<<<<
@@ -8637,22 +8642,22 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_read_next_received(struct _
  */
   }
 
-  /* "c_skylink.pyx":229
+  /* "c_skylink.pyx":230
  * 			free(tgt)
  * 			return ret, b""
  * 		ret_b = bytes( tgt[0:ret] )             # <<<<<<<<<<<<<<
  * 		free(tgt)
  * 		return ret, ret_b
  */
-  __pyx_t_3 = __Pyx_PyBytes_FromStringAndSize(((const char*)__pyx_v_tgt) + 0, __pyx_v_ret - 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 229, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyBytes_FromStringAndSize(((const char*)__pyx_v_tgt) + 0, __pyx_v_ret - 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 230, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyBytes_Type)), __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 229, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyBytes_Type)), __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 230, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_ret_b = ((PyObject*)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":230
+  /* "c_skylink.pyx":231
  * 			return ret, b""
  * 		ret_b = bytes( tgt[0:ret] )
  * 		free(tgt)             # <<<<<<<<<<<<<<
@@ -8661,7 +8666,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_read_next_received(struct _
  */
   free(__pyx_v_tgt);
 
-  /* "c_skylink.pyx":231
+  /* "c_skylink.pyx":232
  * 		ret_b = bytes( tgt[0:ret] )
  * 		free(tgt)
  * 		return ret, ret_b             # <<<<<<<<<<<<<<
@@ -8669,21 +8674,21 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_read_next_received(struct _
  * 	def sky_vc_read_next_received(self, ichannel):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 231, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 232, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = PyTuple_New(2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 231, __pyx_L1_error)
+  __pyx_t_3 = PyTuple_New(2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 232, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_GIVEREF(__pyx_t_2);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_2)) __PYX_ERR(0, 231, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_2)) __PYX_ERR(0, 232, __pyx_L1_error);
   __Pyx_INCREF(__pyx_v_ret_b);
   __Pyx_GIVEREF(__pyx_v_ret_b);
-  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 1, __pyx_v_ret_b)) __PYX_ERR(0, 231, __pyx_L1_error);
+  if (__Pyx_PyTuple_SET_ITEM(__pyx_t_3, 1, __pyx_v_ret_b)) __PYX_ERR(0, 232, __pyx_L1_error);
   __pyx_t_2 = 0;
   __pyx_r = __pyx_t_3;
   __pyx_t_3 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":221
+  /* "c_skylink.pyx":222
  * 
  * 
  * 	cdef _sky_vc_read_next_received(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -8704,7 +8709,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_read_next_received(struct _
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":233
+/* "c_skylink.pyx":234
  * 		return ret, ret_b
  * 
  * 	def sky_vc_read_next_received(self, ichannel):             # <<<<<<<<<<<<<<
@@ -8765,12 +8770,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 233, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 234, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_read_next_received") < 0)) __PYX_ERR(0, 233, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_read_next_received") < 0)) __PYX_ERR(0, 234, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -8781,7 +8786,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("sky_vc_read_next_received", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 233, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("sky_vc_read_next_received", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 234, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -8820,7 +8825,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_22sky_vc_read_next_received(struct
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_vc_read_next_received", 1);
 
-  /* "c_skylink.pyx":234
+  /* "c_skylink.pyx":235
  * 
  * 	def sky_vc_read_next_received(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS             # <<<<<<<<<<<<<<
@@ -8829,26 +8834,26 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_22sky_vc_read_next_received(struct
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(__pyx_assertions_enabled())) {
-    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 234, __pyx_L1_error)
+    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 235, __pyx_L1_error)
     if (__Pyx_PyObject_IsTrue(__pyx_t_1)) {
       __Pyx_DECREF(__pyx_t_1);
-      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 234, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 235, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 234, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 235, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 234, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 235, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(!__pyx_t_3)) {
       __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
-      __PYX_ERR(0, 234, __pyx_L1_error)
+      __PYX_ERR(0, 235, __pyx_L1_error)
     }
   }
   #else
-  if ((1)); else __PYX_ERR(0, 234, __pyx_L1_error)
+  if ((1)); else __PYX_ERR(0, 235, __pyx_L1_error)
   #endif
 
-  /* "c_skylink.pyx":235
+  /* "c_skylink.pyx":236
  * 	def sky_vc_read_next_received(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_read_next_received(<int> ichannel)             # <<<<<<<<<<<<<<
@@ -8856,14 +8861,14 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_22sky_vc_read_next_received(struct
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 235, __pyx_L1_error)
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_read_next_received(__pyx_v_self, ((int)__pyx_t_4)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 235, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 236, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_read_next_received(__pyx_v_self, ((int)__pyx_t_4)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 236, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":233
+  /* "c_skylink.pyx":234
  * 		return ret, ret_b
  * 
  * 	def sky_vc_read_next_received(self, ichannel):             # <<<<<<<<<<<<<<
@@ -8883,7 +8888,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_22sky_vc_read_next_received(struct
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":242
+/* "c_skylink.pyx":243
  * 
  * 	# === CONTROL ==========================================================================================================================
  * 	cdef _sky_get_state(self):             # <<<<<<<<<<<<<<
@@ -8901,7 +8906,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_get_state(struct __pyx_obj_9c_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_sky_get_state", 1);
 
-  /* "c_skylink.pyx":244
+  /* "c_skylink.pyx":245
  * 	cdef _sky_get_state(self):
  * 		cdef SkyState state;
  * 		c_skylink.sky_get_state(self.handle, &state)             # <<<<<<<<<<<<<<
@@ -8910,7 +8915,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_get_state(struct __pyx_obj_9c_
  */
   sky_get_state(__pyx_v_self->handle, (&__pyx_v_state));
 
-  /* "c_skylink.pyx":245
+  /* "c_skylink.pyx":246
  * 		cdef SkyState state;
  * 		c_skylink.sky_get_state(self.handle, &state)
  * 		return state             # <<<<<<<<<<<<<<
@@ -8918,13 +8923,13 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_get_state(struct __pyx_obj_9c_
  * 	def sky_get_state(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_convert__to_py_SkyState(__pyx_v_state); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 245, __pyx_L1_error)
+  __pyx_t_1 = __pyx_convert__to_py_SkyState(__pyx_v_state); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 246, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":242
+  /* "c_skylink.pyx":243
  * 
  * 	# === CONTROL ==========================================================================================================================
  * 	cdef _sky_get_state(self):             # <<<<<<<<<<<<<<
@@ -8943,7 +8948,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_get_state(struct __pyx_obj_9c_
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":247
+/* "c_skylink.pyx":248
  * 		return state
  * 
  * 	def sky_get_state(self):             # <<<<<<<<<<<<<<
@@ -9010,32 +9015,32 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_24sky_get_state(struct __pyx_obj_9
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_get_state", 1);
 
-  /* "c_skylink.pyx":249
+  /* "c_skylink.pyx":250
  * 	def sky_get_state(self):
  * 		cdef SkyState state;
  * 		state = self._sky_get_state()             # <<<<<<<<<<<<<<
  * 		vc_list = list()
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
  */
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_get_state(__pyx_v_self); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 249, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_get_state(__pyx_v_self); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 250, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __pyx_convert__from_py_SkyState(__pyx_t_1); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 249, __pyx_L1_error)
+  __pyx_t_2 = __pyx_convert__from_py_SkyState(__pyx_t_1); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 250, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_state = __pyx_t_2;
 
-  /* "c_skylink.pyx":250
+  /* "c_skylink.pyx":251
  * 		cdef SkyState state;
  * 		state = self._sky_get_state()
  * 		vc_list = list()             # <<<<<<<<<<<<<<
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
  * 			dd = dict()
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 250, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 251, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_vc_list = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "c_skylink.pyx":251
+  /* "c_skylink.pyx":252
  * 		state = self._sky_get_state()
  * 		vc_list = list()
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):             # <<<<<<<<<<<<<<
@@ -9047,89 +9052,89 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_24sky_get_state(struct __pyx_obj_9
   for (__pyx_t_5 = 0; __pyx_t_5 < __pyx_t_4; __pyx_t_5+=1) {
     __pyx_v_i = __pyx_t_5;
 
-    /* "c_skylink.pyx":252
+    /* "c_skylink.pyx":253
  * 		vc_list = list()
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
  * 			dd = dict()             # <<<<<<<<<<<<<<
  * 			dd["state"] = state.vc[i].state
  * 			dd["free_tx_slots"] = state.vc[i].free_tx_slots
  */
-    __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 252, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 253, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_XDECREF_SET(__pyx_v_dd, ((PyObject*)__pyx_t_1));
     __pyx_t_1 = 0;
 
-    /* "c_skylink.pyx":253
+    /* "c_skylink.pyx":254
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
  * 			dd = dict()
  * 			dd["state"] = state.vc[i].state             # <<<<<<<<<<<<<<
  * 			dd["free_tx_slots"] = state.vc[i].free_tx_slots
  * 			dd["tx_frames"] = state.vc[i].tx_frames
  */
-    __pyx_t_1 = __Pyx_PyInt_From_uint16_t((__pyx_v_state.vc[__pyx_v_i]).state); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 253, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyInt_From_uint16_t((__pyx_v_state.vc[__pyx_v_i]).state); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 254, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_state, __pyx_t_1) < 0))) __PYX_ERR(0, 253, __pyx_L1_error)
+    if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_state, __pyx_t_1) < 0))) __PYX_ERR(0, 254, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "c_skylink.pyx":254
+    /* "c_skylink.pyx":255
  * 			dd = dict()
  * 			dd["state"] = state.vc[i].state
  * 			dd["free_tx_slots"] = state.vc[i].free_tx_slots             # <<<<<<<<<<<<<<
  * 			dd["tx_frames"] = state.vc[i].tx_frames
  * 			dd["rx_frames"] = state.vc[i].rx_frames
  */
-    __pyx_t_1 = __Pyx_PyInt_From_uint16_t((__pyx_v_state.vc[__pyx_v_i]).free_tx_slots); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 254, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyInt_From_uint16_t((__pyx_v_state.vc[__pyx_v_i]).free_tx_slots); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 255, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_free_tx_slots, __pyx_t_1) < 0))) __PYX_ERR(0, 254, __pyx_L1_error)
+    if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_free_tx_slots, __pyx_t_1) < 0))) __PYX_ERR(0, 255, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "c_skylink.pyx":255
+    /* "c_skylink.pyx":256
  * 			dd["state"] = state.vc[i].state
  * 			dd["free_tx_slots"] = state.vc[i].free_tx_slots
  * 			dd["tx_frames"] = state.vc[i].tx_frames             # <<<<<<<<<<<<<<
  * 			dd["rx_frames"] = state.vc[i].rx_frames
  * 			dd["session_identifier"] = state.vc[i].session_identifier
  */
-    __pyx_t_1 = __Pyx_PyInt_From_uint16_t((__pyx_v_state.vc[__pyx_v_i]).tx_frames); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 255, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyInt_From_uint16_t((__pyx_v_state.vc[__pyx_v_i]).tx_frames); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 256, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_tx_frames, __pyx_t_1) < 0))) __PYX_ERR(0, 255, __pyx_L1_error)
+    if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_tx_frames, __pyx_t_1) < 0))) __PYX_ERR(0, 256, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "c_skylink.pyx":256
+    /* "c_skylink.pyx":257
  * 			dd["free_tx_slots"] = state.vc[i].free_tx_slots
  * 			dd["tx_frames"] = state.vc[i].tx_frames
  * 			dd["rx_frames"] = state.vc[i].rx_frames             # <<<<<<<<<<<<<<
  * 			dd["session_identifier"] = state.vc[i].session_identifier
  * 			vc_list.append(dd)
  */
-    __pyx_t_1 = __Pyx_PyInt_From_uint16_t((__pyx_v_state.vc[__pyx_v_i]).rx_frames); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 256, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyInt_From_uint16_t((__pyx_v_state.vc[__pyx_v_i]).rx_frames); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 257, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_frames, __pyx_t_1) < 0))) __PYX_ERR(0, 256, __pyx_L1_error)
+    if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_frames, __pyx_t_1) < 0))) __PYX_ERR(0, 257, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "c_skylink.pyx":257
+    /* "c_skylink.pyx":258
  * 			dd["tx_frames"] = state.vc[i].tx_frames
  * 			dd["rx_frames"] = state.vc[i].rx_frames
  * 			dd["session_identifier"] = state.vc[i].session_identifier             # <<<<<<<<<<<<<<
  * 			vc_list.append(dd)
  * 		return vc_list
  */
-    __pyx_t_1 = __Pyx_PyInt_From_uint32_t((__pyx_v_state.vc[__pyx_v_i]).session_identifier); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 257, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyInt_From_uint32_t((__pyx_v_state.vc[__pyx_v_i]).session_identifier); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 258, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_session_identifier, __pyx_t_1) < 0))) __PYX_ERR(0, 257, __pyx_L1_error)
+    if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_session_identifier, __pyx_t_1) < 0))) __PYX_ERR(0, 258, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "c_skylink.pyx":258
+    /* "c_skylink.pyx":259
  * 			dd["rx_frames"] = state.vc[i].rx_frames
  * 			dd["session_identifier"] = state.vc[i].session_identifier
  * 			vc_list.append(dd)             # <<<<<<<<<<<<<<
  * 		return vc_list
  * 
  */
-    __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_vc_list, __pyx_v_dd); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 258, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_vc_list, __pyx_v_dd); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 259, __pyx_L1_error)
   }
 
-  /* "c_skylink.pyx":259
+  /* "c_skylink.pyx":260
  * 			dd["session_identifier"] = state.vc[i].session_identifier
  * 			vc_list.append(dd)
  * 		return vc_list             # <<<<<<<<<<<<<<
@@ -9141,7 +9146,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_24sky_get_state(struct __pyx_obj_9
   __pyx_r = __pyx_v_vc_list;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":247
+  /* "c_skylink.pyx":248
  * 		return state
  * 
  * 	def sky_get_state(self):             # <<<<<<<<<<<<<<
@@ -9162,7 +9167,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_24sky_get_state(struct __pyx_obj_9
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":262
+/* "c_skylink.pyx":263
  * 
  * 
  * 	def sky_get_stats(self):             # <<<<<<<<<<<<<<
@@ -9230,7 +9235,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_26sky_get_stats(struct __pyx_obj_9
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_get_stats", 1);
 
-  /* "c_skylink.pyx":264
+  /* "c_skylink.pyx":265
  * 	def sky_get_stats(self):
  * 		cdef SkyDiagnostics* stats;
  * 		stats = self.handle.diag             # <<<<<<<<<<<<<<
@@ -9240,115 +9245,115 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_26sky_get_stats(struct __pyx_obj_9
   __pyx_t_1 = __pyx_v_self->handle->diag;
   __pyx_v_stats = __pyx_t_1;
 
-  /* "c_skylink.pyx":265
+  /* "c_skylink.pyx":266
  * 		cdef SkyDiagnostics* stats;
  * 		stats = self.handle.diag
  * 		dd = dict()             # <<<<<<<<<<<<<<
  * 		dd["rx_frames"] = stats.rx_frames
  * 		dd["rx_bytes"] = stats.rx_bytes
  */
-  __pyx_t_2 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 265, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 266, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_v_dd = ((PyObject*)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":266
+  /* "c_skylink.pyx":267
  * 		stats = self.handle.diag
  * 		dd = dict()
  * 		dd["rx_frames"] = stats.rx_frames             # <<<<<<<<<<<<<<
  * 		dd["rx_bytes"] = stats.rx_bytes
  * 		dd["rx_fec_ok"] = stats.rx_fec_ok
  */
-  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_frames); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 266, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_frames); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 267, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_frames, __pyx_t_2) < 0))) __PYX_ERR(0, 266, __pyx_L1_error)
+  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_frames, __pyx_t_2) < 0))) __PYX_ERR(0, 267, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":267
+  /* "c_skylink.pyx":268
  * 		dd = dict()
  * 		dd["rx_frames"] = stats.rx_frames
  * 		dd["rx_bytes"] = stats.rx_bytes             # <<<<<<<<<<<<<<
  * 		dd["rx_fec_ok"] = stats.rx_fec_ok
  * 		dd["rx_fec_fail"] = stats.rx_fec_fail
  */
-  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_bytes); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 267, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_bytes); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 268, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_bytes, __pyx_t_2) < 0))) __PYX_ERR(0, 267, __pyx_L1_error)
+  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_bytes, __pyx_t_2) < 0))) __PYX_ERR(0, 268, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":268
+  /* "c_skylink.pyx":269
  * 		dd["rx_frames"] = stats.rx_frames
  * 		dd["rx_bytes"] = stats.rx_bytes
  * 		dd["rx_fec_ok"] = stats.rx_fec_ok             # <<<<<<<<<<<<<<
  * 		dd["rx_fec_fail"] = stats.rx_fec_fail
  * 		dd["rx_fec_errs"] = stats.rx_fec_errs
  */
-  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_fec_ok); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 268, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_fec_ok); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_fec_ok, __pyx_t_2) < 0))) __PYX_ERR(0, 268, __pyx_L1_error)
+  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_fec_ok, __pyx_t_2) < 0))) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":269
+  /* "c_skylink.pyx":270
  * 		dd["rx_bytes"] = stats.rx_bytes
  * 		dd["rx_fec_ok"] = stats.rx_fec_ok
  * 		dd["rx_fec_fail"] = stats.rx_fec_fail             # <<<<<<<<<<<<<<
  * 		dd["rx_fec_errs"] = stats.rx_fec_errs
  * 		dd["rx_arq_resets"] = stats.rx_arq_resets
  */
-  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_fec_fail); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 269, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_fec_fail); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 270, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_fec_fail, __pyx_t_2) < 0))) __PYX_ERR(0, 269, __pyx_L1_error)
+  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_fec_fail, __pyx_t_2) < 0))) __PYX_ERR(0, 270, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":270
+  /* "c_skylink.pyx":271
  * 		dd["rx_fec_ok"] = stats.rx_fec_ok
  * 		dd["rx_fec_fail"] = stats.rx_fec_fail
  * 		dd["rx_fec_errs"] = stats.rx_fec_errs             # <<<<<<<<<<<<<<
  * 		dd["rx_arq_resets"] = stats.rx_arq_resets
  * 		dd["rx_hmac_fail"] = stats.rx_hmac_fail
  */
-  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_fec_errs); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 270, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_fec_errs); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 271, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_fec_errs, __pyx_t_2) < 0))) __PYX_ERR(0, 270, __pyx_L1_error)
+  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_fec_errs, __pyx_t_2) < 0))) __PYX_ERR(0, 271, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":271
+  /* "c_skylink.pyx":272
  * 		dd["rx_fec_fail"] = stats.rx_fec_fail
  * 		dd["rx_fec_errs"] = stats.rx_fec_errs
  * 		dd["rx_arq_resets"] = stats.rx_arq_resets             # <<<<<<<<<<<<<<
  * 		dd["rx_hmac_fail"] = stats.rx_hmac_fail
  * 		dd["vc"] = list()
  */
-  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_arq_resets); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 271, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_arq_resets); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 272, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_arq_resets, __pyx_t_2) < 0))) __PYX_ERR(0, 271, __pyx_L1_error)
+  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_arq_resets, __pyx_t_2) < 0))) __PYX_ERR(0, 272, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":272
+  /* "c_skylink.pyx":273
  * 		dd["rx_fec_errs"] = stats.rx_fec_errs
  * 		dd["rx_arq_resets"] = stats.rx_arq_resets
  * 		dd["rx_hmac_fail"] = stats.rx_hmac_fail             # <<<<<<<<<<<<<<
  * 		dd["vc"] = list()
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
  */
-  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_hmac_fail); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 272, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_uint16_t(__pyx_v_stats->rx_hmac_fail); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 273, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_hmac_fail, __pyx_t_2) < 0))) __PYX_ERR(0, 272, __pyx_L1_error)
+  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_rx_hmac_fail, __pyx_t_2) < 0))) __PYX_ERR(0, 273, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":273
+  /* "c_skylink.pyx":274
  * 		dd["rx_arq_resets"] = stats.rx_arq_resets
  * 		dd["rx_hmac_fail"] = stats.rx_hmac_fail
  * 		dd["vc"] = list()             # <<<<<<<<<<<<<<
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
  * 			dd["vc"].append( dict() )
  */
-  __pyx_t_2 = PyList_New(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 273, __pyx_L1_error)
+  __pyx_t_2 = PyList_New(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 274, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_vc, __pyx_t_2) < 0))) __PYX_ERR(0, 273, __pyx_L1_error)
+  if (unlikely((PyDict_SetItem(__pyx_v_dd, __pyx_n_u_vc, __pyx_t_2) < 0))) __PYX_ERR(0, 274, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":274
+  /* "c_skylink.pyx":275
  * 		dd["rx_hmac_fail"] = stats.rx_hmac_fail
  * 		dd["vc"] = list()
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):             # <<<<<<<<<<<<<<
@@ -9360,77 +9365,77 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_26sky_get_stats(struct __pyx_obj_9
   for (__pyx_t_5 = 0; __pyx_t_5 < __pyx_t_4; __pyx_t_5+=1) {
     __pyx_v_i = __pyx_t_5;
 
-    /* "c_skylink.pyx":275
+    /* "c_skylink.pyx":276
  * 		dd["vc"] = list()
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
  * 			dd["vc"].append( dict() )             # <<<<<<<<<<<<<<
  * 			dd["vc"][i]["arq_retransmits"] = stats.vc_stats[i].arq_retransmits
  * 			dd["vc"][i]["total_tx_frames"] = stats.vc_stats[i].tx_frames
  */
-    __pyx_t_2 = __Pyx_PyDict_GetItem(__pyx_v_dd, __pyx_n_u_vc); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 275, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyDict_GetItem(__pyx_v_dd, __pyx_n_u_vc); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 276, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_6 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 275, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 276, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_7 = __Pyx_PyObject_Append(__pyx_t_2, __pyx_t_6); if (unlikely(__pyx_t_7 == ((int)-1))) __PYX_ERR(0, 275, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_Append(__pyx_t_2, __pyx_t_6); if (unlikely(__pyx_t_7 == ((int)-1))) __PYX_ERR(0, 276, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-    /* "c_skylink.pyx":276
+    /* "c_skylink.pyx":277
  * 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
  * 			dd["vc"].append( dict() )
  * 			dd["vc"][i]["arq_retransmits"] = stats.vc_stats[i].arq_retransmits             # <<<<<<<<<<<<<<
  * 			dd["vc"][i]["total_tx_frames"] = stats.vc_stats[i].tx_frames
  * 			dd["vc"][i]["total_rx_frames"] = stats.vc_stats[i].rx_frames
  */
-    __pyx_t_6 = __Pyx_PyInt_From_uint16_t((__pyx_v_stats->vc_stats[__pyx_v_i]).arq_retransmits); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 276, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyInt_From_uint16_t((__pyx_v_stats->vc_stats[__pyx_v_i]).arq_retransmits); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 277, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_2 = __Pyx_PyDict_GetItem(__pyx_v_dd, __pyx_n_u_vc); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 276, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyDict_GetItem(__pyx_v_dd, __pyx_n_u_vc); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 277, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_2, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 276, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_2, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 277, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (unlikely((PyObject_SetItem(__pyx_t_8, __pyx_n_u_arq_retransmits, __pyx_t_6) < 0))) __PYX_ERR(0, 276, __pyx_L1_error)
+    if (unlikely((PyObject_SetItem(__pyx_t_8, __pyx_n_u_arq_retransmits, __pyx_t_6) < 0))) __PYX_ERR(0, 277, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-    /* "c_skylink.pyx":277
+    /* "c_skylink.pyx":278
  * 			dd["vc"].append( dict() )
  * 			dd["vc"][i]["arq_retransmits"] = stats.vc_stats[i].arq_retransmits
  * 			dd["vc"][i]["total_tx_frames"] = stats.vc_stats[i].tx_frames             # <<<<<<<<<<<<<<
  * 			dd["vc"][i]["total_rx_frames"] = stats.vc_stats[i].rx_frames
  * 		return dd
  */
-    __pyx_t_6 = __Pyx_PyInt_From_uint16_t((__pyx_v_stats->vc_stats[__pyx_v_i]).tx_frames); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 277, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyInt_From_uint16_t((__pyx_v_stats->vc_stats[__pyx_v_i]).tx_frames); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 278, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_8 = __Pyx_PyDict_GetItem(__pyx_v_dd, __pyx_n_u_vc); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 277, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyDict_GetItem(__pyx_v_dd, __pyx_n_u_vc); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 278, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_8, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 277, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_GetItemInt(__pyx_t_8, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 278, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely((PyObject_SetItem(__pyx_t_2, __pyx_n_u_total_tx_frames, __pyx_t_6) < 0))) __PYX_ERR(0, 277, __pyx_L1_error)
+    if (unlikely((PyObject_SetItem(__pyx_t_2, __pyx_n_u_total_tx_frames, __pyx_t_6) < 0))) __PYX_ERR(0, 278, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-    /* "c_skylink.pyx":278
+    /* "c_skylink.pyx":279
  * 			dd["vc"][i]["arq_retransmits"] = stats.vc_stats[i].arq_retransmits
  * 			dd["vc"][i]["total_tx_frames"] = stats.vc_stats[i].tx_frames
  * 			dd["vc"][i]["total_rx_frames"] = stats.vc_stats[i].rx_frames             # <<<<<<<<<<<<<<
  * 		return dd
  * 
  */
-    __pyx_t_6 = __Pyx_PyInt_From_uint16_t((__pyx_v_stats->vc_stats[__pyx_v_i]).rx_frames); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 278, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyInt_From_uint16_t((__pyx_v_stats->vc_stats[__pyx_v_i]).rx_frames); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 279, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_2 = __Pyx_PyDict_GetItem(__pyx_v_dd, __pyx_n_u_vc); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 278, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyDict_GetItem(__pyx_v_dd, __pyx_n_u_vc); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 279, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_2, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 278, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_GetItemInt(__pyx_t_2, __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 279, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (unlikely((PyObject_SetItem(__pyx_t_8, __pyx_n_u_total_rx_frames, __pyx_t_6) < 0))) __PYX_ERR(0, 278, __pyx_L1_error)
+    if (unlikely((PyObject_SetItem(__pyx_t_8, __pyx_n_u_total_rx_frames, __pyx_t_6) < 0))) __PYX_ERR(0, 279, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   }
 
-  /* "c_skylink.pyx":279
+  /* "c_skylink.pyx":280
  * 			dd["vc"][i]["total_tx_frames"] = stats.vc_stats[i].tx_frames
  * 			dd["vc"][i]["total_rx_frames"] = stats.vc_stats[i].rx_frames
  * 		return dd             # <<<<<<<<<<<<<<
@@ -9442,7 +9447,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_26sky_get_stats(struct __pyx_obj_9
   __pyx_r = __pyx_v_dd;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":262
+  /* "c_skylink.pyx":263
  * 
  * 
  * 	def sky_get_stats(self):             # <<<<<<<<<<<<<<
@@ -9464,7 +9469,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_26sky_get_stats(struct __pyx_obj_9
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":282
+/* "c_skylink.pyx":283
  * 
  * 
  * 	def sky_diag_clear(self):             # <<<<<<<<<<<<<<
@@ -9518,7 +9523,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_28sky_diag_clear(struct __pyx_obj_
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("sky_diag_clear", 1);
 
-  /* "c_skylink.pyx":283
+  /* "c_skylink.pyx":284
  * 
  * 	def sky_diag_clear(self):
  * 		c_skylink.sky_diag_clear(self.handle.diag)             # <<<<<<<<<<<<<<
@@ -9527,7 +9532,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_28sky_diag_clear(struct __pyx_obj_
  */
   sky_diag_clear(__pyx_v_self->handle->diag);
 
-  /* "c_skylink.pyx":282
+  /* "c_skylink.pyx":283
  * 
  * 
  * 	def sky_diag_clear(self):             # <<<<<<<<<<<<<<
@@ -9542,7 +9547,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_28sky_diag_clear(struct __pyx_obj_
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":286
+/* "c_skylink.pyx":287
  * 
  * 
  * 	cdef _sky_vc_arq_connect(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -9560,7 +9565,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_arq_connect(struct __pyx_ob
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_sky_vc_arq_connect", 1);
 
-  /* "c_skylink.pyx":287
+  /* "c_skylink.pyx":288
  * 
  * 	cdef _sky_vc_arq_connect(self, int ichannel):
  * 		cdef int ret = 0;             # <<<<<<<<<<<<<<
@@ -9569,7 +9574,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_arq_connect(struct __pyx_ob
  */
   __pyx_v_ret = 0;
 
-  /* "c_skylink.pyx":288
+  /* "c_skylink.pyx":289
  * 	cdef _sky_vc_arq_connect(self, int ichannel):
  * 		cdef int ret = 0;
  * 		ret = sky_vc_arq_connect(self.handle.virtual_channels[ichannel])             # <<<<<<<<<<<<<<
@@ -9578,7 +9583,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_arq_connect(struct __pyx_ob
  */
   __pyx_v_ret = sky_vc_arq_connect((__pyx_v_self->handle->virtual_channels[__pyx_v_ichannel]));
 
-  /* "c_skylink.pyx":289
+  /* "c_skylink.pyx":290
  * 		cdef int ret = 0;
  * 		ret = sky_vc_arq_connect(self.handle.virtual_channels[ichannel])
  * 		return ret             # <<<<<<<<<<<<<<
@@ -9586,13 +9591,13 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_arq_connect(struct __pyx_ob
  * 	def sky_vc_arq_connect(self, ichannel):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 289, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 290, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":286
+  /* "c_skylink.pyx":287
  * 
  * 
  * 	cdef _sky_vc_arq_connect(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -9611,7 +9616,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_arq_connect(struct __pyx_ob
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":291
+/* "c_skylink.pyx":292
  * 		return ret
  * 
  * 	def sky_vc_arq_connect(self, ichannel):             # <<<<<<<<<<<<<<
@@ -9672,12 +9677,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 291, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 292, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_arq_connect") < 0)) __PYX_ERR(0, 291, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_arq_connect") < 0)) __PYX_ERR(0, 292, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -9688,7 +9693,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("sky_vc_arq_connect", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 291, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("sky_vc_arq_connect", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 292, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -9727,7 +9732,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_30sky_vc_arq_connect(struct __pyx_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_vc_arq_connect", 1);
 
-  /* "c_skylink.pyx":292
+  /* "c_skylink.pyx":293
  * 
  * 	def sky_vc_arq_connect(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS             # <<<<<<<<<<<<<<
@@ -9736,26 +9741,26 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_30sky_vc_arq_connect(struct __pyx_
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(__pyx_assertions_enabled())) {
-    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 292, __pyx_L1_error)
+    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 293, __pyx_L1_error)
     if (__Pyx_PyObject_IsTrue(__pyx_t_1)) {
       __Pyx_DECREF(__pyx_t_1);
-      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 292, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 293, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 292, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 293, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 292, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 293, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(!__pyx_t_3)) {
       __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
-      __PYX_ERR(0, 292, __pyx_L1_error)
+      __PYX_ERR(0, 293, __pyx_L1_error)
     }
   }
   #else
-  if ((1)); else __PYX_ERR(0, 292, __pyx_L1_error)
+  if ((1)); else __PYX_ERR(0, 293, __pyx_L1_error)
   #endif
 
-  /* "c_skylink.pyx":293
+  /* "c_skylink.pyx":294
  * 	def sky_vc_arq_connect(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_arq_connect(<int> ichannel)             # <<<<<<<<<<<<<<
@@ -9763,14 +9768,14 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_30sky_vc_arq_connect(struct __pyx_
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 293, __pyx_L1_error)
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_arq_connect(__pyx_v_self, ((int)__pyx_t_4)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 293, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 294, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_arq_connect(__pyx_v_self, ((int)__pyx_t_4)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 294, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":291
+  /* "c_skylink.pyx":292
  * 		return ret
  * 
  * 	def sky_vc_arq_connect(self, ichannel):             # <<<<<<<<<<<<<<
@@ -9790,7 +9795,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_30sky_vc_arq_connect(struct __pyx_
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":296
+/* "c_skylink.pyx":297
  * 
  * 
  * 	cdef _sky_vc_arq_disconnect(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -9808,7 +9813,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_arq_disconnect(struct __pyx
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_sky_vc_arq_disconnect", 1);
 
-  /* "c_skylink.pyx":297
+  /* "c_skylink.pyx":298
  * 
  * 	cdef _sky_vc_arq_disconnect(self, int ichannel):
  * 		cdef int ret = 0;             # <<<<<<<<<<<<<<
@@ -9817,7 +9822,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_arq_disconnect(struct __pyx
  */
   __pyx_v_ret = 0;
 
-  /* "c_skylink.pyx":298
+  /* "c_skylink.pyx":299
  * 	cdef _sky_vc_arq_disconnect(self, int ichannel):
  * 		cdef int ret = 0;
  * 		ret = sky_vc_arq_disconnect(self.handle.virtual_channels[ichannel])             # <<<<<<<<<<<<<<
@@ -9826,7 +9831,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_arq_disconnect(struct __pyx
  */
   __pyx_v_ret = sky_vc_arq_disconnect((__pyx_v_self->handle->virtual_channels[__pyx_v_ichannel]));
 
-  /* "c_skylink.pyx":299
+  /* "c_skylink.pyx":300
  * 		cdef int ret = 0;
  * 		ret = sky_vc_arq_disconnect(self.handle.virtual_channels[ichannel])
  * 		return ret             # <<<<<<<<<<<<<<
@@ -9834,13 +9839,13 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_arq_disconnect(struct __pyx
  * 	def sky_vc_arq_disconnect(self, ichannel):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 300, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":296
+  /* "c_skylink.pyx":297
  * 
  * 
  * 	cdef _sky_vc_arq_disconnect(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -9859,7 +9864,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_arq_disconnect(struct __pyx
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":301
+/* "c_skylink.pyx":302
  * 		return ret
  * 
  * 	def sky_vc_arq_disconnect(self, ichannel):             # <<<<<<<<<<<<<<
@@ -9920,12 +9925,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 301, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 302, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_arq_disconnect") < 0)) __PYX_ERR(0, 301, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_arq_disconnect") < 0)) __PYX_ERR(0, 302, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -9936,7 +9941,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("sky_vc_arq_disconnect", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 301, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("sky_vc_arq_disconnect", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 302, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -9975,7 +9980,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_32sky_vc_arq_disconnect(struct __p
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_vc_arq_disconnect", 1);
 
-  /* "c_skylink.pyx":302
+  /* "c_skylink.pyx":303
  * 
  * 	def sky_vc_arq_disconnect(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS             # <<<<<<<<<<<<<<
@@ -9984,26 +9989,26 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_32sky_vc_arq_disconnect(struct __p
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(__pyx_assertions_enabled())) {
-    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
+    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 303, __pyx_L1_error)
     if (__Pyx_PyObject_IsTrue(__pyx_t_1)) {
       __Pyx_DECREF(__pyx_t_1);
-      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 302, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 303, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 303, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 302, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 303, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(!__pyx_t_3)) {
       __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
-      __PYX_ERR(0, 302, __pyx_L1_error)
+      __PYX_ERR(0, 303, __pyx_L1_error)
     }
   }
   #else
-  if ((1)); else __PYX_ERR(0, 302, __pyx_L1_error)
+  if ((1)); else __PYX_ERR(0, 303, __pyx_L1_error)
   #endif
 
-  /* "c_skylink.pyx":303
+  /* "c_skylink.pyx":304
  * 	def sky_vc_arq_disconnect(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_arq_disconnect(<int> ichannel)             # <<<<<<<<<<<<<<
@@ -10011,14 +10016,14 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_32sky_vc_arq_disconnect(struct __p
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 303, __pyx_L1_error)
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_arq_disconnect(__pyx_v_self, ((int)__pyx_t_4)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 303, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 304, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_arq_disconnect(__pyx_v_self, ((int)__pyx_t_4)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 304, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":301
+  /* "c_skylink.pyx":302
  * 		return ret
  * 
  * 	def sky_vc_arq_disconnect(self, ichannel):             # <<<<<<<<<<<<<<
@@ -10038,7 +10043,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_32sky_vc_arq_disconnect(struct __p
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":306
+/* "c_skylink.pyx":307
  * 
  * 
  * 	cdef _sky_vc_get_arq_state(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -10058,7 +10063,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_get_arq_state(struct __pyx_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_sky_vc_get_arq_state", 1);
 
-  /* "c_skylink.pyx":308
+  /* "c_skylink.pyx":309
  * 	cdef _sky_vc_get_arq_state(self, int ichannel):
  * 		cdef uint8_t x;
  * 		x = self.handle.virtual_channels[ichannel].arq_state             # <<<<<<<<<<<<<<
@@ -10068,7 +10073,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_get_arq_state(struct __pyx_
   __pyx_t_1 = (__pyx_v_self->handle->virtual_channels[__pyx_v_ichannel])->arq_state;
   __pyx_v_x = __pyx_t_1;
 
-  /* "c_skylink.pyx":309
+  /* "c_skylink.pyx":310
  * 		cdef uint8_t x;
  * 		x = self.handle.virtual_channels[ichannel].arq_state
  * 		return int(x)             # <<<<<<<<<<<<<<
@@ -10076,16 +10081,16 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_get_arq_state(struct __pyx_
  * 	def sky_vc_get_arq_state(self, ichannel):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2 = __Pyx_PyInt_From_uint8_t(__pyx_v_x); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 309, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_uint8_t(__pyx_v_x); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 310, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 309, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 310, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_r = __pyx_t_3;
   __pyx_t_3 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":306
+  /* "c_skylink.pyx":307
  * 
  * 
  * 	cdef _sky_vc_get_arq_state(self, int ichannel):             # <<<<<<<<<<<<<<
@@ -10105,7 +10110,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__sky_vc_get_arq_state(struct __pyx_
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":311
+/* "c_skylink.pyx":312
  * 		return int(x)
  * 
  * 	def sky_vc_get_arq_state(self, ichannel):             # <<<<<<<<<<<<<<
@@ -10166,12 +10171,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 311, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 312, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_get_arq_state") < 0)) __PYX_ERR(0, 311, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_vc_get_arq_state") < 0)) __PYX_ERR(0, 312, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -10182,7 +10187,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("sky_vc_get_arq_state", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 311, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("sky_vc_get_arq_state", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 312, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -10221,7 +10226,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_34sky_vc_get_arq_state(struct __py
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_vc_get_arq_state", 1);
 
-  /* "c_skylink.pyx":312
+  /* "c_skylink.pyx":313
  * 
  * 	def sky_vc_get_arq_state(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS             # <<<<<<<<<<<<<<
@@ -10230,26 +10235,26 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_34sky_vc_get_arq_state(struct __py
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(__pyx_assertions_enabled())) {
-    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 312, __pyx_L1_error)
+    __pyx_t_1 = PyObject_RichCompare(__pyx_int_0, __pyx_v_ichannel, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 313, __pyx_L1_error)
     if (__Pyx_PyObject_IsTrue(__pyx_t_1)) {
       __Pyx_DECREF(__pyx_t_1);
-      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 312, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyInt_From_int(SKY_NUM_VIRTUAL_CHANNELS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 313, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 312, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_v_ichannel, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 313, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 312, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_3 < 0))) __PYX_ERR(0, 313, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(!__pyx_t_3)) {
       __Pyx_Raise(__pyx_builtin_AssertionError, 0, 0, 0);
-      __PYX_ERR(0, 312, __pyx_L1_error)
+      __PYX_ERR(0, 313, __pyx_L1_error)
     }
   }
   #else
-  if ((1)); else __PYX_ERR(0, 312, __pyx_L1_error)
+  if ((1)); else __PYX_ERR(0, 313, __pyx_L1_error)
   #endif
 
-  /* "c_skylink.pyx":313
+  /* "c_skylink.pyx":314
  * 	def sky_vc_get_arq_state(self, ichannel):
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_get_arq_state(ichannel)             # <<<<<<<<<<<<<<
@@ -10257,14 +10262,14 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_34sky_vc_get_arq_state(struct __py
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 313, __pyx_L1_error)
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_get_arq_state(__pyx_v_self, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 313, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_int(__pyx_v_ichannel); if (unlikely((__pyx_t_4 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 314, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_sky_vc_get_arq_state(__pyx_v_self, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 314, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":311
+  /* "c_skylink.pyx":312
  * 		return int(x)
  * 
  * 	def sky_vc_get_arq_state(self, ichannel):             # <<<<<<<<<<<<<<
@@ -10284,7 +10289,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_34sky_vc_get_arq_state(struct __py
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":316
+/* "c_skylink.pyx":317
  * 
  * 
  * 	cdef _can_send(self):             # <<<<<<<<<<<<<<
@@ -10303,7 +10308,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__can_send(struct __pyx_obj_9c_skyli
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_can_send", 1);
 
-  /* "c_skylink.pyx":319
+  /* "c_skylink.pyx":320
  * 		cdef sky_tick_t now;
  * 		cdef bint b;
  * 		now = c_skylink.sky_get_tick_time()             # <<<<<<<<<<<<<<
@@ -10312,7 +10317,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__can_send(struct __pyx_obj_9c_skyli
  */
   __pyx_v_now = sky_get_tick_time();
 
-  /* "c_skylink.pyx":320
+  /* "c_skylink.pyx":321
  * 		cdef bint b;
  * 		now = c_skylink.sky_get_tick_time()
  * 		b = c_skylink.mac_can_send(self.handle.mac, now)             # <<<<<<<<<<<<<<
@@ -10321,7 +10326,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__can_send(struct __pyx_obj_9c_skyli
  */
   __pyx_v_b = mac_can_send(__pyx_v_self->handle->mac, __pyx_v_now);
 
-  /* "c_skylink.pyx":321
+  /* "c_skylink.pyx":322
  * 		now = c_skylink.sky_get_tick_time()
  * 		b = c_skylink.mac_can_send(self.handle.mac, now)
  * 		return b             # <<<<<<<<<<<<<<
@@ -10329,13 +10334,13 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__can_send(struct __pyx_obj_9c_skyli
  * 	def can_send(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_b); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 321, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_b); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 322, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":316
+  /* "c_skylink.pyx":317
  * 
  * 
  * 	cdef _can_send(self):             # <<<<<<<<<<<<<<
@@ -10354,7 +10359,7 @@ static PyObject *__pyx_f_9c_skylink_7SkyLink__can_send(struct __pyx_obj_9c_skyli
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":323
+/* "c_skylink.pyx":324
  * 		return b
  * 
  * 	def can_send(self):             # <<<<<<<<<<<<<<
@@ -10413,7 +10418,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_36can_send(struct __pyx_obj_9c_sky
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("can_send", 1);
 
-  /* "c_skylink.pyx":324
+  /* "c_skylink.pyx":325
  * 
  * 	def can_send(self):
  * 		return bool(self._can_send())             # <<<<<<<<<<<<<<
@@ -10421,17 +10426,17 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_36can_send(struct __pyx_obj_9c_sky
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_can_send(__pyx_v_self); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 324, __pyx_L1_error)
+  __pyx_t_1 = ((struct __pyx_vtabstruct_9c_skylink_SkyLink *)__pyx_v_self->__pyx_vtab)->_can_send(__pyx_v_self); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 325, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_2 < 0))) __PYX_ERR(0, 324, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_2 < 0))) __PYX_ERR(0, 325, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyBool_FromLong((!(!__pyx_t_2))); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 324, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyBool_FromLong((!(!__pyx_t_2))); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 325, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":323
+  /* "c_skylink.pyx":324
  * 		return b
  * 
  * 	def can_send(self):             # <<<<<<<<<<<<<<
@@ -10450,7 +10455,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_36can_send(struct __pyx_obj_9c_sky
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":327
+/* "c_skylink.pyx":328
  * 
  * 
  * 	def carrier_sensed(self):             # <<<<<<<<<<<<<<
@@ -10513,14 +10518,14 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_38carrier_sensed(struct __pyx_obj_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("carrier_sensed", 1);
 
-  /* "c_skylink.pyx":329
+  /* "c_skylink.pyx":330
  * 	def carrier_sensed(self):
  * 		cdef sky_tick_t now;
  * 		now = self.get_tick_time()             # <<<<<<<<<<<<<<
  * 		c_skylink.sky_mac_carrier_sensed(self.handle.mac, now)
  * 
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_get_tick_time); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 329, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_get_tick_time); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 330, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   __pyx_t_4 = 0;
@@ -10540,15 +10545,15 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_38carrier_sensed(struct __pyx_obj_
     PyObject *__pyx_callargs[2] = {__pyx_t_3, NULL};
     __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_2, __pyx_callargs+1-__pyx_t_4, 0+__pyx_t_4);
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 329, __pyx_L1_error)
+    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 330, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   }
-  __pyx_t_5 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_5 == ((sky_tick_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 329, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyInt_As_int32_t(__pyx_t_1); if (unlikely((__pyx_t_5 == ((sky_tick_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 330, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_now = __pyx_t_5;
 
-  /* "c_skylink.pyx":330
+  /* "c_skylink.pyx":331
  * 		cdef sky_tick_t now;
  * 		now = self.get_tick_time()
  * 		c_skylink.sky_mac_carrier_sensed(self.handle.mac, now)             # <<<<<<<<<<<<<<
@@ -10557,7 +10562,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_38carrier_sensed(struct __pyx_obj_
  */
   sky_mac_carrier_sensed(__pyx_v_self->handle->mac, __pyx_v_now);
 
-  /* "c_skylink.pyx":327
+  /* "c_skylink.pyx":328
  * 
  * 
  * 	def carrier_sensed(self):             # <<<<<<<<<<<<<<
@@ -10580,11 +10585,11 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_38carrier_sensed(struct __pyx_obj_
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":333
+/* "c_skylink.pyx":334
  * 
  * 
  * 	def get_tick_time(self):             # <<<<<<<<<<<<<<
- * 		return int( c_skylink.sky_get_tick_time() )
+ * 		return int(c_skylink.sky_get_tick_time())
  * 
  */
 
@@ -10639,28 +10644,28 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_40get_tick_time(CYTHON_UNUSED stru
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("get_tick_time", 1);
 
-  /* "c_skylink.pyx":334
+  /* "c_skylink.pyx":335
  * 
  * 	def get_tick_time(self):
- * 		return int( c_skylink.sky_get_tick_time() )             # <<<<<<<<<<<<<<
+ * 		return int(c_skylink.sky_get_tick_time())             # <<<<<<<<<<<<<<
  * 
  * 	def sky_tick(self, ticks):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(sky_get_tick_time()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 334, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(sky_get_tick_time()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 335, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 334, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 335, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_r = __pyx_t_2;
   __pyx_t_2 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":333
+  /* "c_skylink.pyx":334
  * 
  * 
  * 	def get_tick_time(self):             # <<<<<<<<<<<<<<
- * 		return int( c_skylink.sky_get_tick_time() )
+ * 		return int(c_skylink.sky_get_tick_time())
  * 
  */
 
@@ -10676,8 +10681,8 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_40get_tick_time(CYTHON_UNUSED stru
   return __pyx_r;
 }
 
-/* "c_skylink.pyx":336
- * 		return int( c_skylink.sky_get_tick_time() )
+/* "c_skylink.pyx":337
+ * 		return int(c_skylink.sky_get_tick_time())
  * 
  * 	def sky_tick(self, ticks):             # <<<<<<<<<<<<<<
  * 		cdef sky_tick_t tick_t_tick;
@@ -10737,12 +10742,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
           (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
           kw_args--;
         }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 336, __pyx_L3_error)
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 337, __pyx_L3_error)
         else goto __pyx_L5_argtuple_error;
       }
       if (unlikely(kw_args > 0)) {
         const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_tick") < 0)) __PYX_ERR(0, 336, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "sky_tick") < 0)) __PYX_ERR(0, 337, __pyx_L3_error)
       }
     } else if (unlikely(__pyx_nargs != 1)) {
       goto __pyx_L5_argtuple_error;
@@ -10753,7 +10758,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("sky_tick", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 336, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("sky_tick", 1, 1, 1, __pyx_nargs); __PYX_ERR(0, 337, __pyx_L3_error)
   __pyx_L6_skip:;
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -10792,17 +10797,17 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_42sky_tick(CYTHON_UNUSED struct __
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("sky_tick", 1);
 
-  /* "c_skylink.pyx":339
+  /* "c_skylink.pyx":340
  * 		cdef sky_tick_t tick_t_tick;
  * 		cdef int ret;
  * 		tick_t_tick = ticks             # <<<<<<<<<<<<<<
  * 		ret = c_skylink.sky_tick(tick_t_tick)
  * 		return ret
  */
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_ticks); if (unlikely((__pyx_t_1 == ((sky_tick_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 339, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_ticks); if (unlikely((__pyx_t_1 == ((sky_tick_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 340, __pyx_L1_error)
   __pyx_v_tick_t_tick = __pyx_t_1;
 
-  /* "c_skylink.pyx":340
+  /* "c_skylink.pyx":341
  * 		cdef int ret;
  * 		tick_t_tick = ticks
  * 		ret = c_skylink.sky_tick(tick_t_tick)             # <<<<<<<<<<<<<<
@@ -10811,7 +10816,7 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_42sky_tick(CYTHON_UNUSED struct __
  */
   __pyx_v_ret = sky_tick(__pyx_v_tick_t_tick);
 
-  /* "c_skylink.pyx":341
+  /* "c_skylink.pyx":342
  * 		tick_t_tick = ticks
  * 		ret = c_skylink.sky_tick(tick_t_tick)
  * 		return ret             # <<<<<<<<<<<<<<
@@ -10819,14 +10824,14 @@ static PyObject *__pyx_pf_9c_skylink_7SkyLink_42sky_tick(CYTHON_UNUSED struct __
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 341, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ret); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 342, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_r = __pyx_t_2;
   __pyx_t_2 = 0;
   goto __pyx_L0;
 
-  /* "c_skylink.pyx":336
- * 		return int( c_skylink.sky_get_tick_time() )
+  /* "c_skylink.pyx":337
+ * 		return int(c_skylink.sky_get_tick_time())
  * 
  * 	def sky_tick(self, ticks):             # <<<<<<<<<<<<<<
  * 		cdef sky_tick_t tick_t_tick;
@@ -11302,6 +11307,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_auth_flag_require_auth, __pyx_k_auth_flag_require_auth, sizeof(__pyx_k_auth_flag_require_auth), 0, 0, 1, 1},
     {&__pyx_n_s_auth_flag_require_seq, __pyx_k_auth_flag_require_seq, sizeof(__pyx_k_auth_flag_require_seq), 0, 0, 1, 1},
     {&__pyx_n_s_auth_flag_use_crc32, __pyx_k_auth_flag_use_crc32, sizeof(__pyx_k_auth_flag_use_crc32), 0, 0, 1, 1},
+    {&__pyx_n_s_blake3_key_len, __pyx_k_blake3_key_len, sizeof(__pyx_k_blake3_key_len), 0, 0, 1, 1},
     {&__pyx_n_s_boolean_variable, __pyx_k_boolean_variable, sizeof(__pyx_k_boolean_variable), 0, 0, 1, 1},
     {&__pyx_n_s_c_skylink, __pyx_k_c_skylink, sizeof(__pyx_k_c_skylink), 0, 0, 1, 1},
     {&__pyx_kp_s_c_skylink_pyx, __pyx_k_c_skylink_pyx, sizeof(__pyx_k_c_skylink_pyx), 0, 0, 1, 0},
@@ -11426,8 +11432,8 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
 }
 /* #### Code section: cached_builtins ### */
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 83, __pyx_L1_error)
-  __pyx_builtin_AssertionError = __Pyx_GetBuiltinName(__pyx_n_s_AssertionError); if (!__pyx_builtin_AssertionError) __PYX_ERR(0, 127, __pyx_L1_error)
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 84, __pyx_L1_error)
+  __pyx_builtin_AssertionError = __Pyx_GetBuiltinName(__pyx_n_s_AssertionError); if (!__pyx_builtin_AssertionError) __PYX_ERR(0, 128, __pyx_L1_error)
   __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(1, 2, __pyx_L1_error)
   __pyx_builtin_KeyError = __Pyx_GetBuiltinName(__pyx_n_s_KeyError); if (!__pyx_builtin_KeyError) __PYX_ERR(1, 19, __pyx_L1_error)
   __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(1, 20, __pyx_L1_error)
@@ -11510,218 +11516,218 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__6);
   __Pyx_GIVEREF(__pyx_tuple__6);
 
-  /* "c_skylink.pyx":48
+  /* "c_skylink.pyx":49
  * 
  * class SkyConfiguration:
  * 	def __init__(self):             # <<<<<<<<<<<<<<
  * 		self.vc = [VCConfig(), VCConfig(), VCConfig(), VCConfig()]
  * 		self.mac = MACConfig()
  */
-  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(0, 48, __pyx_L1_error)
+  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(0, 49, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__8);
   __Pyx_GIVEREF(__pyx_tuple__8);
-  __pyx_codeobj__9 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_init, 48, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__9)) __PYX_ERR(0, 48, __pyx_L1_error)
+  __pyx_codeobj__9 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_init, 49, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__9)) __PYX_ERR(0, 49, __pyx_L1_error)
 
-  /* "c_skylink.pyx":126
+  /* "c_skylink.pyx":127
  * 		free(keys)
  * 
  * 	def set_hmac_keys(self, key_list):             # <<<<<<<<<<<<<<
  * 		assert 0 < len(key_list) <= c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		for key in key_list:
  */
-  __pyx_tuple__10 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_key_list, __pyx_n_s_key, __pyx_n_s_keydata); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 126, __pyx_L1_error)
+  __pyx_tuple__10 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_key_list, __pyx_n_s_key, __pyx_n_s_keydata); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 127, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__10);
   __Pyx_GIVEREF(__pyx_tuple__10);
-  __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__10, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_set_hmac_keys, 126, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) __PYX_ERR(0, 126, __pyx_L1_error)
+  __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__10, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_set_hmac_keys, 127, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) __PYX_ERR(0, 127, __pyx_L1_error)
 
-  /* "c_skylink.pyx":142
+  /* "c_skylink.pyx":143
  * 		return k
  * 
  * 	def get_hmac_key(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return bytes(self._get_hmac_key( <int> ichannel))
  */
-  __pyx_tuple__12 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_ichannel); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_tuple__12 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_ichannel); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 143, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__12);
   __Pyx_GIVEREF(__pyx_tuple__12);
-  __pyx_codeobj__13 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_get_hmac_key, 142, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__13)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_codeobj__13 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_get_hmac_key, 143, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__13)) __PYX_ERR(0, 143, __pyx_L1_error)
 
-  /* "c_skylink.pyx":158
+  /* "c_skylink.pyx":159
  * 		return iret
  * 
  * 	def sky_rx(self, raw_frame_bytes):             # <<<<<<<<<<<<<<
  * 		return self._sky_rx(<uint8_t*> raw_frame_bytes, <int> len(raw_frame_bytes))
  * 
  */
-  __pyx_tuple__14 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_raw_frame_bytes); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __pyx_tuple__14 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_raw_frame_bytes); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(0, 159, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__14);
   __Pyx_GIVEREF(__pyx_tuple__14);
-  __pyx_codeobj__15 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__14, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_rx, 158, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__15)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __pyx_codeobj__15 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__14, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_rx, 159, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__15)) __PYX_ERR(0, 159, __pyx_L1_error)
 
-  /* "c_skylink.pyx":171
+  /* "c_skylink.pyx":172
  * 		return iret, frame_bytes
  * 
  * 	def sky_tx(self):             # <<<<<<<<<<<<<<
  * 		return self._sky_tx()
  * 	# === RX/TX ============================================================================================================================
  */
-  __pyx_codeobj__16 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_tx, 171, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__16)) __PYX_ERR(0, 171, __pyx_L1_error)
+  __pyx_codeobj__16 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_tx, 172, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__16)) __PYX_ERR(0, 172, __pyx_L1_error)
 
-  /* "c_skylink.pyx":184
+  /* "c_skylink.pyx":185
  * 		return ret
  * 
  * 	def sky_vc_push_packet_to_send(self, ichannel, data):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_push_packet_to_send(<int> ichannel, <uint8_t*> data, <int> len(data))
  */
-  __pyx_tuple__17 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_ichannel, __pyx_n_s_data); if (unlikely(!__pyx_tuple__17)) __PYX_ERR(0, 184, __pyx_L1_error)
+  __pyx_tuple__17 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_ichannel, __pyx_n_s_data); if (unlikely(!__pyx_tuple__17)) __PYX_ERR(0, 185, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__17);
   __Pyx_GIVEREF(__pyx_tuple__17);
-  __pyx_codeobj__18 = (PyObject*)__Pyx_PyCode_New(3, 0, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__17, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_push_packet_to_send, 184, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__18)) __PYX_ERR(0, 184, __pyx_L1_error)
+  __pyx_codeobj__18 = (PyObject*)__Pyx_PyCode_New(3, 0, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__17, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_push_packet_to_send, 185, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__18)) __PYX_ERR(0, 185, __pyx_L1_error)
 
-  /* "c_skylink.pyx":194
+  /* "c_skylink.pyx":195
  * 		return ret
  * 
  * 	def sky_vc_count_packets_to_tx(self, ichannel, include_resend):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_count_packets_to_tx(<int> ichannel, <int> int(include_resend))
  */
-  __pyx_tuple__19 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_ichannel, __pyx_n_s_include_resend); if (unlikely(!__pyx_tuple__19)) __PYX_ERR(0, 194, __pyx_L1_error)
+  __pyx_tuple__19 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_ichannel, __pyx_n_s_include_resend); if (unlikely(!__pyx_tuple__19)) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__19);
   __Pyx_GIVEREF(__pyx_tuple__19);
-  __pyx_codeobj__20 = (PyObject*)__Pyx_PyCode_New(3, 0, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__19, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_count_packets_to_tx, 194, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__20)) __PYX_ERR(0, 194, __pyx_L1_error)
+  __pyx_codeobj__20 = (PyObject*)__Pyx_PyCode_New(3, 0, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__19, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_count_packets_to_tx, 195, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__20)) __PYX_ERR(0, 195, __pyx_L1_error)
 
-  /* "c_skylink.pyx":199
+  /* "c_skylink.pyx":200
  * 
  * 
  * 	def sky_vc_send_buffer_is_full(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		cdef int ret = 0;
  */
-  __pyx_tuple__21 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_ichannel, __pyx_n_s_ret); if (unlikely(!__pyx_tuple__21)) __PYX_ERR(0, 199, __pyx_L1_error)
+  __pyx_tuple__21 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_ichannel, __pyx_n_s_ret); if (unlikely(!__pyx_tuple__21)) __PYX_ERR(0, 200, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__21);
   __Pyx_GIVEREF(__pyx_tuple__21);
-  __pyx_codeobj__22 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__21, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_send_buffer_is_full, 199, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__22)) __PYX_ERR(0, 199, __pyx_L1_error)
+  __pyx_codeobj__22 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__21, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_send_buffer_is_full, 200, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__22)) __PYX_ERR(0, 200, __pyx_L1_error)
 
-  /* "c_skylink.pyx":216
+  /* "c_skylink.pyx":217
  * 		return ret
  * 
  * 	def sky_vc_count_readable_rcv_packets(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_count_readable_rcv_packets(<int> ichannel)
  */
-  __pyx_codeobj__23 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_count_readable_rcv_packet, 216, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__23)) __PYX_ERR(0, 216, __pyx_L1_error)
+  __pyx_codeobj__23 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_count_readable_rcv_packet, 217, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__23)) __PYX_ERR(0, 217, __pyx_L1_error)
 
-  /* "c_skylink.pyx":233
+  /* "c_skylink.pyx":234
  * 		return ret, ret_b
  * 
  * 	def sky_vc_read_next_received(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_read_next_received(<int> ichannel)
  */
-  __pyx_codeobj__24 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_read_next_received, 233, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__24)) __PYX_ERR(0, 233, __pyx_L1_error)
+  __pyx_codeobj__24 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_read_next_received, 234, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__24)) __PYX_ERR(0, 234, __pyx_L1_error)
 
-  /* "c_skylink.pyx":247
+  /* "c_skylink.pyx":248
  * 		return state
  * 
  * 	def sky_get_state(self):             # <<<<<<<<<<<<<<
  * 		cdef SkyState state;
  * 		state = self._sky_get_state()
  */
-  __pyx_tuple__25 = PyTuple_Pack(5, __pyx_n_s_self, __pyx_n_s_state, __pyx_n_s_vc_list, __pyx_n_s_i, __pyx_n_s_dd); if (unlikely(!__pyx_tuple__25)) __PYX_ERR(0, 247, __pyx_L1_error)
+  __pyx_tuple__25 = PyTuple_Pack(5, __pyx_n_s_self, __pyx_n_s_state, __pyx_n_s_vc_list, __pyx_n_s_i, __pyx_n_s_dd); if (unlikely(!__pyx_tuple__25)) __PYX_ERR(0, 248, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__25);
   __Pyx_GIVEREF(__pyx_tuple__25);
-  __pyx_codeobj__26 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__25, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_get_state, 247, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__26)) __PYX_ERR(0, 247, __pyx_L1_error)
+  __pyx_codeobj__26 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__25, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_get_state, 248, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__26)) __PYX_ERR(0, 248, __pyx_L1_error)
 
-  /* "c_skylink.pyx":262
+  /* "c_skylink.pyx":263
  * 
  * 
  * 	def sky_get_stats(self):             # <<<<<<<<<<<<<<
  * 		cdef SkyDiagnostics* stats;
  * 		stats = self.handle.diag
  */
-  __pyx_tuple__27 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_stats, __pyx_n_s_dd, __pyx_n_s_i); if (unlikely(!__pyx_tuple__27)) __PYX_ERR(0, 262, __pyx_L1_error)
+  __pyx_tuple__27 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_stats, __pyx_n_s_dd, __pyx_n_s_i); if (unlikely(!__pyx_tuple__27)) __PYX_ERR(0, 263, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__27);
   __Pyx_GIVEREF(__pyx_tuple__27);
-  __pyx_codeobj__28 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__27, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_get_stats, 262, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__28)) __PYX_ERR(0, 262, __pyx_L1_error)
+  __pyx_codeobj__28 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__27, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_get_stats, 263, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__28)) __PYX_ERR(0, 263, __pyx_L1_error)
 
-  /* "c_skylink.pyx":282
+  /* "c_skylink.pyx":283
  * 
  * 
  * 	def sky_diag_clear(self):             # <<<<<<<<<<<<<<
  * 		c_skylink.sky_diag_clear(self.handle.diag)
  * 
  */
-  __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_diag_clear, 282, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 282, __pyx_L1_error)
+  __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_diag_clear, 283, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 283, __pyx_L1_error)
 
-  /* "c_skylink.pyx":291
+  /* "c_skylink.pyx":292
  * 		return ret
  * 
  * 	def sky_vc_arq_connect(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_arq_connect(<int> ichannel)
  */
-  __pyx_codeobj__30 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_arq_connect, 291, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__30)) __PYX_ERR(0, 291, __pyx_L1_error)
+  __pyx_codeobj__30 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_arq_connect, 292, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__30)) __PYX_ERR(0, 292, __pyx_L1_error)
 
-  /* "c_skylink.pyx":301
+  /* "c_skylink.pyx":302
  * 		return ret
  * 
  * 	def sky_vc_arq_disconnect(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_arq_disconnect(<int> ichannel)
  */
-  __pyx_codeobj__31 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_arq_disconnect, 301, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__31)) __PYX_ERR(0, 301, __pyx_L1_error)
+  __pyx_codeobj__31 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_arq_disconnect, 302, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__31)) __PYX_ERR(0, 302, __pyx_L1_error)
 
-  /* "c_skylink.pyx":311
+  /* "c_skylink.pyx":312
  * 		return int(x)
  * 
  * 	def sky_vc_get_arq_state(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_get_arq_state(ichannel)
  */
-  __pyx_codeobj__32 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_get_arq_state, 311, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__32)) __PYX_ERR(0, 311, __pyx_L1_error)
+  __pyx_codeobj__32 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_vc_get_arq_state, 312, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__32)) __PYX_ERR(0, 312, __pyx_L1_error)
 
-  /* "c_skylink.pyx":323
+  /* "c_skylink.pyx":324
  * 		return b
  * 
  * 	def can_send(self):             # <<<<<<<<<<<<<<
  * 		return bool(self._can_send())
  * 
  */
-  __pyx_codeobj__33 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_can_send, 323, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__33)) __PYX_ERR(0, 323, __pyx_L1_error)
+  __pyx_codeobj__33 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_can_send, 324, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__33)) __PYX_ERR(0, 324, __pyx_L1_error)
 
-  /* "c_skylink.pyx":327
+  /* "c_skylink.pyx":328
  * 
  * 
  * 	def carrier_sensed(self):             # <<<<<<<<<<<<<<
  * 		cdef sky_tick_t now;
  * 		now = self.get_tick_time()
  */
-  __pyx_tuple__34 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_now); if (unlikely(!__pyx_tuple__34)) __PYX_ERR(0, 327, __pyx_L1_error)
+  __pyx_tuple__34 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_now); if (unlikely(!__pyx_tuple__34)) __PYX_ERR(0, 328, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__34);
   __Pyx_GIVEREF(__pyx_tuple__34);
-  __pyx_codeobj__35 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__34, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_carrier_sensed, 327, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__35)) __PYX_ERR(0, 327, __pyx_L1_error)
+  __pyx_codeobj__35 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__34, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_carrier_sensed, 328, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__35)) __PYX_ERR(0, 328, __pyx_L1_error)
 
-  /* "c_skylink.pyx":333
+  /* "c_skylink.pyx":334
  * 
  * 
  * 	def get_tick_time(self):             # <<<<<<<<<<<<<<
- * 		return int( c_skylink.sky_get_tick_time() )
+ * 		return int(c_skylink.sky_get_tick_time())
  * 
  */
-  __pyx_codeobj__36 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_get_tick_time, 333, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__36)) __PYX_ERR(0, 333, __pyx_L1_error)
+  __pyx_codeobj__36 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_get_tick_time, 334, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__36)) __PYX_ERR(0, 334, __pyx_L1_error)
 
-  /* "c_skylink.pyx":336
- * 		return int( c_skylink.sky_get_tick_time() )
+  /* "c_skylink.pyx":337
+ * 		return int(c_skylink.sky_get_tick_time())
  * 
  * 	def sky_tick(self, ticks):             # <<<<<<<<<<<<<<
  * 		cdef sky_tick_t tick_t_tick;
  * 		cdef int ret;
  */
-  __pyx_tuple__37 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_ticks, __pyx_n_s_tick_t_tick, __pyx_n_s_ret); if (unlikely(!__pyx_tuple__37)) __PYX_ERR(0, 336, __pyx_L1_error)
+  __pyx_tuple__37 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_ticks, __pyx_n_s_tick_t_tick, __pyx_n_s_ret); if (unlikely(!__pyx_tuple__37)) __PYX_ERR(0, 337, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__37);
   __Pyx_GIVEREF(__pyx_tuple__37);
-  __pyx_codeobj__38 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__37, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_tick, 336, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__38)) __PYX_ERR(0, 336, __pyx_L1_error)
+  __pyx_codeobj__38 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__37, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_c_skylink_pyx, __pyx_n_s_sky_tick, 337, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__38)) __PYX_ERR(0, 337, __pyx_L1_error)
 
   /* "(tree fragment)":1
  * def __reduce_cython__(self):             # <<<<<<<<<<<<<<
@@ -11846,15 +11852,15 @@ static int __Pyx_modinit_type_init_code(void) {
   __pyx_vtable_9c_skylink_SkyLink._sky_vc_get_arq_state = (PyObject *(*)(struct __pyx_obj_9c_skylink_SkyLink *, int))__pyx_f_9c_skylink_7SkyLink__sky_vc_get_arq_state;
   __pyx_vtable_9c_skylink_SkyLink._can_send = (PyObject *(*)(struct __pyx_obj_9c_skylink_SkyLink *))__pyx_f_9c_skylink_7SkyLink__can_send;
   #if CYTHON_USE_TYPE_SPECS
-  __pyx_ptype_9c_skylink_SkyLink = (PyTypeObject *) __Pyx_PyType_FromModuleAndSpec(__pyx_m, &__pyx_type_9c_skylink_SkyLink_spec, NULL); if (unlikely(!__pyx_ptype_9c_skylink_SkyLink)) __PYX_ERR(0, 56, __pyx_L1_error)
-  if (__Pyx_fix_up_extension_type_from_spec(&__pyx_type_9c_skylink_SkyLink_spec, __pyx_ptype_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 56, __pyx_L1_error)
+  __pyx_ptype_9c_skylink_SkyLink = (PyTypeObject *) __Pyx_PyType_FromModuleAndSpec(__pyx_m, &__pyx_type_9c_skylink_SkyLink_spec, NULL); if (unlikely(!__pyx_ptype_9c_skylink_SkyLink)) __PYX_ERR(0, 57, __pyx_L1_error)
+  if (__Pyx_fix_up_extension_type_from_spec(&__pyx_type_9c_skylink_SkyLink_spec, __pyx_ptype_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 57, __pyx_L1_error)
   #else
   __pyx_ptype_9c_skylink_SkyLink = &__pyx_type_9c_skylink_SkyLink;
   #endif
   #if !CYTHON_COMPILING_IN_LIMITED_API
   #endif
   #if !CYTHON_USE_TYPE_SPECS
-  if (__Pyx_PyType_Ready(__pyx_ptype_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 56, __pyx_L1_error)
+  if (__Pyx_PyType_Ready(__pyx_ptype_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 57, __pyx_L1_error)
   #endif
   #if PY_MAJOR_VERSION < 3
   __pyx_ptype_9c_skylink_SkyLink->tp_print = 0;
@@ -11864,13 +11870,13 @@ static int __Pyx_modinit_type_init_code(void) {
     __pyx_ptype_9c_skylink_SkyLink->tp_getattro = __Pyx_PyObject_GenericGetAttr;
   }
   #endif
-  if (__Pyx_SetVtable(__pyx_ptype_9c_skylink_SkyLink, __pyx_vtabptr_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 56, __pyx_L1_error)
+  if (__Pyx_SetVtable(__pyx_ptype_9c_skylink_SkyLink, __pyx_vtabptr_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 57, __pyx_L1_error)
   #if !CYTHON_COMPILING_IN_LIMITED_API
-  if (__Pyx_MergeVtables(__pyx_ptype_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 56, __pyx_L1_error)
+  if (__Pyx_MergeVtables(__pyx_ptype_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 57, __pyx_L1_error)
   #endif
-  if (PyObject_SetAttr(__pyx_m, __pyx_n_s_SkyLink, (PyObject *) __pyx_ptype_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 56, __pyx_L1_error)
+  if (PyObject_SetAttr(__pyx_m, __pyx_n_s_SkyLink, (PyObject *) __pyx_ptype_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 57, __pyx_L1_error)
   #if !CYTHON_COMPILING_IN_LIMITED_API
-  if (__Pyx_setup_reduce((PyObject *) __pyx_ptype_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 56, __pyx_L1_error)
+  if (__Pyx_setup_reduce((PyObject *) __pyx_ptype_9c_skylink_SkyLink) < 0) __PYX_ERR(0, 57, __pyx_L1_error)
   #endif
   __Pyx_RefNannyFinishContext();
   return 0;
@@ -12210,7 +12216,7 @@ if (!__Pyx_RefNanny) {
  * num_virtual_channels 	= c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * max_identity_len 		= c_skylink.SKY_MAX_IDENTITY_LEN             # <<<<<<<<<<<<<<
  * mod_time_ticks 			= c_skylink.MOD_TIME_TICKS
- * 
+ * blake3_key_len 			= c_skylink.BLAKE3_KEY_LEN
  */
   __pyx_t_2 = __Pyx_PyInt_From_int(SKY_MAX_IDENTITY_LEN); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 9, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -12221,631 +12227,643 @@ if (!__Pyx_RefNanny) {
  * num_virtual_channels 	= c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * max_identity_len 		= c_skylink.SKY_MAX_IDENTITY_LEN
  * mod_time_ticks 			= c_skylink.MOD_TIME_TICKS             # <<<<<<<<<<<<<<
+ * blake3_key_len 			= c_skylink.BLAKE3_KEY_LEN
  * 
- * auth_flag_auth_tx 		= c_skylink.SKY_CONFIG_FLAG_AUTHENTICATE_TX
  */
   __pyx_t_2 = __Pyx_PyInt_From_int(MOD_TIME_TICKS); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 10, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_mod_time_ticks, __pyx_t_2) < 0) __PYX_ERR(0, 10, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":12
+  /* "c_skylink.pyx":11
+ * max_identity_len 		= c_skylink.SKY_MAX_IDENTITY_LEN
  * mod_time_ticks 			= c_skylink.MOD_TIME_TICKS
+ * blake3_key_len 			= c_skylink.BLAKE3_KEY_LEN             # <<<<<<<<<<<<<<
+ * 
+ * auth_flag_auth_tx 		= c_skylink.SKY_CONFIG_FLAG_AUTHENTICATE_TX
+ */
+  __pyx_t_2 = __Pyx_PyInt_From_int(BLAKE3_KEY_LEN); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 11, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_blake3_key_len, __pyx_t_2) < 0) __PYX_ERR(0, 11, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
+  /* "c_skylink.pyx":13
+ * blake3_key_len 			= c_skylink.BLAKE3_KEY_LEN
  * 
  * auth_flag_auth_tx 		= c_skylink.SKY_CONFIG_FLAG_AUTHENTICATE_TX             # <<<<<<<<<<<<<<
  * auth_flag_require_auth 	= c_skylink.SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION
  * auth_flag_require_seq 	= c_skylink.SKY_CONFIG_FLAG_REQUIRE_SEQUENCE
  */
-  __pyx_t_2 = __Pyx_PyInt_From_int(SKY_CONFIG_FLAG_AUTHENTICATE_TX); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 12, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(SKY_CONFIG_FLAG_AUTHENTICATE_TX); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 13, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_auth_flag_auth_tx, __pyx_t_2) < 0) __PYX_ERR(0, 12, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_auth_flag_auth_tx, __pyx_t_2) < 0) __PYX_ERR(0, 13, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":13
+  /* "c_skylink.pyx":14
  * 
  * auth_flag_auth_tx 		= c_skylink.SKY_CONFIG_FLAG_AUTHENTICATE_TX
  * auth_flag_require_auth 	= c_skylink.SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION             # <<<<<<<<<<<<<<
  * auth_flag_require_seq 	= c_skylink.SKY_CONFIG_FLAG_REQUIRE_SEQUENCE
  * auth_flag_use_crc32 	= c_skylink.SKY_CONFIG_FLAG_USE_CRC32
  */
-  __pyx_t_2 = __Pyx_PyInt_From_int(SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 13, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_auth_flag_require_auth, __pyx_t_2) < 0) __PYX_ERR(0, 13, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_auth_flag_require_auth, __pyx_t_2) < 0) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":14
+  /* "c_skylink.pyx":15
  * auth_flag_auth_tx 		= c_skylink.SKY_CONFIG_FLAG_AUTHENTICATE_TX
  * auth_flag_require_auth 	= c_skylink.SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION
  * auth_flag_require_seq 	= c_skylink.SKY_CONFIG_FLAG_REQUIRE_SEQUENCE             # <<<<<<<<<<<<<<
  * auth_flag_use_crc32 	= c_skylink.SKY_CONFIG_FLAG_USE_CRC32
  * 
  */
-  __pyx_t_2 = __Pyx_PyInt_From_int(SKY_CONFIG_FLAG_REQUIRE_SEQUENCE); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 14, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(SKY_CONFIG_FLAG_REQUIRE_SEQUENCE); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 15, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_auth_flag_require_seq, __pyx_t_2) < 0) __PYX_ERR(0, 14, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_auth_flag_require_seq, __pyx_t_2) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":15
+  /* "c_skylink.pyx":16
  * auth_flag_require_auth 	= c_skylink.SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION
  * auth_flag_require_seq 	= c_skylink.SKY_CONFIG_FLAG_REQUIRE_SEQUENCE
  * auth_flag_use_crc32 	= c_skylink.SKY_CONFIG_FLAG_USE_CRC32             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_t_2 = __Pyx_PyInt_From_int(SKY_CONFIG_FLAG_USE_CRC32); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 15, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(SKY_CONFIG_FLAG_USE_CRC32); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 16, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_auth_flag_use_crc32, __pyx_t_2) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_auth_flag_use_crc32, __pyx_t_2) < 0) __PYX_ERR(0, 16, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":18
+  /* "c_skylink.pyx":19
  * 
  * 
  * class ArqConfig:             # <<<<<<<<<<<<<<
  * 	timeout_ticks		 	= 26000
  * 	idle_frame_threshold 	= 6500
  */
-  __pyx_t_2 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_ArqConfig, __pyx_n_s_ArqConfig, (PyObject *) NULL, __pyx_n_s_c_skylink, (PyObject *) NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 18, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_ArqConfig, __pyx_n_s_ArqConfig, (PyObject *) NULL, __pyx_n_s_c_skylink, (PyObject *) NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 19, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
 
-  /* "c_skylink.pyx":19
+  /* "c_skylink.pyx":20
  * 
  * class ArqConfig:
  * 	timeout_ticks		 	= 26000             # <<<<<<<<<<<<<<
  * 	idle_frame_threshold 	= 6500
  * 	idle_frames_per_window 	= 1
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_timeout_ticks, __pyx_int_26000) < 0) __PYX_ERR(0, 19, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_timeout_ticks, __pyx_int_26000) < 0) __PYX_ERR(0, 20, __pyx_L1_error)
 
-  /* "c_skylink.pyx":20
+  /* "c_skylink.pyx":21
  * class ArqConfig:
  * 	timeout_ticks		 	= 26000
  * 	idle_frame_threshold 	= 6500             # <<<<<<<<<<<<<<
  * 	idle_frames_per_window 	= 1
  * 
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_idle_frame_threshold, __pyx_int_6500) < 0) __PYX_ERR(0, 20, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_idle_frame_threshold, __pyx_int_6500) < 0) __PYX_ERR(0, 21, __pyx_L1_error)
 
-  /* "c_skylink.pyx":21
+  /* "c_skylink.pyx":22
  * 	timeout_ticks		 	= 26000
  * 	idle_frame_threshold 	= 6500
  * 	idle_frames_per_window 	= 1             # <<<<<<<<<<<<<<
  * 
  * class HMACConfig:
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_idle_frames_per_window, __pyx_int_1) < 0) __PYX_ERR(0, 21, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_idle_frames_per_window, __pyx_int_1) < 0) __PYX_ERR(0, 22, __pyx_L1_error)
 
-  /* "c_skylink.pyx":18
+  /* "c_skylink.pyx":19
  * 
  * 
  * class ArqConfig:             # <<<<<<<<<<<<<<
  * 	timeout_ticks		 	= 26000
  * 	idle_frame_threshold 	= 6500
  */
-  __pyx_t_3 = __Pyx_Py3ClassCreate(((PyObject*)&PyType_Type), __pyx_n_s_ArqConfig, __pyx_empty_tuple, __pyx_t_2, NULL, 0, 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 18, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_Py3ClassCreate(((PyObject*)&PyType_Type), __pyx_n_s_ArqConfig, __pyx_empty_tuple, __pyx_t_2, NULL, 0, 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 19, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_ArqConfig, __pyx_t_3) < 0) __PYX_ERR(0, 18, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_ArqConfig, __pyx_t_3) < 0) __PYX_ERR(0, 19, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":23
+  /* "c_skylink.pyx":24
  * 	idle_frames_per_window 	= 1
  * 
  * class HMACConfig:             # <<<<<<<<<<<<<<
  * 	maximum_jump 			= 24
  * 
  */
-  __pyx_t_2 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_HMACConfig, __pyx_n_s_HMACConfig, (PyObject *) NULL, __pyx_n_s_c_skylink, (PyObject *) NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 23, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_HMACConfig, __pyx_n_s_HMACConfig, (PyObject *) NULL, __pyx_n_s_c_skylink, (PyObject *) NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 24, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
 
-  /* "c_skylink.pyx":24
+  /* "c_skylink.pyx":25
  * 
  * class HMACConfig:
  * 	maximum_jump 			= 24             # <<<<<<<<<<<<<<
  * 
  * class MACConfig:
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_maximum_jump, __pyx_int_24) < 0) __PYX_ERR(0, 24, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_maximum_jump, __pyx_int_24) < 0) __PYX_ERR(0, 25, __pyx_L1_error)
 
-  /* "c_skylink.pyx":23
+  /* "c_skylink.pyx":24
  * 	idle_frames_per_window 	= 1
  * 
  * class HMACConfig:             # <<<<<<<<<<<<<<
  * 	maximum_jump 			= 24
  * 
  */
-  __pyx_t_3 = __Pyx_Py3ClassCreate(((PyObject*)&PyType_Type), __pyx_n_s_HMACConfig, __pyx_empty_tuple, __pyx_t_2, NULL, 0, 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 23, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_Py3ClassCreate(((PyObject*)&PyType_Type), __pyx_n_s_HMACConfig, __pyx_empty_tuple, __pyx_t_2, NULL, 0, 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 24, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_HMACConfig, __pyx_t_3) < 0) __PYX_ERR(0, 23, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_HMACConfig, __pyx_t_3) < 0) __PYX_ERR(0, 24, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":26
+  /* "c_skylink.pyx":27
  * 	maximum_jump 			= 24
  * 
  * class MACConfig:             # <<<<<<<<<<<<<<
  * 	gap_constant_ticks              = 600
  * 	tail_constant_ticks             = 80
  */
-  __pyx_t_2 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_MACConfig, __pyx_n_s_MACConfig, (PyObject *) NULL, __pyx_n_s_c_skylink, (PyObject *) NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 26, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_MACConfig, __pyx_n_s_MACConfig, (PyObject *) NULL, __pyx_n_s_c_skylink, (PyObject *) NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 27, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
 
-  /* "c_skylink.pyx":27
+  /* "c_skylink.pyx":28
  * 
  * class MACConfig:
  * 	gap_constant_ticks              = 600             # <<<<<<<<<<<<<<
  * 	tail_constant_ticks             = 80
  * 	minimum_window_length_ticks     = 250
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_gap_constant_ticks, __pyx_int_600) < 0) __PYX_ERR(0, 27, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_gap_constant_ticks, __pyx_int_600) < 0) __PYX_ERR(0, 28, __pyx_L1_error)
 
-  /* "c_skylink.pyx":28
+  /* "c_skylink.pyx":29
  * class MACConfig:
  * 	gap_constant_ticks              = 600
  * 	tail_constant_ticks             = 80             # <<<<<<<<<<<<<<
  * 	minimum_window_length_ticks     = 250
  * 	maximum_window_length_ticks     = 1000
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_tail_constant_ticks, __pyx_int_80) < 0) __PYX_ERR(0, 28, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_tail_constant_ticks, __pyx_int_80) < 0) __PYX_ERR(0, 29, __pyx_L1_error)
 
-  /* "c_skylink.pyx":29
+  /* "c_skylink.pyx":30
  * 	gap_constant_ticks              = 600
  * 	tail_constant_ticks             = 80
  * 	minimum_window_length_ticks     = 250             # <<<<<<<<<<<<<<
  * 	maximum_window_length_ticks     = 1000
  * 	window_adjust_increment_ticks   = 250
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_minimum_window_length_ticks, __pyx_int_250) < 0) __PYX_ERR(0, 29, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_minimum_window_length_ticks, __pyx_int_250) < 0) __PYX_ERR(0, 30, __pyx_L1_error)
 
-  /* "c_skylink.pyx":30
+  /* "c_skylink.pyx":31
  * 	tail_constant_ticks             = 80
  * 	minimum_window_length_ticks     = 250
  * 	maximum_window_length_ticks     = 1000             # <<<<<<<<<<<<<<
  * 	window_adjust_increment_ticks   = 250
  * 	window_adjustment_threshold     = 2
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_maximum_window_length_ticks, __pyx_int_1000) < 0) __PYX_ERR(0, 30, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_maximum_window_length_ticks, __pyx_int_1000) < 0) __PYX_ERR(0, 31, __pyx_L1_error)
 
-  /* "c_skylink.pyx":31
+  /* "c_skylink.pyx":32
  * 	minimum_window_length_ticks     = 250
  * 	maximum_window_length_ticks     = 1000
  * 	window_adjust_increment_ticks   = 250             # <<<<<<<<<<<<<<
  * 	window_adjustment_threshold     = 2
  * 	unauthenticated_mac_updates     = 0
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_window_adjust_increment_ticks, __pyx_int_250) < 0) __PYX_ERR(0, 31, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_window_adjust_increment_ticks, __pyx_int_250) < 0) __PYX_ERR(0, 32, __pyx_L1_error)
 
-  /* "c_skylink.pyx":32
+  /* "c_skylink.pyx":33
  * 	maximum_window_length_ticks     = 1000
  * 	window_adjust_increment_ticks   = 250
  * 	window_adjustment_threshold     = 2             # <<<<<<<<<<<<<<
  * 	unauthenticated_mac_updates     = 0
  * 	idle_frames_per_window          = 0
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_window_adjustment_threshold, __pyx_int_2) < 0) __PYX_ERR(0, 32, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_window_adjustment_threshold, __pyx_int_2) < 0) __PYX_ERR(0, 33, __pyx_L1_error)
 
-  /* "c_skylink.pyx":33
+  /* "c_skylink.pyx":34
  * 	window_adjust_increment_ticks   = 250
  * 	window_adjustment_threshold     = 2
  * 	unauthenticated_mac_updates     = 0             # <<<<<<<<<<<<<<
  * 	idle_frames_per_window          = 0
  * 	idle_timeout_ticks              = 30000
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_unauthenticated_mac_updates, __pyx_int_0) < 0) __PYX_ERR(0, 33, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_unauthenticated_mac_updates, __pyx_int_0) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
 
-  /* "c_skylink.pyx":34
+  /* "c_skylink.pyx":35
  * 	window_adjustment_threshold     = 2
  * 	unauthenticated_mac_updates     = 0
  * 	idle_frames_per_window          = 0             # <<<<<<<<<<<<<<
  * 	idle_timeout_ticks              = 30000
  * 	carrier_sense_ticks             = 200
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_idle_frames_per_window, __pyx_int_0) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_idle_frames_per_window, __pyx_int_0) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "c_skylink.pyx":35
+  /* "c_skylink.pyx":36
  * 	unauthenticated_mac_updates     = 0
  * 	idle_frames_per_window          = 0
  * 	idle_timeout_ticks              = 30000             # <<<<<<<<<<<<<<
  * 	carrier_sense_ticks             = 200
  * 
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_idle_timeout_ticks, __pyx_int_30000) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_idle_timeout_ticks, __pyx_int_30000) < 0) __PYX_ERR(0, 36, __pyx_L1_error)
 
-  /* "c_skylink.pyx":36
+  /* "c_skylink.pyx":37
  * 	idle_frames_per_window          = 0
  * 	idle_timeout_ticks              = 30000
  * 	carrier_sense_ticks             = 200             # <<<<<<<<<<<<<<
  * 
  * class VCConfig:
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_carrier_sense_ticks, __pyx_int_200) < 0) __PYX_ERR(0, 36, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_carrier_sense_ticks, __pyx_int_200) < 0) __PYX_ERR(0, 37, __pyx_L1_error)
 
-  /* "c_skylink.pyx":26
+  /* "c_skylink.pyx":27
  * 	maximum_jump 			= 24
  * 
  * class MACConfig:             # <<<<<<<<<<<<<<
  * 	gap_constant_ticks              = 600
  * 	tail_constant_ticks             = 80
  */
-  __pyx_t_3 = __Pyx_Py3ClassCreate(((PyObject*)&PyType_Type), __pyx_n_s_MACConfig, __pyx_empty_tuple, __pyx_t_2, NULL, 0, 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 26, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_Py3ClassCreate(((PyObject*)&PyType_Type), __pyx_n_s_MACConfig, __pyx_empty_tuple, __pyx_t_2, NULL, 0, 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 27, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_MACConfig, __pyx_t_3) < 0) __PYX_ERR(0, 26, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_MACConfig, __pyx_t_3) < 0) __PYX_ERR(0, 27, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":38
+  /* "c_skylink.pyx":39
  * 	carrier_sense_ticks             = 200
  * 
  * class VCConfig:             # <<<<<<<<<<<<<<
  * 	require_authentication      = auth_flag_auth_tx | auth_flag_use_crc32
  * 	rcv_ring_len                = 28
  */
-  __pyx_t_2 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_VCConfig, __pyx_n_s_VCConfig, (PyObject *) NULL, __pyx_n_s_c_skylink, (PyObject *) NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 38, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_VCConfig, __pyx_n_s_VCConfig, (PyObject *) NULL, __pyx_n_s_c_skylink, (PyObject *) NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 39, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
 
-  /* "c_skylink.pyx":39
+  /* "c_skylink.pyx":40
  * 
  * class VCConfig:
  * 	require_authentication      = auth_flag_auth_tx | auth_flag_use_crc32             # <<<<<<<<<<<<<<
  * 	rcv_ring_len                = 28
  * 	horizon_width               = 16
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_auth_flag_auth_tx); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 39, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_auth_flag_auth_tx); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 40, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_auth_flag_use_crc32); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 39, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_auth_flag_use_crc32); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 40, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = PyNumber_Or(__pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 39, __pyx_L1_error)
+  __pyx_t_5 = PyNumber_Or(__pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 40, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_require_authentication, __pyx_t_5) < 0) __PYX_ERR(0, 39, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_require_authentication, __pyx_t_5) < 0) __PYX_ERR(0, 40, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-  /* "c_skylink.pyx":40
+  /* "c_skylink.pyx":41
  * class VCConfig:
  * 	require_authentication      = auth_flag_auth_tx | auth_flag_use_crc32
  * 	rcv_ring_len                = 28             # <<<<<<<<<<<<<<
  * 	horizon_width               = 16
  * 	send_ring_len               = 24
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_rcv_ring_len, __pyx_int_28) < 0) __PYX_ERR(0, 40, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_rcv_ring_len, __pyx_int_28) < 0) __PYX_ERR(0, 41, __pyx_L1_error)
 
-  /* "c_skylink.pyx":41
+  /* "c_skylink.pyx":42
  * 	require_authentication      = auth_flag_auth_tx | auth_flag_use_crc32
  * 	rcv_ring_len                = 28
  * 	horizon_width               = 16             # <<<<<<<<<<<<<<
  * 	send_ring_len               = 24
  * 	usable_element_size         = 175
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_horizon_width, __pyx_int_16) < 0) __PYX_ERR(0, 41, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_horizon_width, __pyx_int_16) < 0) __PYX_ERR(0, 42, __pyx_L1_error)
 
-  /* "c_skylink.pyx":42
+  /* "c_skylink.pyx":43
  * 	rcv_ring_len                = 28
  * 	horizon_width               = 16
  * 	send_ring_len               = 24             # <<<<<<<<<<<<<<
  * 	usable_element_size         = 175
  * 	tx_key                      = 0
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_send_ring_len, __pyx_int_24) < 0) __PYX_ERR(0, 42, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_send_ring_len, __pyx_int_24) < 0) __PYX_ERR(0, 43, __pyx_L1_error)
 
-  /* "c_skylink.pyx":43
+  /* "c_skylink.pyx":44
  * 	horizon_width               = 16
  * 	send_ring_len               = 24
  * 	usable_element_size         = 175             # <<<<<<<<<<<<<<
  * 	tx_key                      = 0
  * 	rx_key                      = 0
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_usable_element_size, __pyx_int_175) < 0) __PYX_ERR(0, 43, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_usable_element_size, __pyx_int_175) < 0) __PYX_ERR(0, 44, __pyx_L1_error)
 
-  /* "c_skylink.pyx":44
+  /* "c_skylink.pyx":45
  * 	send_ring_len               = 24
  * 	usable_element_size         = 175
  * 	tx_key                      = 0             # <<<<<<<<<<<<<<
  * 	rx_key                      = 0
  * 
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_tx_key, __pyx_int_0) < 0) __PYX_ERR(0, 44, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_tx_key, __pyx_int_0) < 0) __PYX_ERR(0, 45, __pyx_L1_error)
 
-  /* "c_skylink.pyx":45
+  /* "c_skylink.pyx":46
  * 	usable_element_size         = 175
  * 	tx_key                      = 0
  * 	rx_key                      = 0             # <<<<<<<<<<<<<<
  * 
  * class SkyConfiguration:
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_rx_key, __pyx_int_0) < 0) __PYX_ERR(0, 45, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_rx_key, __pyx_int_0) < 0) __PYX_ERR(0, 46, __pyx_L1_error)
 
-  /* "c_skylink.pyx":38
+  /* "c_skylink.pyx":39
  * 	carrier_sense_ticks             = 200
  * 
  * class VCConfig:             # <<<<<<<<<<<<<<
  * 	require_authentication      = auth_flag_auth_tx | auth_flag_use_crc32
  * 	rcv_ring_len                = 28
  */
-  __pyx_t_5 = __Pyx_Py3ClassCreate(((PyObject*)&PyType_Type), __pyx_n_s_VCConfig, __pyx_empty_tuple, __pyx_t_2, NULL, 0, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 38, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_Py3ClassCreate(((PyObject*)&PyType_Type), __pyx_n_s_VCConfig, __pyx_empty_tuple, __pyx_t_2, NULL, 0, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 39, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_VCConfig, __pyx_t_5) < 0) __PYX_ERR(0, 38, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_VCConfig, __pyx_t_5) < 0) __PYX_ERR(0, 39, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":47
+  /* "c_skylink.pyx":48
  * 	rx_key                      = 0
  * 
  * class SkyConfiguration:             # <<<<<<<<<<<<<<
  * 	def __init__(self):
  * 		self.vc = [VCConfig(), VCConfig(), VCConfig(), VCConfig()]
  */
-  __pyx_t_2 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_SkyConfiguration, __pyx_n_s_SkyConfiguration, (PyObject *) NULL, __pyx_n_s_c_skylink, (PyObject *) NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 47, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_SkyConfiguration, __pyx_n_s_SkyConfiguration, (PyObject *) NULL, __pyx_n_s_c_skylink, (PyObject *) NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
 
-  /* "c_skylink.pyx":48
+  /* "c_skylink.pyx":49
  * 
  * class SkyConfiguration:
  * 	def __init__(self):             # <<<<<<<<<<<<<<
  * 		self.vc = [VCConfig(), VCConfig(), VCConfig(), VCConfig()]
  * 		self.mac = MACConfig()
  */
-  __pyx_t_5 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_16SkyConfiguration_1__init__, 0, __pyx_n_s_SkyConfiguration___init, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__9)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 48, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_16SkyConfiguration_1__init__, 0, __pyx_n_s_SkyConfiguration___init, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__9)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 49, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_init, __pyx_t_5) < 0) __PYX_ERR(0, 48, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_init, __pyx_t_5) < 0) __PYX_ERR(0, 49, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-  /* "c_skylink.pyx":47
+  /* "c_skylink.pyx":48
  * 	rx_key                      = 0
  * 
  * class SkyConfiguration:             # <<<<<<<<<<<<<<
  * 	def __init__(self):
  * 		self.vc = [VCConfig(), VCConfig(), VCConfig(), VCConfig()]
  */
-  __pyx_t_5 = __Pyx_Py3ClassCreate(((PyObject*)&PyType_Type), __pyx_n_s_SkyConfiguration, __pyx_empty_tuple, __pyx_t_2, NULL, 0, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 47, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_Py3ClassCreate(((PyObject*)&PyType_Type), __pyx_n_s_SkyConfiguration, __pyx_empty_tuple, __pyx_t_2, NULL, 0, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_SkyConfiguration, __pyx_t_5) < 0) __PYX_ERR(0, 47, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_SkyConfiguration, __pyx_t_5) < 0) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "c_skylink.pyx":126
+  /* "c_skylink.pyx":127
  * 		free(keys)
  * 
  * 	def set_hmac_keys(self, key_list):             # <<<<<<<<<<<<<<
  * 		assert 0 < len(key_list) <= c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		for key in key_list:
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_7set_hmac_keys, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_set_hmac_keys, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__11)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 126, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_7set_hmac_keys, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_set_hmac_keys, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__11)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 127, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_set_hmac_keys, __pyx_t_2) < 0) __PYX_ERR(0, 126, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_set_hmac_keys, __pyx_t_2) < 0) __PYX_ERR(0, 127, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":142
+  /* "c_skylink.pyx":143
  * 		return k
  * 
  * 	def get_hmac_key(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return bytes(self._get_hmac_key( <int> ichannel))
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_9get_hmac_key, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_get_hmac_key, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__13)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_9get_hmac_key, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_get_hmac_key, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__13)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 143, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_get_hmac_key, __pyx_t_2) < 0) __PYX_ERR(0, 142, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_get_hmac_key, __pyx_t_2) < 0) __PYX_ERR(0, 143, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":158
+  /* "c_skylink.pyx":159
  * 		return iret
  * 
  * 	def sky_rx(self, raw_frame_bytes):             # <<<<<<<<<<<<<<
  * 		return self._sky_rx(<uint8_t*> raw_frame_bytes, <int> len(raw_frame_bytes))
  * 
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_11sky_rx, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_rx, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__15)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_11sky_rx, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_rx, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__15)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 159, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_rx, __pyx_t_2) < 0) __PYX_ERR(0, 158, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_rx, __pyx_t_2) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":171
+  /* "c_skylink.pyx":172
  * 		return iret, frame_bytes
  * 
  * 	def sky_tx(self):             # <<<<<<<<<<<<<<
  * 		return self._sky_tx()
  * 	# === RX/TX ============================================================================================================================
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_13sky_tx, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_tx, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__16)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 171, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_13sky_tx, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_tx, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__16)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 172, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_tx, __pyx_t_2) < 0) __PYX_ERR(0, 171, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_tx, __pyx_t_2) < 0) __PYX_ERR(0, 172, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":184
+  /* "c_skylink.pyx":185
  * 		return ret
  * 
  * 	def sky_vc_push_packet_to_send(self, ichannel, data):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_push_packet_to_send(<int> ichannel, <uint8_t*> data, <int> len(data))
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_15sky_vc_push_packet_to_send, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_push_packet_to_se, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__18)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 184, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_15sky_vc_push_packet_to_send, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_push_packet_to_se, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__18)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 185, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_push_packet_to_send, __pyx_t_2) < 0) __PYX_ERR(0, 184, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_push_packet_to_send, __pyx_t_2) < 0) __PYX_ERR(0, 185, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":194
+  /* "c_skylink.pyx":195
  * 		return ret
  * 
  * 	def sky_vc_count_packets_to_tx(self, ichannel, include_resend):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_count_packets_to_tx(<int> ichannel, <int> int(include_resend))
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_17sky_vc_count_packets_to_tx, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_count_packets_to, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__20)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 194, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_17sky_vc_count_packets_to_tx, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_count_packets_to, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__20)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_count_packets_to_tx, __pyx_t_2) < 0) __PYX_ERR(0, 194, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_count_packets_to_tx, __pyx_t_2) < 0) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":199
+  /* "c_skylink.pyx":200
  * 
  * 
  * 	def sky_vc_send_buffer_is_full(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		cdef int ret = 0;
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_19sky_vc_send_buffer_is_full, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_send_buffer_is_fu, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__22)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 199, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_19sky_vc_send_buffer_is_full, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_send_buffer_is_fu, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__22)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 200, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_send_buffer_is_full, __pyx_t_2) < 0) __PYX_ERR(0, 199, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_send_buffer_is_full, __pyx_t_2) < 0) __PYX_ERR(0, 200, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":216
+  /* "c_skylink.pyx":217
  * 		return ret
  * 
  * 	def sky_vc_count_readable_rcv_packets(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_count_readable_rcv_packets(<int> ichannel)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_21sky_vc_count_readable_rcv_packets, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_count_readable_rc, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__23)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 216, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_21sky_vc_count_readable_rcv_packets, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_count_readable_rc, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__23)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 217, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_count_readable_rcv_packet, __pyx_t_2) < 0) __PYX_ERR(0, 216, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_count_readable_rcv_packet, __pyx_t_2) < 0) __PYX_ERR(0, 217, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":233
+  /* "c_skylink.pyx":234
  * 		return ret, ret_b
  * 
  * 	def sky_vc_read_next_received(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_read_next_received(<int> ichannel)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_23sky_vc_read_next_received, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_read_next_receive, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__24)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 233, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_23sky_vc_read_next_received, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_read_next_receive, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__24)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 234, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_read_next_received, __pyx_t_2) < 0) __PYX_ERR(0, 233, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_read_next_received, __pyx_t_2) < 0) __PYX_ERR(0, 234, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":247
+  /* "c_skylink.pyx":248
  * 		return state
  * 
  * 	def sky_get_state(self):             # <<<<<<<<<<<<<<
  * 		cdef SkyState state;
  * 		state = self._sky_get_state()
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_25sky_get_state, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_get_state, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__26)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 247, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_25sky_get_state, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_get_state, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__26)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 248, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_get_state, __pyx_t_2) < 0) __PYX_ERR(0, 247, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_get_state, __pyx_t_2) < 0) __PYX_ERR(0, 248, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":262
+  /* "c_skylink.pyx":263
  * 
  * 
  * 	def sky_get_stats(self):             # <<<<<<<<<<<<<<
  * 		cdef SkyDiagnostics* stats;
  * 		stats = self.handle.diag
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_27sky_get_stats, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_get_stats, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__28)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 262, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_27sky_get_stats, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_get_stats, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__28)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 263, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_get_stats, __pyx_t_2) < 0) __PYX_ERR(0, 262, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_get_stats, __pyx_t_2) < 0) __PYX_ERR(0, 263, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":282
+  /* "c_skylink.pyx":283
  * 
  * 
  * 	def sky_diag_clear(self):             # <<<<<<<<<<<<<<
  * 		c_skylink.sky_diag_clear(self.handle.diag)
  * 
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_29sky_diag_clear, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_diag_clear, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__29)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 282, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_29sky_diag_clear, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_diag_clear, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__29)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 283, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_diag_clear, __pyx_t_2) < 0) __PYX_ERR(0, 282, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_diag_clear, __pyx_t_2) < 0) __PYX_ERR(0, 283, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":291
+  /* "c_skylink.pyx":292
  * 		return ret
  * 
  * 	def sky_vc_arq_connect(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_arq_connect(<int> ichannel)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_31sky_vc_arq_connect, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_arq_connect, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__30)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 291, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_31sky_vc_arq_connect, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_arq_connect, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__30)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 292, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_arq_connect, __pyx_t_2) < 0) __PYX_ERR(0, 291, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_arq_connect, __pyx_t_2) < 0) __PYX_ERR(0, 292, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":301
+  /* "c_skylink.pyx":302
  * 		return ret
  * 
  * 	def sky_vc_arq_disconnect(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_arq_disconnect(<int> ichannel)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_33sky_vc_arq_disconnect, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_arq_disconnect, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__31)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 301, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_33sky_vc_arq_disconnect, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_arq_disconnect, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__31)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 302, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_arq_disconnect, __pyx_t_2) < 0) __PYX_ERR(0, 301, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_arq_disconnect, __pyx_t_2) < 0) __PYX_ERR(0, 302, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":311
+  /* "c_skylink.pyx":312
  * 		return int(x)
  * 
  * 	def sky_vc_get_arq_state(self, ichannel):             # <<<<<<<<<<<<<<
  * 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
  * 		return self._sky_vc_get_arq_state(ichannel)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_35sky_vc_get_arq_state, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_get_arq_state, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__32)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 311, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_35sky_vc_get_arq_state, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_vc_get_arq_state, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__32)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 312, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_get_arq_state, __pyx_t_2) < 0) __PYX_ERR(0, 311, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_vc_get_arq_state, __pyx_t_2) < 0) __PYX_ERR(0, 312, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":323
+  /* "c_skylink.pyx":324
  * 		return b
  * 
  * 	def can_send(self):             # <<<<<<<<<<<<<<
  * 		return bool(self._can_send())
  * 
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_37can_send, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_can_send, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__33)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 323, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_37can_send, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_can_send, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__33)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 324, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_can_send, __pyx_t_2) < 0) __PYX_ERR(0, 323, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_can_send, __pyx_t_2) < 0) __PYX_ERR(0, 324, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":327
+  /* "c_skylink.pyx":328
  * 
  * 
  * 	def carrier_sensed(self):             # <<<<<<<<<<<<<<
  * 		cdef sky_tick_t now;
  * 		now = self.get_tick_time()
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_39carrier_sensed, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_carrier_sensed, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__35)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 327, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_39carrier_sensed, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_carrier_sensed, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__35)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 328, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_carrier_sensed, __pyx_t_2) < 0) __PYX_ERR(0, 327, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_carrier_sensed, __pyx_t_2) < 0) __PYX_ERR(0, 328, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":333
+  /* "c_skylink.pyx":334
  * 
  * 
  * 	def get_tick_time(self):             # <<<<<<<<<<<<<<
- * 		return int( c_skylink.sky_get_tick_time() )
+ * 		return int(c_skylink.sky_get_tick_time())
  * 
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_41get_tick_time, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_get_tick_time, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__36)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 333, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_41get_tick_time, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_get_tick_time, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__36)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 334, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_get_tick_time, __pyx_t_2) < 0) __PYX_ERR(0, 333, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_get_tick_time, __pyx_t_2) < 0) __PYX_ERR(0, 334, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 
-  /* "c_skylink.pyx":336
- * 		return int( c_skylink.sky_get_tick_time() )
+  /* "c_skylink.pyx":337
+ * 		return int(c_skylink.sky_get_tick_time())
  * 
  * 	def sky_tick(self, ticks):             # <<<<<<<<<<<<<<
  * 		cdef sky_tick_t tick_t_tick;
  * 		cdef int ret;
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_43sky_tick, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_tick, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__38)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 336, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9c_skylink_7SkyLink_43sky_tick, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_SkyLink_sky_tick, NULL, __pyx_n_s_c_skylink, __pyx_d, ((PyObject *)__pyx_codeobj__38)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 337, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_tick, __pyx_t_2) < 0) __PYX_ERR(0, 336, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_9c_skylink_SkyLink, __pyx_n_s_sky_tick, __pyx_t_2) < 0) __PYX_ERR(0, 337, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   PyType_Modified(__pyx_ptype_9c_skylink_SkyLink);
 

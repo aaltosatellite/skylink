@@ -84,9 +84,10 @@ def record():
 	"""TX samples based on input arguments"""
 	usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
 
-	num_samps = 5000000 # number of samples received
+
 	center_freq = 437.00e6 # Hz
 	sample_rate = 1e6 # Hz
+	num_samps = int(5.0 * sample_rate) # number of samples received
 	gain = 50 # dB
 
 	usrp.set_rx_rate(sample_rate, 0)
@@ -139,10 +140,10 @@ def record():
 	stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
 	streamer.issue_stream_cmd(stream_cmd)
 
-	rint = np.random.randint(0,100)
-	#f = open("/home/elmore/datasetit/radiotallenteet/uhf-nayte-{}.dat".format(rint), "wb")
-	#f.write( pickle.dumps(samples))
-	#f.close()
+	rint = np.random.randint(0,1000)
+	f = open("/home/elmore/datasetit/radiotallenteet/uhf-nayte-{}.dat".format(rint), "wb")
+	f.write(pickle.dumps(samples))
+	f.close()
 	print("Written")
 
 

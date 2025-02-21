@@ -58,13 +58,19 @@ class RadioLoop:
 		self._internal_sample_que = Queue(250)
 		self.receiver_lock = threading.RLock()
 		self.on = True
-		self.rx_thread = None
-		self.rx_process_thread = None
-		self.tx_thread = None
+		self.rx_thread 			= threading.Thread(target=None, args=tuple())
+		self.rx_process_thread 	= threading.Thread(target=None, args=tuple())
+		self.tx_thread 			= threading.Thread(target=None, args=tuple())
 		self.exception_counter = 0
 		self.warning_vector = [0,0]
 
-
+	def is_ok(self):
+		if not self.on:
+			return False
+		for thrd in (self.tx_thread, self.rx_process_thread, self.rx_thread):
+			if not thrd.is_alive():
+				return False
+		return True
 
 	def soapystart(self):
 		args = dict(device="uhd")
@@ -86,12 +92,15 @@ class RadioLoop:
 		sdr.closeStream(rxStream)
 		# TODO implement soapy version
 
-
+	def close(self):
+		self.on = False
+		self.rx_thread.join(timeout=1.0)
+		self.rx_process_thread.join(timeout=1.0)
+		self.tx_thread.join(timeout=1.0)
 
 
 	def start(self):
 		self.rx = Receiver(settings=self.rx_settings)
-
 		# This noise injection enforces the jit-compilation of much of the signal processing pipeline before the loop starts.
 		noise = np.random.normal(0,0.1,10000) + np.random.normal(0, 0.1, 10000)*1j
 		rx0 = Receiver(settings=self.rx_settings)
@@ -106,6 +115,7 @@ class RadioLoop:
 		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(center_freq), 0)
 		usrp.set_rx_gain(gain, 0) #print("rx gain range",usrp.get_rx_gain_range())
 		#usrp.set_tx_gain(gain, 0) #TODO do this?
+
 		self.rx_thread = threading.Thread(target=self.rx_loop, args=(usrp, 8000)) #TODO bufferlen as setting?
 		self.rx_process_thread = threading.Thread(target=self.rx_process_loop, args=tuple())
 		self.tx_thread = threading.Thread(target=self.tx_loop, args=(usrp, 8000)) #TODO bufferlen as setting?

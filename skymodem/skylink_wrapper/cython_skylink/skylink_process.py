@@ -24,6 +24,7 @@ class SkyLinkLoop(threading.Thread):
 
 	def close(self):
 		self.on = False
+		self.join(timeout=1.0)
 
 	def send(self, ichannel, data):
 		with self.lock:
