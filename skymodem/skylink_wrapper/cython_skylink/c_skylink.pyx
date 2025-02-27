@@ -15,6 +15,10 @@ auth_flag_require_auth 	= c_skylink.SKY_CONFIG_FLAG_REQUIRE_AUTHENTICATION
 auth_flag_require_seq 	= c_skylink.SKY_CONFIG_FLAG_REQUIRE_SEQUENCE
 auth_flag_use_crc32 	= c_skylink.SKY_CONFIG_FLAG_USE_CRC32
 
+arq_state_off			= c_skylink.ARQ_STATE_OFF
+arq_state_in_init		= c_skylink.ARQ_STATE_IN_INIT
+arq_state_on			= c_skylink.ARQ_STATE_ON
+
 
 class ArqConfig:
 	timeout_ticks		 	= 26000

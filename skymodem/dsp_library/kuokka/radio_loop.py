@@ -7,7 +7,14 @@ from .lib_framing import frame_packet
 from .lib_reedsolomon import get_default_rs
 from queue import Queue, Empty
 import SoapySDR
-from SoapySDR import  SOAPY_SDR_ABI_VERSION, SOAPY_SDR_RX, SOAPY_SDR_TX, SOAPY_SDR_CF32
+from SoapySDR import SOAPY_SDR_ABI_VERSION, SOAPY_SDR_RX, SOAPY_SDR_TX, SOAPY_SDR_CF32
+
+DEBUG_PRINT = True
+
+def DBGPRINT(*args, **kwargs):
+	if DEBUG_PRINT:
+		print(*args, **kwargs)
+
 
 def get_default_settings(sr, baudrate, f_tune, f_signal):
 	#baudrate			= 9600			# tx param
@@ -72,25 +79,45 @@ class RadioLoop:
 				return False
 		return True
 
-	def soapystart(self):
+	def compose_samples(self, payload):
+		pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
+		#pl_chars = np.random.randint(0,255, 122)
+		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
+		bits = np.concatenate( (self.preamble_bits, bits) )
+		sps = self.rx_settings.sr0 / self.rx_settings.baudrate
+		f_offset = (self.rx.center_frequency_estimate() - self.rx_settings.f_tune) / self.rx_settings.sr0
+		n_silence_start = int(self.rx_settings.sr0 * 5e-3) # TODO: this should be a setting
+		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset, power=1.0,
+					 		   mod_index=self.rx_settings.mod_index, shaper_mode=1,
+							   shaper_BT_prod=self.rx_settings.BT, shaper_n_taps=int(sps*4)+1,
+							   n_silence_start=n_silence_start, n_silence_end=0)
+		return samples
+
+	def soapy_start(self):
+		# TODO implement soapy version ------------------------------------
+		center_freq = self.rx_settings.f_tune # Hz
+		sample_rate = self.rx_settings.sr0 # Hz
 		args = dict(device="uhd")
 		sdr = SoapySDR.Device(args)
-		sdr.setSampleRate(SOAPY_SDR_RX, 0, 1e6)
-		sdr.setFrequency(SOAPY_SDR_RX, 0, 912.3e6)
-
+		sdr.setSampleRate(SOAPY_SDR_RX, 0, sample_rate)
+		sdr.setFrequency(SOAPY_SDR_RX, 0, center_freq)
+		print(sdr.getGainRange())
+		#txStream = sdr.setupStream(SOAPY_SDR_TX, SOAPY_SDR_CF32)
+		#sdr.writeStream()
 		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
 		sdr.activateStream(rxStream) #start streaming
 		#create a re-usable buffer for rx samples
-		buff = np.array([0]*1024, np.complex64)
+		bufferlen = 8*1024
+		buff = np.zeros(bufferlen, np.complex64)
 		while True:
-			ret = sdr.readStream(rxStream, [buff], len(buff))
+			ret = sdr.readStream(rxStream, [buff], bufferlen)
 			print(ret.ret) #num samples or error code
 			print(ret.flags) #flags set by receive operation
 			print(ret.timeNs) #timestamp for receive buffer
 			break
 		sdr.deactivateStream(rxStream) #stop streaming
 		sdr.closeStream(rxStream)
-		# TODO implement soapy version
+		# TODO implement soapy version ------------------------------------
 
 	def close(self):
 		self.on = False
@@ -98,8 +125,7 @@ class RadioLoop:
 		self.rx_process_thread.join(timeout=1.0)
 		self.tx_thread.join(timeout=1.0)
 
-
-	def start(self):
+	def usrp_start(self):
 		self.rx = Receiver(settings=self.rx_settings)
 		# This noise injection enforces the jit-compilation of much of the signal processing pipeline before the loop starts.
 		noise = np.random.normal(0,0.1,10000) + np.random.normal(0, 0.1, 10000)*1j
@@ -116,15 +142,15 @@ class RadioLoop:
 		usrp.set_rx_gain(gain, 0) #print("rx gain range",usrp.get_rx_gain_range())
 		#usrp.set_tx_gain(gain, 0) #TODO do this?
 
-		self.rx_thread = threading.Thread(target=self.rx_loop, args=(usrp, 8000)) #TODO bufferlen as setting?
+		self.rx_thread = threading.Thread(target=self.usrp_rx_loop, args=(usrp, 8000)) #TODO bufferlen as setting?
 		self.rx_process_thread = threading.Thread(target=self.rx_process_loop, args=tuple())
-		self.tx_thread = threading.Thread(target=self.tx_loop, args=(usrp, 8000)) #TODO bufferlen as setting?
+		self.tx_thread = threading.Thread(target=self.usrp_tx_loop, args=(usrp, 8000)) #TODO bufferlen as setting?
 		self.on = True
 		self.rx_thread.start()
 		self.rx_process_thread.start()
 		self.tx_thread.start()
 
-	def rx_loop(self, usrp:uhd.usrp.MultiUSRP, rx_buffer_len):
+	def usrp_rx_loop(self, usrp:uhd.usrp.MultiUSRP, rx_buffer_len):
 		# Set up the stream and receive buffer
 		st_args = uhd.usrp.StreamArgs("fc32", "sc16")
 		st_args.channels = [0]
@@ -135,14 +161,19 @@ class RadioLoop:
 		rx_streamer.issue_stream_cmd(stream_cmd)
 		recv_buffer = np.zeros((1, rx_buffer_len), dtype=np.complex64)
 		metadata = uhd.types.RXMetadata()
+		n_rx_loops = 0
 		while self.on:
 			try:
+				if (n_rx_loops % 1000) == 0:
+					DBGPRINT("rx loop #{}".format(n_rx_loops))
 				rx_ret = rx_streamer.recv(recv_buffer, metadata)
+				assert rx_ret == rx_buffer_len
 				if not self._internal_sample_que.full():
 					self._internal_sample_que.put_nowait(recv_buffer[0,:])
 				elif self.warning_vector[0] == 0:
 					self.warning_vector[0] = 1
 					raise Warning("Modem: radio-to-process queue overflow.")
+				n_rx_loops += 1
 			except Exception as e:
 				print("Modem: Exception! (rx-radio-rcv-thread)", e)
 				self.on = False
@@ -169,23 +200,7 @@ class RadioLoop:
 				self.exception_counter += 1
 				break
 
-
-	def compose_samples(self, payload):
-		pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
-		#pl_chars = np.random.randint(0,255, 122)
-		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
-		bits = np.concatenate( (self.preamble_bits, bits) )
-		sps = self.rx_settings.sr0 / self.rx_settings.baudrate
-		f_offset = (self.rx.center_frequency_estimate() - self.rx_settings.f_tune) / self.rx_settings.sr0
-		n_silence_start = int(self.rx_settings.sr0 * 5e-3) # TODO: this should be a setting
-		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset, power=1.0,
-					 		   mod_index=self.rx_settings.mod_index, shaper_mode=1,
-							   shaper_BT_prod=self.rx_settings.BT, shaper_n_taps=int(sps*4)+1,
-							   n_silence_start=n_silence_start, n_silence_end=0)
-		return samples
-
-
-	def tx_loop(self, usrp:uhd.usrp.MultiUSRP, tx_batch_len):
+	def usrp_tx_loop(self, usrp:uhd.usrp.MultiUSRP, tx_batch_len):
 		tx_stream_args = uhd.usrp.StreamArgs("fc32", "sc16")
 		#stream_args.args = "spp=200" # Note this setting is not valid for all USRPs
 		tx_stream_args.channels = [0]
@@ -201,6 +216,7 @@ class RadioLoop:
 				while idx < N:
 					tx_streamer.send(samplearr[0,idx:idx+tx_batch_len], tx_metadata)
 					idx += tx_batch_len
+				DBGPRINT("successfully transmitted samples")
 			except Empty:
 				pass
 			except Exception as e:
