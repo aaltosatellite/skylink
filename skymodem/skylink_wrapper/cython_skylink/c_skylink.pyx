@@ -275,6 +275,8 @@ cdef class SkyLink:
 		dd["rx_fec_errs"] = stats.rx_fec_errs
 		dd["rx_arq_resets"] = stats.rx_arq_resets
 		dd["rx_hmac_fail"] = stats.rx_hmac_fail
+		dd["tx_frames"] = stats.tx_frames
+		dd["tx_bytes"] = stats.tx_bytes
 		dd["vc"] = list()
 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
 			dd["vc"].append( dict() )

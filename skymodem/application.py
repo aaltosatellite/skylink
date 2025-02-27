@@ -182,7 +182,6 @@ class SkyModem:
 				self.session_id_list[ichannel] = session_id_list[ichannel]
 
 
-
 	def _skylink_reception_loop(self):
 		while self.on:
 			try:
@@ -222,7 +221,6 @@ class SkyModem:
 				self.close()
 				break
 
-
 	def _process_sub_que_frame(self, ID, msg):
 		if not ID in range(num_virtual_channels):
 			DBGPRINT("ID not in vc range: {}.".format(ID))
@@ -251,14 +249,16 @@ class SkyModem:
 				return
 			ctrl_command = control_dict["cmd"]
 			if ctrl_command == "get_state":
-				DBGPRINT("command unimplemented 1")			# TODO
 				list_of_vc_state_dicts 	= self.skylink_loop.sky_get_state()
 				response_dict["rsp"] 	= "state"
 				response_dict["state"] 	= list_of_vc_state_dicts
 			elif ctrl_command == "flush":
 				self.skylink_loop.flush(ichannel=ichannel)
 			elif ctrl_command == "get_stats":
-				DBGPRINT("command unimplemented 2")			# TODO
+				sky_stats_d = self.skylink_loop.sky_get_stats()
+				response_dict["rsp"] = "statss"
+				response_dict["skylink"] = sky_stats_d
+				response_dict["kuokka"] = dict()
 			elif ctrl_command == "clear_stats":
 				self.skylink_loop.sky_diag_clear()
 			elif ctrl_command == "set_config":
