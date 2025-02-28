@@ -23,6 +23,11 @@ skymodem/sky_cython/cython_skylink/build/
 skymodem/sky_cython/cython_skylink/build/*
 
 skymodem/skylink_wrapper/cython_skylink/c_skylink.c
+skymodem/skylink_wrapper/cython_skylink/*.c
+skymodem/skylink_wrapper/cython_skylink/*.so
+
+skymodem/skylink_wrapper/cython_skylink/build
+skymodem/skylink_wrapper/cython_skylink/build/*
 
 skymodem/dsp_library/*.dat
 
