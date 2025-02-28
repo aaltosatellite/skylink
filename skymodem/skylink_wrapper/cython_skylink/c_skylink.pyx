@@ -62,50 +62,50 @@ cdef class SkyLink:
 	cdef c_skylink.SkyHandle handle #sky_all
 	cdef c_skylink.SkyConfig conf
 	#cdef public :
-	#	object conf_override
+	#	object configuration
 
-	def __init__(self, conf_override): #runs after __cinit__
-		self._init0(conf_override)
+	def __init__(self, configuration): #runs after __cinit__
+		self._init0(configuration)
 
-	cdef _init0(self, conf_override):
-		self.conf.arq.timeout_ticks = conf_override.arq.timeout_ticks
-		self.conf.arq.idle_frame_threshold = conf_override.arq.idle_frame_threshold
-		self.conf.arq.idle_frames_per_window = conf_override.arq.idle_frames_per_window
+	cdef _init0(self, configuration):
+		self.conf.arq.timeout_ticks = configuration.arq.timeout_ticks
+		self.conf.arq.idle_frame_threshold = configuration.arq.idle_frame_threshold
+		self.conf.arq.idle_frames_per_window = configuration.arq.idle_frames_per_window
 
-		self.conf.hmac.maximum_jump = conf_override.hmac.maximum_jump
+		self.conf.hmac.maximum_jump = configuration.hmac.maximum_jump
 
-		self.conf.mac.carrier_sense_ticks = conf_override.mac.carrier_sense_ticks
-		self.conf.mac.gap_constant_ticks = conf_override.mac.gap_constant_ticks
-		self.conf.mac.idle_frames_per_window = conf_override.mac.idle_frames_per_window
-		self.conf.mac.idle_timeout_ticks = conf_override.mac.idle_timeout_ticks
-		self.conf.mac.maximum_window_length_ticks = conf_override.mac.maximum_window_length_ticks
-		self.conf.mac.minimum_window_length_ticks = conf_override.mac.minimum_window_length_ticks
-		self.conf.mac.tail_constant_ticks = conf_override.mac.tail_constant_ticks
-		self.conf.mac.unauthenticated_mac_updates = conf_override.mac.unauthenticated_mac_updates
-		self.conf.mac.window_adjust_increment_ticks = conf_override.mac.window_adjust_increment_ticks
-		self.conf.mac.window_adjustment_threshold = conf_override.mac.window_adjustment_threshold
+		self.conf.mac.carrier_sense_ticks = configuration.mac.carrier_sense_ticks
+		self.conf.mac.gap_constant_ticks = configuration.mac.gap_constant_ticks
+		self.conf.mac.idle_frames_per_window = configuration.mac.idle_frames_per_window
+		self.conf.mac.idle_timeout_ticks = configuration.mac.idle_timeout_ticks
+		self.conf.mac.maximum_window_length_ticks = configuration.mac.maximum_window_length_ticks
+		self.conf.mac.minimum_window_length_ticks = configuration.mac.minimum_window_length_ticks
+		self.conf.mac.tail_constant_ticks = configuration.mac.tail_constant_ticks
+		self.conf.mac.unauthenticated_mac_updates = configuration.mac.unauthenticated_mac_updates
+		self.conf.mac.window_adjust_increment_ticks = configuration.mac.window_adjust_increment_ticks
+		self.conf.mac.window_adjustment_threshold = configuration.mac.window_adjustment_threshold
 
 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
-			self.conf.vc[i].horizon_width = conf_override.vc[i].horizon_width
-			self.conf.vc[i].rcv_ring_len = conf_override.vc[i].rcv_ring_len
-			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication
-			self.conf.vc[i].send_ring_len = conf_override.vc[i].send_ring_len
-			self.conf.vc[i].tx_key = conf_override.vc[i].tx_key
-			self.conf.vc[i].rx_key = conf_override.vc[i].rx_key
-			self.conf.vc[i].usable_element_size = conf_override.vc[i].usable_element_size
-			self.conf.vc[i].require_authentication = conf_override.vc[i].require_authentication
+			self.conf.vc[i].horizon_width = configuration.vc[i].horizon_width
+			self.conf.vc[i].rcv_ring_len = configuration.vc[i].rcv_ring_len
+			self.conf.vc[i].require_authentication = configuration.vc[i].require_authentication
+			self.conf.vc[i].send_ring_len = configuration.vc[i].send_ring_len
+			self.conf.vc[i].tx_key = configuration.vc[i].tx_key
+			self.conf.vc[i].rx_key = configuration.vc[i].rx_key
+			self.conf.vc[i].usable_element_size = configuration.vc[i].usable_element_size
+			self.conf.vc[i].require_authentication = configuration.vc[i].require_authentication
 
 		cdef int id_len = 0;
-		id_len = min(len(conf_override.identity), c_skylink.SKY_MAX_IDENTITY_LEN)
-		memcpy(self.conf.identity, <uint8_t*> conf_override.identity, id_len)
-		#self.conf.identity[0:min(c_skylink.SKY_MAX_IDENTITY_LEN, len(conf_override.identity))] = conf_override.identity
+		id_len = min(len(configuration.identity), c_skylink.SKY_MAX_IDENTITY_LEN)
+		memcpy(self.conf.identity, <uint8_t*> configuration.identity, id_len)
+		#self.conf.identity[0:min(c_skylink.SKY_MAX_IDENTITY_LEN, len(configuration.identity))] = configuration.identity
 		self.conf.identity_len = id_len
 		self.handle = c_skylink.sky_create(&self.conf)
 		pass
 
-	def __cinit__(self, conf_override): #Run before __init__
+	def __cinit__(self, configuration): #Run before __init__
 		# cdef c_skylink.SkyConfig conf
-		# conf.arq.timeout_ticks = conf_override.arq.timeout_ticks
+		# conf.arq.timeout_ticks = configuration.arq.timeout_ticks
 		# print("A")
 		pass
 

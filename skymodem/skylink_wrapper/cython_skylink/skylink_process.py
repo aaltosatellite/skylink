@@ -5,6 +5,11 @@ from c_skylink import SkyLink, SkyConfiguration, mod_time_ticks
 import time
 
 
+DEBUG_PRINT_ON = True
+
+def DBGPRINT(*args, **kwargs):
+	if DEBUG_PRINT_ON:
+		print(*args, **kwargs)
 
 
 class SkyLinkLoop(threading.Thread):
@@ -66,11 +71,13 @@ class SkyLinkLoop(threading.Thread):
 		sleeptime = 0.0
 		while self.on:
 			sleeptime += 0.1e-3
-
 			with self.lock:
 				self.skylink.sky_tick( (int(time.time() * 1000) % mod_time_ticks) )
 				while not self.que_payloads_from_radio.empty():
-					self.skylink.sky_rx( self.que_payloads_from_radio.get_nowait() )
+					pl = self.que_payloads_from_radio.get_nowait()
+					DBGPRINT("+[SkyLink][pulled from from-radio queue: {}]".format(pl))
+					sky_rx_ret = self.skylink.sky_rx(pl)
+					DBGPRINT("+[SkyLink][sky_rx returned {}]".format(sky_rx_ret))
 					sleeptime = 0.0
 
 				while True:
@@ -87,8 +94,8 @@ class SkyLinkLoop(threading.Thread):
 						ri, rb = self.skylink.sky_vc_read_next_received(ichannel)
 						if ri < 0:
 							break
+						DBGPRINT("+[SkyLink][vc {} received {} bytes]".format(ichannel, len(rb)))
 						self.que_received_messages.put_nowait( (ichannel, rb) )
-						print("{} received at {}:  ".format(self.name, ichannel),ichannel, rb)
 						sleeptime = 0.0
 
 			if sleeptime > 0:

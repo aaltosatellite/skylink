@@ -206,6 +206,7 @@ class Receiver:
 
 	def center_frequency_estimate(self):
 		f_center, is_active = get_center_frequency_estimate(self.FFTstatemx, f_tune=self.settings.f_tune)
+		print("(is active: {}), (c_f_update_long: {})".format(is_active,  self.FFTstatemx[0,27]))
 		if is_active:
 			return f_center
 		return self.settings.f_expected
@@ -220,7 +221,7 @@ class Receiver:
 
 
 	def push_samples(self, batch, give_bits=False):
-		ret = None
+		ret = list()
 		bits = np.zeros(0, dtype=np.int64)
 
 		t0 = time.perf_counter()
