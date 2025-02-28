@@ -25,7 +25,7 @@ def sub_socket_loop(sub_sock:zmq.Socket, sub_que:Queue, ID, parent_obj):
 	while parent_obj.on:
 		try:
 			rcv_msg = sub_sock.recv()
-			DBGPRINT("++zmq-sub-socket-{} received {} bytes.".format(ID, len(rcv_msg)), flush=True)
+			DBGPRINT("+[zmq-sub-socket-{} received {} bytes]".format(ID, len(rcv_msg)), flush=True)
 			sub_que.put_nowait((ID, rcv_msg))
 		except zmq.Again:
 			pass
@@ -63,6 +63,10 @@ def bind_vc_sockets(vc_base, num_channels):
 		sub_sockets.append(sub_sock)
 
 	return pub_sockets, sub_sockets, context
+
+
+
+
 
 
 
@@ -133,11 +137,11 @@ class SkyModem:
 			self.sub_threads.append(thrd)
 		self.skylink_loop.start()
 		self.radio_loop.usrp_start() # TODO choose usrp or Soapy
-		self.arq_check_thread = threading.Thread(target=self._check_arq_loop, args=tuple(), daemon=True)
+		self.arq_check_thread 			= threading.Thread(target=self._check_arq_loop, args=tuple(), daemon=True)
 		self.arq_check_thread.start()
-		self.sub_que_process_thread = threading.Thread(target=self._sub_que_loop, args=tuple(), daemon=True)
+		self.sub_que_process_thread 	= threading.Thread(target=self._sub_que_loop, args=tuple(), daemon=True)
 		self.sub_que_process_thread.start()
-		self.skylink_reception_thread = threading.Thread(target=self._skylink_reception_loop, args=tuple(), daemon=True)
+		self.skylink_reception_thread 	= threading.Thread(target=self._skylink_reception_loop, args=tuple(), daemon=True)
 		self.skylink_reception_thread.start()
 
 
@@ -146,9 +150,9 @@ class SkyModem:
 			try:
 				with self.action_lock:
 					self._check_arq_states()
-				time.sleep(0.2)
+				time.sleep(0.15)
 			except Exception as e:
-				DBGPRINT("Exception in process loop: ", e)
+				DBGPRINT("SkyModem Exception (check_arq_loop): ", e)
 				self.close()
 				break
 
@@ -166,7 +170,7 @@ class SkyModem:
 				response_dict["vc"] = ichannel
 				response_dict["timestamp"] = dtime.now().isoformat()
 				response_dict["metadata"] = metadata_dict
-				self.pub_sockets[ichannel].send(json.dumps(response_dict))
+				self.pub_sockets[ichannel].send(json.dumps(response_dict).encode("utf8"))
 				self.session_id_list[ichannel] = session_id_list[ichannel]
 			if (session_id_list[ichannel] != self.session_id_list[ichannel]) and (session_id_list[ichannel] == arq_state_on):
 				metadata_dict = dict()
@@ -178,7 +182,7 @@ class SkyModem:
 				response_dict["vc"] = ichannel
 				response_dict["timestamp"] = dtime.now().isoformat()
 				response_dict["metadata"] = metadata_dict
-				self.pub_sockets[ichannel].send(json.dumps(response_dict))
+				self.pub_sockets[ichannel].send(json.dumps(response_dict).encode("utf8"))
 				self.session_id_list[ichannel] = session_id_list[ichannel]
 
 
@@ -198,11 +202,11 @@ class SkyModem:
 					meta_d = dict()
 					meta_d["vc"] 		= ichannel
 					frame_d["metadata"] = meta_d
-					self.pub_sockets[ichannel].send(json.dumps(frame_d))
+					self.pub_sockets[ichannel].send(json.dumps(frame_d).encode("utf8"))
 			except Empty:
 				continue
 			except Exception as e:
-				DBGPRINT("Error in skylink_reception_loop: ", e)
+				DBGPRINT("SkyModem Exception (skylink_reception_loop): ", e)
 				self.close()
 				break
 
@@ -210,14 +214,14 @@ class SkyModem:
 	def _sub_que_loop(self):
 		while self.on:
 			try:
-				ID, msg = self.sub_que.get(timeout=0.25)
-				DBGPRINT("++ID-msg pulled from zmq-sub-queue-{}.".format(ID))
+				ID, msg = self.sub_que.get(timeout=0.15)
+				DBGPRINT("+[ID-msg pulled from zmq-sub-queue-{}]".format(ID))
 				with self.action_lock:
 					self._process_sub_que_frame(ID, msg)
 			except Empty:
 				pass
 			except Exception as e:
-				DBGPRINT("Exception in process loop: ", e)
+				DBGPRINT("SkyModem Exception (sub_que_loop): ", e)
 				self.close()
 				break
 
@@ -226,10 +230,11 @@ class SkyModem:
 			DBGPRINT("ID not in vc range: {}.".format(ID))
 			return
 		ichannel = ID
+		DBGPRINT("+[attempting json load on type {}]".format(str(type(msg))), flush=True)
 		frame_dict = json.loads( msg )
-		DBGPRINT("++json load successful: {}".format(frame_dict) , flush=True)
-		if not type(frame_dict) == dict():
-			DBGPRINT("json was not a dict.")
+		DBGPRINT("+[json load successful: {}]".format(frame_dict), flush=True)
+		if not type(frame_dict) == dict:
+			DBGPRINT("json was not a dict:", type(frame_dict))
 			return
 
 		if "data" in frame_dict:
@@ -262,9 +267,11 @@ class SkyModem:
 			elif ctrl_command == "clear_stats":
 				self.skylink_loop.sky_diag_clear()
 			elif ctrl_command == "set_config":
-				DBGPRINT("command unimplemented 3")			# TODO
+				DBGPRINT("command unimplemented 1")			# TODO
+				return
 			elif ctrl_command == "get_config":
-				DBGPRINT("command unimplemented 4")			# TODO
+				DBGPRINT("command unimplemented 2")			# TODO
+				return
 			elif ctrl_command == "arq_connect":
 				self.skylink_loop.arq_connect(ichannel=ichannel)
 				response_dict["rsp"] = "arq_connecting"
@@ -272,11 +279,14 @@ class SkyModem:
 			elif ctrl_command == "arq_disconnect":
 				self.skylink_loop.arq_disconnect(ichannel=ichannel)
 			elif ctrl_command == "mac_reset":
-				DBGPRINT("command unimplemented 5")			# TODO
+				DBGPRINT("command unimplemented 3")			# TODO
+				return
 			elif ctrl_command == "set_sequences":
-				DBGPRINT("command unimplemented 6")			# TODO
+				DBGPRINT("command unimplemented 4")			# TODO
+				return
 			elif ctrl_command == "debug":
-				DBGPRINT("command unimplemented 7")			# TODO
+				DBGPRINT("command unimplemented 5")			# TODO
+				return
 			else:
 				DBGPRINT("Unknown control command: {}".format(ctrl_command))
 				return
@@ -285,7 +295,7 @@ class SkyModem:
 			rsp_frame_dict["packet_type"] 	= "control"
 			rsp_frame_dict["timestamp"] 	= dtime.now().isoformat()
 			rsp_frame_dict["metadata"] 		= response_dict
-			self.pub_sockets[ichannel].send(json.dumps(rsp_frame_dict))
+			self.pub_sockets[ichannel].send(json.dumps(rsp_frame_dict).encode("utf8"))
 
 
 
@@ -295,7 +305,18 @@ class SkyModem:
 
 
 
+def get_default_receiver_settings():
+	settings = ReceiverSettings(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=32000, f_tune=437.100e6, f_expected=437.125e6)
+	settings.mod_index 	= 0.5
+	settings.BT 		= 0.5
+	settings.sps 		= 21
 
+	settings.T_f_upd_recovery = 12.0
+
+	return settings
+
+def get_default_skylink_config():
+	return SkyConfiguration()
 
 
 
@@ -382,10 +403,22 @@ def tst_1(vc_base):
 
 
 
-zmq_socket_instrumentation()
-#tst_1(7100)
-
-
+if __name__ == '__main__':
+	#zmq_socket_instrumentation()
+	#tst_1(7100)
+	hmac_keys = [
+		b"0"*32,
+		b"0"*32,
+		b"0"*32,
+		b"0"*32,
+	]
+	modem = SkyModem(receiver_settings=get_default_receiver_settings(), skylink_config=get_default_skylink_config(), hmac_key_list=hmac_keys, vc_port_base=7100)
+	modem.start()
+	while True:
+		time.sleep(1.0)
+		if not modem.is_ok():
+			print("Modem is_ok() failed. Exiting.")
+			break
 
 
 
