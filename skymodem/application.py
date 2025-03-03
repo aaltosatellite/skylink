@@ -310,9 +310,13 @@ def get_default_receiver_settings():
 	settings.mod_index 	= 0.5
 	settings.BT 		= 0.5
 	settings.sps 		= 21
+	settings.T_f_upd_recovery 		= 4.0
+	settings.fft_trigger_on_level 	= 6.5
+	settings.fft_trigger_off_level 	= 2.0
+	settings.start_margin_mpr		= 2.0
+	settings.end_margin_mpr			= 1.4
 
-	settings.T_f_upd_recovery = 12.0
-
+	#settings.T_f_upd_recovery = 12.0
 	return settings
 
 def get_default_skylink_config():

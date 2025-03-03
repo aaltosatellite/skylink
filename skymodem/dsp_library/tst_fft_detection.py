@@ -123,6 +123,7 @@ def tst_fft_center_detect_1(inputmode):
 		nnoise_init		= sps * 1400 * 4
 		nnoise_mid		= sps * 200
 		nnoise_end		= sps * 1200
+		BT = -1
 		f_offset_rel1 	= f_offset / sr
 		f_offset_rel2 	= f_offset / sr
 		f_offset_rel3 	= f_offset / sr

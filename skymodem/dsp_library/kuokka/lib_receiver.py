@@ -21,15 +21,15 @@ class ReceiverSettings:
 		self.bufferlen			= bufferlen
 		self.batch_maxlen		= batch_maxlen
 		# resampling ---------------------------------------
-		self.sps 				= 17			# !			# sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate.
-		self.m_halflen 			= 17			# !
+		self.sps 				= 21			# !			# sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate.
+		self.m_halflen 			= 25			# !
 		self.n_banks 			= 64
 		self.rs_f_cutoff_coeff 	= 0.499						# determines lowpass associated with the resampling. In interval (0 : 0.5)
 		# --------------------------------------------------
 		# fft detection ------------------------------------
 		self.fftlen 			= 1024			# ~
 		self.jumplen 			= 512			# ~
-		self.mod_index 			= 0.7			# ~
+		self.mod_index 			= 0.5			# ~
 		self.BT 				= -1			# ~
 		self.c_stat_update 		= 1/700.0		# ~ D-vs-c
 		self.c_f_update_minimum = 0.025			# ~ D-vs-c
@@ -44,7 +44,7 @@ class ReceiverSettings:
 		self.JPL_n_decay 		= 28.0			# ! D-vs-c
 		# --------------------------------------------------
 		# demodulation -------------------------------------
-		self.lp_ntaps			= 121			# ~
+		self.lp_ntaps			= 161			# ~
 		self.lp_cutoff_coeff	= 0.625			# !
 		self.synch_delay_mpr	= 22.0			# !
 		# --------------------------------------------------
@@ -90,8 +90,8 @@ class ReceiverSettings:
 		assert -1.0 <= self.fft_trigger_off_level <= 9.0
 		assert self.fft_trigger_off_level <= self.fft_trigger_on_level
 		assert self.mask_mode in (0,1)
-		assert 0 <= self.start_margin_mpr < 10.0
-		assert 0 <= self.end_margin_mpr < 5.0
+		assert 0 <= self.start_margin_mpr < 100.0  #was 10
+		assert 0 <= self.end_margin_mpr < 100.0     # was 5
 		assert 1.0 <= self.JPL_n_decay < 100.0
 		assert 30.0 <= self.lp_ntaps < 300.0
 		assert type(self.lp_ntaps) == int
@@ -122,6 +122,7 @@ class ReceiverSettings:
 		df_doppler = self.f_expected * (((3e8+7500)/3e8) - 1)  # approximate maximum doppler shift for LEO orbital speed
 		df_search_sideband = df_doppler * 1.2
 		triplet = self.f_tune, self.f_expected - df_search_sideband, self.f_expected + df_search_sideband
+		print("+[search space: {} MHz  -  {} MHz]".format( round(triplet[1]*1e-6, 3), round(triplet[2]*1e-6, 3) ))
 		return triplet
 
 

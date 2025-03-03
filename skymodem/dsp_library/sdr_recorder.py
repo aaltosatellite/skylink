@@ -61,15 +61,16 @@ def record(f_center, sr, t_total):
 	f.write(pickle.dumps(samples))
 	f.close()
 	print("Written into {}".format(fpath))
+	return rint
 
 
 
 
 
-
-def show_recording():
-	nn = 50
+def show_recording(nn):
+	#nn = 50
 	#nn = 583
+	#nn = 468
 	fpath = "/home/elmore/datasetit/radiotallenteet/uhf-{}_437.0MHz-1000ksps.pickled".format(nn)
 	f = open(fpath, "rb")
 	rd = f.read()
@@ -86,8 +87,10 @@ def show_recording():
 
 
 if __name__ == '__main__':
-	#record(f_center=437.0e6,  sr=1e6, t_total=6.0)
-	show_recording()
+	rint = record(f_center=437.0e6,  sr=1e6, t_total=16.0)
+
+	#/home/elmore/datasetit/radiotallenteet/uhf-969_437.0MHz-1000ksps.pickled
+	show_recording(rint)
 
 
 

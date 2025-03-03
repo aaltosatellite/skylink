@@ -108,6 +108,7 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_tr
 	statemx[0,26] = 0.0		# NEW long running f_center_long
 	statemx[0,27] = 1.0		# NEW long running c_f_update_long
 	statemx[0,28] = 0.0		# bandmax (just for instrumentation purposes)
+	statemx[0,29] = 0		# end_tail_remaining
 
 	statemx[1,:]  = np.fft.fftshift( np.fft.fftfreq(fftlen, d=1.0) ) # frequency table
 	statemx[2,:]  = 0.0		# fft
@@ -166,10 +167,11 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 	f_center_long   = statemx[0,26]
 	c_f_update_long = statemx[0,27]
 	bandmax 		= statemx[0,28]
+	end_tail_remaining 		= int(statemx[0,29])
 	window 			= statemx[4,:] + 1j*statemx[5,:]
 	search_indexes  = statemx[7,:n_search]
 
-	end_tail_remaining = 0
+	#end_tail_remaining = 0
 	D_stat_update 	= int(1.0/c_stat_update)
 	center_f_head = center_f_head0
 	for i_in in range(isample0, isample0 + nsamples):
@@ -209,6 +211,7 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 			if tx_on and tx_on_prev:
 				f_center 	= f_center_long
 			if tx_on and (not tx_on_prev):
+				print("Detector triggered.", bandmax)
 				f_center 	= f_center_long
 				rev_index 	= center_f_head
 				while True:
@@ -220,12 +223,18 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 				c_f_update_long = min(1.0, c_f_update_long + f_updt_recovery_increment)   # = jumplen / (T_recovery * sr)
 				if tx_on_prev:
 					end_tail_remaining = end_margin
-				if end_tail_remaining <= 0:
-					f_center = -1
-				end_tail_remaining -= 1
+				#if end_tail_remaining <= 0:
+				#	f_center = -1
+				#end_tail_remaining -= 1
 
 			if jumplen < fftlen:
 				window = np.roll(window, -jumplen)
+
+		if (not tx_on):
+			end_tail_remaining -= 1
+			if end_tail_remaining <= 0:
+				f_center = -1
+
 		if center_f_head >= 0:
 			center_f_arr[center_f_head] = f_center
 			instr_arr[center_f_head,0] = running_avg
@@ -242,6 +251,7 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 	statemx[0,26] = f_center_long
 	statemx[0,27] = c_f_update_long
 	statemx[0,28] = bandmax
+	statemx[0,29] = end_tail_remaining
 	statemx[4,:] = window.real
 	statemx[5,:] = window.imag
 	return center_f_head, max(0, center_f_head - (start_margin + 1))   # demodulation head. (the demodulation stage should be given samples up to this head)

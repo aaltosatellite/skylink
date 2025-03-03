@@ -3,25 +3,87 @@ from kuokka.lib_receiver import ReceiverSettings, Receiver
 from mtools.tools_dsp import create_resampler, resampler_execute
 from mtools.tools_dsp import waterfall_mx
 from matplotlib import pyplot as plt
-import time
-from _draw_lab_spams import get_samples2
+import time, pickle
+from scipy.signal import firwin
+
+fpath0 = "/home/elmore/datasetit/radiotallenteet/uhf-nayte-76.dat"
+fpath1 = "/home/elmore/datasetit/radiotallenteet/uhf-nayte-96.dat"
+
+fpath2 = "/home/elmore/datasetit/radiotallenteet/uhf-nayte-472.dat"
+fpath3 = "/home/elmore/datasetit/radiotallenteet/uhf-nayte-237.dat"
+
+fpath4 = "/home/elmore/datasetit/radiotallenteet/uhf-817_437.0MHz-1000ksps.pickled"
+fpath5 = "/home/elmore/datasetit/radiotallenteet/uhf-969_437.0MHz-1000ksps.pickled"
+fpath6 = "/home/elmore/datasetit/radiotallenteet/uhf-965_437.0MHz-1000ksps.pickled"
+
+
+
+fpaths = [fpath0,fpath1, fpath2,fpath3,  fpath4,fpath5,fpath6]
+def get_samples2(fpath):
+	f = open(fpath, "rb")
+	rd = f.read()
+	f.close()
+	samples = pickle.loads(rd)
+	assert type(samples) == np.ndarray
+	return samples
+
+
+
+
+
+def draw(samples):
+	#samples = get_samples2(idx)
+	#samples = samples[250000:-500000]
+	sr0 = 1e6
+	fshift = -1.2250e5 #-86.5e3
+	baudrate = 9600 * 4 * 2
+	samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * fshift/sr0)
+
+	waterfall_mx(samples=samples, fftlen=2048, fft_jump=1024, srate=sr0, plot_and_show=True, y_is_time=True)
+
+	lpfilter = firwin(numtaps=201, cutoff=0.63*baudrate/sr0, pass_zero=True)
+
+	samples = np.convolve(samples, lpfilter)
+
+	zz = samples * np.conj( np.roll(samples, 1) )
+	dmd = np.arctan2(zz.imag, zz.real)
+
+	xx0 = np.arange(len(dmd))
+	xx_t = np.arange(len(dmd)) * (1/sr0)
+	xx_sym = np.arange(len(dmd)) * (1/sr0) / (1/baudrate)
+
+	fig = plt.figure(figsize=(13,13))
+	ax1 = fig.add_subplot(111)
+
+	ax1.plot(xx_sym, dmd )
+
+	ax1.grid()
+	fig.set_layout_engine("tight")
+	plt.show()
+
+
+
+
+
+
+
 
 
 def tst0():
-
-	samples = get_samples2(0)
+	samples = get_samples2(fpath6)
 	sr0 = 1e6
 	nsamples = len(samples)
 	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * -100e3)
-
+	samples = np.concatenate( (samples[0:300000], samples) )
 	baudrate			= 9600			# tx param
 	sps  				= 21			# todo measure final A against a spectrum of sps's....
 	mod_index			= 0.5			# tx param
+	BT 					= 0.5
 	batch_maxlen 		= 6000
 	f_tune				= 437.1e6
 	f_signal			= 437.00e6 + 125e3
 
-	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_expected=f_signal)
+	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=3400000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_expected=f_signal)
 	settings.sps 					= sps
 	settings.baudrate 				= baudrate
 	settings.lp_cutoff_coeff 		= 0.625 #0.625
@@ -35,14 +97,15 @@ def tst0():
 	settings.fftlen					= 1024
 	settings.jumplen				= 1024//2
 	settings.mod_index				= mod_index
+	settings.BT						= BT
 	settings.mask_mode				= 1
 	settings.c_stat_update			= 1 / 700
 	settings.c_f_update_minimum 	= 0.02
-	settings.T_f_upd_recovery 		= 2.5
-	settings.fft_trigger_on_level 	= 4.9
-	settings.fft_trigger_off_level 	= 3.0
-	settings.start_margin_mpr		= 1.0
-	settings.end_margin_mpr			= 0.4
+	settings.T_f_upd_recovery 		= 4.0
+	settings.fft_trigger_on_level 	= 6.5
+	settings.fft_trigger_off_level 	= 2.0
+	settings.start_margin_mpr		= 2.0
+	settings.end_margin_mpr			= 1.4
 
 	rx = Receiver(settings=settings)
 	rx2 = Receiver(settings=settings)
@@ -83,7 +146,7 @@ def tst0():
 	feed_head = 0
 	dt_total = 0
 	while feed_head < nsamples:
-		batchlen = np.random.randint(0, batch_maxlen)
+		batchlen = 8000
 		batch = samples[feed_head : feed_head+batchlen]
 
 		t0 = time.perf_counter()
@@ -94,6 +157,8 @@ def tst0():
 
 		if ret_pl:
 			pl_list.extend(ret_pl)
+			t_abs = feed_head / sr0
+			print("Extended with {} payloads at {} s".format( len(ret_pl),  round(t_abs, 2)) )
 
 		bits = np.concatenate( (bits, ret_b) )
 		feed_head += batchlen
@@ -118,7 +183,21 @@ def tst0():
 
 	for pl in pl_list:
 		print(pl)
+	xx = np.arange(len(rx.center_f_array))
+	fig = plt.figure(figsize=(14,14))
+	ax1 = fig.add_subplot(211)
+	ax2 = fig.add_subplot(212)
 
+	ax1.plot( xx, rx.center_f_array )
+	ax1.grid()
+
+	ax2.plot( xx, rx.fft_instr_array[:,0] )
+	ax2.plot( xx, rx.fft_instr_array[:,1] )
+	ax2.plot( xx, rx.fft_instr_array[:,2] )
+	ax2.grid()
+
+	fig.set_layout_engine("tight")
+	plt.show()
 
 
 tst0()

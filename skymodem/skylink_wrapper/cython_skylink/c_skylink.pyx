@@ -55,7 +55,7 @@ class SkyConfiguration:
 		self.mac = MACConfig()
 		self.hmac = HMACConfig()
 		self.arq = ArqConfig()
-		self.identity = b"tstID"
+		self.identity = b"PySky"
 
 
 cdef class SkyLink:

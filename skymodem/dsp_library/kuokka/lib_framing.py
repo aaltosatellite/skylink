@@ -278,26 +278,26 @@ def deframe(bits, deframer_mx, rs_mx, rs_cfg):
 		if state == 0:
 			found, latest_bits, bit_idx, n_errs = deframe_synchword(bit=bit, latest_bits=latest_bits, synchword=synchword, synch_length_mask=synch_length_mask, synchword_len=synchword_len, synch_threshold=synch_threshold)
 			if found:
-				#print("Deframer >> 1", n_errs)
+				print("Deframer >> 1", n_errs)
 				state = 1
 			continue
 		elif state == 1:
 			ok, latest_bits, bit_idx, data_len = deframe_header(bit=bit, latest_bits=latest_bits, bit_idx=bit_idx, use_rs=use_rs, data_maxlen=data_maxlen)
 			if ok < 0:
-				#print("Deframer to 0. (Header deframe failed.)", ok)
+				print("Deframer to 0. (Header deframe failed.)", ok)
 				state = 0
 			if ok == 1:
-				#print("Deframer >> 2")
+				print("Deframer >> 2")
 				state = 2
 				char_idx = 0
 			continue
 		elif state == 2:
 			ok, latest_bits, bit_idx, char_idx, pl_leng = deframe_payload(bit=bit, latest_bits=latest_bits, bit_idx=bit_idx, chars=chars, char_idx=char_idx, use_scrambler=use_scrambler, data_len=data_len, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg)
 			if ok < 0:
-				#print("Deframer to 0. (Decode failed.)")
+				print("Deframer to 0. (Decode failed.)")
 				state = 0
 			if ok == 1:
-				#print("Deframer finished successfully!")
+				print("Deframer finished successfully!")
 				state = 0
 				payload_delimits = np.resize( payload_delimits, (len(payload_delimits)+1, 2) )
 				payload_delimits[-1][0] = pl_head

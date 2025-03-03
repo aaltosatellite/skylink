@@ -1,3 +1,5 @@
+import time
+
 import uhd
 import numpy as np
 import threading
@@ -60,7 +62,7 @@ class RadioLoop:
 		self.rs_cfg = rs_cfg
 		self.rx_settings = rx_settings
 		self.rx = Receiver(settings=self.rx_settings)
-		self.que_radio_to_skylink = Queue(100)
+		self.que_radio_to_skylink = Queue(400)
 		self.que_skylink_to_radio = Queue(3)
 		self._internal_sample_que = Queue(250)
 		self.receiver_lock = threading.RLock()
@@ -70,6 +72,7 @@ class RadioLoop:
 		self.tx_thread 			= threading.Thread(target=None, args=tuple())
 		self.exception_counter = 0
 		self.warning_vector = [0,0]
+		self.self_mute = False
 
 	def is_ok(self):
 		if not self.on:
@@ -138,12 +141,14 @@ class RadioLoop:
 		gain = 50 # dB
 		usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
 		usrp.set_rx_rate(sample_rate, 0)
+		#usrp.set_tx_rate(sample_rate, 0)
 		usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(center_freq), 0)
 		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(center_freq), 0)
 		usrp.set_rx_gain(gain, 0) # print("rx gain range",usrp.get_rx_gain_range())
 		usrp.set_tx_gain(gain, 0) # TODO do this?
 		print("[usrp rx-center-f:  {} MHz]".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
 		print("[usrp tx-center-f:  {} MHz]".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
+		#self.rx_thread 			= threading.Thread(target=self._recording_rx_loop,    args=(8000,), daemon=True) #TODO bufferlen as setting?
 		self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 8000), daemon=True) #TODO bufferlen as setting?
 		self.rx_process_thread 	= threading.Thread(target=self._rx_process_loop, args=tuple(),      daemon=True)
 		self.tx_thread 			= threading.Thread(target=self._usrp_tx_loop,    args=(usrp, 8000), daemon=True) #TODO bufferlen as setting?
@@ -151,6 +156,41 @@ class RadioLoop:
 		self.rx_thread.start()
 		self.rx_process_thread.start()
 		self.tx_thread.start()
+
+
+
+	def _recording_rx_loop(self, rx_buffer_len):
+		import pickle
+		f = open("/home/elmore/datasetit/radiotallenteet/uhf-965_437.0MHz-1000ksps.pickled", "rb")
+		rd = f.read()
+		f.close()
+		samples = pickle.loads(rd)
+		samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/1e6) * -100e3)
+		assert len(samples.shape) == 1
+		assert type(samples) == np.ndarray
+		samples = np.complex64(samples)
+		time.sleep(4)
+		cursor = 0
+		n_received = 0
+		t0 = time.perf_counter()
+		t_next = t0 + ((n_received + rx_buffer_len) / self.rx_settings.sr0)
+		t_sleep = max(0, t_next - time.perf_counter())
+		while self.on:
+			time.sleep(t_sleep)
+			batch = samples[cursor:cursor+rx_buffer_len]
+			assert len(batch) == rx_buffer_len
+			cursor += rx_buffer_len
+			if cursor > (len(samples) - rx_buffer_len):
+				cursor = 0
+			if not self._internal_sample_que.full():
+				self._internal_sample_que.put_nowait(batch)
+			else:
+				DBGPRINT("[WARNING! radio-to-process queue overflow!]  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
+			n_received += rx_buffer_len
+			t_next = t0 + ((n_received + rx_buffer_len) / self.rx_settings.sr0)
+			t_sleep = max(0, t_next - time.perf_counter())
+
+
 
 	def _usrp_rx_loop(self, usrp:uhd.usrp.MultiUSRP, rx_buffer_len):
 		# Set up the stream and receive buffer
@@ -168,13 +208,17 @@ class RadioLoop:
 			try:
 				if (n_rx_loops % 1000) == 0:
 					DBGPRINT("rx loop #{}".format(n_rx_loops))
-				rx_ret = rx_streamer.recv(recv_buffer, metadata)
+				rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx buffer len achievec
 				assert rx_ret == rx_buffer_len
+				#if self.self_mute:
+				#	continue
 				if not self._internal_sample_que.full():
 					self._internal_sample_que.put_nowait(recv_buffer[0,:])
-				elif self.warning_vector[0] == 0:
-					self.warning_vector[0] = 1
-					raise Warning("radio-loop: radio-to-process queue overflow.")
+				else:
+					DBGPRINT("[WARNING! radio-to-process queue overflow!]")
+					if self.warning_vector[0] == 0:
+						self.warning_vector[0] = 1
+						raise Warning("radio-loop: radio-to-process queue overflow.")
 				n_rx_loops += 1
 			except Exception as e:
 				print("radio-loop: Exception (rx-radio-rcv-thread)", e)
@@ -216,16 +260,25 @@ class RadioLoop:
 				payload = self.que_skylink_to_radio.get(timeout=0.25)
 				assert type(payload) == bytes
 				samplearr = self.compose_samples(payload)
-				DBGPRINT("+[inital samplearr of shape {}]".format(str(samplearr.shape)))
-				DBGPRINT("+[inital samplearr of dtype {}]".format(str(samplearr.dtype)))
+				#DBGPRINT("+[inital samplearr of shape {}]".format(str(samplearr.shape)))
+				#DBGPRINT("+[inital samplearr of dtype {}]".format(str(samplearr.dtype)))
 				assert len(samplearr.shape) == 1
 				N = len(samplearr)
 				samplearr = np.reshape(samplearr, (1,N))
 				samplearr = np.complex64(samplearr)
 				idx = 0
+				dtt = N / self.rx_settings.sr0
+				t_end = time.perf_counter() + dtt
+				self.self_mute = True  # the 5ms initial silence in composed samples also ensures this will have effect.
 				while idx < N:
+					if (N - idx) <= tx_batch_len:
+						tx_metadata.end_of_burst = True
 					tx_streamer.send(samplearr[0,idx:idx+tx_batch_len], tx_metadata)
 					idx += tx_batch_len
+				t_to_end = max(0, t_end - time.perf_counter())
+				time.sleep(t_to_end + 2.048e-3)
+				self.self_mute = False
+				DBGPRINT("+[tx end sleep of {} ms]".format(t_to_end*1e3))
 				DBGPRINT("+[radio transmitted samples]")
 			except Empty:
 				pass
