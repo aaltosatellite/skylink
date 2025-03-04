@@ -211,7 +211,7 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 			if tx_on and tx_on_prev:
 				f_center 	= f_center_long
 			if tx_on and (not tx_on_prev):
-				print("Detector triggered.", bandmax)
+				print("\t(Detector triggered)", bandmax)
 				f_center 	= f_center_long
 				rev_index 	= center_f_head
 				while True:
@@ -219,6 +219,7 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 						break
 					rev_index = rev_index -1
 				center_f_arr[rev_index:center_f_head] = f_center
+				#center_f_arr[rev_index:center_f_head] = 0.112
 			if not tx_on:
 				c_f_update_long = min(1.0, c_f_update_long + f_updt_recovery_increment)   # = jumplen / (T_recovery * sr)
 				if tx_on_prev:
@@ -237,6 +238,8 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 
 		if center_f_head >= 0:
 			center_f_arr[center_f_head] = f_center
+			#if f_center > -0.5:
+			#	center_f_arr[center_f_head] = 0.112
 			instr_arr[center_f_head,0] = running_avg
 			instr_arr[center_f_head,1] = running_var
 			instr_arr[center_f_head,2] = bandmax

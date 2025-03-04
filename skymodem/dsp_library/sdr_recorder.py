@@ -87,7 +87,7 @@ def show_recording(nn):
 
 
 if __name__ == '__main__':
-	rint = record(f_center=437.0e6,  sr=1e6, t_total=16.0)
+	rint = record(f_center=437.0e6,  sr=1e6, t_total=9.0)
 
 	#/home/elmore/datasetit/radiotallenteet/uhf-969_437.0MHz-1000ksps.pickled
 	show_recording(rint)

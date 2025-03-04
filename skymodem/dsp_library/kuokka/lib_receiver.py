@@ -86,7 +86,7 @@ class ReceiverSettings:
 		assert 0 < self.c_stat_update <= 1.0
 		assert 0 < self.c_f_update_minimum <= 1.0
 		assert 0 < self.T_f_upd_recovery < 1800
-		assert -1.0 <= self.fft_trigger_on_level <= 9.0
+		assert -1.0 <= self.fft_trigger_on_level <= 32.0
 		assert -1.0 <= self.fft_trigger_off_level <= 9.0
 		assert self.fft_trigger_off_level <= self.fft_trigger_on_level
 		assert self.mask_mode in (0,1)
@@ -120,7 +120,7 @@ class ReceiverSettings:
 		if (self.f_tune == -1) and (self.f_expected == -1):
 			return -1, -1, -1
 		df_doppler = self.f_expected * (((3e8+7500)/3e8) - 1)  # approximate maximum doppler shift for LEO orbital speed
-		df_search_sideband = df_doppler * 1.2
+		df_search_sideband = df_doppler * 1.9
 		triplet = self.f_tune, self.f_expected - df_search_sideband, self.f_expected + df_search_sideband
 		print("+[search space: {} MHz  -  {} MHz]".format( round(triplet[1]*1e-6, 3), round(triplet[2]*1e-6, 3) ))
 		return triplet

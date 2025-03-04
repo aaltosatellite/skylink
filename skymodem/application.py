@@ -10,12 +10,28 @@ import time
 import json
 from datetime import datetime as dtime
 from queue import Queue, Empty
-
+import os, struct
 DEBUG_PRINT_ON = True
 
 def DBGPRINT(*args, **kwargs):
 	if DEBUG_PRINT_ON:
 		print(*args, **kwargs)
+
+
+
+def fetch_hmac_key(fpath):
+	assert os.path.isfile(fpath)
+	f = open(fpath, "rb")
+	rd = f.read()
+	f.close()
+	key = json.loads(rd)
+	assert type(key) in (tuple, list)
+	for i in key:
+		assert type(i) == int
+		assert 0 <= i <= 255
+	assert len(key) == 32
+	return struct.pack("32b", *key), key
+
 
 
 
@@ -25,22 +41,9 @@ def sub_socket_loop(sub_sock:zmq.Socket, sub_que:Queue, ID, parent_obj):
 	while parent_obj.on:
 		try:
 			rcv_msg = sub_sock.recv()
-			DBGPRINT("+[zmq-sub-socket-{} received {} bytes]".format(ID, len(rcv_msg)), flush=True)
+			#DBGPRINT("+[zmq-sub-socket-{} received {} bytes]".format(ID, len(rcv_msg)), flush=True)
 			sub_que.put_nowait((ID, rcv_msg))
 		except zmq.Again:
-			pass
-		except:
-			break
-
-
-def pub_socket_loop(pub_sock_dict:dict, pub_que:Queue, parent_obj):
-	for k in pub_sock_dict.keys():
-		pub_sock_dict[k].set(zmq.SNDTIMEO, 500)
-	while parent_obj.on:
-		try:
-			ID, msg = pub_que.get(timeout=0.250)
-			pub_sock_dict[ID].send(msg)
-		except Empty:
 			pass
 		except:
 			break
@@ -63,8 +66,6 @@ def bind_vc_sockets(vc_base, num_channels):
 		sub_sockets.append(sub_sock)
 
 	return pub_sockets, sub_sockets, context
-
-
 
 
 
@@ -190,6 +191,7 @@ class SkyModem:
 		while self.on:
 			try:
 				ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.15)
+				DBGPRINT("+[SkyModem][message from skylink to pub-zmq][vc: {} len: {}]".format(ichannel, len(rdata)))
 				if not ichannel in range(num_virtual_channels):
 					DBGPRINT("vc number in skylink reception out of bounds: {}".format(ichannel))
 					continue
@@ -215,7 +217,7 @@ class SkyModem:
 		while self.on:
 			try:
 				ID, msg = self.sub_que.get(timeout=0.15)
-				DBGPRINT("+[ID-msg pulled from zmq-sub-queue-{}]".format(ID))
+				DBGPRINT("+[SkyModem][msg for vc {} pulled from zmq-sub-queue]".format(ID))
 				with self.action_lock:
 					self._process_sub_que_frame(ID, msg)
 			except Empty:
@@ -227,14 +229,12 @@ class SkyModem:
 
 	def _process_sub_que_frame(self, ID, msg):
 		if not ID in range(num_virtual_channels):
-			DBGPRINT("ID not in vc range: {}.".format(ID))
+			DBGPRINT("![SkyModem][error: ID not in vc range: {}]".format(ID))
 			return
 		ichannel = ID
-		DBGPRINT("+[attempting json load on type {}]".format(str(type(msg))), flush=True)
 		frame_dict = json.loads( msg )
-		DBGPRINT("+[json load successful: {}]".format(frame_dict), flush=True)
 		if not type(frame_dict) == dict:
-			DBGPRINT("json was not a dict:", type(frame_dict))
+			DBGPRINT("![SkyModem][error: json was not a dict:{}]".format(type(frame_dict)))
 			return
 
 		if "data" in frame_dict:
@@ -244,13 +244,13 @@ class SkyModem:
 			data = bytes(ints)
 			send_ret = self.skylink_loop.send(ichannel=ichannel, data=data)
 			if send_ret < 0:
-				DBGPRINT("sky_vc_push_packet_to_send error: {}".format(send_ret))
+				DBGPRINT("![SkyModem][error: sky_vc_push_packet_to_send error: {}]".format(send_ret))
 
 		if "metadata" in frame_dict:
 			response_dict = dict()
 			control_dict = frame_dict["metadata"]
 			if not "cmd" in control_dict:
-				DBGPRINT("No 'cmd' field in control_dict.")
+				DBGPRINT("![SkyModem][No 'cmd' field in control_dict]")
 				return
 			ctrl_command = control_dict["cmd"]
 			if ctrl_command == "get_state":
@@ -310,11 +310,12 @@ def get_default_receiver_settings():
 	settings.mod_index 	= 0.5
 	settings.BT 		= 0.5
 	settings.sps 		= 21
-	settings.T_f_upd_recovery 		= 4.0
-	settings.fft_trigger_on_level 	= 6.5
-	settings.fft_trigger_off_level 	= 2.0
+	settings.T_f_upd_recovery 		= 2.0
+	settings.fft_trigger_on_level 	= 8.0
+	settings.fft_trigger_off_level 	= 3.0
 	settings.start_margin_mpr		= 2.0
-	settings.end_margin_mpr			= 1.4
+	settings.end_margin_mpr			= 1.0
+	settings.lp_cutoff_coeff		= 0.630 * 1
 
 	#settings.T_f_upd_recovery = 12.0
 	return settings
@@ -410,11 +411,12 @@ def tst_1(vc_base):
 if __name__ == '__main__':
 	#zmq_socket_instrumentation()
 	#tst_1(7100)
+	key0, _ = fetch_hmac_key(fpath="/home/elmore/fs1p/fs1p_hmac_key.json")
 	hmac_keys = [
-		b"0"*32,
-		b"0"*32,
-		b"0"*32,
-		b"0"*32,
+		key0,
+		key0,
+		key0,
+		key0,
 	]
 	modem = SkyModem(receiver_settings=get_default_receiver_settings(), skylink_config=get_default_skylink_config(), hmac_key_list=hmac_keys, vc_port_base=7100)
 	modem.start()

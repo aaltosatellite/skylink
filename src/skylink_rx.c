@@ -163,6 +163,7 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 	self->diag->vc_stats[vc].rx_frames++;
 
 	// Pass the parsed frame to be processed.
+	printf("Skl-check-1\n");
 	return sky_vc_process_frame(self->virtual_channels[vc], &parsed, sky_get_tick_time());
 }
 

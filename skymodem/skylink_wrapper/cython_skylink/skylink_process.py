@@ -75,9 +75,8 @@ class SkyLinkLoop(threading.Thread):
 				self.skylink.sky_tick( (int(time.time() * 1000) % mod_time_ticks) )
 				while not self.que_payloads_from_radio.empty():
 					pl = self.que_payloads_from_radio.get_nowait()
-					DBGPRINT("+[SkyLink][pulled from from-radio queue: {}]".format(pl))
 					sky_rx_ret = self.skylink.sky_rx(pl)
-					DBGPRINT("+[SkyLink][sky_rx returned {}]".format(sky_rx_ret))
+					DBGPRINT("+[SkyLink][skylink was given a pl. sky_rx returned {}]".format(sky_rx_ret))
 					sleeptime = 0.0
 
 				while True:
@@ -86,6 +85,7 @@ class SkyLinkLoop(threading.Thread):
 					tx_i, frame_bytes = self.skylink.sky_tx()
 					if tx_i == 0:
 						break
+					DBGPRINT("+[SkyLink][transmits {} bytes]".format( len(frame_bytes)))
 					self.que_payloads_to_radio.put_nowait(frame_bytes)
 					sleeptime = 0.0
 

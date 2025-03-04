@@ -62,7 +62,7 @@ class RadioLoop:
 		self.rs_cfg = rs_cfg
 		self.rx_settings = rx_settings
 		self.rx = Receiver(settings=self.rx_settings)
-		self.que_radio_to_skylink = Queue(400)
+		self.que_radio_to_skylink = Queue(64)
 		self.que_skylink_to_radio = Queue(3)
 		self._internal_sample_que = Queue(250)
 		self.receiver_lock = threading.RLock()
@@ -70,8 +70,6 @@ class RadioLoop:
 		self.rx_thread 			= threading.Thread(target=None, args=tuple())
 		self.rx_process_thread 	= threading.Thread(target=None, args=tuple())
 		self.tx_thread 			= threading.Thread(target=None, args=tuple())
-		self.exception_counter = 0
-		self.warning_vector = [0,0]
 		self.self_mute = False
 
 	def is_ok(self):
@@ -95,7 +93,7 @@ class RadioLoop:
 		bits = np.concatenate( (self.preamble_bits, bits) )
 		sps = self.rx_settings.sr0 / self.rx_settings.baudrate
 		f_center = self.rx.center_frequency_estimate()
-		DBGPRINT("-[transmission center freq:  {} MHz]".format( f_center * 1e-6, 4 ))
+		DBGPRINT("-[RadioLoop][transmission center freq:  {} MHz]".format( f_center * 1e-6, 4 ))
 		f_offset = (f_center - self.rx_settings.f_tune) / self.rx_settings.sr0
 		n_silence_start = int(self.rx_settings.sr0 * 5e-3) # TODO: this should be a setting
 		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset, power=1.0,
@@ -112,7 +110,7 @@ class RadioLoop:
 		sdr = SoapySDR.Device(args)
 		sdr.setSampleRate(SOAPY_SDR_RX, 0, sample_rate)
 		sdr.setFrequency(SOAPY_SDR_RX, 0, center_freq)
-		print(sdr.getGainRange())
+		DBGPRINT("[RadioLoop][Gain Range: {}]".format( sdr.getGainRange()))
 		#txStream = sdr.setupStream(SOAPY_SDR_TX, SOAPY_SDR_CF32)
 		#sdr.writeStream()
 		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
@@ -141,17 +139,21 @@ class RadioLoop:
 		gain = 50 # dB
 		usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
 		usrp.set_rx_rate(sample_rate, 0)
-		#usrp.set_tx_rate(sample_rate, 0)
+		usrp.set_tx_rate(sample_rate, 0)
 		usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(center_freq), 0)
 		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(center_freq), 0)
-		usrp.set_rx_gain(gain, 0) # print("rx gain range",usrp.get_rx_gain_range())
+		usrp.set_rx_gain(gain, 0)
 		usrp.set_tx_gain(gain, 0) # TODO do this?
-		print("[usrp rx-center-f:  {} MHz]".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
-		print("[usrp tx-center-f:  {} MHz]".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
-		#self.rx_thread 			= threading.Thread(target=self._recording_rx_loop,    args=(8000,), daemon=True) #TODO bufferlen as setting?
-		self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 8000), daemon=True) #TODO bufferlen as setting?
+		DBGPRINT("[RadioLoop][RX Gain Range: {}]".format( usrp.get_rx_gain_range() ))
+		DBGPRINT("[RadioLoop][TX Gain Range: {}]".format( usrp.get_tx_gain_range() ))
+		DBGPRINT("[RadioLoop][usrp RX samplerate:  {} ksps]".format( round(usrp.get_rx_rate(0)*1e-3, 3) ))
+		DBGPRINT("[RadioLoop][usrp TX samplerate:  {} ksps]".format( round(usrp.get_tx_rate(0)*1e-3, 3) ))
+		DBGPRINT("[RadioLoop][usrp RX center-f:  {} MHz]".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
+		DBGPRINT("[RadioLoop][usrp TX center-f:  {} MHz]".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
+		#self.rx_thread 			= threading.Thread(target=self._recording_rx_loop,    args=(1024*8,), daemon=True) #TODO bufferlen as setting?
+		self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 1024*4), daemon=True) #TODO bufferlen as setting?
 		self.rx_process_thread 	= threading.Thread(target=self._rx_process_loop, args=tuple(),      daemon=True)
-		self.tx_thread 			= threading.Thread(target=self._usrp_tx_loop,    args=(usrp, 8000), daemon=True) #TODO bufferlen as setting?
+		self.tx_thread 			= threading.Thread(target=self._usrp_tx_loop,    args=(usrp, 1024*4), daemon=True) #TODO bufferlen as setting?
 		self.on = True
 		self.rx_thread.start()
 		self.rx_process_thread.start()
@@ -161,7 +163,10 @@ class RadioLoop:
 
 	def _recording_rx_loop(self, rx_buffer_len):
 		import pickle
-		f = open("/home/elmore/datasetit/radiotallenteet/uhf-965_437.0MHz-1000ksps.pickled", "rb")
+		fpath7 = "/home/elmore/datasetit/radiotallenteet/uhf-298_437.0MHz-1000ksps.pickled"
+		fpath8 = "/home/elmore/datasetit/radiotallenteet/uhf-447_437.0MHz-1000ksps.pickled"
+		fpath9 = "/home/elmore/datasetit/radiotallenteet/uhf-195_437.0MHz-1000ksps.pickled"
+		f = open(fpath9, "rb")
 		rd = f.read()
 		f.close()
 		samples = pickle.loads(rd)
@@ -182,10 +187,11 @@ class RadioLoop:
 			cursor += rx_buffer_len
 			if cursor > (len(samples) - rx_buffer_len):
 				cursor = 0
+				DBGPRINT("\n[CURSROR ZEROED]\n")
 			if not self._internal_sample_que.full():
 				self._internal_sample_que.put_nowait(batch)
 			else:
-				DBGPRINT("[WARNING! radio-to-process queue overflow!]  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
+				DBGPRINT("[RadioLoop][WARNING! radio-to-process queue overflow!]  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
 			n_received += rx_buffer_len
 			t_next = t0 + ((n_received + rx_buffer_len) / self.rx_settings.sr0)
 			t_sleep = max(0, t_next - time.perf_counter())
@@ -200,30 +206,27 @@ class RadioLoop:
 		# Start Stream
 		stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
 		stream_cmd.stream_now = True
-		rx_streamer.issue_stream_cmd(stream_cmd)
 		recv_buffer = np.zeros((1, rx_buffer_len), dtype=np.complex64)
 		metadata = uhd.types.RXMetadata()
 		n_rx_loops = 0
+		rx_streamer.issue_stream_cmd(stream_cmd)
 		while self.on:
 			try:
 				if (n_rx_loops % 1000) == 0:
-					DBGPRINT("rx loop #{}".format(n_rx_loops))
-				rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx buffer len achievec
+					DBGPRINT("rx-#{}".format(n_rx_loops))
+				rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
 				assert rx_ret == rx_buffer_len
 				#if self.self_mute:
 				#	continue
 				if not self._internal_sample_que.full():
-					self._internal_sample_que.put_nowait(recv_buffer[0,:])
+					self._internal_sample_que.put_nowait(recv_buffer[0,:].copy())
 				else:
-					DBGPRINT("[WARNING! radio-to-process queue overflow!]")
-					if self.warning_vector[0] == 0:
-						self.warning_vector[0] = 1
-						raise Warning("radio-loop: radio-to-process queue overflow.")
+					DBGPRINT("![RadioLoop][WARNING: radio-to-process queue overflow!]")
+					raise Exception("radio-loop: radio-to-process queue overflow.")
 				n_rx_loops += 1
 			except Exception as e:
-				print("radio-loop: Exception (rx-radio-rcv-thread)", e)
+				DBGPRINT("![RadioLoop][Exception (rx-radio-rcv-thread)]", e)
 				self.on = False
-				self.exception_counter += 1
 				break
 
 	def _rx_process_loop(self):
@@ -233,20 +236,17 @@ class RadioLoop:
 				with self.receiver_lock:
 					rx_pls = self.rx.push_samples(batch=rx_samples, give_bits=False)
 				for rx_pl in rx_pls:
-					DBGPRINT("+[radio received a payload]")
+					DBGPRINT("+[RadioLoop][radio received a payload: {}...]".format( rx_pl[0:16] ))
 					if not self.que_radio_to_skylink.full():
 						self.que_radio_to_skylink.put_nowait(rx_pl)
 					else:
-						DBGPRINT("![WARNING: radio-to-skylink queue full]")
-						if self.warning_vector[1] == 0:
-							self.warning_vector[1] = 1
-							raise Warning("radio-loop: process-to-skylink queue overflow.")
+						DBGPRINT("![RadioLoop][WARNING: radio-to-skylink queue full]")
+						raise Exception("![RadioLoop][process-to-skylink queue overflow]")
 			except Empty:
 				pass
 			except Exception as e:
-				print("radio-loop: Exception (rx-process-thread)", e)
+				DBGPRINT("![RadioLoop][Exception (rx-process-thread)]", e)
 				self.on = False
-				self.exception_counter += 1
 				break
 
 	def _usrp_tx_loop(self, usrp:uhd.usrp.MultiUSRP, tx_batch_len):
@@ -278,14 +278,13 @@ class RadioLoop:
 				t_to_end = max(0, t_end - time.perf_counter())
 				time.sleep(t_to_end + 2.048e-3)
 				self.self_mute = False
-				DBGPRINT("+[tx end sleep of {} ms]".format(t_to_end*1e3))
-				DBGPRINT("+[radio transmitted samples]")
+				DBGPRINT("+[RadioLoop][tx end sleep of {} ms]".format(t_to_end*1e3))
+				DBGPRINT("+[RadioLoop][radio transmitted samples]")
 			except Empty:
 				pass
 			except Exception as e:
-				print("radio-loop: Exception (tx-thread)", e)
+				DBGPRINT("![RadioLoop][Exception (tx-thread)]", e)
 				self.on = False
-				self.exception_counter += 1
 				break
 
 

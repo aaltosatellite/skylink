@@ -15,7 +15,11 @@ fpath3 = "/home/elmore/datasetit/radiotallenteet/uhf-nayte-237.dat"
 fpath4 = "/home/elmore/datasetit/radiotallenteet/uhf-817_437.0MHz-1000ksps.pickled"
 fpath5 = "/home/elmore/datasetit/radiotallenteet/uhf-969_437.0MHz-1000ksps.pickled"
 fpath6 = "/home/elmore/datasetit/radiotallenteet/uhf-965_437.0MHz-1000ksps.pickled"
+fpath7 = "/home/elmore/datasetit/radiotallenteet/uhf-298_437.0MHz-1000ksps.pickled"
 
+fpath8 = "/home/elmore/datasetit/radiotallenteet/uhf-447_437.0MHz-1000ksps.pickled"
+
+fpath9 = "/home/elmore/datasetit/radiotallenteet/uhf-195_437.0MHz-1000ksps.pickled"
 
 
 fpaths = [fpath0,fpath1, fpath2,fpath3,  fpath4,fpath5,fpath6]
@@ -31,17 +35,18 @@ def get_samples2(fpath):
 
 
 
-def draw(samples):
+def draw_demod(samples):
 	#samples = get_samples2(idx)
 	#samples = samples[250000:-500000]
 	sr0 = 1e6
-	fshift = -1.2250e5 #-86.5e3
-	baudrate = 9600 * 4 * 2
+	fshift = -0.12250e6 -500 #-86.5e3
+	baudrate = 9600 * 1
 	samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * fshift/sr0)
-
+	#samples = samples[100:len(samples)//3]
 	waterfall_mx(samples=samples, fftlen=2048, fft_jump=1024, srate=sr0, plot_and_show=True, y_is_time=True)
 
-	lpfilter = firwin(numtaps=201, cutoff=0.63*baudrate/sr0, pass_zero=True)
+	lp_cutoff = 0.630 * 2.5 * baudrate / sr0
+	lpfilter = firwin(numtaps=201, cutoff=lp_cutoff, pass_zero=True)
 
 	samples = np.convolve(samples, lpfilter)
 
@@ -70,11 +75,11 @@ def draw(samples):
 
 
 def tst0():
-	samples = get_samples2(fpath6)
+	samples = get_samples2(fpath7)
 	sr0 = 1e6
 	nsamples = len(samples)
 	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * -100e3)
-	samples = np.concatenate( (samples[0:300000], samples) )
+	#samples = np.concatenate( (samples[0:300000], samples) )
 	baudrate			= 9600			# tx param
 	sps  				= 21			# todo measure final A against a spectrum of sps's....
 	mod_index			= 0.5			# tx param
@@ -200,4 +205,35 @@ def tst0():
 	plt.show()
 
 
+
+
+
+
+
+
+
 tst0()
+draw_demod(get_samples2(fpath8))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

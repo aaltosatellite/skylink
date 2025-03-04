@@ -16,6 +16,7 @@ target_include_directories(
     skylink PUBLIC
     "${PROJECT_SOURCE_DIR}"
     "${CMAKE_SOURCE_DIR}/platforms/linux/"
+    "/home/elmore/old-SL/skylink/platforms/linux/"
 )
 
 target_compile_options(
