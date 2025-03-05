@@ -30,18 +30,23 @@ def speedbench_fft_detect(sps, baudrate):
 	samples0 = samples0 + radionoise(n=nsamples, sr=sr, W_per_Hz=0.2/baudrate)
 	samples1 = samples1 + radionoise(n=nsamples, sr=sr, W_per_Hz=0.2/baudrate)
 
-	fftlen = 1024
-	jumplen = fftlen//2
-	c_stat_update = 1/700
-	c_f_update_minimum = 0.02
-	T_f_upd_recovery = 3.0
-	fft_trigger_on_level = 5.0
-	fft_trigger_off_level = 3.0
-	masklen = int(2.5 * 0.5 * fftlen / sps)*2 + 1
-	search_space_triplet = (f_tune, f_signal-doppler_max*1.2, f_signal+doppler_max*1.2 )
-	fft_statemx = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, baudrate=baudrate, search_space_triplet=search_space_triplet, mod_index=mod_idx, BT=BT, c_stat_update=c_stat_update,
-								 c_f_update_minimum=c_f_update_minimum, T_f_upd_recovery=T_f_upd_recovery, fft_trigger_on_level=fft_trigger_on_level, fft_trigger_off_level=fft_trigger_off_level,
-								 masklen=masklen, avg0=0.0, var0=1.0, mask_mode=1, start_margin_mpr=1.0, end_margin_mpr=0.33)
+	fftlen 					= 1024
+	jumplen 				= fftlen//2
+	c_stat_update 			= 1/700
+	n_delay 				= fftlen*5
+	T_f_decay 				= 0.5
+	fft_trigger_on_level 	= 5.5
+	fft_trigger_off_level 	= 2.0
+	masklen 				= int(2.5 * 0.5 * fftlen / sps)*2 + 1
+	search_space_triplet 	= (f_tune, f_signal-doppler_max*1.2, f_signal+doppler_max*1.2 )
+	start_margin_mpr		= 3.0
+	end_margin_mpr			= 1.5
+	mask_mode				= 1
+	fft_statemx = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, baudrate=baudrate, search_space_triplet=search_space_triplet,
+											   mod_index=mod_idx, BT=BT, c_stat_update=c_stat_update, n_delay=n_delay, T_f_decay=T_f_decay,
+											   fft_trigger_on_level=fft_trigger_on_level, fft_trigger_off_level=fft_trigger_off_level,
+								 			   masklen=masklen, avg0=0.0, var0=1.0, mask_mode=mask_mode,
+											   start_margin_mpr=start_margin_mpr, end_margin_mpr=end_margin_mpr)
 
 	center_f_arr = np.zeros(nsamples, dtype=np.float64)
 	instr_arr = np.zeros((nsamples,3), dtype=np.float64)
@@ -150,7 +155,7 @@ def tst_fft_center_detect_1(inputmode):
 		sig_y_arr[0]	= np.array( (f_offset_rel1, f_offset_rel1) )
 		sig_y_arr[1]	= np.array( (f_offset_rel2, f_offset_rel2) )
 		sig_y_arr[2]	= np.array( (f_offset_rel3, f_offset_rel3) )
-		samples 		= samples + radionoise(n=len(samples), sr=sr, W_per_Hz=0.15/9600)
+		samples 		= samples + radionoise(n=len(samples), sr=sr, W_per_Hz=0.20/9600)
 
 	else:
 		fpath = "/home/elmore/datasetit/radiotallenteet/uhf-nayte-{}.dat".format(96)
@@ -168,7 +173,7 @@ def tst_fft_center_detect_1(inputmode):
 		samples0 = samples0 * np.exp(2j*np.pi * (1/sr0) * (f_offset-f_offset0)*np.arange(len(samples0)))
 		initial_avgamp = np.average( np.abs(samples0) )
 		samples0 = samples0 * (1/initial_avgamp)
-		samples0 = samples0 +  radionoise(n=len(samples0), sr=sr0, W_per_Hz=0.15/9600)
+		samples0 = samples0 +  radionoise(n=len(samples0), sr=sr0, W_per_Hz=0.20/9600)
 		print("\tinitial avg amplitude: ",initial_avgamp)
 
 		f_tune = 437e6
@@ -208,14 +213,14 @@ def tst_fft_center_detect_1(inputmode):
 	fftlen				= 1024			# !		(1024,  2048, 512)
 	jumplen				= 1024//2		# !		(fftlen / [2,3,4])
 	c_stat_update		= 1 / 700		# -		([400:2000])
-	c_f_update_minimum	= 0.025			# !
-	T_f_upd_recovery 	= 3.0
-	trigger_on_lvl		= 5.0								# !!!	(4.5 < _ < 9)
-	trigger_off_lvl		= 3.0
+	n_delay				= fftlen*5
+	T_f_decay			= 0.5
+	trigger_on_lvl		= 5.5								# !!!	(4.5 < _ < 9)
+	trigger_off_lvl		= 2.0
 	masklen				= int(0.5 * 2.5*fftlen/sps)*2 +1	# !		( int( [0.8:1.2] * fftlen/sps)  )
 	mask_mode			= 1				# !!	( -1 <= _ <= 1 )
-	start_margin_mpr	= 1.0			# !!!
-	end_margin_mpr  	= 0.0			# !
+	start_margin_mpr	= 3.0			# !!!
+	end_margin_mpr  	= 1.5			# !
 	#============================================
 	#f_tune = 437e6
 	#f_signal = 437.125e6
@@ -227,8 +232,8 @@ def tst_fft_center_detect_1(inputmode):
 	instr_arr 		= np.zeros((nsamples,3), dtype=np.float64) -1
 
 	print("Creating statemx.")
-	statemx0 = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, baudrate=baudrate, search_space_triplet=search_space_triplet, mod_index=mod_index, BT=BT, c_stat_update=c_stat_update,
-											c_f_update_minimum=c_f_update_minimum, T_f_upd_recovery=T_f_upd_recovery,
+	statemx0 = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, baudrate=baudrate, search_space_triplet=search_space_triplet,
+											mod_index=mod_index, BT=BT, c_stat_update=c_stat_update, n_delay=n_delay, T_f_decay=T_f_decay,
 											fft_trigger_on_level=trigger_on_lvl, fft_trigger_off_level=trigger_off_lvl, masklen=masklen,
 											avg0=0.0, var0=1.0, mask_mode=mask_mode, start_margin_mpr=start_margin_mpr, end_margin_mpr=end_margin_mpr)
 
@@ -245,7 +250,10 @@ def tst_fft_center_detect_1(inputmode):
 		fft_detect_and_freq_determ(sample_arr=samples, isample0=feed_head, nsamples=nbatch, center_f_arr=center_f_arr_fft1, center_f_head0=feed_head, statemx=statemx2, instr_arr=instr_arr)
 		feed_head += nbatch
 
+	x = np.sum(np.abs((np.isclose(center_f_arr_fft0, center_f_arr_fft1) * 1.0)-1.0))
+	print("outputs differ in {} points".format(x))
 	assert np.allclose(center_f_arr_fft0, center_f_arr_fft1)
+
 	print("Outputs of batched run and one-go run match.")
 
 	trigger_arr_fft = center_f_arr_fft1 > -0.5
@@ -325,6 +333,7 @@ def tst_fft_center_detect_1(inputmode):
 
 tst_fft_center_detect_1(inputmode="A")
 
+speedbench_fft_detect(sps=21, baudrate=9600)
 speedbench_fft_detect(sps=17, baudrate=9600)
 speedbench_fft_detect(sps=8, baudrate=9600*16)
 speedbench_fft_detect(sps=6, baudrate=9600*16)

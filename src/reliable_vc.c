@@ -600,7 +600,7 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 		 * Just pass the payload to buffer.
 		 */
 		printf("Skl-check-1.5\n");
-		if (parsed->payload_len > 0) {
+		if (parsed->payload_len >= 0) {
 			int retx = sky_vc_push_rx_packet_monotonic(vchannel, parsed->payload, parsed->payload_len);
 			printf("Skl-check-2: %d\n", retx);
 		}

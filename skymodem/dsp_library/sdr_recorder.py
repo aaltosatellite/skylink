@@ -55,23 +55,25 @@ def record(f_center, sr, t_total):
 	stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
 	streamer.issue_stream_cmd(stream_cmd)
 
-	rint = np.random.randint(0,1000)
-	fpath = "/home/elmore/datasetit/radiotallenteet/uhf-{}_{}MHz-{}ksps.pickled".format(rint, round(f_center*1e-6,2),  round(1e-3*sr))
+	while True:
+		n_letters = 1.0
+		triplet = "".join( [chr(x) for x in np.random.randint(65,91, int(n_letters))])
+		fpath = "/home/elmore/datasetit/radiotallenteet/uhf-{}_{}MHz-{}ksps.pickled".format(triplet, round(f_center*1e-6,3),  round(1e-3*sr))
+		if not os.path.isfile(fpath):
+			break
+		n_letters += 0.5
+
 	f = open(fpath, "wb")
 	f.write(pickle.dumps(samples))
 	f.close()
 	print("Written into {}".format(fpath))
-	return rint
+	return fpath
 
 
 
 
 
-def show_recording(nn):
-	#nn = 50
-	#nn = 583
-	#nn = 468
-	fpath = "/home/elmore/datasetit/radiotallenteet/uhf-{}_437.0MHz-1000ksps.pickled".format(nn)
+def show_recording(fpath):
 	f = open(fpath, "rb")
 	rd = f.read()
 	f.close()
@@ -83,14 +85,12 @@ def show_recording(nn):
 
 
 
-
+# /home/elmore/datasetit/radiotallenteet/uhf-S_437.0MHz-1000ksps.pickled   ## Kasper-kohinaa
 
 
 if __name__ == '__main__':
-	rint = record(f_center=437.0e6,  sr=1e6, t_total=9.0)
-
-	#/home/elmore/datasetit/radiotallenteet/uhf-969_437.0MHz-1000ksps.pickled
-	show_recording(rint)
+	fpath = record(f_center=437.0e6,  sr=1e6, t_total=10.0)
+	show_recording(fpath)
 
 
 

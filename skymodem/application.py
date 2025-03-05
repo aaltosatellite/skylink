@@ -307,17 +307,11 @@ class SkyModem:
 
 def get_default_receiver_settings():
 	settings = ReceiverSettings(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=32000, f_tune=437.100e6, f_expected=437.125e6)
-	settings.mod_index 	= 0.5
-	settings.BT 		= 0.5
-	settings.sps 		= 21
-	settings.T_f_upd_recovery 		= 2.0
-	settings.fft_trigger_on_level 	= 8.0
-	settings.fft_trigger_off_level 	= 3.0
-	settings.start_margin_mpr		= 2.0
-	settings.end_margin_mpr			= 1.0
+	settings.mod_index 				= 0.5
+	settings.BT 					= 0.5
+	settings.sps 					= 21
+	settings.fft_trigger_on_level 	= 7.0
 	settings.lp_cutoff_coeff		= 0.630 * 1
-
-	#settings.T_f_upd_recovery = 12.0
 	return settings
 
 def get_default_skylink_config():

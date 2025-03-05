@@ -10,24 +10,6 @@ settings = ReceiverSettings(sr0=1e6, baudrate=9600, bufferlen=600000, batch_maxl
 settings.sps 					= 17
 settings.baudrate 				= 9600
 settings.lp_cutoff_coeff 		= 0.625
-settings.lp_ntaps				= 121
-settings.JPL_n_decay 			= 28.0
-settings.synch_delay_mpr 		= 22.0
-
-settings.rs_f_cutoff_coeff		= 0.499
-settings.m_halflen				= 25
-
-settings.fftlen					= 1024
-settings.jumplen				= 1024//2
-settings.mod_index				= 0.5
-settings.mask_mode				= 1
-settings.c_stat_update			= 1 / 700
-settings.c_f_update_minimum 	= 0.02
-settings.T_f_upd_recovery 		= 2.5
-settings.fft_trigger_on_level 	= 4.9
-settings.fft_trigger_off_level 	= 3.0
-settings.start_margin_mpr		= 1.0
-settings.end_margin_mpr			= 0.4
 
 
 class UHDReceiver:
@@ -235,23 +217,6 @@ def transmit():
 
 
 
-
-def rx_function(rx_streamer):
-	rx_metadata = uhd.types.RXMetadata()
-	stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
-	stream_cmd.stream_now = True
-	rx_buffer = np.zeros((1,2000000), dtype=np.complex64)
-	rx_streamer.issue_stream_cmd(stream_cmd)
-	# Receive Samples
-	t0 = time.perf_counter()
-	rxret = rx_streamer.recv(rx_buffer, rx_metadata)
-	dt = time.perf_counter() - t0
-	print("Recording done in {} s.".format( round(dt, 2) ))
-	fpath = "./recording-{}.dat".format(np.random.randint(0,999))
-	f = open(fpath, "wb")
-	f.write( pickle.dumps(rx_buffer[0,:]) )
-	f.close()
-	print("Saved samples in ",fpath)
 
 
 def transmit2():

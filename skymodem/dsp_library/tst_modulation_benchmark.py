@@ -1,5 +1,5 @@
 import os
-from _draw_lab_spams import get_samples2
+from tst_receive_recording import get_samples2, fpath0, fpath1
 from kuokka.lib_tools import make_samples
 import time
 import numpy as np
@@ -80,7 +80,7 @@ def test_packet_generation_speed(sr, baudrate, BT):
 
 
 def compare_generated_to_recording():
-	recorded = get_samples2(0)
+	recorded = get_samples2(fpath0)
 	recorded = recorded / np.average( np.abs(recorded))
 
 	settings = get_default_settings(sr=1e6, baudrate=9600, f_tune=437.00e6, f_signal=437.11e6)
@@ -107,7 +107,7 @@ def compare_generated_to_recording():
 
 
 def plot_fmdemod_of_recording():
-	recorded = get_samples2(0)
+	recorded = get_samples2(fpath0)
 	recorded = recorded / np.average( np.abs(recorded))
 	N0 = len(recorded)
 	recorded = recorded[0 : int(N0* 0.12)]
@@ -164,7 +164,7 @@ print("")
 a = np.identity(3)
 k = np.cross(np.ones(3), np.ones(3))
 x = np.cross(np.ones(3), np.ones(3))
-
+"""
 test_packet_generation_speed(sr=1e6, baudrate=1*9600, BT=-1)
 test_packet_generation_speed(sr=1e6, baudrate=2*9600, BT=-1)
 test_packet_generation_speed(sr=1e6, baudrate=4*9600, BT=-1)
@@ -174,7 +174,7 @@ test_packet_generation_speed(sr=1e6, baudrate=2*9600, BT=0.5)
 print("################################################")
 print("")
 print("")
-
+"""
 
 compare_generated_to_recording()
 

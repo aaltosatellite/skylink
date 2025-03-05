@@ -36,7 +36,6 @@ savior_params["mod_index"] 			= 0.7		# param !
 
 
 def tst0():
-	from _draw_lab_spams import get_samples, get_samples2
 	samples = get_samples2(0)
 	sr0 = 1e6
 	nsamples = len(samples)
@@ -53,24 +52,8 @@ def tst0():
 	settings.sps 					= sps
 	settings.baudrate 				= baudrate
 	settings.lp_cutoff_coeff 		= 0.625 #0.625
-	settings.lp_ntaps				= 161
-	settings.JPL_n_decay 			= 28.0
-	settings.synch_delay_mpr 		= 22.0
-
-	settings.rs_f_cutoff_coeff		= 0.499
-	settings.m_halflen				= 25
-
-	settings.fftlen					= 1024
-	settings.jumplen				= 1024//2
 	settings.mod_index				= mod_index
 	settings.mask_mode				= 1
-	settings.c_stat_update			= 1 / 700
-	settings.c_f_update_minimum 	= 0.02
-	settings.T_f_upd_recovery 		= 2.5
-	settings.fft_trigger_on_level 	= 4.9
-	settings.fft_trigger_off_level 	= 3.0
-	settings.start_margin_mpr		= 1.0
-	settings.end_margin_mpr			= 0.4
 
 	rx = Receiver(settings=settings)
 	rx2 = Receiver(settings=settings)
@@ -145,24 +128,8 @@ def tst1(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 	settings.sps 					= sps
 	settings.baudrate 				= baudrate
 	settings.lp_cutoff_coeff 		= 0.625
-	settings.lp_ntaps				= 121
-	settings.JPL_n_decay 			= 28.0
-	settings.synch_delay_mpr 		= 22.0
-
-	settings.rs_f_cutoff_coeff		= 0.499
-	settings.m_halflen				= 25
-
-	settings.fftlen					= 1024
-	settings.jumplen				= 1024//2
 	settings.mod_index				= mod_index
 	settings.mask_mode				= 1
-	settings.c_stat_update			= 1 / 700
-	settings.c_f_update_minimum 	= 0.02
-	settings.T_f_upd_recovery 		= 2.5
-	settings.fft_trigger_on_level 	= 4.9
-	settings.fft_trigger_off_level 	= 3.0
-	settings.start_margin_mpr		= 1.0
-	settings.end_margin_mpr			= 0.4
 
 
 
@@ -328,21 +295,9 @@ def tst2_pl_mode(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 	settings.sps 					= sps
 	settings.baudrate 				= baudrate
 	settings.lp_cutoff_coeff 		= 0.625
-	settings.lp_ntaps				= 121
-	settings.JPL_n_decay 			= 28.0
-	settings.synch_delay_mpr 		= 22.0
-
-	settings.fftlen					= 1024
-	settings.jumplen				= 1024//2
 	settings.mod_index				= mod_index
 	settings.mask_mode				= 1
-	settings.c_stat_update			= 1 / 700
-	settings.c_f_update_minimum 	= 0.02
-	settings.T_f_upd_recovery 		= 2.5
-	settings.fft_trigger_on_level 	= 4.9
-	settings.fft_trigger_off_level 	= 3.0
-	settings.start_margin_mpr		= 1.0
-	settings.end_margin_mpr			= 0.4
+	settings.BT						= BT_prod
 
 
 	rs_mx, rs_cfg = get_default_rs()

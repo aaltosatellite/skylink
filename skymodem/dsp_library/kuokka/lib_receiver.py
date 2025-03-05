@@ -22,7 +22,7 @@ class ReceiverSettings:
 		self.batch_maxlen		= batch_maxlen
 		# resampling ---------------------------------------
 		self.sps 				= 21			# !			# sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate.
-		self.m_halflen 			= 25			# !
+		self.m_halflen 			= 21			# !
 		self.n_banks 			= 64
 		self.rs_f_cutoff_coeff 	= 0.499						# determines lowpass associated with the resampling. In interval (0 : 0.5)
 		# --------------------------------------------------
@@ -32,13 +32,13 @@ class ReceiverSettings:
 		self.mod_index 			= 0.5			# ~
 		self.BT 				= -1			# ~
 		self.c_stat_update 		= 1/700.0		# ~ D-vs-c
-		self.c_f_update_minimum = 0.025			# ~ D-vs-c
-		self.T_f_upd_recovery 	= 2.0			# ~ D-vs-c
-		self.fft_trigger_on_level 	= 4.8		# !!
-		self.fft_trigger_off_level 	= 3.0		# !!
+		self.T_f_decay 			= 0.5			# ~ D-vs-c
+		self.n_delay			= 1024*5
+		self.fft_trigger_on_level 	= 5.5		# !!
+		self.fft_trigger_off_level 	= 2.0		# !!
 		self.mask_mode 			= 1	# !
-		self.start_margin_mpr 	= 1.0			# !
-		self.end_margin_mpr 	= 0.5			# ~
+		self.start_margin_mpr 	= 3.0			# !
+		self.end_margin_mpr 	= 1.5			# ~
 		# --------------------------------------------------
 		# JPL synchronizer ---------------------------------
 		self.JPL_n_decay 		= 28.0			# ! D-vs-c
@@ -84,8 +84,9 @@ class ReceiverSettings:
 		assert type(self.BT) in (float, int)
 		assert (self.BT >= 0.5) or (self.BT == -1)
 		assert 0 < self.c_stat_update <= 1.0
-		assert 0 < self.c_f_update_minimum <= 1.0
-		assert 0 < self.T_f_upd_recovery < 1800
+		assert 0 < self.T_f_decay < 30
+		assert self.fftlen <= self.n_delay < self.fftlen*40
+		assert self.n_delay > (self.start_margin_mpr*self.fftlen)
 		assert -1.0 <= self.fft_trigger_on_level <= 32.0
 		assert -1.0 <= self.fft_trigger_off_level <= 9.0
 		assert self.fft_trigger_off_level <= self.fft_trigger_on_level
@@ -182,8 +183,8 @@ class Receiver:
 		self.resampler_statemx = create_resampler(m_halflen=settings.m_halflen, n_banks=settings.n_banks, r_rate=settings.get_r_rate(), f_cutoff=f_cutoff, allow_aliasing=False)
 		self.FFTstatemx = create_fft_centering_statemx(fftlen=settings.fftlen, jumplen=settings.jumplen, sps=settings.sps, baudrate=settings.baudrate,
 													   search_space_triplet=settings.get_search_space_triplet(), mod_index=settings.mod_index,
-													   BT=settings.BT, c_stat_update=settings.c_stat_update, c_f_update_minimum=settings.c_f_update_minimum,
-													   T_f_upd_recovery=settings.T_f_upd_recovery, fft_trigger_on_level=settings.fft_trigger_on_level,
+													   BT=settings.BT, c_stat_update=settings.c_stat_update, n_delay=settings.n_delay,
+													   T_f_decay=settings.T_f_decay, fft_trigger_on_level=settings.fft_trigger_on_level,
 													   fft_trigger_off_level=settings.fft_trigger_off_level, masklen=settings.get_masklen(), avg0=0.0, var0=1.0,
 													   mask_mode=settings.mask_mode, start_margin_mpr=settings.start_margin_mpr, end_margin_mpr=settings.end_margin_mpr)
 		self.JPLstatemx = create_classic_JPL_statemx(N_eps=settings.sps, n_decay=settings.JPL_n_decay)

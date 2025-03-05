@@ -43,9 +43,6 @@ def get_default_settings(sr, baudrate, f_tune, f_signal):
 	settings.mask_mode				= 1
 	settings.c_stat_update			= 1 / 700
 	settings.c_f_update_minimum 	= 0.02
-	settings.T_f_upd_recovery 		= 2.5
-	settings.fft_trigger_on_level 	= 4.9
-	settings.fft_trigger_off_level 	= 3.0
 	settings.start_margin_mpr		= 1.0
 	settings.end_margin_mpr			= 0.4
 

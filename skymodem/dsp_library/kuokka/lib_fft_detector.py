@@ -75,12 +75,13 @@ def get_frequency_search_space_indexing(fftlen, sr, masklen, f_tune, f_center_mi
 
 
 #@njit(cache=True)
-def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_triplet, mod_index, BT, c_stat_update, c_f_update_minimum, T_f_upd_recovery, fft_trigger_on_level, fft_trigger_off_level, masklen, avg0, var0, mask_mode, start_margin_mpr, end_margin_mpr):
+def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_triplet, mod_index, BT, c_stat_update, n_delay, T_f_decay, fft_trigger_on_level, fft_trigger_off_level, masklen, avg0, var0, mask_mode, start_margin_mpr, end_margin_mpr):
 	assert var0 > 0
 	assert fftlen >= 32
 	assert mask_mode in (0,1)
 	assert (masklen % 2) == 1
-	assert T_f_upd_recovery > 0
+	assert T_f_decay > 0
+	assert int(start_margin_mpr*fftlen) < n_delay
 	f_tune, f_center_min, f_center_max = search_space_triplet
 	search_indexes = get_frequency_search_space_indexing(fftlen=fftlen, sr=sps*baudrate, masklen=masklen, f_tune=f_tune, f_center_min=f_center_min, f_center_max=f_center_max)
 	n_search = len(search_indexes)
@@ -89,15 +90,14 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_tr
 	statemx[0,0]  = fftlen
 	statemx[0,1]  = jumplen
 	statemx[0,2]  = c_stat_update
-	statemx[0,3]  = c_f_update_minimum
-	statemx[0,4]  = jumplen / (sps*baudrate*T_f_upd_recovery)		# f_updt_recovery_increment
-	statemx[0,5]  = fft_trigger_on_level
-	statemx[0,6]  = fft_trigger_off_level
-	statemx[0,7]  = int(masklen)
-	statemx[0,8]  = int(start_margin_mpr * (fftlen+jumplen))
-	statemx[0,9]  = int(end_margin_mpr * (fftlen+jumplen))
-	statemx[0,10] = n_search
-	statemx[0,11] = sps*baudrate
+	statemx[0,3]  = n_delay
+	statemx[0,4]  = fft_trigger_on_level
+	statemx[0,5]  = fft_trigger_off_level
+	statemx[0,6]  = int(masklen)
+	statemx[0,7]  = int(start_margin_mpr * fftlen)
+	statemx[0,8]  = int(end_margin_mpr * fftlen)
+	statemx[0,9] = n_search
+	statemx[0,10] = 0.5**( 1 / (T_f_decay * sps*baudrate / jumplen))  # c_f_decay
 
 	statemx[0,20] = 0 		# idx  (this runs from (fftlen-jumplen) to fftlen-1 and then an fft is called)
 	statemx[0,21] = -1.0	# f_center
@@ -105,10 +105,11 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_tr
 	statemx[0,23] = avg0	# running_avg
 	statemx[0,24] = var0	# running_var
 	statemx[0,25] = 0		# stat_update_counter
-	statemx[0,26] = 0.0		# NEW long running f_center_long
-	statemx[0,27] = 1.0		# NEW long running c_f_update_long
-	statemx[0,28] = 0.0		# bandmax (just for instrumentation purposes)
-	statemx[0,29] = 0		# end_tail_remaining
+	statemx[0,26] = 0		# f_switch
+	statemx[0,27:29] = 0.0	# f_center_arr
+	statemx[0,29] = 0.0		# corrmax (just for instrumentation purposes)
+	statemx[0,30] = 0.0		# corrmaxfmax_sum
+	statemx[0,31] = 0.0		# corrmax_sum
 
 	statemx[1,:]  = np.fft.fftshift( np.fft.fftfreq(fftlen, d=1.0) ) # frequency table
 	statemx[2,:]  = 0.0		# fft
@@ -149,14 +150,14 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 	fftlen 			= int(statemx[0,0])
 	jumplen 		= int(statemx[0,1])
 	c_stat_update 	= statemx[0,2]
-	c_f_update_minimum 			= statemx[0,3]
-	f_updt_recovery_increment 	= statemx[0,4]
-	trigger_on_lvl 	= statemx[0,5]
-	trigger_off_lvl = statemx[0,6]
-	masklen 		= int(statemx[0,7])
-	start_margin	= int(statemx[0,8])
-	end_margin		= int(statemx[0,9])
-	n_search		= int(statemx[0,10])
+	n_delay 		= int(statemx[0,3])
+	trigger_on_lvl 	= statemx[0,4]
+	trigger_off_lvl = statemx[0,5]
+	masklen 		= int(statemx[0,6])
+	start_margin	= int(statemx[0,7])
+	end_margin		= int(statemx[0,8])
+	n_search		= int(statemx[0,9])
+	c_f_decay		= statemx[0,10]
 
 	idx 			= int(statemx[0,20])
 	f_center 		= statemx[0,21]
@@ -164,14 +165,14 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 	running_avg 	= statemx[0,23]
 	running_var 	= statemx[0,24]
 	stat_upd_count 	= statemx[0,25]
-	f_center_long   = statemx[0,26]
-	c_f_update_long = statemx[0,27]
-	bandmax 		= statemx[0,28]
-	end_tail_remaining 		= int(statemx[0,29])
+	f_switch   		= int(statemx[0,26])
+	f_center_arr 	= statemx[0,27:29]
+	corrmax 		= statemx[0,29]
+	corrmaxfmax_sum = statemx[0,30]
+	corrmax_sum 	= statemx[0,31]
 	window 			= statemx[4,:] + 1j*statemx[5,:]
 	search_indexes  = statemx[7,:n_search]
 
-	#end_tail_remaining = 0
 	D_stat_update 	= int(1.0/c_stat_update)
 	center_f_head = center_f_head0
 	for i_in in range(isample0, isample0 + nsamples):
@@ -201,48 +202,42 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 					stat_upd_count += 1
 
 			argmax 		= np.argmax(statemx[3,:])
-			bandmax 	= (statemx[3,argmax] - running_avg) / (running_var**0.5)
+			corrmax 	= (statemx[3,argmax] - running_avg) / (running_var**0.5)
 			tx_on_prev 	= tx_on
-			tx_on 		= (((bandmax > trigger_off_lvl) and tx_on_prev) or (bandmax > trigger_on_lvl)) and (stat_upd_count > D_stat_update)
-			if tx_on:
-				f_center_long = f_center_long + (statemx[1,:][argmax] - f_center_long) * c_f_update_long
-				c_f_update_long = max(c_f_update_minimum,  1/(1 + 1/c_f_update_long))
-				f_center 	= f_center_long
-			if tx_on and tx_on_prev:
-				f_center 	= f_center_long
+			tx_on 		= (((corrmax > trigger_off_lvl) and tx_on_prev) or (corrmax > trigger_on_lvl)) and (stat_upd_count > D_stat_update)
 			if tx_on and (not tx_on_prev):
-				print("\t(Detector triggered)", bandmax)
-				f_center 	= f_center_long
-				rev_index 	= center_f_head
-				while True:
-					if (rev_index == 0) or ((center_f_head-rev_index) >= start_margin) or (center_f_arr[rev_index-1] > -0.5): # 'fftlen+jumplen' is the delay of this algorithm.
-						break
-					rev_index = rev_index -1
-				center_f_arr[rev_index:center_f_head] = f_center
-				#center_f_arr[rev_index:center_f_head] = 0.112
+				print("Trigger!")
+				f_switch 		= (1,0)[f_switch]
+				#corrmaxfmax_sum = 0.0
+				#corrmax_sum 	= 0.0
+				center_f_arr[max(0,center_f_head-start_margin):center_f_head] = f_switch-10
+			if tx_on:						# fft-mask correlator triggered.
+				#f_center_long 		= f_center_long + (statemx[1,:][argmax] - f_center_long) * c_f_update_long
+				#c_f_update_long 	= max(c_f_update_minimum,  1/(1 + 1/c_f_update_long))
+				f_center_arr[f_switch] =  (corrmaxfmax_sum + corrmax*statemx[1,:][argmax]) / (corrmax_sum + corrmax)
+				corrmaxfmax_sum	= (corrmaxfmax_sum + corrmax*statemx[1,:][argmax]) * c_f_decay
+				corrmax_sum		= (corrmax_sum + corrmax) * c_f_decay
+			if (not tx_on) and tx_on_prev:
+				center_f_arr[center_f_head:center_f_head+end_margin] = f_switch-10
 			if not tx_on:
-				c_f_update_long = min(1.0, c_f_update_long + f_updt_recovery_increment)   # = jumplen / (T_recovery * sr)
-				if tx_on_prev:
-					end_tail_remaining = end_margin
-				#if end_tail_remaining <= 0:
-				#	f_center = -1
-				#end_tail_remaining -= 1
+				corrmaxfmax_sum = corrmaxfmax_sum * 0.25
+				corrmax_sum		= corrmax_sum * 0.25
 
 			if jumplen < fftlen:
 				window = np.roll(window, -jumplen)
 
-		if (not tx_on):
-			end_tail_remaining -= 1
-			if end_tail_remaining <= 0:
-				f_center = -1
+		if tx_on:
+			center_f_arr[center_f_head] = f_switch-10
 
-		if center_f_head >= 0:
-			center_f_arr[center_f_head] = f_center
-			#if f_center > -0.5:
-			#	center_f_arr[center_f_head] = 0.112
-			instr_arr[center_f_head,0] = running_avg
-			instr_arr[center_f_head,1] = running_var
-			instr_arr[center_f_head,2] = bandmax
+		if (center_f_head-n_delay) >= 0:
+			if center_f_arr[center_f_head-n_delay] >= -0.5:
+				center_f_arr[center_f_head-n_delay] = -1.0
+			elif center_f_arr[center_f_head-n_delay] < -2.0:
+				f_side = int(center_f_arr[center_f_head-n_delay] + 10)
+				center_f_arr[center_f_head-n_delay] = f_center_arr[f_side]
+		instr_arr[center_f_head,0] = running_avg
+		instr_arr[center_f_head,1] = running_var
+		instr_arr[center_f_head,2] = corrmax
 		center_f_head += 1
 	assert center_f_head == center_f_head0 + nsamples
 	statemx[0,20] = idx
@@ -251,13 +246,14 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 	statemx[0,23] = running_avg
 	statemx[0,24] = running_var
 	statemx[0,25] = stat_upd_count
-	statemx[0,26] = f_center_long
-	statemx[0,27] = c_f_update_long
-	statemx[0,28] = bandmax
-	statemx[0,29] = end_tail_remaining
+	statemx[0,26] = f_switch
+	statemx[0,27:29] = f_center_arr
+	statemx[0,29] = corrmax
+	statemx[0,30] = corrmaxfmax_sum
+	statemx[0,31] = corrmax_sum
 	statemx[4,:] = window.real
 	statemx[5,:] = window.imag
-	return center_f_head, max(0, center_f_head - (start_margin + 1))   # demodulation head. (the demodulation stage should be given samples up to this head)
+	return center_f_head, max(0, center_f_head - (n_delay + 1))   # demodulation head. (the demodulation stage should be given samples up to this head)
 
 
 

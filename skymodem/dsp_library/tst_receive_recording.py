@@ -21,6 +21,7 @@ fpath8 = "/home/elmore/datasetit/radiotallenteet/uhf-447_437.0MHz-1000ksps.pickl
 
 fpath9 = "/home/elmore/datasetit/radiotallenteet/uhf-195_437.0MHz-1000ksps.pickled"
 
+fpath10 = "/home/elmore/datasetit/radiotallenteet/uhf-S_437.0MHz-1000ksps.pickled"  #Kasper-kohinaa & kaksi beaconia.
 
 fpaths = [fpath0,fpath1, fpath2,fpath3,  fpath4,fpath5,fpath6]
 def get_samples2(fpath):
@@ -39,7 +40,7 @@ def draw_demod(samples):
 	#samples = get_samples2(idx)
 	#samples = samples[250000:-500000]
 	sr0 = 1e6
-	fshift = -0.12250e6 -500 #-86.5e3
+	fshift = -0.12250e6 -1000
 	baudrate = 9600 * 1
 	samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * fshift/sr0)
 	#samples = samples[100:len(samples)//3]
@@ -92,25 +93,10 @@ def tst0():
 	settings.sps 					= sps
 	settings.baudrate 				= baudrate
 	settings.lp_cutoff_coeff 		= 0.625 #0.625
-	settings.lp_ntaps				= 161
-	settings.JPL_n_decay 			= 28.0
-	settings.synch_delay_mpr 		= 22.0
 
-	settings.rs_f_cutoff_coeff		= 0.499
-	settings.m_halflen				= 25
-
-	settings.fftlen					= 1024
-	settings.jumplen				= 1024//2
 	settings.mod_index				= mod_index
 	settings.BT						= BT
 	settings.mask_mode				= 1
-	settings.c_stat_update			= 1 / 700
-	settings.c_f_update_minimum 	= 0.02
-	settings.T_f_upd_recovery 		= 4.0
-	settings.fft_trigger_on_level 	= 6.5
-	settings.fft_trigger_off_level 	= 2.0
-	settings.start_margin_mpr		= 2.0
-	settings.end_margin_mpr			= 1.4
 
 	rx = Receiver(settings=settings)
 	rx2 = Receiver(settings=settings)
@@ -211,9 +197,9 @@ def tst0():
 
 
 
-
-tst0()
-draw_demod(get_samples2(fpath8))
+if __name__ == '__main__':
+	tst0()
+	draw_demod(get_samples2(fpath9))
 
 
 
