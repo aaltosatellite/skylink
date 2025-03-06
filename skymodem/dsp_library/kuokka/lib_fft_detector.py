@@ -42,7 +42,7 @@ def construct_fft_mask(sps, mod_index, BT, fftlen, masklen, nn):
 	#mask = mask - np.min(mask)
 	mask = mask / np.max(mask)
 	T_construct = (time.perf_counter() - t0)
-	print("Constructed fft mask in {} s".format(T_construct))
+	#print("[Constructed fft mask in {} ms]".format(round(1e3*T_construct,1)))
 	_fft_mask_dict[ (sps, mod_index, BT, fftlen, masklen, nn) ] = mask
 	return mask
 
@@ -194,26 +194,25 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 				assert i1 <= fftlen
 				statemx[3,i_fft] = np.sum(statemx[2,i0:i1] * statemx[6,0:masklen])
 
-			if not tx_on:
-				for _ in range(5 + 5*(stat_upd_count < D_stat_update)):
-					i_search = np.random.randint(0, n_search)
-					i_fft = int(search_indexes[i_search])
-					running_avg, running_var = avg_var_upd(avg0=running_avg, var0=running_var, val=statemx[3, i_fft], c_update=c_stat_update, update_count=stat_upd_count)
-					stat_upd_count += 1
-
 			argmax 		= np.argmax(statemx[3,:])
 			corrmax 	= (statemx[3,argmax] - running_avg) / (running_var**0.5)
 			tx_on_prev 	= tx_on
 			tx_on 		= (((corrmax > trigger_off_lvl) and tx_on_prev) or (corrmax > trigger_on_lvl)) and (stat_upd_count > D_stat_update)
+
+			if not tx_on:
+				for _ in range(2 + 3*(stat_upd_count < D_stat_update)):
+					#i_fft = int(search_indexes[np.random.randint(0, n_search)])
+					i_fft = argmax
+					running_avg, running_var = avg_var_upd(avg0=running_avg, var0=running_var, val=statemx[3, i_fft], c_update=c_stat_update, update_count=stat_upd_count)
+					stat_upd_count += 1
+
 			if tx_on and (not tx_on_prev):
-				print("Trigger!")
-				f_switch 		= (1,0)[f_switch]
-				#corrmaxfmax_sum = 0.0
-				#corrmax_sum 	= 0.0
+				print("    Trigger!")
+				f_switch 			= (1,0)[f_switch]
+				#corrmaxfmax_sum 	= 0.0
+				#corrmax_sum 		= 0.0
 				center_f_arr[max(0,center_f_head-start_margin):center_f_head] = f_switch-10
 			if tx_on:						# fft-mask correlator triggered.
-				#f_center_long 		= f_center_long + (statemx[1,:][argmax] - f_center_long) * c_f_update_long
-				#c_f_update_long 	= max(c_f_update_minimum,  1/(1 + 1/c_f_update_long))
 				f_center_arr[f_switch] =  (corrmaxfmax_sum + corrmax*statemx[1,:][argmax]) / (corrmax_sum + corrmax)
 				corrmaxfmax_sum	= (corrmaxfmax_sum + corrmax*statemx[1,:][argmax]) * c_f_decay
 				corrmax_sum		= (corrmax_sum + corrmax) * c_f_decay

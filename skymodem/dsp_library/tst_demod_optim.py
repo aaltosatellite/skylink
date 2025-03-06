@@ -61,6 +61,7 @@ def demodulation_experiment(noisepower, rx_params, baudrate, nbits, f_offset, do
 	dmd_arr 		= np.zeros(nsamples, dtype=np.float64)
 	synch_arr 		= np.zeros((nsamples,3), dtype=np.int64)
 	bitarr 			= np.zeros(3*int(nsamples/sps))
+	bitfarr 		= np.zeros(3*int(nsamples/sps), dtype=np.float64)
 	t_arraygen = time.perf_counter() - t00
 
 	t00 = time.perf_counter()
@@ -70,7 +71,7 @@ def demodulation_experiment(noisepower, rx_params, baudrate, nbits, f_offset, do
 
 	t00 = time.perf_counter()
 	dmd_head, bit_head = demodulation_sequence(rs_arr=samples, centerf_arr=center_f_array, i_rs0=0, nsamples=nsamples, dmd_arr=dmd_arr,
-						  synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx, demodmx=DSD_statemx, bitarr=bitarr, bit_head0=0)
+						  synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx, demodmx=DSD_statemx, bitarr=bitarr, bitfarr=bitfarr, bit_head0=0)
 	t_call = time.perf_counter() - t00
 
 	speed = nsamples / t_call

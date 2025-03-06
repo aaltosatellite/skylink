@@ -1,18 +1,17 @@
 import time
-
 import uhd
 import numpy as np
 import threading
-from .lib_receiver import ReceiverSettings, Receiver
-from .lib_tools import make_samples, ints_to_bits, DEFAULT_SYNCHWORD
-from .lib_framing import frame_packet
+from .lib_receiver import ReceiverSettings, Receiver, precompile_receiver
+from .lib_tools import make_samples, ints_to_bits, DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise
+from .lib_framing import frame_packet, RS_MAX_PL_LEN
 from .lib_reedsolomon import get_default_rs
 from queue import Queue, Empty
 import SoapySDR
 from SoapySDR import SOAPY_SDR_ABI_VERSION, SOAPY_SDR_RX, SOAPY_SDR_TX, SOAPY_SDR_CF32
 
-DEBUG_PRINT = True
 
+DEBUG_PRINT = True
 def DBGPRINT(*args, **kwargs):
 	if DEBUG_PRINT:
 		print(*args, **kwargs)
@@ -22,7 +21,7 @@ def get_default_settings(sr, baudrate, f_tune, f_signal):
 	#baudrate			= 9600			# tx param
 	sps  				= 21			# todo measure final A against a spectrum of sps's....
 	mod_index			= 0.5			# tx param
-	batch_maxlen 		= 6000
+	batch_maxlen 		= 1024*16
 	#f_tune				= 437.1e6
 	#f_signal			= 437.00e6 + 125e3
 
@@ -53,6 +52,7 @@ def get_default_settings(sr, baudrate, f_tune, f_signal):
 
 class RadioLoop:
 	def __init__(self, rx_settings:ReceiverSettings):
+		precompile_receiver(rx_settings)
 		self.preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
 		rs_mx, rs_cfg = get_default_rs()
 		self.rs_mx = rs_mx
@@ -86,7 +86,7 @@ class RadioLoop:
 	def compose_samples(self, payload):
 		pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
 		#pl_chars = np.random.randint(0,255, 122)
-		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
+		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (self.preamble_bits, bits) )
 		sps = self.rx_settings.sr0 / self.rx_settings.baudrate
 		f_center = self.rx.center_frequency_estimate()
@@ -232,8 +232,8 @@ class RadioLoop:
 				rx_samples = self._internal_sample_que.get(timeout=0.25)
 				with self.receiver_lock:
 					rx_pls = self.rx.push_samples(batch=rx_samples, give_bits=False)
-				for rx_pl in rx_pls:
-					DBGPRINT("+[RadioLoop][radio received a payload: {}...]".format( rx_pl[0:16] ))
+				for rx_pl, rx_pl_f in rx_pls:
+					DBGPRINT("+[RadioLoop][radio decoded a payload at {}: {}...]".format(round(rx_pl_f, 4), rx_pl[0:16] ))
 					if not self.que_radio_to_skylink.full():
 						self.que_radio_to_skylink.put_nowait(rx_pl)
 					else:

@@ -245,13 +245,24 @@ def tst_fft_center_detect_1(inputmode):
 	statemx2 = statemx0.copy()
 	while feed_head < nsamples:
 		nbatch = np.random.randint(0, fftlen*2+2)
+		if nbatch == 0:
+			print("NBATCH=0 at",feed_head)
 		#nbatch = fftlen +3
 		nbatch = min(nbatch, nsamples - feed_head)
 		fft_detect_and_freq_determ(sample_arr=samples, isample0=feed_head, nsamples=nbatch, center_f_arr=center_f_arr_fft1, center_f_head0=feed_head, statemx=statemx2, instr_arr=instr_arr)
 		feed_head += nbatch
 
-	x = np.sum(np.abs((np.isclose(center_f_arr_fft0, center_f_arr_fft1) * 1.0)-1.0))
-	print("outputs differ in {} points".format(x))
+	diffs = np.abs((np.isclose(center_f_arr_fft0, center_f_arr_fft1) * 1.0)-1.0)
+	differing_indexes = np.array([i for i in range(len(diffs)) if diffs[i]])
+
+	print("outputs differ in {} points".format(sum(diffs)))
+	print("such as:      ", differing_indexes[0:10])
+	print("which are at: ", differing_indexes[0:10]/len(diffs))
+
+	plt.plot(center_f_arr_fft0 - center_f_arr_fft1)
+	plt.grid()
+	plt.show()
+
 	assert np.allclose(center_f_arr_fft0, center_f_arr_fft1)
 
 	print("Outputs of batched run and one-go run match.")

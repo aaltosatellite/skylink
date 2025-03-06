@@ -1,12 +1,11 @@
 import time
-
 import numpy as np
 #from matplotlib import pyplot as plt
 from .lib_demodulation import demodulation_sequence, create_DSD_statemx, DSD_buffer_roll
 from .lib_symsynching import create_classic_JPL_statemx
 from .lib_fft_detector import fft_detect_and_freq_determ, create_fft_centering_statemx, get_center_frequency_estimate
-from .lib_framing import create_deframer, deframe, RS_MAX_PL_LEN, RS_MAX_ENCODED_LEN
-from .lib_tools import DEFAULT_SYNCHWORD
+from .lib_framing import create_deframer, deframe, RS_MAX_ENCODED_LEN, frame_packet, RS_MAX_PL_LEN
+from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples
 from .lib_reedsolomon import get_default_rs
 from .lib_resampler import resampler_execute_stream, create_resampler
 
@@ -123,7 +122,7 @@ class ReceiverSettings:
 		df_doppler = self.f_expected * (((3e8+7500)/3e8) - 1)  # approximate maximum doppler shift for LEO orbital speed
 		df_search_sideband = df_doppler * 1.9
 		triplet = self.f_tune, self.f_expected - df_search_sideband, self.f_expected + df_search_sideband
-		print("+[search space: {} MHz  -  {} MHz]".format( round(triplet[1]*1e-6, 3), round(triplet[2]*1e-6, 3) ))
+		#print("+[search space: {} MHz  -  {} MHz]".format( round(triplet[1]*1e-6, 3), round(triplet[2]*1e-6, 3) ))
 		return triplet
 
 
@@ -148,6 +147,7 @@ class Receiver:
 		self.dmd_array 			= np.zeros(self.bufferlen, dtype=np.float64)
 		self.synch_array 		= np.zeros((self.bufferlen, 3), dtype=np.int64)
 		self.bit_array 			= np.zeros(self.bufferlen // 10, dtype=np.int64)
+		self.bit_f_array 		= np.zeros(self.bufferlen // 10, dtype=np.float64)
 		self.fft_instr_array 	= np.zeros((self.bufferlen, 3), dtype=np.float64)
 		self.bufferhalf			= int(self.bufferlen / 2)
 		self.buffer_roll_limit 	= int(self.bufferlen*3/4)
@@ -172,7 +172,6 @@ class Receiver:
 		self.switch_baudrate(baudrate=9600, sps=_sps)
 		self.switch_baudrate(baudrate=9600*2, sps=_sps)
 		self.switch_baudrate(baudrate=9600*2*2, sps=_sps)
-		#self.switch_baudrate(baudrate=4800, sps=_sps)
 		self.switch_baudrate(baudrate=_br, sps=_sps)
 
 
@@ -214,11 +213,11 @@ class Receiver:
 		return self.settings.f_expected
 
 
-	def _split_payloads(self, payloads, delimits):
+	def _split_payloads(self, payloads, delimits, frequencies):
 		pl_list = list()
-		for (i0,i1) in delimits:
-			pl_list.append( bytes(payloads[i0:i1]) )
-			assert len(pl_list[-1]) == (i1-i0)
+		for i_pl, (i0,i1) in enumerate(delimits):
+			pl_list.append( (bytes(payloads[i0:i1]), frequencies[i_pl]) )
+			assert len(pl_list[-1][0]) == (i1-i0)
 		return pl_list
 
 
@@ -239,18 +238,20 @@ class Receiver:
 		t0 = time.perf_counter()
 		dmdsynch_head_new, bit_head_new = demodulation_sequence(rs_arr=self.rs_array, centerf_arr=self.center_f_array, i_rs0=self.demodulation_head,
 																nsamples=demodulation_head_new - self.demodulation_head, dmd_arr=self.dmd_array, synch_arr=self.synch_array,
-																dmdsynch_head0=self.dmdsynch_head, JPLstatemx=self.JPLstatemx, demodmx=self.DPDstatemx, bitarr=self.bit_array, bit_head0=0)
+																dmdsynch_head0=self.dmdsynch_head, JPLstatemx=self.JPLstatemx, demodmx=self.DPDstatemx,
+																bitarr=self.bit_array, bitfarr=self.bit_f_array, bit_head0=0)
 		self.dt_array[2] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()
 		if bit_head_new > 0:
 			bits = self.bit_array[:bit_head_new]
+			bit_freqs = self.bit_f_array[:bit_head_new]
 			#print("got bits", bits[0:4])
 			if not give_bits:
 				bits = np.clip(bits, 0, 1)
-				payloads, payload_delimits = deframe(bits=bits, deframer_mx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
+				payloads, payload_delimits, payload_frequencies = deframe(bits=bits, bit_frequencies=bit_freqs, deframer_mx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
 				if len(payload_delimits) > 0:
-					ret = self._split_payloads(payloads=payloads, delimits=payload_delimits)
+					ret = self._split_payloads(payloads=payloads, delimits=payload_delimits, frequencies=payload_frequencies)
 		self.dt_array[3] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()
@@ -296,6 +297,63 @@ class Receiver:
 
 
 
+
+# PRECOMPILE RECEIVER ====================================================================================================
+def get_a_precompiling_sampleset(rx_settings:ReceiverSettings, do_print=False):
+	sr0 = rx_settings.sr0
+	baudrate = rx_settings.baudrate
+	sps = rx_settings.sps
+	BT = rx_settings.BT
+
+	rel_offset_raw = 0.1 * (sps*baudrate/sr0)
+	rs_mx, rs_cfg = get_default_rs()
+	pl = np.random.randint(0,255, RS_MAX_PL_LEN-2)
+	bitstring = frame_packet(pl=pl, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
+	transmission = make_samples(sps_f=sr0/baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=rx_settings.mod_index, shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
+
+	n_fft_calibration = int(12 * rx_settings.jumplen * (1/rx_settings.c_stat_update) / 3)
+	nsamples = int(n_fft_calibration + 1.0*sr0 + len(transmission) + 1.0*sr0)
+	i0 = int(n_fft_calibration + 1.0*sr0)
+	if do_print:
+		print("\tEquivalent times per sample segment:")
+		print("\t\t{} s for fft-calibration".format( round( n_fft_calibration/sr0 , 3 ) ))
+		print("\t\t{} s for transmission".format( round( len(transmission)/sr0, 3)))
+		print("\t\t{} s for margins".format( round(2.0, 3) ))
+	samples = radionoise(n=nsamples, sr=sr0, W_per_Hz=0.01/baudrate)
+	samples[i0:i0+len(transmission)] += transmission
+	return samples
+
+def precompile_receiver(rx_settings:ReceiverSettings, do_print=False):
+	if do_print:
+		print("[Precompiling]")
+	t0 = time.perf_counter()
+	if do_print:
+		print("\t[Generating sampleset]")
+	samples = get_a_precompiling_sampleset(rx_settings, do_print)
+	samples = np.array(samples, dtype=np.complex128)
+	t1 = time.perf_counter()
+	nsamples = len(samples)
+	rx1 = Receiver(settings=rx_settings)
+	rx2 = Receiver(settings=rx_settings)
+	c = 0
+	ret_pls1 = list()
+	ret_pls2 = list()
+	if do_print:
+		print("\t[Processing]")
+	while c < nsamples:
+		c2 = min(c+rx_settings.batch_maxlen//2, nsamples)
+		batch = samples[c:c2]
+		ret1 = rx1.push_samples(batch=batch, give_bits=False)
+		ret2 = rx2.push_samples(batch=np.complex64(batch), give_bits=False)
+		ret_pls1.extend(ret1)
+		ret_pls2.extend(ret2)
+		c = c2
+	t2 = time.perf_counter()
+	assert len(ret_pls1) == 1, len(ret_pls1)
+	assert len(ret_pls2) == 1, len(ret_pls2)
+	if do_print:
+		print("\t[Precompiled in {} s.  ({} s for samples)]".format( round(t2-t0, 3), round(t1-t0, 3)  ))
+# PRECOMPILE RECEIVER ====================================================================================================
 
 
 

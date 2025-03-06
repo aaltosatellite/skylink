@@ -29,7 +29,7 @@ conf1.vc[0].require_authentication = c_skylink.auth_flag_auth_tx | c_skylink.aut
 conf1.vc[1].require_authentication = c_skylink.auth_flag_auth_tx | c_skylink.auth_flag_use_crc32
 conf1.identity = b"Peer-01"
 
-link1 = SkyLink(conf_override=conf1)
+link1 = SkyLink(configuration=conf1)
 
 rcv_pl_list = list()
 

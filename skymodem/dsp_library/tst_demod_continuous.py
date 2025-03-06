@@ -57,6 +57,8 @@ def tst_demodulation_continuity():
 	synch_arr2 		= np.zeros((nsamples,3), dtype=np.int64)
 	bitarr1 		= np.zeros(3*int(nsamples/sps))
 	bitarr2 		= np.zeros(3*int(nsamples/sps))
+	bitfarr1 		= np.zeros(3*int(nsamples/sps), dtype=np.float64)
+	bitfarr2 		= np.zeros(3*int(nsamples/sps), dtype=np.float64)
 
 	JPLstatemx1 = create_classic_JPL_statemx(N_eps=sps, n_decay=JPLdecay)
 	JPLstatemx2 = create_classic_JPL_statemx(N_eps=sps, n_decay=JPLdecay)
@@ -64,7 +66,7 @@ def tst_demodulation_continuity():
 	DSD_statemx2 = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff=lp_cutoff, synch_delay_mpr_f=synch_delay_mpr, sps_f=sps, f_center=f_offset)
 
 	dmd_head1, bit_head1 = demodulation_sequence(rs_arr=samples, centerf_arr=center_f_array, i_rs0=0, nsamples=nsamples, dmd_arr=dmd_arr1,
-						  synch_arr=synch_arr1, dmdsynch_head0=0, JPLstatemx=JPLstatemx1, demodmx=DSD_statemx1, bitarr=bitarr1, bit_head0=0)
+						  synch_arr=synch_arr1, dmdsynch_head0=0, JPLstatemx=JPLstatemx1, demodmx=DSD_statemx1, bitarr=bitarr1, bitfarr=bitfarr1, bit_head0=0)
 	assert dmd_head1 == signal_total, (dmd_head1, signal_total)
 
 	head2 = 0
@@ -75,7 +77,7 @@ def tst_demodulation_continuity():
 		n_process = np.random.randint(0,  2000)
 		n_process = min(n_process, nsamples - head2)
 		dmd_head2, bit_head2 = demodulation_sequence(rs_arr=samples, centerf_arr=center_f_array, i_rs0=head2, nsamples=n_process, dmd_arr=dmd_arr2,
-						  synch_arr=synch_arr2, dmdsynch_head0=dmd_head2, JPLstatemx=JPLstatemx2, demodmx=DSD_statemx2, bitarr=bitarr2, bit_head0=bit_head2)
+						  synch_arr=synch_arr2, dmdsynch_head0=dmd_head2, JPLstatemx=JPLstatemx2, demodmx=DSD_statemx2, bitarr=bitarr2, bitfarr=bitfarr2, bit_head0=bit_head2)
 		head2 += n_process
 		nchunks += 1
 	assert dmd_head2 == signal_total

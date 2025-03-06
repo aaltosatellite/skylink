@@ -1,71 +1,11 @@
 import numpy as np
-from kuokka.lib_receiver import ReceiverSettings, Receiver
+from kuokka.lib_receiver import ReceiverSettings, Receiver, precompile_receiver
 from mtools.tools_dsp import create_resampler, resampler_execute
 from mtools.tools_dsp import waterfall_mx
 from matplotlib import pyplot as plt
 import time, pickle
 from scipy.signal import firwin
-
-fpath0 = "/home/elmore/datasetit/radiotallenteet/uhf-nayte-76.dat"
-fpath1 = "/home/elmore/datasetit/radiotallenteet/uhf-nayte-96.dat"
-
-fpath2 = "/home/elmore/datasetit/radiotallenteet/uhf-nayte-472.dat"
-fpath3 = "/home/elmore/datasetit/radiotallenteet/uhf-nayte-237.dat"
-
-fpath4 = "/home/elmore/datasetit/radiotallenteet/uhf-817_437.0MHz-1000ksps.pickled"
-fpath5 = "/home/elmore/datasetit/radiotallenteet/uhf-969_437.0MHz-1000ksps.pickled"
-fpath6 = "/home/elmore/datasetit/radiotallenteet/uhf-965_437.0MHz-1000ksps.pickled"
-fpath7 = "/home/elmore/datasetit/radiotallenteet/uhf-298_437.0MHz-1000ksps.pickled"
-
-fpath8 = "/home/elmore/datasetit/radiotallenteet/uhf-447_437.0MHz-1000ksps.pickled"
-
-fpath9 = "/home/elmore/datasetit/radiotallenteet/uhf-195_437.0MHz-1000ksps.pickled"
-
-fpath10 = "/home/elmore/datasetit/radiotallenteet/uhf-S_437.0MHz-1000ksps.pickled"  #Kasper-kohinaa & kaksi beaconia.
-
-fpaths = [fpath0,fpath1, fpath2,fpath3,  fpath4,fpath5,fpath6]
-def get_samples2(fpath):
-	f = open(fpath, "rb")
-	rd = f.read()
-	f.close()
-	samples = pickle.loads(rd)
-	assert type(samples) == np.ndarray
-	return samples
-
-
-
-
-
-def draw_demod(samples):
-	#samples = get_samples2(idx)
-	#samples = samples[250000:-500000]
-	sr0 = 1e6
-	fshift = -0.12250e6 -1000
-	baudrate = 9600 * 1
-	samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * fshift/sr0)
-	#samples = samples[100:len(samples)//3]
-	waterfall_mx(samples=samples, fftlen=2048, fft_jump=1024, srate=sr0, plot_and_show=True, y_is_time=True)
-
-	lp_cutoff = 0.630 * 2.5 * baudrate / sr0
-	lpfilter = firwin(numtaps=201, cutoff=lp_cutoff, pass_zero=True)
-
-	samples = np.convolve(samples, lpfilter)
-
-	zz = samples * np.conj( np.roll(samples, 1) )
-	dmd = np.arctan2(zz.imag, zz.real)
-
-	xx0 = np.arange(len(dmd))
-	xx_t = np.arange(len(dmd)) * (1/sr0)
-	xx_sym = np.arange(len(dmd)) * (1/sr0) / (1/baudrate)
-
-	fig = plt.figure(figsize=(13,13))
-	ax1 = fig.add_subplot(111)
-
-	ax1.plot(xx_sym, dmd )
-
-	ax1.grid()
-	fig.set_layout_engine("tight")
-	plt.show()
+from sdr_recorder import get_samples, fpaths
 
 
 
@@ -73,13 +13,12 @@ def draw_demod(samples):
 
 
 
-
-
-def tst0():
-	samples = get_samples2(fpath7)
+def receive_a_recording():
+	fpath, fshift0 = fpaths[7]
+	samples = get_samples(fpath)
 	sr0 = 1e6
 	nsamples = len(samples)
-	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * -100e3)
+
 	#samples = np.concatenate( (samples[0:300000], samples) )
 	baudrate			= 9600			# tx param
 	sps  				= 21			# todo measure final A against a spectrum of sps's....
@@ -89,15 +28,16 @@ def tst0():
 	f_tune				= 437.1e6
 	f_signal			= 437.00e6 + 125e3
 
+	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * (fshift0+(f_signal-f_tune)))
+	expected_relative_f = (f_signal-f_tune) / (baudrate*sps)
+
 	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=3400000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_expected=f_signal)
 	settings.sps 					= sps
-	settings.baudrate 				= baudrate
 	settings.lp_cutoff_coeff 		= 0.625 #0.625
-
 	settings.mod_index				= mod_index
 	settings.BT						= BT
-	settings.mask_mode				= 1
 
+	precompile_receiver(rx_settings=settings, do_print=True)
 	rx = Receiver(settings=settings)
 	rx2 = Receiver(settings=settings)
 
@@ -171,9 +111,10 @@ def tst0():
 
 	print("Got {} bits".format(len(bits)))
 	print("Got {} payloads".format(len(pl_list)))
+	print("Relative freq should be ~{}".format( round(expected_relative_f, 4) ))
 
-	for pl in pl_list:
-		print(pl)
+	for pl_bytes, pl_f in pl_list:
+		print(round(pl_f, 4), ":", pl_bytes)
 	xx = np.arange(len(rx.center_f_array))
 	fig = plt.figure(figsize=(14,14))
 	ax1 = fig.add_subplot(211)
@@ -198,8 +139,7 @@ def tst0():
 
 
 if __name__ == '__main__':
-	tst0()
-	draw_demod(get_samples2(fpath9))
+	receive_a_recording()
 
 
 

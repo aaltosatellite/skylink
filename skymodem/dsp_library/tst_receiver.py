@@ -8,6 +8,7 @@ from mtools.tools_dsp import waterfall_mx
 from kuokka.lib_tools import make_samples, radionoise
 import time
 from matplotlib import pyplot as plt
+from sdr_recorder import get_samples, fpaths
 
 """
 savior_params["sps"] 				= 21		# param ~
@@ -36,7 +37,7 @@ savior_params["mod_index"] 			= 0.7		# param !
 
 
 def tst0():
-	samples = get_samples2(0)
+	samples = get_samples(0)
 	sr0 = 1e6
 	nsamples = len(samples)
 	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * -100e3)
@@ -344,7 +345,7 @@ def tst2_pl_mode(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 		ret = rx.push_samples(batch=batch, give_bits=False)
 		dt_total += (time.perf_counter() - t0)
 		if not (ret is None):
-			recvd_payloads.extend(ret)
+			recvd_payloads.extend([x[0] for x in ret])  #take just the bytes, discard frequencies.
 			assert type(ret[-1]) == bytes
 	speed = nsamples / dt_total
 	overmatch = speed / sr0

@@ -5,7 +5,7 @@ from numba import njit, prange
 #DEFAULT_SYNCHWORD = 0x930B51DE
 DEFAULT_SYNCHWORD = 0x1ACFFC1D
 DEFAULT_SYNCHWORD_BITS = np.array( [int(x) for x in ("0"*32+bin(DEFAULT_SYNCHWORD)[2:])[-32:]], dtype=np.int32)
-
+DEFAULT_SYNCHWORD_LEN = 32
 # = CCSDS TM RANDOMIZER ======================================================================================================================================================================
 # = CCSDS TM RANDOMIZER ======================================================================================================================================================================
 ccsds_tm_whitening_bytes = np.array([

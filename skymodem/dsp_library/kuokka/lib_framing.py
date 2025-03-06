@@ -249,12 +249,14 @@ def create_deframer(use_scrambler, use_rs, data_maxlen, synchword, synchword_len
 	mx[1,2] = 0		# bit index
 	mx[1,3] = 0		# char index
 	mx[1,4] = 0		# encoded data length
+	mx[1,5] = 0		# frequency sum
+	mx[1,6] = 0		# frequency sum count
 	mx[2,:] = 0		# chars
 	return mx
 
 
 @njit(cache=True)
-def deframe(bits, deframer_mx, rs_mx, rs_cfg):
+def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequencies" can be just an array of zeros. Has to be as long as "bits"
 	use_scrambler 		= deframer_mx[0,0]
 	use_rs 				= deframer_mx[0,1]
 	synchword 			= deframer_mx[0,2]
@@ -268,36 +270,47 @@ def deframe(bits, deframer_mx, rs_mx, rs_cfg):
 	bit_idx 			= deframer_mx[1,2]
 	char_idx 			= deframer_mx[1,3]
 	data_len 			= deframer_mx[1,4]
+	frequency_sum 		= deframer_mx[1,5]
+	frequency_sum_count = deframer_mx[1,6]
 	chars 				= deframer_mx[2]
 
 	payloads = np.zeros( 0, dtype=np.uint8)
 	payload_delimits = np.zeros( (0, 2), dtype=np.int64)
+	payload_frequencies = np.zeros( 0, dtype=np.float64)
 	pl_head = 0
 
+	ib = -1
 	for bit in bits:
+		ib += 1
 		if state == 0:
 			found, latest_bits, bit_idx, n_errs = deframe_synchword(bit=bit, latest_bits=latest_bits, synchword=synchword, synch_length_mask=synch_length_mask, synchword_len=synchword_len, synch_threshold=synch_threshold)
 			if found:
-				print("\t(Deframer 0 > 1)", n_errs)
+				#print("\t(Deframer 0 > 1)", n_errs)
 				state = 1
+				frequency_sum = int(1e9 * bit_frequencies[ib])
+				frequency_sum_count = 1
 			continue
 		elif state == 1:
 			ok, latest_bits, bit_idx, data_len = deframe_header(bit=bit, latest_bits=latest_bits, bit_idx=bit_idx, use_rs=use_rs, data_maxlen=data_maxlen)
+			frequency_sum += int(1e9 * bit_frequencies[ib])
+			frequency_sum_count += 1
 			if ok < 0:
-				print("\t(Deframer << 0! (Header deframe failed.))", ok)
+				#print("\t(Deframer << 0! (Header deframe failed.))", ok)
 				state = 0
 			if ok == 1:
-				print("\t(Deframer 1 > 2)")
+				#print("\t(Deframer 1 > 2)")
 				state = 2
 				char_idx = 0
 			continue
 		elif state == 2:
 			ok, latest_bits, bit_idx, char_idx, pl_leng = deframe_payload(bit=bit, latest_bits=latest_bits, bit_idx=bit_idx, chars=chars, char_idx=char_idx, use_scrambler=use_scrambler, data_len=data_len, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg)
+			frequency_sum += int(1e9 * bit_frequencies[ib])
+			frequency_sum_count += 1
 			if ok < 0:
-				print("\t(Deframer << 0! (Decode failed.))")
+				#print("\t(Deframer << 0! (Decode failed.))")
 				state = 0
 			if ok == 1:
-				print("\t(Deframer finished successfully!)")
+				#print("\t(Deframer finished successfully!)")
 				state = 0
 				payload_delimits = np.resize( payload_delimits, (len(payload_delimits)+1, 2) )
 				payload_delimits[-1][0] = pl_head
@@ -305,14 +318,19 @@ def deframe(bits, deframer_mx, rs_mx, rs_cfg):
 				payloads = np.resize(payloads, len(payloads) + pl_leng)
 				payloads[pl_head:pl_head+pl_leng] = chars[0:pl_leng]
 				pl_head = pl_head + pl_leng
+				freq = (1.0e-9*frequency_sum) / (1.0*frequency_sum_count)
+				payload_frequencies = np.resize(payload_frequencies, len(payload_frequencies)+1)
+				payload_frequencies[-1] = freq
 			continue
 	deframer_mx[1,0] = state
 	deframer_mx[1,1] = latest_bits
 	deframer_mx[1,2] = bit_idx
 	deframer_mx[1,3] = char_idx
 	deframer_mx[1,4] = data_len
+	deframer_mx[1,5] = frequency_sum
+	deframer_mx[1,6] = frequency_sum_count
 	deframer_mx[2]   = chars
-	return payloads, payload_delimits
+	return payloads, payload_delimits, payload_frequencies
 ## FRAMING ===================================================================================================================================================================================
 ## FRAMING ===================================================================================================================================================================================
 

@@ -468,7 +468,7 @@ def test_framing_1():
 				bits[56:] = corrupt_n_bits_of_bitarr(bitarr=bits[56:], n_corrupt=n_corrupt)
 				bits = np.concatenate( (noiseA, bits) )
 				deframermx = create_deframer(use_scrambler=True, use_rs=True, data_maxlen=255, synchword=synchword, synchword_len=32, synch_threshold=3)
-				payloads, payload_delimits = deframe(bits=bits, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+				payloads, payload_delimits, _ = deframe(bits=bits, bit_frequencies=bits*0, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 				assert len(payload_delimits) == 1, (len(payload_delimits), pl_len, n_corrupt, deframermx[1,0])
 				pl = payloads[payload_delimits[0,0]:payload_delimits[0,1]]
 				assert np.all(pl == pl_chars)
@@ -510,7 +510,7 @@ def test_framing_2():
 		while bit_head < len(bits):
 			batchlen = rint(0,  400)
 			batchlen = min(len(bits) - bit_head, batchlen)
-			payload_bits, payload_delimits = deframe(bits=bits[bit_head:bit_head+batchlen], deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+			payload_bits, payload_delimits, _ = deframe(bits=bits[bit_head:bit_head+batchlen], bit_frequencies=bits*0, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 			if len(payload_delimits) > 0:
 				for delims in payload_delimits:
 					pl_list.append( payload_bits[delims[0]:delims[1]] )
@@ -560,16 +560,17 @@ def speedbench_framing():
 	if use_rs:
 		bits = corrupt_n_bits_of_bitarr(bitarr=bits, n_corrupt=6)
 	bits = np.array(bits, dtype=np.int8)
+	bit_fs = bits*0.0
 	deframermx = create_deframer(use_scrambler=use_scrambler, use_rs=use_rs, data_maxlen=255, synchword=synchword, synchword_len=32, synch_threshold=3)
-	payloads, payload_delimits = deframe(bits=bits, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+	payloads, payload_delimits, _ = deframe(bits=bits, bit_frequencies=bits*0, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 	assert len(payload_delimits) == 1
 	assert np.all(payloads == pl_chars)
-	_ = deframe(bits=bits, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
-	_ = deframe(bits=bits, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
-	_ = deframe(bits=bits, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+	_ = deframe(bits=bits, bit_frequencies=bit_fs, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+	_ = deframe(bits=bits, bit_frequencies=bit_fs, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+	_ = deframe(bits=bits, bit_frequencies=bit_fs, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 	t0 = time.perf_counter()
 	for _ in range(nreps):
-		_ = deframe(bits=bits, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+		_ = deframe(bits=bits, bit_frequencies=bit_fs, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 	T_deframe = (time.perf_counter() - t0) / nreps
 	speed_packets = 1 / T_deframe
 	speed_bytes = len(pl_chars) / T_deframe
@@ -596,12 +597,9 @@ test_peak_deviation_algos_cohere()
 #plot_peak_deviations()
 
 test_golay()
-
 test_synchword_deframing()
-
 test_rs_1()
 test_rs_2(do_plot=True)
-
 test_framing_1()
 test_framing_2()
 

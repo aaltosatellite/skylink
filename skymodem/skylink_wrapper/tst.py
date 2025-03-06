@@ -10,8 +10,8 @@ conf.identity = b"1234567"
 conf2.identity = b"9876543"
 print("B")
 
-skylink = SkyLink(conf_override=conf)
-skylink2 = SkyLink(conf_override=conf2)
+skylink = SkyLink(configuration=conf)
+skylink2 = SkyLink(configuration=conf2)
 
 key1 = (b"01-" + b"0"*40)[0:32]
 key2 = (b"02-" + b"0"*40)[0:32]

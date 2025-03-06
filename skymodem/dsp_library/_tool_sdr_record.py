@@ -2,135 +2,13 @@ import time
 import numpy as np
 import uhd
 import pickle
-from kuokka.lib_receiver import Receiver, ReceiverSettings
+
 #Foresail1: 437.125MHz
 
 
-settings = ReceiverSettings(sr0=1e6, baudrate=9600, bufferlen=600000, batch_maxlen=6000, f_tune=437.1e6, f_expected=437.125e6)
-settings.sps 					= 17
-settings.baudrate 				= 9600
-settings.lp_cutoff_coeff 		= 0.625
-
-
-class UHDReceiver:
-	def __init__(self, settings:ReceiverSettings):
-		self.settings = settings
-		self.rcvr = Receiver(settings=settings)
-		self.on = False
-
-	def run(self):
-		self.on = True
-
-		#center_freq = 437.11e6 # Hz
-		#sample_rate = 1e6 # Hz
-		center_freq = self.settings.f_tune
-		sample_rate = self.settings.sr0
-		gain = 50 # dB
-
-		usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
-		usrp.set_rx_rate(sample_rate, 0)
-		usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(center_freq), 0)
-		#print("rx frequency: ", usrp.get_rx_freq())
-		usrp.set_rx_gain(gain, 0)
-		#print("rx gain range",usrp.get_rx_gain_range())
-
-		st_args = uhd.usrp.StreamArgs("fc32", "sc16")
-		st_args.channels = [0]
-		metadata = uhd.types.RXMetadata()
-
-		streamer = usrp.get_rx_stream(st_args)
-		tx_stream = usrp.get_tx_stream(st_args)
-		recv_buffer = np.zeros((1, 1000), dtype=np.complex64)
-
-		# Start Stream
-		stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
-		stream_cmd.stream_now = True
-		streamer.issue_stream_cmd(stream_cmd)
-		tx_stream
-
-		# Receive Samples
-		while self.on:
-			streamer.recv(recv_buffer, metadata)
-			payloads = self.rcvr.push_samples(batch= np.complex128(recv_buffer), give_bits=False )
-			for pl in payloads:
-				print("Received: ", pl)
-
-		# Stop Stream
-		stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
-		streamer.issue_stream_cmd(stream_cmd)
 
 
 
-
-def record():
-	"""TX samples based on input arguments"""
-	usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
-
-
-	center_freq = 437.00e6 # Hz
-	sample_rate = 1e6 # Hz
-	num_samps = int(5.0 * sample_rate) # number of samples received
-	gain = 50 # dB
-
-	usrp.set_rx_rate(sample_rate, 0)
-	usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(center_freq), 0)
-	print("rx frequency: ", usrp.get_rx_freq())
-	usrp.set_rx_gain(gain, 0)
-	print("rx gain range",usrp.get_rx_gain_range())
-
-
-	# Set up the stream and receive buffer
-	st_args = uhd.usrp.StreamArgs("fc32", "sc16")
-	st_args.channels = [0]
-	metadata = uhd.types.RXMetadata()
-
-	streamer = usrp.get_rx_stream(st_args)
-	recv_buffer = np.zeros((1, 1000), dtype=np.complex64)
-
-	print("tx gain range:",usrp.get_tx_gain_range(0))
-	print("tx gain range:",usrp.get_tx_gain_range())
-	print("rx gain range:",usrp.get_rx_gain_range(0))
-	print("rx gain range:",usrp.get_rx_gain_range())
-
-	print("tx antennas: ",usrp.get_tx_antennas())
-	print("rx antennas: ",usrp.get_rx_antennas())
-
-
-	# Start Stream
-	stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
-	stream_cmd.stream_now = True
-	streamer.issue_stream_cmd(stream_cmd)
-
-	# Receive Samples
-	samples = np.zeros(num_samps, dtype=np.complex64)
-	nmod = len(samples) // 1000
-	dt_arr = list()
-	print("Engage loop.")
-	t00 = time.perf_counter()
-	for ii in range(nmod):
-		t0 = time.perf_counter()
-		streamer.recv(recv_buffer, metadata)
-		t1 = time.perf_counter()
-		dt = t1-t0
-		dt_arr.append(dt)
-		samples[(ii%nmod)*1000:((ii%nmod)+1)*1000] = recv_buffer[0]
-	t11 = time.perf_counter()
-	dt_arr = np.array(dt_arr)
-	print("Avg dt: ", np.average(dt_arr))
-	print("Total time:", t11-t00 )
-	# Stop Stream
-	stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
-	streamer.issue_stream_cmd(stream_cmd)
-
-	rint = np.random.randint(0,1000)
-	f = open("/home/elmore/datasetit/radiotallenteet/uhf-nayte-{}.dat".format(rint), "wb")
-	f.write(pickle.dumps(samples))
-	f.close()
-	print("Written")
-
-
-
-import inspect
 
 def transmit():
 	from kuokka.lib_tools import make_samples

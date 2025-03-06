@@ -1,5 +1,4 @@
 import time
-
 from cython_skylink import c_skylink
 from cython_skylink.c_skylink import SkyConfiguration, SkyLink
 from cython_skylink.skylink_process import SkyLinkLoop
@@ -33,8 +32,8 @@ def tst_arq():
 	conf1.identity = b"1234567"
 	conf2.identity = b"9876543"
 
-	skylink1 = SkyLink(conf_override=conf1)
-	skylink2 = SkyLink(conf_override=conf2)
+	skylink1 = SkyLink(configuration=conf1)
+	skylink2 = SkyLink(configuration=conf2)
 
 	skylink1.set_hmac_keys( keyset_1 )
 	skylink2.set_hmac_keys( keyset_1 )

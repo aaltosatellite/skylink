@@ -5,8 +5,7 @@ from mtools.tools_math import random_point_on_sphere, npv3
 from mtools.tools_dsp import waterfall_mx, resampler_execute_stream, resampler_execute, create_resampler
 from kuokka.lib_tools import make_samples, radionoise
 from matplotlib import pyplot as plt
-from tst_receive_recording import get_samples2, fpath0, fpath1, fpath8, fpath9, fpath10, fpath7, fpath6, fpath2, fpath3, fpath4, fpath5
-
+from sdr_recorder import get_samples, fpaths
 from kuokka.lib_fft_detector import create_fft_centering_statemx, fft_detect_and_freq_determ
 
 
@@ -18,7 +17,7 @@ def compare():
 	nsamples 		= int(sr * 6.0)
 
 	f_offset_rel 	= 0.09
-	noise_power 	= 0.1 / 9600  # ~0.2 is doable with fft.
+	noise_power 	= 0.2 / 9600  # ~0.2 is doable with fft.
 	mod_idx 		= 0.5
 	BT 				= 0.5
 
@@ -30,13 +29,10 @@ def compare():
 	i_tx_begin 		= int(0.75 * nsamples)
 	samples[i_tx_begin:i_tx_begin + len(tx_samples)] += tx_samples
 
-	centerf5 = -122.46e3
-	centerf6 = -124.0e3
-	centerf7 = -122.5e3
-	centerf8 = -122.5e3
-	centerf9 = -123.8e3
-	samples = get_samples2(fpath=fpath6)
-	samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/1e6) * centerf6 )
+
+	fpath, centerf = fpaths[7]
+	samples = get_samples(fpath=fpath)
+	samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/1e6) * centerf )
 	samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/1e6) * (f_offset_rel*sr) )
 	waterfall_mx(samples, fftlen=2048, fft_jump=1024, srate=1e6, plot_and_show=True, y_is_time=False)
 
@@ -60,7 +56,7 @@ def compare():
 	fft_statemx = create_fft_centering_statemx(fftlen=fftlen, jumplen=fftlen//2, sps=sps, baudrate=baudrate, search_space_triplet=(-1,-1,-1),
 											   mod_index=mod_idx, BT=BT, c_stat_update=1/700, n_delay=fftlen*5, T_f_decay=1.5,
 											   fft_trigger_on_level=5.5, fft_trigger_off_level=2.0, masklen=masklen, avg0=0.0, var0=1.0,
-											   mask_mode=mask_mode, start_margin_mpr=3.0, end_margin_mpr=1.5)
+											   mask_mode=mask_mode, start_margin_mpr=4.0, end_margin_mpr=1.5)
 
 	fft_center_f_arr = np.zeros(nsamples, dtype=np.float64)
 	instr_arr = np.zeros((nsamples,3), dtype=np.float64)
@@ -97,9 +93,10 @@ def compare():
 
 	xx_n = np.arange(nsamples)
 	xx_t = np.arange(nsamples) * (1/sr)
-	fig = plt.figure(figsize=(14,9))
-	ax1 = fig.add_subplot(211)
-	ax2 = fig.add_subplot(212)
+	fig = plt.figure(figsize=(14,12))
+	ax1 = fig.add_subplot(311)
+	ax2 = fig.add_subplot(312)
+	ax3 = fig.add_subplot(313)
 
 	#ax1.plot(xx_n, pll_f_arr)
 	ax1.plot(xx_n[::10], pll_center_f_arr[::10], label="PLL")
@@ -122,6 +119,11 @@ def compare():
 
 	ax2.plot(xx_n, instr_arr[:,2])
 	ax2.grid()
+
+	ax3.plot(xx_n, instr_arr[:,0], label="avg")
+	ax3.plot(xx_n, instr_arr[:,1], label="var")
+	ax3.grid()
+	ax3.legend()
 
 	fig.set_layout_engine("tight")
 	plt.show()
@@ -151,7 +153,7 @@ def center_acquisition():
 	samples = noise.copy()
 	samples[i_tx_begin:i_tx_begin + len(tx_samples)] += tx_samples
 
-	samples = get_samples2(fpath=fpath6)
+	samples = get_samples(fpath=fpath6)
 	#waterfall_mx(samples=samples, fftlen=1024*2, fft_jump=1024, srate=sr, plot_and_show=True, y_is_time=False)
 	samples = samples / np.average( np.abs(samples[int(2.5e6):int(2.6e6)]) )
 

@@ -250,6 +250,9 @@ def speedbench_resampling(sr0, sps, baudrate, m_halflen, do_print=True):
 	budget_fraction	= (1/overmatch) / 0.5
 	if do_print:
 		print("-- resampling -------------------------------")
+		print("sps:   		{}".format( round( sps, 1 ) ))
+		print("baudrate:	{}".format( baudrate ))
+		print("m_half:		{}".format( m_halflen ))
 		print("speed:           {} Ms/s".format( round( 1e-6 * speed, 2 ) ))
 		print("overmatch:       {} ".format( round( overmatch, 2 ) ))
 		print("core use:        {} %".format( round( 100*core_fraction, 2 ) ))
@@ -257,8 +260,55 @@ def speedbench_resampling(sr0, sps, baudrate, m_halflen, do_print=True):
 		print("---------------------------------------------")
 		print("")
 		print("")
-	return speed, overmatch, budget_fraction
+	return speed, overmatch, core_fraction, budget_fraction
 
+
+
+def plot_speed_dependences():
+	print("Measuring against sps...")
+	sps_arr = np.arange(7, 33, dtype=np.int64)
+	sps_core_fraction_arr = np.zeros(len(sps_arr), dtype=np.float64)
+	for i, sps in enumerate(sps_arr):
+		speed, overmatch, core_fraction, budget_fraction = speedbench_resampling(sr0=1e6, sps=sps, baudrate=9600, m_halflen=17, do_print=False)
+		sps_core_fraction_arr[i] = core_fraction
+
+	print("Measuring against baudrate...")
+	baudrate_arr = np.array([9600, 9600*2, 9600*4, 9600*8, 9600*16,], dtype=np.int64)
+	baudrate_core_fraction_arr = np.zeros(len(baudrate_arr), dtype=np.float64)
+	for i, baudrate in enumerate(baudrate_arr):
+		speed, overmatch, core_fraction, budget_fraction = speedbench_resampling(sr0=1e6, sps=17, baudrate=baudrate, m_halflen=17, do_print=False)
+		baudrate_core_fraction_arr[i] = core_fraction
+
+	print("Measuring against m_halflen...")
+	m_arr = np.arange(9,33,2, dtype=np.int64)
+	m_core_fraction_arr = np.zeros(len(m_arr), dtype=np.float64)
+	for i, m in enumerate(m_arr):
+		speed, overmatch, core_fraction, budget_fraction = speedbench_resampling(sr0=1e6, sps=17, baudrate=9600, m_halflen=int(m), do_print=False)
+		m_core_fraction_arr[i] = core_fraction
+
+
+	fig = plt.figure(figsize=(14,12))
+	ax1 = fig.add_subplot(311)
+	ax2 = fig.add_subplot(312)
+	ax3 = fig.add_subplot(313)
+
+	ax1.plot(sps_arr, sps_core_fraction_arr)
+	ax1.set_xlabel("sps")
+	ax1.set_ylabel("core %")
+	ax1.grid()
+
+	ax2.plot(baudrate_arr, baudrate_core_fraction_arr)
+	ax2.set_xlabel("baudrate")
+	ax2.set_ylabel("core %")
+	ax2.grid()
+
+	ax3.plot(m_arr, m_core_fraction_arr)
+	ax3.set_xlabel("m_halflen")
+	ax3.set_ylabel("core %")
+	ax3.grid()
+
+	fig.set_layout_engine("tight")
+	plt.show()
 
 
 
@@ -267,9 +317,10 @@ def speedbench_resampling(sr0, sps, baudrate, m_halflen, do_print=True):
 #tst_compare_windows()
 #tst_lowpass_effect()
 speedbench_resampling(sr0=1e6, sps=17, baudrate=9600, m_halflen=17)
+speedbench_resampling(sr0=1e6, sps=21, baudrate=9600, m_halflen=21)
 speedbench_resampling(sr0=1e6, sps=8, baudrate=9600*16, m_halflen=17)
 
-
+plot_speed_dependences()
 
 
 

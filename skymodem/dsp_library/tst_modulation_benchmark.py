@@ -1,5 +1,5 @@
 import os
-from tst_receive_recording import get_samples2, fpath0, fpath1
+from sdr_recorder import get_samples, fpaths
 from kuokka.lib_tools import make_samples
 import time
 import numpy as np
@@ -80,7 +80,7 @@ def test_packet_generation_speed(sr, baudrate, BT):
 
 
 def compare_generated_to_recording():
-	recorded = get_samples2(fpath0)
+	recorded = get_samples(fpath0)
 	recorded = recorded / np.average( np.abs(recorded))
 
 	settings = get_default_settings(sr=1e6, baudrate=9600, f_tune=437.00e6, f_signal=437.11e6)
@@ -107,7 +107,7 @@ def compare_generated_to_recording():
 
 
 def plot_fmdemod_of_recording():
-	recorded = get_samples2(fpath0)
+	recorded = get_samples(fpath0)
 	recorded = recorded / np.average( np.abs(recorded))
 	N0 = len(recorded)
 	recorded = recorded[0 : int(N0* 0.12)]
