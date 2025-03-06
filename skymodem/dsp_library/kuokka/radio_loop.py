@@ -3,8 +3,8 @@ import uhd
 import numpy as np
 import threading
 from .lib_receiver import ReceiverSettings, Receiver, precompile_receiver
-from .lib_tools import make_samples, ints_to_bits, DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise
-from .lib_framing import frame_packet, RS_MAX_PL_LEN
+from .lib_tools import make_samples, ints_to_bits, DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, doppler_correction
+from .lib_framing import frame_packet
 from .lib_reedsolomon import get_default_rs
 from queue import Queue, Empty
 import SoapySDR
@@ -89,9 +89,10 @@ class RadioLoop:
 		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (self.preamble_bits, bits) )
 		sps = self.rx_settings.sr0 / self.rx_settings.baudrate
-		f_center = self.rx.center_frequency_estimate()
-		DBGPRINT("-[RadioLoop][transmission center freq:  {} MHz]".format( f_center * 1e-6, 4 ))
-		f_offset = (f_center - self.rx_settings.f_tune) / self.rx_settings.sr0
+		f_last_reception = self.rx.center_frequency_estimate(normalized=False, t_past_receptions=120.0)
+		f_use, dt_separation = doppler_correction(f_received=f_last_reception, f_original=self.rx_settings.f_expected, f_at_target=self.rx_settings.f_expected)
+		DBGPRINT("-[RadioLoop][transmission center freq:  {} MHz]".format( f_use * 1e-6, 4 ))
+		f_offset = (f_use - self.rx_settings.f_tune) / self.rx_settings.sr0
 		n_silence_start = int(self.rx_settings.sr0 * 5e-3) # TODO: this should be a setting
 		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset, power=1.0,
 					 		   mod_index=self.rx_settings.mod_index, shaper_mode=1,
@@ -133,7 +134,7 @@ class RadioLoop:
 		rx0.push_samples(batch=noise)
 		center_freq = self.rx_settings.f_tune # Hz
 		sample_rate = self.rx_settings.sr0 # Hz
-		gain = 50 # dB
+		gain = 55 # dB
 		usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
 		usrp.set_rx_rate(sample_rate, 0)
 		usrp.set_tx_rate(sample_rate, 0)
@@ -147,7 +148,7 @@ class RadioLoop:
 		DBGPRINT("[RadioLoop][usrp TX samplerate:  {} ksps]".format( round(usrp.get_tx_rate(0)*1e-3, 3) ))
 		DBGPRINT("[RadioLoop][usrp RX center-f:  {} MHz]".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
 		DBGPRINT("[RadioLoop][usrp TX center-f:  {} MHz]".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
-		#self.rx_thread 			= threading.Thread(target=self._recording_rx_loop,    args=(1024*8,), daemon=True) #TODO bufferlen as setting?
+		#self.rx_thread 			= threading.Thread(target=self._recording_rx_loop,    args=(1024*4,), daemon=True) #TODO bufferlen as setting?
 		self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 1024*4), daemon=True) #TODO bufferlen as setting?
 		self.rx_process_thread 	= threading.Thread(target=self._rx_process_loop, args=tuple(),      daemon=True)
 		self.tx_thread 			= threading.Thread(target=self._usrp_tx_loop,    args=(usrp, 1024*4), daemon=True) #TODO bufferlen as setting?
@@ -160,14 +161,15 @@ class RadioLoop:
 
 	def _recording_rx_loop(self, rx_buffer_len):
 		import pickle
-		fpath7 = "/home/elmore/datasetit/radiotallenteet/uhf-298_437.0MHz-1000ksps.pickled"
-		fpath8 = "/home/elmore/datasetit/radiotallenteet/uhf-447_437.0MHz-1000ksps.pickled"
-		fpath9 = "/home/elmore/datasetit/radiotallenteet/uhf-195_437.0MHz-1000ksps.pickled"
-		f = open(fpath9, "rb")
+		#fpath7 = "/home/elmore/datasetit/radiotallenteet/uhf-298_437.0MHz-1000ksps.pickled"
+		#fpath8 = "/home/elmore/datasetit/radiotallenteet/uhf-447_437.0MHz-1000ksps.pickled"
+		#fpath9 = "/home/elmore/datasetit/radiotallenteet/uhf-195_437.0MHz-1000ksps.pickled"
+		fpath, fcenter0 = ("/home/elmore/datasetit/radiotallenteet/uhf-965_437.0MHz-1000ksps.pickled",-124.0e3)
+		f = open(fpath, "rb")
 		rd = f.read()
 		f.close()
 		samples = pickle.loads(rd)
-		samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/1e6) * -100e3)
+		samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/1e6) * (fcenter0+25e3))
 		assert len(samples.shape) == 1
 		assert type(samples) == np.ndarray
 		samples = np.complex64(samples)
@@ -273,7 +275,7 @@ class RadioLoop:
 					tx_streamer.send(samplearr[0,idx:idx+tx_batch_len], tx_metadata)
 					idx += tx_batch_len
 				t_to_end = max(0, t_end - time.perf_counter())
-				time.sleep(t_to_end + 2.048e-3)
+				time.sleep(t_to_end + 0.0e-3)
 				self.self_mute = False
 				DBGPRINT("+[RadioLoop][tx end sleep of {} ms]".format(t_to_end*1e3))
 				DBGPRINT("+[RadioLoop][radio transmitted samples]")

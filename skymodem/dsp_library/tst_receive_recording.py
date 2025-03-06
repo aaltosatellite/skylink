@@ -3,8 +3,7 @@ from kuokka.lib_receiver import ReceiverSettings, Receiver, precompile_receiver
 from mtools.tools_dsp import create_resampler, resampler_execute
 from mtools.tools_dsp import waterfall_mx
 from matplotlib import pyplot as plt
-import time, pickle
-from scipy.signal import firwin
+import time
 from sdr_recorder import get_samples, fpaths
 
 
@@ -16,6 +15,8 @@ from sdr_recorder import get_samples, fpaths
 def receive_a_recording():
 	fpath, fshift0 = fpaths[7]
 	samples = get_samples(fpath)
+	for _ in range(int(1.8*1e6/8000.0)):
+		samples = np.concatenate( (samples[0:8000] , samples) )
 	sr0 = 1e6
 	nsamples = len(samples)
 
@@ -54,7 +55,7 @@ def receive_a_recording():
 
 		fftstate = rx.FFTstatemx
 		mask0 = np.zeros(1024)
-		scan_idxs = np.int64(fftstate[7,:int(fftstate[0,10])])
+		scan_idxs = np.int64(fftstate[7,:int(fftstate[0,9])])
 		mask0[scan_idxs] = 1
 		resampler = create_resampler(m_halflen=21, n_banks=64, r_rate=sps*baudrate/sr0, f_cutoff=0.499*sps*baudrate/sr0, allow_aliasing=False)
 		samples_rs = resampler_execute(samples=samples, statemx=resampler)
@@ -62,6 +63,8 @@ def receive_a_recording():
 		mx[10] = mask0
 		mx[11] = mask0
 		mx[12] = mask0
+		mx[13] = mask0
+		print("mask[::4]", mask0[::4])
 		fig = plt.figure(figsize=(14,14))
 		ax = fig.add_subplot(111)
 		ax.imshow(mx, origin="lower",  extent=extent, aspect=aspect)

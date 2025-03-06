@@ -1,0 +1,3 @@
+/home/elmore/fs1p/skylink/tests/units/CMakeFiles/unit_tests.dir
+/home/elmore/fs1p/skylink/tests/units/CMakeFiles/edit_cache.dir
+/home/elmore/fs1p/skylink/tests/units/CMakeFiles/rebuild_cache.dir

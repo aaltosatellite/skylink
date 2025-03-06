@@ -27,7 +27,7 @@ def classic_JPL_synch_reset(statemx):
 @njit(cache=True)
 def classic_JPL_synch_run(samples, statemx):
 	"""
-	This is a simple implementation of a maximum likelihood synchronizer for NRZ data stream described in
+	This is a simple implementation of a maximum likelihood synchronizer for NRZ data stream described on
 	p.340 of the 9th volume of the DEEP SPACE COMMUNICATIONS AND NAVIGATION SERIES (DESCANSO) published by JPL.
 
 	It finds a maximum amplitude producing phase of the data stream, given that symbol length matches closely to the

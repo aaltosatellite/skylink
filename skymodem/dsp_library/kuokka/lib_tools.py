@@ -326,8 +326,12 @@ def radionoise(n, sr, W_per_Hz):
 
 
 
-
-
+def doppler_correction(f_received, f_original, f_at_target):
+	c = 299792458.0
+	#f_received = f_original * c/(c+v_src)
+	v_src = c * (f_original/f_received - 1)
+	f_send = f_at_target * c/(c-v_src)
+	return f_send, v_src # v_src is the derivative of separating distance. (negative if satellite is approaching)
 
 
 

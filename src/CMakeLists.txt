@@ -54,4 +54,4 @@ target_sources(
 )
 
 add_library(skylink_shared SHARED $<TARGET_OBJECTS:skylink>)
-add_library(skylink_static SHARED $<TARGET_OBJECTS:skylink>)
+add_library(skylink_static STATIC $<TARGET_OBJECTS:skylink>)

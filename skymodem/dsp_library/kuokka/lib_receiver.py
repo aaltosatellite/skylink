@@ -66,38 +66,48 @@ class ReceiverSettings:
 		assert 0 < self.baudrate < (self.sr0/2)
 		assert 1000 < self.bufferlen < 100e6
 		assert type(self.bufferlen) == int
-		assert 10 < self.batch_maxlen < (0.1*self.bufferlen)
+		assert 100 < self.batch_maxlen < (0.1*self.bufferlen)
 		assert type(self.batch_maxlen) == int
-		assert 1 < self.sps < (3.9 * self.sr0 / self.baudrate)
+		assert 2 < self.sps <= (self.sr0 / self.baudrate)
 		assert type(self.sps) == int
 		assert 5 < self.m_halflen < 42
 		assert type(self.m_halflen) == int
+		assert (self.m_halflen%2) == 1
 		assert 24 < self.n_banks < 240
 		assert type(self.n_banks) == int
 		assert 0 < self.rs_f_cutoff_coeff < 0.5
 		assert self.fftlen in (256, 512, 1024, 2048)
 		assert type(self.fftlen) == int
-		assert 1 < self.jumplen < (2*self.fftlen)
+		assert 10 <= self.jumplen < (2*self.fftlen)
 		assert type(self.jumplen) == int
 		assert 0.5 <= self.mod_index < 10.0
 		assert type(self.BT) in (float, int)
 		assert (self.BT >= 0.5) or (self.BT == -1)
 		assert 0 < self.c_stat_update <= 1.0
 		assert 0 < self.T_f_decay < 30
+		assert type(self.n_delay) == int
 		assert self.fftlen <= self.n_delay < self.fftlen*40
 		assert self.n_delay > (self.start_margin_mpr*self.fftlen)
 		assert -1.0 <= self.fft_trigger_on_level <= 32.0
 		assert -1.0 <= self.fft_trigger_off_level <= 9.0
 		assert self.fft_trigger_off_level <= self.fft_trigger_on_level
 		assert self.mask_mode in (0,1)
-		assert 0 <= self.start_margin_mpr < 100.0  #was 10
-		assert 0 <= self.end_margin_mpr < 100.0     # was 5
+		assert 0 <= self.start_margin_mpr < 10.0
+		assert 0 <= self.end_margin_mpr < 10.0
 		assert 1.0 <= self.JPL_n_decay < 100.0
 		assert 30.0 <= self.lp_ntaps < 300.0
 		assert type(self.lp_ntaps) == int
 		assert (self.lp_ntaps % 2) == 1
 		assert 0 < self.lp_cutoff_coeff < (0.5*self.sps)
 		assert 0 <= self.synch_delay_mpr <= 64.0
+		assert type(self.use_scrambler) == bool
+		assert type(self.use_rs) == bool
+		assert type(self.synch_threshold) == int
+		assert 0 <= self.synch_threshold < 5
+		assert type(self.data_maxlen) == int
+		assert self.data_maxlen > 10
+		if self.use_rs:
+			assert self.data_maxlen == RS_MAX_ENCODED_LEN
 
 
 	def get_r_rate(self):
@@ -120,7 +130,7 @@ class ReceiverSettings:
 		if (self.f_tune == -1) and (self.f_expected == -1):
 			return -1, -1, -1
 		df_doppler = self.f_expected * (((3e8+7500)/3e8) - 1)  # approximate maximum doppler shift for LEO orbital speed
-		df_search_sideband = df_doppler * 1.9
+		df_search_sideband = df_doppler * 2.0
 		triplet = self.f_tune, self.f_expected - df_search_sideband, self.f_expected + df_search_sideband
 		#print("+[search space: {} MHz  -  {} MHz]".format( round(triplet[1]*1e-6, 3), round(triplet[2]*1e-6, 3) ))
 		return triplet
@@ -159,12 +169,13 @@ class Receiver:
 		self.resampler_statemx 	= np.zeros((2,2), dtype=np.float64)
 		self.FFTstatemx 		= np.zeros((2,2), dtype=np.float64)
 		self.JPLstatemx 		= np.zeros((2,2), dtype=np.float64)
-		self.DPDstatemx 		= np.zeros((2,2), dtype=np.float64)
+		self.DSDstatemx 		= np.zeros((2,2), dtype=np.float64)
 		self.deframermx 		= np.zeros((2,2), dtype=np.float64)
 		rs_mx, rs_cfg 			= get_default_rs()
 		self.rs_mx 				= rs_mx
 		self.rs_cfg 			= rs_cfg
 		self.dt_array			= np.zeros(5, dtype=np.float64)
+		self.last_verified_freq = (settings.f_expected / (settings.sps*settings.baudrate), 0.0)
 		self._setup()
 		# This series of baudrate switches pre-generates correlation masks to memory.
 		_br = self.settings.baudrate
@@ -176,7 +187,6 @@ class Receiver:
 
 
 	def _setup(self):
-		# r_rate = settings.sps * settings.baudrate / settings.sr0
 		settings = self.settings
 		f_cutoff = settings.get_r_rate() * settings.rs_f_cutoff_coeff
 		self.resampler_statemx = create_resampler(m_halflen=settings.m_halflen, n_banks=settings.n_banks, r_rate=settings.get_r_rate(), f_cutoff=f_cutoff, allow_aliasing=False)
@@ -187,7 +197,7 @@ class Receiver:
 													   fft_trigger_off_level=settings.fft_trigger_off_level, masklen=settings.get_masklen(), avg0=0.0, var0=1.0,
 													   mask_mode=settings.mask_mode, start_margin_mpr=settings.start_margin_mpr, end_margin_mpr=settings.end_margin_mpr)
 		self.JPLstatemx = create_classic_JPL_statemx(N_eps=settings.sps, n_decay=settings.JPL_n_decay)
-		self.DPDstatemx = create_DSD_statemx(lp_ntaps=settings.lp_ntaps, lp_cutoff=settings.get_lp_cutoff(), synch_delay_mpr_f=settings.synch_delay_mpr, sps_f=settings.sps, f_center=0)
+		self.DSDstatemx = create_DSD_statemx(lp_ntaps=settings.lp_ntaps, lp_cutoff=settings.get_lp_cutoff(), synch_delay_mpr_f=settings.synch_delay_mpr, sps_f=settings.sps)
 		self.deframermx = create_deframer(use_scrambler=settings.use_scrambler, use_rs=settings.use_rs, data_maxlen=settings.data_maxlen,
 										  synchword=DEFAULT_SYNCHWORD, synchword_len=32, synch_threshold=settings.synch_threshold)
 		a = int(settings.batch_maxlen * settings.get_r_rate() * 2)
@@ -205,12 +215,14 @@ class Receiver:
 		self._setup()
 
 
-	def center_frequency_estimate(self):
-		f_center, is_active = get_center_frequency_estimate(self.FFTstatemx, f_tune=self.settings.f_tune)
-		print("(is active: {}), (c_f_update_long: {})".format(is_active,  self.FFTstatemx[0,27]))
-		if is_active:
-			return f_center
-		return self.settings.f_expected
+	def center_frequency_estimate(self, normalized=False, t_past_receptions=60.0):
+		f_abs = self.settings.f_expected
+		f_rcv_normed, ts_mono = self.last_verified_freq
+		if (time.monotonic() - ts_mono) < t_past_receptions:
+			f_abs = self.settings.f_tune + (self.settings.baudrate*self.settings.sps) * f_rcv_normed
+		if normalized:
+			return (f_abs - self.settings.f_tune) / (self.settings.baudrate*self.settings.sps)
+		return f_abs
 
 
 	def _split_payloads(self, payloads, delimits, frequencies):
@@ -238,7 +250,7 @@ class Receiver:
 		t0 = time.perf_counter()
 		dmdsynch_head_new, bit_head_new = demodulation_sequence(rs_arr=self.rs_array, centerf_arr=self.center_f_array, i_rs0=self.demodulation_head,
 																nsamples=demodulation_head_new - self.demodulation_head, dmd_arr=self.dmd_array, synch_arr=self.synch_array,
-																dmdsynch_head0=self.dmdsynch_head, JPLstatemx=self.JPLstatemx, demodmx=self.DPDstatemx,
+																dmdsynch_head0=self.dmdsynch_head, JPLstatemx=self.JPLstatemx, demodmx=self.DSDstatemx,
 																bitarr=self.bit_array, bitfarr=self.bit_f_array, bit_head0=0)
 		self.dt_array[2] += (time.perf_counter() - t0)
 
@@ -246,12 +258,12 @@ class Receiver:
 		if bit_head_new > 0:
 			bits = self.bit_array[:bit_head_new]
 			bit_freqs = self.bit_f_array[:bit_head_new]
-			#print("got bits", bits[0:4])
 			if not give_bits:
 				bits = np.clip(bits, 0, 1)
 				payloads, payload_delimits, payload_frequencies = deframe(bits=bits, bit_frequencies=bit_freqs, deframer_mx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
 				if len(payload_delimits) > 0:
 					ret = self._split_payloads(payloads=payloads, delimits=payload_delimits, frequencies=payload_frequencies)
+					self.last_verified_freq = ret[-1][1], time.monotonic()
 		self.dt_array[3] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()
@@ -262,9 +274,7 @@ class Receiver:
 		assert self.rs_head == self.center_f_head
 		if self.rs_head >= self.buffer_roll_limit:
 			self._buffer_roll_1()
-			#self._buffer_roll_2()
 		if self.dmdsynch_head >= self.buffer_roll_limit:
-			#self._buffer_roll_1()
 			self._buffer_roll_2()
 		self.dt_array[4] += (time.perf_counter() - t0)
 
@@ -280,7 +290,7 @@ class Receiver:
 		self.fft_instr_array[0:self.center_f_head-self.bufferhalf] 	= self.fft_instr_array[self.bufferhalf:self.center_f_head]
 		self.rs_head 			= self.rs_head - self.bufferhalf
 		self.center_f_head 		= self.center_f_head - self.bufferhalf
-		#self.demodulation_head 	= max(0,self.demodulation_head - self.bufferhalf)
+		#self.demodulation_head = max(0,self.demodulation_head - self.bufferhalf)
 		self.demodulation_head 	= self.demodulation_head - self.bufferhalf
 
 
@@ -289,7 +299,7 @@ class Receiver:
 		self.dmd_array[0:self.dmdsynch_head-self.bufferhalf] 		= self.dmd_array[self.bufferhalf:self.dmdsynch_head]
 		self.synch_array[0:self.dmdsynch_head-self.bufferhalf] 		= self.synch_array[self.bufferhalf:self.dmdsynch_head]
 		self.dmdsynch_head = self.dmdsynch_head - self.bufferhalf
-		DSD_buffer_roll(demodmx=self.DPDstatemx, buffers_receded_by=self.bufferhalf)
+		DSD_buffer_roll(demodmx=self.DSDstatemx, buffers_receded_by=self.bufferhalf)
 
 
 
@@ -354,12 +364,6 @@ def precompile_receiver(rx_settings:ReceiverSettings, do_print=False):
 	if do_print:
 		print("\t[Precompiled in {} s.  ({} s for samples)]".format( round(t2-t0, 3), round(t1-t0, 3)  ))
 # PRECOMPILE RECEIVER ====================================================================================================
-
-
-
-
-
-
 
 
 

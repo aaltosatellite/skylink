@@ -32,6 +32,8 @@ def compare():
 
 	fpath, centerf = fpaths[7]
 	samples = get_samples(fpath=fpath)
+	for _ in range(int(2*1e6/8000.0)):
+		samples = np.concatenate( (samples[0:8000] , samples) )
 	samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/1e6) * centerf )
 	samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/1e6) * (f_offset_rel*sr) )
 	waterfall_mx(samples, fftlen=2048, fft_jump=1024, srate=1e6, plot_and_show=True, y_is_time=False)
@@ -117,11 +119,11 @@ def compare():
 	ax1.grid()
 
 
-	ax2.plot(xx_n, instr_arr[:,2])
+	ax2.plot(xx_t, instr_arr[:,2])
 	ax2.grid()
 
-	ax3.plot(xx_n, instr_arr[:,0], label="avg")
-	ax3.plot(xx_n, instr_arr[:,1], label="var")
+	ax3.plot(xx_t, instr_arr[:,0], label="avg")
+	ax3.plot(xx_t, instr_arr[:,1], label="var")
 	ax3.grid()
 	ax3.legend()
 

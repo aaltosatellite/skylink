@@ -66,7 +66,7 @@ def demodulation_experiment(noisepower, rx_params, baudrate, nbits, f_offset, do
 
 	t00 = time.perf_counter()
 	JPLstatemx 		= create_classic_JPL_statemx(N_eps=sps, n_decay=JPLdecay)
-	DSD_statemx 	= create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff=lp_cutoff, synch_delay_mpr_f=synch_delay_mpr, sps_f=sps, f_center=f_offset)
+	DSD_statemx 	= create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff=lp_cutoff, synch_delay_mpr_f=synch_delay_mpr, sps_f=sps)
 	t_stategen = time.perf_counter() - t00
 
 	t00 = time.perf_counter()

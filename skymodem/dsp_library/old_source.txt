@@ -93,3 +93,65 @@ def demod_synch_decide(rs_arr, ii0, dmd_arr, io0, nsamples, f_center, JPLstatemx
 """
 
 
+
+@njit(cache=True, parallel=False)
+def demod_synch_decide(rs_arr, i_rs0, nsamples, dmd_arr, synch_arr, dmdsynch_head0, JPLstatemx, demodmx):
+	assert np.iscomplexobj(demodmx)
+	#assert type(synch_arr[0,0]) is int64
+	#assert len(dmd_arr.shape) == 1
+	assert demodmx.shape[0] == demodmx.shape[1]+2
+	shift_phase 	= 1.0j * demodmx[0,0].imag
+	s_lpd_prev 		= demodmx[0,1]
+	lp_tap_phase 	= int(demodmx[0,2].real)
+	f_center		= demodmx[0,3].real
+	lp_taps 		= demodmx[2:,:]
+	ntaps 			= len(demodmx[0])
+	assert abs(f_center) < 0.5
+	dmd_head = dmdsynch_head0
+	for i_rs in range(i_rs0, i_rs0 + nsamples):
+		s_shifted = rs_arr[i_rs] * np.exp(shift_phase)
+		shift_phase -= 2j*np.pi*f_center
+		demodmx[1][lp_tap_phase] = s_shifted
+		s_lpd = 0.0
+		for jj in range(ntaps):
+			s_lpd += demodmx[1][jj] * lp_taps[lp_tap_phase][jj]
+		zz = s_lpd * np.conj(s_lpd_prev)
+		s_lpd_prev = s_lpd
+		dmd_arr[dmd_head] = np.arctan2(zz.imag, zz.real)
+		dmd_head += 1
+		lp_tap_phase = (lp_tap_phase+1) % ntaps
+	demodmx[0,0] = shift_phase
+	demodmx[0,1] = s_lpd_prev
+	demodmx[0,2] = lp_tap_phase
+
+	synch_head = classic_JPL_synch_strm(sample_arr=dmd_arr, i_sample0=dmdsynch_head0, nsamples=nsamples, synch_arr=synch_arr, synch_head0=dmdsynch_head0, statemx=JPLstatemx)
+	assert synch_head == dmd_head
+
+	#last_symbol_absidx_f
+	dmd_opt_idx_f 	= demodmx[0,4].real
+	sps_f 			= demodmx[0,6].real
+	synch_delay_i 	= int(demodmx[0,5].real)  # TODO this should decay towards the end. 1) enables reception of last symbols, and 2) prevents loss of synch for last symbols.
+	Neps 			= JPLstatemx.shape[1]
+	assert synch_delay_i > 0
+	if dmd_opt_idx_f < 0:					# first call (after reset). measurement index is set to the beginning of dmd_array (which is at io0)
+		dmd_opt_idx_f = dmdsynch_head0
+	else:
+		assert dmd_opt_idx_f <= max(0, dmdsynch_head0 - 1)
+	bitarr = np.zeros(int(1.5*nsamples/sps_f)+3, dtype=np.int64)
+	bit_f_arr = np.zeros(int(1.5*nsamples/sps_f)+3, dtype=np.float64)
+	ibit = 0
+	while True:
+		vsym, i_tap = symbol_decision(dmd_arr=dmd_arr, synch_arr=synch_arr, dmd_synch_head_i=dmd_head, prev_dmd_idx_f=dmd_opt_idx_f, sps_f=sps_f, synch_delay_i=synch_delay_i, N_eps_i=Neps)
+		if i_tap < 0:
+			break
+		dmd_opt_idx_f = i_tap
+		bitarr[ibit] = np.sign(vsym)
+		bit_f_arr[ibit] = f_center
+		assert bit_f_arr[ibit] > -0.5
+		ibit += 1
+	demodmx[0,4] = dmd_opt_idx_f
+
+	#dmd_arr[0:len(dmd_arr)-nsamples] = dmd_arr[nsamples:len(dmd_arr)]
+	#synch_arr[0:len(synch_arr)-nsamples] = synch_arr[nsamples:len(synch_arr)]
+	return dmd_head, bitarr[0:ibit], bit_f_arr[0:ibit]
+

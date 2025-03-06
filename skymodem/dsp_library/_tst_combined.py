@@ -1,6 +1,6 @@
 import numpy as np
 from kuokka.lib_symsynching import create_classic_JPL_statemx
-from kuokka.lib_demodulation import demod_synch_decide, create_DSD_statemx, DSD_reset, demod_synch_decide_cont_f
+from kuokka.lib_demodulation import create_DSD_statemx, demod_synch_decide
 import time
 from kuokka.lib_tools import radionoise
 
@@ -28,17 +28,17 @@ def speedbench_demod_synch_decide(sps, baudrate, lp_ntaps):
 	dmd_arr = np.zeros(nsamples, dtype=np.float64)
 	synch_arr = np.zeros((nsamples,3), dtype=np.int64)
 	JPLstatemx = create_classic_JPL_statemx(N_eps=sps, n_decay=JPL_n_decay)
-	demodmx = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff=lp_cutoff, synch_delay_mpr_f=JPL_delay_mpr, sps_f=float(sps), f_center=f_center)
+	demodmx = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff=lp_cutoff, synch_delay_mpr_f=JPL_delay_mpr, sps_f=float(sps))
 
 
-	demod_synch_decide_cont_f(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=0, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx.copy(), demodmx=demodmx.copy())
-	demod_synch_decide_cont_f(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=0, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx.copy(), demodmx=demodmx.copy())
-	demod_synch_decide_cont_f(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=0, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx.copy(), demodmx=demodmx.copy())
+	demod_synch_decide(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=0, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx.copy(), demodmx=demodmx.copy())
+	demod_synch_decide(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=0, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx.copy(), demodmx=demodmx.copy())
+	demod_synch_decide(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=0, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx.copy(), demodmx=demodmx.copy())
 	rs_head = 0
 	dmd_head = 0
 	t0 = time.perf_counter()
 	for _ in range(n_rep):
-		dmd_head, _ = demod_synch_decide_cont_f(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=rs_head, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=dmd_head, JPLstatemx=JPLstatemx, demodmx=demodmx)
+		dmd_head, _ = demod_synch_decide(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=rs_head, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=dmd_head, JPLstatemx=JPLstatemx, demodmx=demodmx)
 		rs_head += batchlen
 	T_total = (time.perf_counter() - t0)
 	T_sample = T_total/(batchlen * n_rep)

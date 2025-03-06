@@ -15,7 +15,6 @@ def tst_demodulation_continuity():
 	lp_ntaps 		= 171
 	baudrate 		= 9600
 	sr 				= sps*baudrate
-	f_offset 		= 0.1
 	lp_cutoff 		= lp_cutoff_coeff*baudrate/sr
 
 	noiseamp = 0.7
@@ -62,8 +61,8 @@ def tst_demodulation_continuity():
 
 	JPLstatemx1 = create_classic_JPL_statemx(N_eps=sps, n_decay=JPLdecay)
 	JPLstatemx2 = create_classic_JPL_statemx(N_eps=sps, n_decay=JPLdecay)
-	DSD_statemx1 = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff=lp_cutoff, synch_delay_mpr_f=synch_delay_mpr, sps_f=sps, f_center=f_offset)
-	DSD_statemx2 = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff=lp_cutoff, synch_delay_mpr_f=synch_delay_mpr, sps_f=sps, f_center=f_offset)
+	DSD_statemx1 = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff=lp_cutoff, synch_delay_mpr_f=synch_delay_mpr, sps_f=sps)
+	DSD_statemx2 = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff=lp_cutoff, synch_delay_mpr_f=synch_delay_mpr, sps_f=sps)
 
 	dmd_head1, bit_head1 = demodulation_sequence(rs_arr=samples, centerf_arr=center_f_array, i_rs0=0, nsamples=nsamples, dmd_arr=dmd_arr1,
 						  synch_arr=synch_arr1, dmdsynch_head0=0, JPLstatemx=JPLstatemx1, demodmx=DSD_statemx1, bitarr=bitarr1, bitfarr=bitfarr1, bit_head0=0)
