@@ -52,6 +52,7 @@ def get_default_settings(sr, baudrate, f_tune, f_signal):
 
 class RadioLoop:
 	def __init__(self, rx_settings:ReceiverSettings):
+		print("[Precompile DSP]")
 		precompile_receiver(rx_settings)
 		self.preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
 		rs_mx, rs_cfg = get_default_rs()
@@ -235,7 +236,7 @@ class RadioLoop:
 				with self.receiver_lock:
 					rx_pls = self.rx.push_samples(batch=rx_samples, give_bits=False)
 				for rx_pl, rx_pl_f in rx_pls:
-					DBGPRINT("+[RadioLoop][radio decoded a payload at {}: {}...]".format(round(rx_pl_f, 4), rx_pl[0:16] ))
+					DBGPRINT("+[RadioLoop][radio decoded a payload at {}: {}]".format(round(rx_pl_f, 4), rx_pl ))
 					if not self.que_radio_to_skylink.full():
 						self.que_radio_to_skylink.put_nowait(rx_pl)
 					else:

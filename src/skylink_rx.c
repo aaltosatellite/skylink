@@ -139,7 +139,6 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 	// Extract the frame payload
 	parsed.payload = &frame->raw[payload_start];
 	parsed.payload_len = frame->length - payload_start;
-	printf("")
 
 	// Validate CRC32 if present
 	if (parsed.hdr.flag_crced) {

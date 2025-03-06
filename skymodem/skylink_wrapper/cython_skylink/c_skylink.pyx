@@ -41,12 +41,12 @@ class MACConfig:
 	carrier_sense_ticks             = 200
 
 class VCConfig:
-	require_authentication      = auth_flag_auth_tx | auth_flag_use_crc32
+	require_authentication      = auth_flag_auth_tx | auth_flag_require_auth
 	rcv_ring_len                = 28
 	horizon_width               = 16
 	send_ring_len               = 24
 	usable_element_size         = 175
-	tx_key                      = 0
+	tx_key                      = 2
 	rx_key                      = 0
 
 class SkyConfiguration:

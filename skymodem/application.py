@@ -191,7 +191,8 @@ class SkyModem:
 		while self.on:
 			try:
 				ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.15)
-				DBGPRINT("+[SkyModem][message from skylink to pub-zmq][vc: {} len: {}]".format(ichannel, len(rdata)))
+				#rdata = rdata[0:-4]
+				DBGPRINT("+[SkyModem][message from skylink to pub-zmq][vc: {} len: {}] {}".format(ichannel, len(rdata), rdata))
 				if not ichannel in range(num_virtual_channels):
 					DBGPRINT("vc number in skylink reception out of bounds: {}".format(ichannel))
 					continue
@@ -403,15 +404,8 @@ def tst_1(vc_base):
 
 
 if __name__ == '__main__':
-	#zmq_socket_instrumentation()
-	#tst_1(7100)
 	key0, _ = fetch_hmac_key(fpath="/home/elmore/fs1p/fs1p_hmac_key.json")
-	hmac_keys = [
-		key0,
-		key0,
-		key0,
-		key0,
-	]
+	hmac_keys = [key0, key0, key0, key0]
 	modem = SkyModem(receiver_settings=get_default_receiver_settings(), skylink_config=get_default_skylink_config(), hmac_key_list=hmac_keys, vc_port_base=7100)
 	modem.start()
 	while True:
