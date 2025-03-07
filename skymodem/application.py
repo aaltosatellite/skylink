@@ -2,9 +2,9 @@
 This file will contain the main application logic for the SkyModem application.
 """
 import threading
-from kuokka.radio_loop import RadioLoop, ReceiverSettings
-from cython_skylink import SkyLinkLoop, SkyConfiguration
-from cython_skylink import num_virtual_channels, arq_state_on, arq_state_off, arq_state_in_init
+from dsp_library.kuokka.radio_loop import RadioLoop, ReceiverSettings
+from skylink_wrapper.cython_skylink import SkyLinkLoop, SkyConfiguration
+from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_on, arq_state_off, arq_state_in_init
 import zmq
 import time
 import json
@@ -404,15 +404,22 @@ def tst_1(vc_base):
 
 
 if __name__ == '__main__':
-	key0, _ = fetch_hmac_key(fpath="/home/elmore/fs1p/fs1p_hmac_key.json")
+	key0 = b""
+	if key0 is b"":
+		print("Check HMAC Key!")
+		exit()
 	hmac_keys = [key0, key0, key0, key0]
 	modem = SkyModem(receiver_settings=get_default_receiver_settings(), skylink_config=get_default_skylink_config(), hmac_key_list=hmac_keys, vc_port_base=7100)
 	modem.start()
-	while True:
-		time.sleep(1.0)
-		if not modem.is_ok():
-			print("Modem is_ok() failed. Exiting.")
-			break
+	try:
+		while True:
+			time.sleep(1.0)
+			if not modem.is_ok():
+				print("Modem is_ok() failed. Exiting.")
+				break
+	except KeyboardInterrupt:
+		pass
+	modem.close()
 
 
 

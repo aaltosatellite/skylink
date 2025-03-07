@@ -17,12 +17,19 @@ This repository contains the protocol implementation, PC host application and va
 
 The source code is available under LGPL license, see `LICENSE` for the license text.
 
-Main authors: Petri Niemelä, Markus Hiltunen
+Main authors: Markus Hiltunen
 
-Special thanks: Tatu Peltola, Baris Dinc
+Additional help: Klaus Kivirikko, Topi Räty
 
+# Dependencies
+```
+sudo apt install python3-soapysdr
 
-# Building for PC
+pip install numba, Cython
+```
+Myös python uhd library
+
+# ((Work in progress))
 
 Skylink implementation itself doesn't depend on any external libraries. However, to run the implementation
 on a PC a hosting application is required to handle the communication between protocol and modem/radio and
