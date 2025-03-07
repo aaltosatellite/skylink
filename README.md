@@ -17,70 +17,52 @@ This repository contains the protocol implementation, PC host application and va
 
 The source code is available under LGPL license, see `LICENSE` for the license text.
 
-Main authors: Markus Hiltunen
+Main authors: Markus Hiltunen, Petri Niemelä
 
 Additional help: Klaus Kivirikko, Topi Räty
 
 # Dependencies
-```
-sudo apt install python3-soapysdr
 
-pip install numba, Cython
-```
-Myös python uhd library
-
-# ((Work in progress))
-
-Skylink implementation itself doesn't depend on any external libraries. However, to run the implementation
-on a PC a hosting application is required to handle the communication between protocol and modem/radio and
-between protocol and user application. For this purpose, the PC build includes `gs` (ground station) application
-which interfaces with [Suo Modem library](https://github.com/petrinm/suo) and other user applications via
-ZMQ sockets.
-
-Before starting the compiling process, the ZeroMQ library shall be installed on the system.
-For example from apt on Debian based distros.
-```
-$ sudo apt install libzmq3-dev
-```
-
-You will also need to enter your Python environment and install the rocket-fft package. This makes Numba recognize numpy's FFT functions.
+A pythonic skymodem was made which uses Cython linking to the C-based Skylink. First install the UHD drivers for
+the USRP B200. This can be done by running the following commands in the terminal:
 
 ```
-$ pip install rocket-fft
+$ sudo add-apt-repository -y ppa:ettusresearch/uhd
+$ sudo apt install uhd-host && sudo uhd_images_downloader && sudo usermod -a -G usrp $USERNAME
+$ sudo apt install soapysdr-module-uhd soapysdr-tools
 ```
 
-then you can build the project with the following commands:
-
+Once the drivers are installed, execute 
 ```
-$ pip install -e .
-```
-
-
-
-## LEGACY BELOW
-
-
-Also, download and install [Suo Modem library](https://github.com/petrinm/suo) according to its instructions.
-If the So library is installed to the system directories, the build system should be capable of locating it
-automatically. Otherwise, the location of the Suo git repository needs to be hinted to the Cmake by giving
-`SUO_GIT` define as shown in following instructions.
-
-```
-$ git clone https://github.com/aaltosatellite/skylink
-$ mkdir build
-$ cd build
-$ cmake .. -DSUO_GIT='~/[yoursuopath]/suo'
-$ make
+$ uhd_usrp_probe
 ```
 
-This compiles the `libskylink.so`, `gs` application and various unit tests.
+in the terminal. This should upload the FPGA image to the USRP and then
+print out some device info. If this succeeds, connecting to the USRP was successful. 
 
-In the PC configuration, the software stack including Skylink can look for example like this:
-<img alt="Skylink implemented in PC application" src="https://docs.google.com/drawings/d/e/2PACX-1vTS7-NUPl7c-zPaWXcuNd-l_SF0DxkMJqoaIFHb-g0cniG5JG1Z52R-qUsmzHVAcu8i_zmya1HMt28Z/pub?w=1042&h=340" width="60%" />
+Next install python dependencies:
+```
+$ sudo apt install python3-soapysdr 
+$ pip install numpy numba Cython
+```
 
-After this the compiled gs host application located in `build/gs/gs` and the suo modem application can
-be launched. The interfacing with Skylink's virtual channels over ZMQ sockets can be done for example
-using interface library `scripts/vc_connector.py`.
+Next compile cython skylink wrapper by running the following commands:
+```
+$ cd skylink/skymodem/skylink_wrapper/cython_skylink
+$ python _run_compile.py
+```
+
+Now you should be able to run the application, but you have to update the HMAC key in the application.py file.
+It is located at the start of the __main__ function, near the end of the file. 
+
+# Running the application
+
+Run the `skymodem` application by:
+
+```
+$ cd skylink/skymodem/
+$ python application.py
+```
 
 
 # Including Skylink into an embedded application

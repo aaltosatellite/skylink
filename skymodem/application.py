@@ -405,7 +405,7 @@ def tst_1(vc_base):
 
 if __name__ == '__main__':
 	key0 = b""
-	if key0 is b"":
+	if key0 == b"":
 		print("Check HMAC Key!")
 		exit()
 	hmac_keys = [key0, key0, key0, key0]
