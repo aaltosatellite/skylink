@@ -89,7 +89,7 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_tr
 	statemx[0,7]  = int(start_margin_mpr * fftlen)
 	statemx[0,8]  = int(end_margin_mpr * fftlen)
 	statemx[0,9] = n_search
-	statemx[0,10] = 0.5**( 1 / (T_f_decay * sps*baudrate / jumplen))  # c_f_decay
+	statemx[0,10] = 0.5**( 1 / (T_f_decay*sps*baudrate/jumplen))  # c_f_decay
 	statemx[0,11] = 5.0 * sps*baudrate / jumplen	# on_count_limit
 
 	statemx[0,20] = 0 		# idx  (this runs from (fftlen-jumplen) to fftlen-1 and then an fft is called)
@@ -202,7 +202,7 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 					running_avg, running_var = avg_var_upd(avg0=running_avg, var0=running_var, val=statemx[3, i_fft], c_update=c_stat_update, update_count=stat_upd_count)
 					stat_upd_count += 1
 			if trig_on and (not trig_on_prev):
-				print("    Trigger!")
+				#print("    trigger (",corrmax, running_avg, running_var, ")")
 				f_switch 			= (1,0)[f_switch]
 				#corrmaxfmax_sum 	= 0.0
 				#corrmax_sum 		= 0.0
@@ -214,6 +214,7 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 				on_counter 		+= 1
 				if on_counter > on_count_limit:
 					stat_upd_count = 0
+					print("    [DSP]Recalibration limit reached. Statistic counter zeroed.")
 			if (not trig_on) and trig_on_prev:
 				center_f_arr[center_f_head:center_f_head+end_margin] = f_switch-10
 			if not trig_on:

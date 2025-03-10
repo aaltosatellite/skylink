@@ -267,7 +267,7 @@ def fm_mod(f_signal_offset, peak_deviation, modulator):
 	for i in range(1,nn):
 		cs_mod[i] = modulator[i] + cs_mod[i-1]
 
-	signal = np.exp((2j*np.pi) * (f_signal_offset * np.arange(nn) + cs_mod * peak_deviation))
+	signal = np.exp((2j*np.pi) * (f_signal_offset * np.arange(nn) + cs_mod * peak_deviation)) # TODO: make the frequency offset it's own exp-multiplication. Math would be cleaner.
 	return signal
 
 

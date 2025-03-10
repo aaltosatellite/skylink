@@ -122,8 +122,6 @@ class ReceiverSettings:
 
 	def get_lp_cutoff(self):
 		# lp_cutoff_coeff * baudrate / sr
-		# = lp_cutoff_coeff * baudrate / (baudrate * sps)
-		# = lp_cutoff_coeff / sps
 		return self.lp_cutoff_coeff / self.sps
 
 	def get_search_space_triplet(self):  #returns (f_tune, minimum_possible_center_frequency, maximum_possible_center_frequency)
@@ -284,7 +282,6 @@ class Receiver:
 
 
 	def _buffer_roll_1(self):
-		#print("ROLL 1")
 		self.rs_array[0:self.rs_head-self.bufferhalf] 				= self.rs_array[self.bufferhalf:self.rs_head]
 		self.center_f_array[0:self.center_f_head-self.bufferhalf] 	= self.center_f_array[self.bufferhalf:self.center_f_head]
 		self.fft_instr_array[0:self.center_f_head-self.bufferhalf] 	= self.fft_instr_array[self.bufferhalf:self.center_f_head]
@@ -295,7 +292,6 @@ class Receiver:
 
 
 	def _buffer_roll_2(self):
-		#print("ROLL 2")
 		self.dmd_array[0:self.dmdsynch_head-self.bufferhalf] 		= self.dmd_array[self.bufferhalf:self.dmdsynch_head]
 		self.synch_array[0:self.dmdsynch_head-self.bufferhalf] 		= self.synch_array[self.bufferhalf:self.dmdsynch_head]
 		self.dmdsynch_head = self.dmdsynch_head - self.bufferhalf

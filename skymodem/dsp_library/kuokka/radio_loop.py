@@ -84,18 +84,14 @@ class RadioLoop:
 		self.rx_process_thread.join(timeout=1.0)
 		self.tx_thread.join(timeout=1.0)
 
-	def compose_samples(self, payload):
+	def compose_samples(self, payload, f_offset_nrm):
 		pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
 		#pl_chars = np.random.randint(0,255, 122)
 		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (self.preamble_bits, bits) )
 		sps = self.rx_settings.sr0 / self.rx_settings.baudrate
-		f_last_reception = self.rx.center_frequency_estimate(normalized=False, t_past_receptions=120.0)
-		f_use, dt_separation = doppler_correction(f_received=f_last_reception, f_original=self.rx_settings.f_expected, f_at_target=self.rx_settings.f_expected)
-		DBGPRINT("-[RadioLoop][transmission center freq:  {} MHz]".format( f_use * 1e-6, 4 ))
-		f_offset = (f_use - self.rx_settings.f_tune) / self.rx_settings.sr0
 		n_silence_start = int(self.rx_settings.sr0 * 5e-3) # TODO: this should be a setting
-		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset, power=1.0,
+		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0,
 					 		   mod_index=self.rx_settings.mod_index, shaper_mode=1,
 							   shaper_BT_prod=self.rx_settings.BT, shaper_n_taps=int(sps*4)+1,
 							   n_silence_start=n_silence_start, n_silence_end=0)
@@ -130,19 +126,14 @@ class RadioLoop:
 	def usrp_start(self):
 		self.rx = Receiver(settings=self.rx_settings)
 		# This noise injection enforces the jit-compilation of much of the signal processing pipeline before the loop starts.
-		noise = np.random.normal(0,0.1,10000) + np.random.normal(0, 0.1, 10000)*1j
-		rx0 = Receiver(settings=self.rx_settings)
-		rx0.push_samples(batch=noise)
-		center_freq = self.rx_settings.f_tune # Hz
-		sample_rate = self.rx_settings.sr0 # Hz
-		gain = 55 # dB
+		gain = 56 # dB
 		usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
-		usrp.set_rx_rate(sample_rate, 0)
-		usrp.set_tx_rate(sample_rate, 0)
-		usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(center_freq), 0)
-		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(center_freq), 0)
+		usrp.set_rx_rate(self.rx_settings.sr0, 0)
+		usrp.set_tx_rate(self.rx_settings.sr0, 0)
+		usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(self.rx_settings.f_tune), 0)
+		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(self.rx_settings.f_tune), 0)
 		usrp.set_rx_gain(gain, 0)
-		usrp.set_tx_gain(gain, 0) # TODO do this?
+		usrp.set_tx_gain(gain, 0)
 		DBGPRINT("[RadioLoop][RX Gain Range: {}]".format( usrp.get_rx_gain_range() ))
 		DBGPRINT("[RadioLoop][TX Gain Range: {}]".format( usrp.get_tx_gain_range() ))
 		DBGPRINT("[RadioLoop][usrp RX samplerate:  {} ksps]".format( round(usrp.get_rx_rate(0)*1e-3, 3) ))
@@ -157,7 +148,6 @@ class RadioLoop:
 		self.rx_thread.start()
 		self.rx_process_thread.start()
 		self.tx_thread.start()
-
 
 
 	def _recording_rx_loop(self, rx_buffer_len):
@@ -178,8 +168,7 @@ class RadioLoop:
 		cursor = 0
 		n_received = 0
 		t0 = time.perf_counter()
-		t_next = t0 + ((n_received + rx_buffer_len) / self.rx_settings.sr0)
-		t_sleep = max(0, t_next - time.perf_counter())
+		t_sleep = 0.0
 		while self.on:
 			time.sleep(t_sleep)
 			batch = samples[cursor:cursor+rx_buffer_len]
@@ -195,7 +184,6 @@ class RadioLoop:
 			n_received += rx_buffer_len
 			t_next = t0 + ((n_received + rx_buffer_len) / self.rx_settings.sr0)
 			t_sleep = max(0, t_next - time.perf_counter())
-
 
 
 	def _usrp_rx_loop(self, usrp:uhd.usrp.MultiUSRP, rx_buffer_len):
@@ -259,9 +247,13 @@ class RadioLoop:
 			try:
 				payload = self.que_skylink_to_radio.get(timeout=0.25)
 				assert type(payload) == bytes
-				samplearr = self.compose_samples(payload)
-				#DBGPRINT("+[inital samplearr of shape {}]".format(str(samplearr.shape)))
-				#DBGPRINT("+[inital samplearr of dtype {}]".format(str(samplearr.dtype)))
+
+				f_last_reception = self.rx.center_frequency_estimate(normalized=False, t_past_receptions=120.0)
+				f_use, dt_separation = doppler_correction(f_received=f_last_reception, f_original=self.rx_settings.f_expected, f_at_target=self.rx_settings.f_expected)
+				DBGPRINT("+[RadioLoop][transmission center freq:  {} MHz]".format( f_use * 1e-6, 4 ))
+				f_offset_nrm = (f_use - self.rx_settings.f_tune) / self.rx_settings.sr0
+
+				samplearr = self.compose_samples(payload, f_offset_nrm=f_offset_nrm)
 				assert len(samplearr.shape) == 1
 				N = len(samplearr)
 				samplearr = np.reshape(samplearr, (1,N))
