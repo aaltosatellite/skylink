@@ -262,9 +262,9 @@ class SkyModem:
 				self.skylink_loop.flush(ichannel=ichannel)
 			elif ctrl_command == "get_stats":
 				sky_stats_d = self.skylink_loop.sky_get_stats()
-				response_dict["rsp"] = "statss"
+				response_dict["rsp"] = "stats"
 				response_dict["skylink"] = sky_stats_d
-				response_dict["kuokka"] = dict()
+				#response_dict["kuokka"] = dict()
 			elif ctrl_command == "clear_stats":
 				self.skylink_loop.sky_diag_clear()
 			elif ctrl_command == "set_config":
@@ -305,7 +305,6 @@ class SkyModem:
 
 
 
-
 def get_default_receiver_settings():
 	settings = ReceiverSettings(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=32000, f_tune=437.100e6, f_expected=437.125e6)
 	settings.mod_index 				= 0.5
@@ -317,86 +316,6 @@ def get_default_receiver_settings():
 
 def get_default_skylink_config():
 	return SkyConfiguration()
-
-
-
-
-
-
-
-
-
-def zmq_socket_instrumentation():
-	from types import SimpleNamespace
-	pub_sockets, sub_sockets, context = bind_vc_sockets(vc_base=7100, num_channels=4)
-	sub_que = Queue(210)
-	NS = SimpleNamespace()
-	NS.on = True
-	sub_threads = list()
-	for i,sub_sock in enumerate(sub_sockets):
-		ID = i
-		thrd = threading.Thread(target=sub_socket_loop, args=(sub_sock, sub_que, ID, NS), daemon=True)
-		thrd.start()
-		sub_threads.append(thrd)
-	print("zmq socket listen loop rungging.")
-	while True:
-		try:
-			rcv = sub_que.get(timeout=0.33)
-			print("\trcv:",rcv)
-			ichannel, json_data = rcv
-			frame_dict = json.loads( json_data )
-			print("\tjson load successful:",frame_dict , flush=True)
-
-		except Empty:
-			pass
-		except Exception as e:
-			print("Exception breaks the que-get loop: ", e)
-			break
-	print("Exit of zmq socket listen loop.")
-
-
-
-
-def tst_1(vc_base):
-	pub_sockets, sub_sockets, context = bind_vc_sockets(7100, num_channels=num_virtual_channels)
-	time.sleep(0.1)
-	print("Sockets created.")
-
-
-	print("Creating peer")
-	peer_pub_1 = context.socket(zmq.SUB)
-
-	print("Connecting peer")
-	peer_pub_1.connect("tcp://localhost:{}".format( str(vc_base + 0*10) ))
-	peer_pub_1.subscribe(b"")
-	peer_pub_1.set(zmq.RCVTIMEO, 1350)
-	time.sleep(0.2)
-
-	print("Pub-0 sending test.")
-	pub_sockets[0].send(b"Foobar!")
-	time.sleep(0.2)
-	print("")
-
-	print("Peer receiving 1.")
-	t0 = time.perf_counter()
-	rcv1 = peer_pub_1.recv()
-	dt1 = round((time.perf_counter() - t0) * 1000)
-	print("rcv1: ",rcv1)
-	print("rcv1 passed in {} ms".format(dt1))
-	print("")
-
-	print("Peer receiving 2.")
-	t0 = time.perf_counter()
-	rcv2 = None
-	try:
-		rcv2 = peer_pub_1.recv()
-	except zmq.Again:
-		print("(Again exception handled)")
-	dt2 = round((time.perf_counter() - t0) * 1000)
-	print("rcv2: ",rcv2)
-	print("rcv2 passed in {} ms".format(dt2))
-
-
 
 
 
