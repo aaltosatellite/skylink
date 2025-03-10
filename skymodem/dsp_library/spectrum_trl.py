@@ -42,10 +42,10 @@ def pixmap_to_samples(mx, nrep, do_plot=False):
 	samples = np.zeros(0, dtype=np.complex128)
 	nrows = mx.shape[0]
 	for irow in range(nrows):
-		smpls = np.fft.ifft(np.fft.fftshift(np.complex128(rollsmooth(mx[irow],0))))
+		smpls = np.fft.ifft(np.fft.fftshift(np.complex128(mx[irow])))
 		samples = np.concatenate( (smpls, samples) )
 	samples = samples / np.max(np.abs(samples))
-	samples = samples * 2
+	samples = samples * 1.0
 
 	print("amp", np.average(np.abs(samples)))
 	if do_plot:
@@ -68,6 +68,9 @@ def paint_in_spectrum(f_tune, sr, gain, samples):
 	usrp.set_rx_gain(gain, 0)
 	usrp.set_tx_gain(gain, 0)
 	print("rx gain range",usrp.get_rx_gain_range())
+	print("tx gain range",usrp.get_tx_gain_range())
+	print("TX gain:", usrp.get_tx_gain())
+	print("TX f:", usrp.get_tx_freq())
 
 	tx_buffer = np.complex64(samples)
 	tx_stream_args = uhd.usrp.StreamArgs("fc32", "sc16")
@@ -95,8 +98,8 @@ if __name__ == '__main__':
 	fpath0 = "/home/elmore/Desktop/jaan1.jpg"
 	fpath1 = "/home/elmore/Desktop/pedro-pedro-400.png"
 	mx = get_jpg_mx(fpath0)
-	samples = pixmap_to_samples(mx, 8, False)
-	paint_in_spectrum(f_tune=437.1e6, sr=1e5, gain=75, samples=samples)
+	samples = pixmap_to_samples(mx, 6, False)
+	paint_in_spectrum(f_tune=437.1e6, sr=1e5, gain=89, samples=samples)
 
 
 

@@ -3,7 +3,8 @@ from sdr_recorder import get_samples, fpaths
 from kuokka.lib_tools import make_samples
 import time
 import numpy as np
-from kuokka.radio_loop import get_default_settings, RadioLoop
+from kuokka.radio_loop import RadioLoop
+from kuokka.lib_receiver import ReceiverSettings
 from mtools.tools_dsp import waterfall_mx
 from matplotlib import pyplot as plt
 from scipy.signal import firwin
@@ -13,9 +14,12 @@ from scipy.signal import firwin
 
 
 def test_sample_modulation_speed(sr, baudrate, BT):
-	T_total 	= 0.050
+	#T_total 	= 0.050
+	#nbits 		= int(T_total * baudrate)
 
-	nbits 		= int(T_total * baudrate)
+	nbits 		= 200*8
+	T_total 	= nbits / baudrate
+
 	bitstring 	= np.random.randint(0,2, nbits)*2 -1
 	sps 		= sr / baudrate
 	f_offset	= 12.0e3 / sr
@@ -46,23 +50,22 @@ def test_sample_modulation_speed(sr, baudrate, BT):
 
 
 def test_packet_generation_speed(sr, baudrate, BT):
-	settings = get_default_settings(sr=sr, baudrate=baudrate, f_tune=437.10e6, f_signal=437.125e6)
+	settings = ReceiverSettings(sr0=sr, baudrate=baudrate, bufferlen=800000, batch_maxlen=16000, f_tune=437e6, f_center=437.025e6)
 	settings.BT = BT
 	radioloop = RadioLoop(rx_settings=settings)
 	pl = os.urandom(200)
 
-	samples = radioloop.compose_samples(payload=pl)
-	samples = radioloop.compose_samples(payload=pl)
+	samples, _ = radioloop._compose_samples(payload=pl, usrp_reshape=False, as_c64=True)
+	samples, _ = radioloop._compose_samples(payload=pl, usrp_reshape=False, as_c64=True)
 
 	t0 = time.perf_counter()
 	for _ in range(100):
-		samples = radioloop.compose_samples(payload=pl)
+		radioloop._compose_samples(payload=pl, usrp_reshape=False, as_c64=True)
 	T_call = (time.perf_counter() - t0) / 100
 	speed_bytes 	= len(pl) / T_call
 	speed_bits 		= len(pl)*8 / T_call
 	speed_ratio_1 	= speed_bits / baudrate
 	speed_ratio_2 	= (len(samples)/T_call) / sr
-
 	print("="*40)
 	print("sr:             {} Ms/s".format( round(sr*1e-6, 2) ))
 	print("baudrate:       {} /s".format( round(baudrate, 0) ))
@@ -79,11 +82,11 @@ def test_packet_generation_speed(sr, baudrate, BT):
 
 
 
-def compare_generated_to_recording():
-	recorded = get_samples(fpath0)
+def compare_generated_to_recording(fpath):
+	recorded = get_samples(fpath)
 	recorded = recorded / np.average( np.abs(recorded))
 
-	settings = get_default_settings(sr=1e6, baudrate=9600, f_tune=437.00e6, f_signal=437.11e6)
+	settings = ReceiverSettings(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=16000, f_tune=437.00e6, f_center=437.1e6)
 	settings.sps = 41
 	settings.BT = -1
 	settings.mod_index = 0.5
@@ -92,7 +95,7 @@ def compare_generated_to_recording():
 	samples = np.zeros( n_init_silence, dtype=np.complex128 )
 	pl = os.urandom(36)
 	for _ in range(7):
-		gen_samples = radioloop.compose_samples(payload=pl)
+		gen_samples = radioloop._compose_samples(payload=pl, usrp_reshape=False, as_c64=True)
 		samples = np.concatenate( (samples, gen_samples) )
 		#samples = np.concatenate( (samples, np.zeros(n_gap, dtype=np.complex128)) )
 	nn = len(samples)
@@ -106,8 +109,8 @@ def compare_generated_to_recording():
 
 
 
-def plot_fmdemod_of_recording():
-	recorded = get_samples(fpath0)
+def plot_fmdemod_of_recording(fpath):
+	recorded = get_samples(fpath)
 	recorded = recorded / np.average( np.abs(recorded))
 	N0 = len(recorded)
 	recorded = recorded[0 : int(N0* 0.12)]
@@ -154,16 +157,17 @@ test_sample_modulation_speed(sr=1e6, baudrate=1*9600,  BT=-1)
 test_sample_modulation_speed(sr=1e6, baudrate=2*9600,  BT=-1)
 test_sample_modulation_speed(sr=1e6, baudrate=4*9600,  BT=-1)
 test_sample_modulation_speed(sr=1e6, baudrate=8*9600,  BT=-1)
-test_sample_modulation_speed(sr=1e6, baudrate=16*9600, BT=-1)
 test_sample_modulation_speed(sr=1e6, baudrate=9600,    BT=0.5)
 test_sample_modulation_speed(sr=1e6, baudrate=9600*2,  BT=0.5)
+test_sample_modulation_speed(sr=1e6, baudrate=9600*4,  BT=0.5)
 print("################################################")
 print("")
 print("")
+test_packet_generation_speed(sr=1e6, baudrate=1*9600, BT=-1)
+test_packet_generation_speed(sr=1e6, baudrate=2*9600, BT=-1)
+test_packet_generation_speed(sr=1e6, baudrate=1*9600, BT=0.5)
+test_packet_generation_speed(sr=1e6, baudrate=2*9600, BT=0.5)
 
-a = np.identity(3)
-k = np.cross(np.ones(3), np.ones(3))
-x = np.cross(np.ones(3), np.ones(3))
 """
 test_packet_generation_speed(sr=1e6, baudrate=1*9600, BT=-1)
 test_packet_generation_speed(sr=1e6, baudrate=2*9600, BT=-1)
@@ -176,8 +180,7 @@ print("")
 print("")
 """
 
-compare_generated_to_recording()
-
+#compare_generated_to_recording()
 #plot_fmdemod_of_recording()
 
 

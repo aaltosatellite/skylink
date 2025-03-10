@@ -47,9 +47,9 @@ def tst0():
 	mod_index			= 0.7			# tx param
 	batch_maxlen 		= 6000
 	f_tune				= 437.1e6
-	f_signal			= 437.00e6 + 125e3
+	f_center			= 437.00e6 + 125e3
 
-	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_expected=f_signal)
+	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
 	settings.sps 					= sps
 	settings.baudrate 				= baudrate
 	settings.lp_cutoff_coeff 		= 0.625 #0.625
@@ -120,12 +120,12 @@ def tst1(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 	noiseamp 			= 0.020 / 9600
 	batch_maxlen 		= 6000
 	f_tune				= 437.0e6
-	f_signal			= 437.00e6 - 25e3
-	f_doppler			= f_signal * ((3e8 + 7500) / 3e8) - f_signal
-	f_offset0_rel		= (f_signal - f_tune) / sr0
+	f_center			= 437.00e6 - 25e3
+	f_doppler			= f_center * ((3e8 + 7500) / 3e8) - f_center
+	f_offset0_rel		= (f_center - f_tune) / sr0
 
 
-	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_expected=f_signal-f_doppler*0.5)
+	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center-f_doppler*0.5)
 	settings.sps 					= sps
 	settings.baudrate 				= baudrate
 	settings.lp_cutoff_coeff 		= 0.625
@@ -287,10 +287,10 @@ def tst2_pl_mode(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 	noiseamp 			= 0.20 / 9600
 	batch_maxlen 		= 6000
 	f_tune				= 437.1e6
-	f_signal			= f_tune + 21e3
-	f_offset0_rel		= (f_signal - f_tune) / sr0
+	f_center			= f_tune + 21e3
+	f_offset0_rel		= (f_center - f_tune) / sr0
 
-	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_expected=f_signal)
+	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
 	settings.m_halflen				= 15
 
 	settings.sps 					= sps

@@ -4,7 +4,7 @@ This file will contain the main application logic for the SkyModem application.
 import threading
 from dsp_library.kuokka.radio_loop import RadioLoop, ReceiverSettings
 from skylink_wrapper.cython_skylink import SkyLinkLoop, SkyConfiguration
-from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_on, arq_state_off, arq_state_in_init
+from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_on, arq_state_off
 import zmq
 import time
 import json
@@ -74,8 +74,6 @@ def bind_vc_sockets(vc_base, num_channels):
 class SkyModem:
 	def __init__(self, receiver_settings:ReceiverSettings, skylink_config:SkyConfiguration, hmac_key_list, vc_port_base):
 		self.on = True
-		self.receiver_settings = receiver_settings
-		self.skylink_config = skylink_config
 		self.hmac_key_list = hmac_key_list
 		self.radio_loop = RadioLoop(rx_settings=receiver_settings)
 		self.skylink_loop = SkyLinkLoop(config=skylink_config, key_list=hmac_key_list,
@@ -130,6 +128,10 @@ class SkyModem:
 			thrd.join(timeout=1.0)
 
 
+	def get_modem_state(self):
+		return self.radio_loop.get_state()
+
+
 	def start(self):
 		for i,sub_sock in enumerate(self.sub_sockets):
 			ID = i
@@ -137,7 +139,7 @@ class SkyModem:
 			thrd.start()
 			self.sub_threads.append(thrd)
 		self.skylink_loop.start()
-		self.radio_loop.usrp_start() # TODO choose usrp or Soapy
+		self.radio_loop.usrp_start() # TODO choose usrp or Soapy (or a sample file)
 		self.arq_check_thread 			= threading.Thread(target=self._check_arq_loop, args=tuple(), daemon=True)
 		self.arq_check_thread.start()
 		self.sub_que_process_thread 	= threading.Thread(target=self._sub_que_loop, args=tuple(), daemon=True)
@@ -156,6 +158,7 @@ class SkyModem:
 				DBGPRINT("SkyModem Exception (check_arq_loop): ", e)
 				self.close()
 				break
+
 
 	def _check_arq_states(self):
 		state_d_l = self.skylink_loop.sky_get_state()
@@ -227,6 +230,7 @@ class SkyModem:
 				DBGPRINT("SkyModem Exception (sub_que_loop): ", e)
 				self.close()
 				break
+
 
 	def _process_sub_que_frame(self, ID, msg):
 		if not ID in range(num_virtual_channels):
@@ -305,21 +309,6 @@ class SkyModem:
 
 
 
-def get_default_receiver_settings():
-	settings = ReceiverSettings(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=32000, f_tune=437.100e6, f_expected=437.125e6)
-	settings.mod_index 				= 0.5
-	settings.BT 					= 0.5
-	settings.sps 					= 21
-	settings.fft_trigger_on_level 	= 7.0
-	settings.lp_cutoff_coeff		= 0.630 * 1
-	return settings
-
-def get_default_skylink_config():
-	return SkyConfiguration()
-
-
-
-
 
 
 if __name__ == '__main__':
@@ -328,7 +317,10 @@ if __name__ == '__main__':
 		print("Check HMAC Key!")
 		exit()
 	hmac_keys = [key0, key0, key0, key0]
-	modem = SkyModem(receiver_settings=get_default_receiver_settings(), skylink_config=get_default_skylink_config(), hmac_key_list=hmac_keys, vc_port_base=7100)
+	rcv_settings = ReceiverSettings(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=32000, f_tune=437.100e6, f_center=437.125e6)
+	skylink_configuration = SkyConfiguration()
+
+	modem = SkyModem(receiver_settings=rcv_settings, skylink_config=skylink_configuration, hmac_key_list=hmac_keys, vc_port_base=7100)
 	modem.start()
 	try:
 		while True:

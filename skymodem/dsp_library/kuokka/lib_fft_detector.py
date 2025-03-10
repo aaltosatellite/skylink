@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit, objmode
 from .lib_tools import make_samples
-import time
+
 
 _fft_mask_dict = dict()
 
@@ -15,7 +15,6 @@ def construct_fft_mask(sps, mod_index, BT, fftlen, masklen, nn):
 
 	assert (masklen % 2) == 1
 	nbits = int((fftlen*6 + sps*3 +1) / sps) + 1
-	t0 = time.perf_counter()
 	fft_stack = np.zeros(fftlen, dtype=np.float64)
 	n_stacked = 0
 	while n_stacked < nn:
@@ -34,7 +33,6 @@ def construct_fft_mask(sps, mod_index, BT, fftlen, masklen, nn):
 	assert len(mask) == masklen, (len(mask),masklen)
 	#mask = mask - np.min(mask)
 	mask = mask / np.max(mask)
-	#T_construct = (time.perf_counter() - t0)
 	#print("[Constructed fft mask in {} ms]".format(round(1e3*T_construct,1)))
 	_fft_mask_dict[ (sps, mod_index, BT, fftlen, masklen, nn) ] = mask
 	return mask
@@ -118,16 +116,6 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_tr
 		statemx[6, 0:masklen]  	+= construct_fft_mask(sps=sps, mod_index=mod_index, BT=BT, fftlen=fftlen, masklen=masklen, nn=1000) # empiric mask
 	return statemx
 
-
-
-@njit(cache=True)
-def get_center_frequency_estimate(statemx, f_tune):
-	c_f_update_long = statemx[0,27]
-	is_active = c_f_update_long < 0.999
-	f_center_long_normalized = statemx[0,26]  # [0.5 : 0.5)
-	sr  = statemx[0,11]
-	f_center = f_tune + sr * f_center_long_normalized
-	return f_center, is_active
 
 
 @njit(cache=True)

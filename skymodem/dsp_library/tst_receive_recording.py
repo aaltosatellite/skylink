@@ -27,12 +27,12 @@ def receive_a_recording():
 	BT 					= 0.5
 	batch_maxlen 		= 6000
 	f_tune				= 437.1e6
-	f_signal			= 437.00e6 + 125e3
+	f_center			= 437.00e6 + 125e3
 
-	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * (fshift0+(f_signal-f_tune)))
-	expected_relative_f = (f_signal-f_tune) / (baudrate*sps)
+	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * (fshift0+(f_center-f_tune)))
+	expected_relative_f = (f_center-f_tune) / (baudrate*sps)
 
-	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=3400000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_expected=f_signal)
+	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=3400000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
 	settings.sps 					= sps
 	settings.lp_cutoff_coeff 		= 0.625 #0.625
 	settings.mod_index				= mod_index
