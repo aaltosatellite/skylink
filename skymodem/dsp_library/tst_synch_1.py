@@ -1,7 +1,7 @@
 import time
 import numpy as np
 #from matplotlib import pyplot as plt
-from kuokka.lib_symsynching import create_classic_JPL_statemx, classic_JPL_synch_run, classic_JPL_synch_step
+from kuokka.lib_symsynching import create_classic_JPL_statemx, classic_JPL_synch_run, classic_JPL_synch_step, classic_JPL_synch_strm
 from kuokka.lib_symsynching import general_JPL_synch_run_2, create_general_JPL_statemx_2, general_JPL_synch_step_2
 from kuokka.lib_symsynching import general_JPL_synch_run_1, general_JPL_synch_step_1, create_general_JPL_statemx_1
 
@@ -35,10 +35,16 @@ def _synchs_against_eachother_round(plott=False):
 	assert np.allclose(out_clss, out_gene_2)
 	# synch runs produce equal outputs
 
+	out_clss_strm = np.zeros( (len(stream), 3), dtype=np.int64)
+	mx_clss   = create_classic_JPL_statemx(N_eps=N_eps, n_decay=12)
+	synch_head = classic_JPL_synch_strm(sample_arr=stream, i_sample0=0, nsamples=len(stream), synch_arr=out_clss_strm, synch_head0=0, statemx=mx_clss)
+	assert np.allclose(out_clss_strm, out_clss)
+	assert synch_head == len(stream)
+	# stream synch (classic) produces the same as single shot run
+
 	mx_clss   = create_classic_JPL_statemx(N_eps=N_eps, n_decay=12)
 	mx_gene_1 = create_general_JPL_statemx_1(sps_int=N_eps, n_decay=12, c_constant=1.0, c_shape=0.0, shape_idx=0)
 	mx_gene_2 = create_general_JPL_statemx_2(sps_int=N_eps, n_decay=12, c_constant=1.0, c_shape=0.0, shape_idx=0)
-
 	for i,s in enumerate(stream):
 		ring_amax_clss, ring_idx_clss = classic_JPL_synch_step(sample=s, statemx=mx_clss)
 		ring_amax_gene_1, ring_idx_gene_1 = general_JPL_synch_step_1(sample=s, statemx=mx_gene_1)

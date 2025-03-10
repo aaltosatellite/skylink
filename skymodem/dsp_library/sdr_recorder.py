@@ -162,7 +162,7 @@ def show_demod(samples, sr0, baudrate, fshift, x_axis="samples"):
 
 
 if __name__ == '__main__':
-	#fpath = record(f_center=437.0e6,  sr=1e6, t_total=10.0)
+	fpath = record_and_save(f_center=437.0e6,  sr=1e6, t_total=10.0)
 	show_recording(fpaths[6][0])
 
 

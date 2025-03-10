@@ -42,10 +42,10 @@ def pixmap_to_samples(mx, nrep, do_plot=False):
 	samples = np.zeros(0, dtype=np.complex128)
 	nrows = mx.shape[0]
 	for irow in range(nrows):
-		smpls = np.fft.ifft(np.fft.fftshift(np.complex128(rollsmooth(mx[irow],1))))
+		smpls = np.fft.ifft(np.fft.fftshift(np.complex128(rollsmooth(mx[irow],0))))
 		samples = np.concatenate( (smpls, samples) )
 	samples = samples / np.max(np.abs(samples))
-	samples = samples * 200
+	samples = samples * 2
 
 	print("amp", np.average(np.abs(samples)))
 	if do_plot:
@@ -88,11 +88,16 @@ def paint_in_spectrum(f_tune, sr, gain, samples):
 			tx_streamer.send(tx_buffer[cc:cc+1024*8], tx_metadata)
 			cc += 1024*8
 		print("tx-dt: ", round(time.perf_counter() - t0, 3))
-		time.sleep(5.0)
+		time.sleep(1.0)
 
 
 if __name__ == '__main__':
 	fpath0 = "/home/elmore/Desktop/jaan1.jpg"
+	fpath1 = "/home/elmore/Desktop/pedro-pedro-400.png"
 	mx = get_jpg_mx(fpath0)
-	samples = pixmap_to_samples(mx, 8, True)
-	#paint_in_spectrum(f_tune=437.1e6, sr=2e5, gain=68, samples=samples)
+	samples = pixmap_to_samples(mx, 8, False)
+	paint_in_spectrum(f_tune=437.1e6, sr=1e5, gain=75, samples=samples)
+
+
+
+
