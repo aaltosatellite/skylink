@@ -9,12 +9,15 @@ from .lib_reedsolomon import get_default_rs
 from queue import Queue, Empty
 import SoapySDR
 from SoapySDR import SOAPY_SDR_ABI_VERSION, SOAPY_SDR_RX, SOAPY_SDR_TX, SOAPY_SDR_CF32
+from datetime import datetime as dtime
 
-
-DEBUG_PRINT = True
+DEBUG_PRINT_ON = True
 def DBGPRINT(*args, **kwargs):
-	if DEBUG_PRINT:
-		print(*args, **kwargs)
+	ts = "[{}]".format( dtime.now().isoformat()[-15:] )
+	ts += " "*(17-len(ts)) + "[RadioLoop]"
+	first, args = args[0], args[1:]
+	if DEBUG_PRINT_ON:
+		print(ts+str(first), *args, **kwargs)
 
 
 
@@ -41,6 +44,7 @@ class RadioLoop:
 		self.tx_thread 			= threading.Thread(target=None, args=tuple())
 		self.self_mute = False
 		self.last_verified_freq = (0, 0.0)
+		self.own_recently_sent = dict()
 
 	def is_ok(self):
 		if not self.on:
@@ -64,7 +68,7 @@ class RadioLoop:
 		sdr = SoapySDR.Device(args)
 		sdr.setSampleRate(SOAPY_SDR_RX, 0, sample_rate)
 		sdr.setFrequency(SOAPY_SDR_RX, 0, center_freq)
-		DBGPRINT("[RadioLoop][Gain Range: {}]".format( sdr.getGainRange()))
+		DBGPRINT("[Gain Range: {}]".format( sdr.getGainRange()))
 		#txStream = sdr.setupStream(SOAPY_SDR_TX, SOAPY_SDR_CF32)
 		#sdr.writeStream()
 		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
@@ -93,12 +97,12 @@ class RadioLoop:
 		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(self.rx_settings.f_tune), 0)
 		usrp.set_rx_gain(gain, 0)
 		usrp.set_tx_gain(gain, 0)
-		DBGPRINT("[RadioLoop][RX Gain Range: {}]".format( usrp.get_rx_gain_range() ))
-		DBGPRINT("[RadioLoop][TX Gain Range: {}]".format( usrp.get_tx_gain_range() ))
-		DBGPRINT("[RadioLoop][usrp RX samplerate:  {} ksps]".format( round(usrp.get_rx_rate(0)*1e-3, 3) ))
-		DBGPRINT("[RadioLoop][usrp TX samplerate:  {} ksps]".format( round(usrp.get_tx_rate(0)*1e-3, 3) ))
-		DBGPRINT("[RadioLoop][usrp RX center-f:  {} MHz]".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
-		DBGPRINT("[RadioLoop][usrp TX center-f:  {} MHz]".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
+		DBGPRINT("[RX Gain Range: {}]".format( usrp.get_rx_gain_range() ))
+		DBGPRINT("[TX Gain Range: {}]".format( usrp.get_tx_gain_range() ))
+		DBGPRINT("[usrp RX samplerate:  {} ksps]".format( round(usrp.get_rx_rate(0)*1e-3, 3) ))
+		DBGPRINT("[usrp TX samplerate:  {} ksps]".format( round(usrp.get_tx_rate(0)*1e-3, 3) ))
+		DBGPRINT("[usrp RX center-f:  {} MHz]".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
+		DBGPRINT("[usrp TX center-f:  {} MHz]".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
 		#self.rx_thread 			= threading.Thread(target=self._recording_rx_loop,    args=(1024*4,), daemon=True) #TODO bufferlen as setting?
 		self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 1024*4), daemon=True) #TODO bufferlen as setting?
 		self.rx_process_thread 	= threading.Thread(target=self._rx_process_loop, args=tuple(),      daemon=True)
@@ -130,6 +134,12 @@ class RadioLoop:
 
 	# == static functions ==================================================================================================================================================
 	# ======================================================================================================================================================================
+	def _clean_own_sent(self):
+		for key in list(self.own_recently_sent):
+			if (time.monotonic() - self.own_recently_sent[key]) > 3.0:
+				del self.own_recently_sent[key]
+
+
 	def _get_transmit_frequency(self, as_offset:bool):
 		if self.frequency_following and ((time.monotonic() - self.last_verified_freq[1]) < 60.0) and (self.last_verified_freq[1] > 0):
 			f_offset = self.last_verified_freq[0]
@@ -192,7 +202,7 @@ class RadioLoop:
 			if not self._internal_sample_que.full():
 				self._internal_sample_que.put_nowait(batch)
 			else:
-				DBGPRINT("[RadioLoop][WARNING! radio-to-process queue overflow!]  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
+				DBGPRINT("[WARNING! radio-to-process queue overflow!]  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
 			n_received += rx_buffer_len
 			t_next = t0 + ((n_received + rx_buffer_len) / self.rx_settings.sr0)
 			t_sleep = max(0, t_next - time.perf_counter())
@@ -221,11 +231,11 @@ class RadioLoop:
 				if not self._internal_sample_que.full():
 					self._internal_sample_que.put_nowait(recv_buffer[0,:].copy())
 				else:
-					DBGPRINT("![RadioLoop][WARNING: radio-to-process queue overflow!]")
+					DBGPRINT("[WARNING: radio-to-process queue overflow!]")
 					raise Exception("radio-loop: radio-to-process queue overflow.")
 				n_rx_loops += 1
 			except Exception as e:
-				DBGPRINT("![RadioLoop][Exception (rx-radio-rcv-thread)]", e)
+				DBGPRINT("[Exception (rx-radio-rcv-thread)]", e)
 				self.on = False
 				break
 
@@ -237,17 +247,21 @@ class RadioLoop:
 				with self.receiver_lock:
 					rx_pls = self.rx.push_samples(batch=rx_samples, give_bits=False)
 					for rx_pl, rx_pl_f_offset in rx_pls:
-						DBGPRINT("+[RadioLoop][radio decoded a payload at {} MHz: {}]".format(round( (self.rx_settings.f_tune+rx_pl_f_offset)*1e-6, 4), rx_pl ))
+						if rx_pl in self.own_recently_sent:
+							del self.own_recently_sent[rx_pl]
+							DBGPRINT("[Discarded a self-reception]")
+							continue
+						DBGPRINT("[radio decoded a frame at {} MHz: {}]".format(round( (self.rx_settings.f_tune+rx_pl_f_offset)*1e-6, 4), rx_pl ))
 						self.last_verified_freq = rx_pl_f_offset, time.monotonic()
 						if not self.que_radio_to_skylink.full():
 							self.que_radio_to_skylink.put_nowait(rx_pl)
 						else:
-							DBGPRINT("![RadioLoop][WARNING: radio-to-skylink queue full]")
-							raise Exception("![RadioLoop][process-to-skylink queue overflow]")
+							DBGPRINT("[WARNING: radio-to-skylink queue full]")
+							raise Exception("[process-to-skylink queue overflow]")
 			except Empty:
 				pass
 			except Exception as e:
-				DBGPRINT("![RadioLoop][Exception (rx-process-thread)]", e)
+				DBGPRINT("[Exception (rx-process-thread)]", e)
 				self.on = False
 				break
 
@@ -262,8 +276,10 @@ class RadioLoop:
 			try:
 				payload = self.que_skylink_to_radio.get(timeout=0.25)
 				with self.receiver_lock:
+					self._clean_own_sent()
+					self.own_recently_sent[payload] = time.monotonic()
 					samplearr, f_use_abs = self._compose_samples(payload, usrp_reshape=True, as_c64=True)
-					DBGPRINT("+[RadioLoop][transmission center freq:  {} MHz]".format( f_use_abs * 1e-6, 4 ))
+					DBGPRINT("[transmission center freq:  {} MHz]".format( f_use_abs * 1e-6, 4 ))
 					N = samplearr.shape[1]
 
 					idx = 0
@@ -278,12 +294,11 @@ class RadioLoop:
 				t_to_end = max(0, t_end - time.perf_counter())
 				time.sleep(t_to_end + 0.0e-3)
 				self.self_mute = False
-				DBGPRINT("+[RadioLoop][tx end sleep of {} ms]".format(t_to_end*1e3))
-				DBGPRINT("+[RadioLoop][radio transmitted samples]")
+				DBGPRINT("[end of tx. sleep of {} ms.]".format( round(t_to_end*1e3, 2) ))
 			except Empty:
 				pass
 			except Exception as e:
-				DBGPRINT("![RadioLoop][Exception (tx-thread)]", e)
+				DBGPRINT("[Exception (tx-thread)]", e)
 				self.on = False
 				break
 

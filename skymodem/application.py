@@ -14,8 +14,11 @@ import os, struct
 DEBUG_PRINT_ON = True
 
 def DBGPRINT(*args, **kwargs):
+	ts = "[{}]".format( dtime.now().isoformat()[-15:] )
+	ts += " "*(17-len(ts)) + "[SkyModem] "
+	first, args = args[0], args[1:]
 	if DEBUG_PRINT_ON:
-		print(*args, **kwargs)
+		print(ts+str(first), *args, **kwargs)
 
 
 
@@ -195,7 +198,7 @@ class SkyModem:
 			try:
 				ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.15)
 				#rdata = rdata[0:-4]
-				DBGPRINT("+[SkyModem][message from skylink to pub-zmq][vc: {} len: {}] {}".format(ichannel, len(rdata), rdata))
+				DBGPRINT("[skylink-vc-{} -> pub-zmq. len: {}]".format(ichannel, len(rdata)))
 				if not ichannel in range(num_virtual_channels):
 					DBGPRINT("vc number in skylink reception out of bounds: {}".format(ichannel))
 					continue
@@ -221,7 +224,7 @@ class SkyModem:
 		while self.on:
 			try:
 				ID, msg = self.sub_que.get(timeout=0.15)
-				DBGPRINT("+[SkyModem][msg for vc {} pulled from zmq-sub-queue]".format(ID))
+				DBGPRINT("[sub-zmq -> skylink-vc-{}. len: {}]".format(ID, len(msg)))
 				with self.action_lock:
 					self._process_sub_que_frame(ID, msg)
 			except Empty:
@@ -234,12 +237,12 @@ class SkyModem:
 
 	def _process_sub_que_frame(self, ID, msg):
 		if not ID in range(num_virtual_channels):
-			DBGPRINT("![SkyModem][error: ID not in vc range: {}]".format(ID))
+			DBGPRINT("[error: ID not in vc range: {}]".format(ID))
 			return
 		ichannel = ID
 		frame_dict = json.loads( msg )
 		if not type(frame_dict) == dict:
-			DBGPRINT("![SkyModem][error: json was not a dict:{}]".format(type(frame_dict)))
+			DBGPRINT("[error: json was not a dict:{}]".format(type(frame_dict)))
 			return
 
 		if "data" in frame_dict:
@@ -249,13 +252,13 @@ class SkyModem:
 			data = bytes(ints)
 			send_ret = self.skylink_loop.send(ichannel=ichannel, data=data)
 			if send_ret < 0:
-				DBGPRINT("![SkyModem][error: sky_vc_push_packet_to_send error: {}]".format(send_ret))
+				DBGPRINT("[error: sky_vc_push_packet_to_send error: {}]".format(send_ret))
 
 		if "metadata" in frame_dict:
 			response_dict = dict()
 			control_dict = frame_dict["metadata"]
 			if not "cmd" in control_dict:
-				DBGPRINT("![SkyModem][No 'cmd' field in control_dict]")
+				DBGPRINT("[No 'cmd' field in control_dict]")
 				return
 			ctrl_command = control_dict["cmd"]
 			if ctrl_command == "get_state":
@@ -322,6 +325,7 @@ if __name__ == '__main__':
 
 	modem = SkyModem(receiver_settings=rcv_settings, skylink_config=skylink_configuration, hmac_key_list=hmac_keys, vc_port_base=7100)
 	modem.start()
+	modem.radio_loop.set_doppler_correction(False)
 	try:
 		while True:
 			time.sleep(1.0)

@@ -3,13 +3,16 @@ import threading as thrd
 from queue import Queue
 from c_skylink import SkyLink, SkyConfiguration, mod_time_ticks
 import time
+from datetime import datetime as dtime
 
 
 DEBUG_PRINT_ON = True
-
 def DBGPRINT(*args, **kwargs):
+	ts = "[{}]".format( dtime.now().isoformat()[-15:] )
+	ts += " "*(17-len(ts)) + "[SkyLink]  "
+	first, args = args[0], args[1:]
 	if DEBUG_PRINT_ON:
-		print(*args, **kwargs)
+		print(ts+str(first), *args, **kwargs)
 
 
 class SkyLinkLoop(threading.Thread):
@@ -76,7 +79,7 @@ class SkyLinkLoop(threading.Thread):
 				while not self.que_payloads_from_radio.empty():
 					pl = self.que_payloads_from_radio.get_nowait()
 					sky_rx_ret = self.skylink.sky_rx(pl)
-					DBGPRINT("+[SkyLink][skylink was given a pl. sky_rx returned {}]".format(sky_rx_ret))
+					DBGPRINT("[skylink was given a pl. sky_rx returned {}]".format(sky_rx_ret))
 					sleeptime = 0.0
 
 				while True:
@@ -85,7 +88,7 @@ class SkyLinkLoop(threading.Thread):
 					tx_i, frame_bytes = self.skylink.sky_tx()
 					if tx_i == 0:
 						break
-					DBGPRINT("+[SkyLink][transmits {} bytes]".format( len(frame_bytes)))
+					DBGPRINT("[transmits {} bytes]".format(len(frame_bytes)))
 					self.que_payloads_to_radio.put_nowait(frame_bytes)
 					sleeptime = 0.0
 
@@ -94,7 +97,7 @@ class SkyLinkLoop(threading.Thread):
 						ri, rb = self.skylink.sky_vc_read_next_received(ichannel)
 						if ri < 0:
 							break
-						DBGPRINT("+[SkyLink][vc {} received {} bytes]".format(ichannel, len(rb)))
+						DBGPRINT("[vc {} received {} bytes]".format(ichannel, len(rb)))
 						self.que_received_messages.put_nowait( (ichannel, rb) )
 						sleeptime = 0.0
 
