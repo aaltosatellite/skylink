@@ -210,13 +210,13 @@ def sinc_curve(BT, sps_f, n_taps):
 	return pulse / np.sum(pulse)
 
 @njit(cache=True)
-def make_squarewave(binary_symbols, sps_f, i_sample_or_sym0_f, nsamples, npad):
+def make_squarewave(binary_symbols, sps_f, i_sample_of_sym0_f, nsamples, npad):
 	assert np.all(np.isclose(binary_symbols, 1) + np.isclose(binary_symbols, -1))
 	if nsamples < 0:
-		nsamples = int(len(binary_symbols) * sps_f + i_sample_or_sym0_f)
+		nsamples = int(len(binary_symbols) * sps_f + i_sample_of_sym0_f)
 	samples = np.zeros(nsamples)
 	for i in range(nsamples):
-		isym = int((i-i_sample_or_sym0_f) / sps_f)
+		isym = int((i-i_sample_of_sym0_f) / sps_f)
 		if isym < 0:
 			continue
 		if isym < len(binary_symbols):
@@ -240,7 +240,7 @@ def make_f_modulating_waveform(binary_symbols, sps_f, shaper_mode, shaper_BT_pro
 	else:
 		pulse = np.ones(1, dtype=np.float64)
 	npulse = len(pulse)
-	modulator0 = make_squarewave(binary_symbols=binary_symbols, sps_f=sps_f, i_sample_or_sym0_f=0.0, nsamples=-1, npad=len(pulse)//2)
+	modulator0 = make_squarewave(binary_symbols=binary_symbols, sps_f=sps_f, i_sample_of_sym0_f=0.0, nsamples=-1, npad=len(pulse)//2)
 	if npulse > 1:
 		#modulator1 = np.correlate(modulator0, pulse)
 		modulator1 = np.zeros(len(modulator0)-npulse+1, dtype=np.float64)

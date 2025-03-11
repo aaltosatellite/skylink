@@ -40,12 +40,12 @@ class ReceiverSettings:
 		self.end_margin_mpr 	= 1.5			# ~
 		# --------------------------------------------------
 		# JPL synchronizer ---------------------------------
-		self.JPL_n_decay 		= 28.0			# ! D-vs-c
+		self.JPL_n_decay 		= 30.0			# ! D-vs-c
 		# --------------------------------------------------
 		# demodulation -------------------------------------
 		self.lp_ntaps			= 161			# ~
 		self.lp_cutoff_coeff	= 0.630			# !
-		self.synch_delay_mpr	= 22.0			# !
+		self.synch_delay_mpr	= 18.0			# !
 		# --------------------------------------------------
 		# framing ------------------------------------------
 		self.use_scrambler 		= True

@@ -6,7 +6,7 @@ from numba import njit
 import time
 import pickle
 from scipy.signal import firwin
-
+import os
 
 def gauss_noise(n, amp):
 	return np.random.normal(0, amp, n) + 1j*np.random.normal(0, amp, n)
@@ -136,10 +136,29 @@ def investigate_noise_shape():
 
 
 
+def d_timing(n):
+	dd = dict()
+	for i in range(n):
+		dd[os.urandom(200)] = time.time() - i*1.0
 
-investigate_noise_shape()
+	t0 = time.perf_counter()
+	for k in list(dd.keys()):
+		if (time.time() - dd[k]) < n*0.5:
+			del dd[k]
+	dt = time.perf_counter() - t0
+	print("{} entries in {} µs".format( n, round(1e6 * dt, 3) ))
 
 
+
+#investigate_noise_shape()
+
+d_timing(1)
+d_timing(2)
+d_timing(4)
+d_timing(10)
+d_timing(20)
+d_timing(30)
+d_timing(60)
 
 
 

@@ -45,7 +45,7 @@ def pixmap_to_samples(mx, nrep, do_plot=False):
 		smpls = np.fft.ifft(np.fft.fftshift(np.complex128(mx[irow])))
 		samples = np.concatenate( (smpls, samples) )
 	samples = samples / np.max(np.abs(samples))
-	samples = samples * 1.0
+	samples = samples * 1.1
 
 	print("amp", np.average(np.abs(samples)))
 	if do_plot:
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 	fpath1 = "/home/elmore/Desktop/pedro-pedro-400.png"
 	mx = get_jpg_mx(fpath0)
 	samples = pixmap_to_samples(mx, 6, False)
-	paint_in_spectrum(f_tune=437.1e6, sr=1e5, gain=89, samples=samples)
+	paint_in_spectrum(f_tune=437.1e6, sr=2e5, gain=89.75, samples=samples)
 
 
 
