@@ -2936,7 +2936,7 @@ typedef struct {
   PyObject *__pyx_int_250;
   PyObject *__pyx_int_600;
   PyObject *__pyx_int_1000;
-  PyObject *__pyx_int_6500;
+  PyObject *__pyx_int_3000;
   PyObject *__pyx_int_26000;
   PyObject *__pyx_int_30000;
   PyObject *__pyx_tuple_;
@@ -3210,7 +3210,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_int_250);
   Py_CLEAR(clear_module_state->__pyx_int_600);
   Py_CLEAR(clear_module_state->__pyx_int_1000);
-  Py_CLEAR(clear_module_state->__pyx_int_6500);
+  Py_CLEAR(clear_module_state->__pyx_int_3000);
   Py_CLEAR(clear_module_state->__pyx_int_26000);
   Py_CLEAR(clear_module_state->__pyx_int_30000);
   Py_CLEAR(clear_module_state->__pyx_tuple_);
@@ -3462,7 +3462,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_int_250);
   Py_VISIT(traverse_module_state->__pyx_int_600);
   Py_VISIT(traverse_module_state->__pyx_int_1000);
-  Py_VISIT(traverse_module_state->__pyx_int_6500);
+  Py_VISIT(traverse_module_state->__pyx_int_3000);
   Py_VISIT(traverse_module_state->__pyx_int_26000);
   Py_VISIT(traverse_module_state->__pyx_int_30000);
   Py_VISIT(traverse_module_state->__pyx_tuple_);
@@ -3732,7 +3732,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_int_250 __pyx_mstate_global->__pyx_int_250
 #define __pyx_int_600 __pyx_mstate_global->__pyx_int_600
 #define __pyx_int_1000 __pyx_mstate_global->__pyx_int_1000
-#define __pyx_int_6500 __pyx_mstate_global->__pyx_int_6500
+#define __pyx_int_3000 __pyx_mstate_global->__pyx_int_3000
 #define __pyx_int_26000 __pyx_mstate_global->__pyx_int_26000
 #define __pyx_int_30000 __pyx_mstate_global->__pyx_int_30000
 #define __pyx_tuple_ __pyx_mstate_global->__pyx_tuple_
@@ -11816,7 +11816,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitConstants(void) {
   __pyx_int_250 = PyInt_FromLong(250); if (unlikely(!__pyx_int_250)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_600 = PyInt_FromLong(600); if (unlikely(!__pyx_int_600)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_1000 = PyInt_FromLong(1000); if (unlikely(!__pyx_int_1000)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_int_6500 = PyInt_FromLong(6500); if (unlikely(!__pyx_int_6500)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_int_3000 = PyInt_FromLong(3000); if (unlikely(!__pyx_int_3000)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_26000 = PyInt_FromLong(26000L); if (unlikely(!__pyx_int_26000)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_30000 = PyInt_FromLong(30000L); if (unlikely(!__pyx_int_30000)) __PYX_ERR(0, 1, __pyx_L1_error)
   return 0;
@@ -12384,7 +12384,7 @@ if (!__Pyx_RefNanny) {
  * 
  * class ArqConfig:             # <<<<<<<<<<<<<<
  * 	timeout_ticks		 	= 26000
- * 	idle_frame_threshold 	= 6500
+ * 	idle_frame_threshold 	= 3000
  */
   __pyx_t_2 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_ArqConfig, __pyx_n_s_ArqConfig, (PyObject *) NULL, __pyx_n_s_c_skylink, (PyObject *) NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 23, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -12393,7 +12393,7 @@ if (!__Pyx_RefNanny) {
  * 
  * class ArqConfig:
  * 	timeout_ticks		 	= 26000             # <<<<<<<<<<<<<<
- * 	idle_frame_threshold 	= 6500
+ * 	idle_frame_threshold 	= 3000
  * 	idle_frames_per_window 	= 1
  */
   if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_timeout_ticks, __pyx_int_26000) < 0) __PYX_ERR(0, 24, __pyx_L1_error)
@@ -12401,15 +12401,15 @@ if (!__Pyx_RefNanny) {
   /* "c_skylink.pyx":25
  * class ArqConfig:
  * 	timeout_ticks		 	= 26000
- * 	idle_frame_threshold 	= 6500             # <<<<<<<<<<<<<<
+ * 	idle_frame_threshold 	= 3000             # <<<<<<<<<<<<<<
  * 	idle_frames_per_window 	= 1
  * 
  */
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_idle_frame_threshold, __pyx_int_6500) < 0) __PYX_ERR(0, 25, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_idle_frame_threshold, __pyx_int_3000) < 0) __PYX_ERR(0, 25, __pyx_L1_error)
 
   /* "c_skylink.pyx":26
  * 	timeout_ticks		 	= 26000
- * 	idle_frame_threshold 	= 6500
+ * 	idle_frame_threshold 	= 3000
  * 	idle_frames_per_window 	= 1             # <<<<<<<<<<<<<<
  * 
  * class HMACConfig:
@@ -12421,7 +12421,7 @@ if (!__Pyx_RefNanny) {
  * 
  * class ArqConfig:             # <<<<<<<<<<<<<<
  * 	timeout_ticks		 	= 26000
- * 	idle_frame_threshold 	= 6500
+ * 	idle_frame_threshold 	= 3000
  */
   __pyx_t_3 = __Pyx_Py3ClassCreate(((PyObject*)&PyType_Type), __pyx_n_s_ArqConfig, __pyx_empty_tuple, __pyx_t_2, NULL, 0, 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 23, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
