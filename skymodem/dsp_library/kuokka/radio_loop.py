@@ -222,8 +222,8 @@ class RadioLoop:
 		rx_streamer.issue_stream_cmd(stream_cmd)
 		while self.on:
 			try:
-				if (n_rx_loops % 1000) == 0:
-					DBGPRINT("rx-#{}".format(n_rx_loops))
+				# if (n_rx_loops % 1000) == 0:
+				# 	DBGPRINT("rx-#{}".format(n_rx_loops))
 				rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
 				assert rx_ret == rx_buffer_len
 				#if self.self_mute:
@@ -247,11 +247,11 @@ class RadioLoop:
 				with self.receiver_lock:
 					rx_pls = self.rx.push_samples(batch=rx_samples, give_bits=False)
 					for rx_pl, rx_pl_f_offset in rx_pls:
-						if rx_pl in self.own_recently_sent:
-							del self.own_recently_sent[rx_pl]
-							DBGPRINT("[Discarded a self-reception]")
-							continue
-						DBGPRINT("[radio decoded a frame at {} MHz: {}]".format(round( (self.rx_settings.f_tune+rx_pl_f_offset)*1e-6, 4), rx_pl ))
+						# if rx_pl in self.own_recently_sent: ##### Commented out to ease debugging, helps compare packets received and sent when testing ARQ.
+						# 	del self.own_recently_sent[rx_pl]
+						# 	DBGPRINT("[Discarded a self-reception]")
+						# 	continue
+						DBGPRINT("[radio decoded a frame at {} MHz: \n\033[92m{}\033[0m]\n".format(round( (self.rx_settings.f_tune+rx_pl_f_offset)*1e-6, 4), rx_pl ))
 						self.last_verified_freq = rx_pl_f_offset, time.monotonic()
 						if not self.que_radio_to_skylink.full():
 							self.que_radio_to_skylink.put_nowait(rx_pl)

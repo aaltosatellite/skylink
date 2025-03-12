@@ -198,7 +198,7 @@ class SkyModem:
 			try:
 				ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.15)
 				#rdata = rdata[0:-4]
-				DBGPRINT("[skylink-vc-{} -> pub-zmq. len: {}]".format(ichannel, len(rdata)))
+				DBGPRINT("[skylink-vc-{} -> pub-zmq. len: {}]: \n\033[96m{}\033[0m\n".format(ichannel, len(rdata), rdata))
 				if not ichannel in range(num_virtual_channels):
 					DBGPRINT("vc number in skylink reception out of bounds: {}".format(ichannel))
 					continue
