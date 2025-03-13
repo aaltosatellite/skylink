@@ -2,7 +2,7 @@ import time
 import uhd
 import numpy as np
 import threading
-from .lib_receiver import ReceiverSettings, Receiver, precompile_receiver
+from .lib_receiver import ReceiverConfig, Receiver, precompile_receiver
 from .lib_tools import make_samples, ints_to_bits, DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, doppler_correction
 from .lib_framing import frame_packet
 from .lib_reedsolomon import get_default_rs
@@ -23,17 +23,17 @@ def DBGPRINT(*args, **kwargs):
 
 
 class RadioLoop:
-	def __init__(self, rx_settings:ReceiverSettings):
+	def __init__(self, rx_config:ReceiverConfig):
 		DBGPRINT("Precompile DSP")
-		precompile_receiver(rx_settings, do_print=False)
-		self.rx_settings 				= rx_settings
+		precompile_receiver(rx_config, do_print=False)
+		self.rx_config 				= rx_config
 		self.frequency_following 		= True
 		self.use_doppler_correction 	= True
 		self.preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
 		rs_mx, rs_cfg = get_default_rs()
 		self.rs_mx = rs_mx
 		self.rs_cfg = rs_cfg
-		self.rx = Receiver(settings=self.rx_settings)
+		self.rx = Receiver(config=self.rx_config)
 		self.que_radio_to_skylink = Queue(64)
 		self.que_skylink_to_radio = Queue(3)
 		self._internal_sample_que = Queue(256)
@@ -62,8 +62,8 @@ class RadioLoop:
 
 	def soapy_start(self):
 		# TODO implement soapy version ------------------------------------
-		center_freq = self.rx_settings.f_tune # Hz
-		sample_rate = self.rx_settings.sr0 # Hz
+		center_freq = self.rx_config.f_tune # Hz
+		sample_rate = self.rx_config.sr0 # Hz
 		args = dict(device="uhd")
 		sdr = SoapySDR.Device(args)
 		sdr.setSampleRate(SOAPY_SDR_RX, 0, sample_rate)
@@ -90,10 +90,10 @@ class RadioLoop:
 		# This noise injection enforces the jit-compilation of much of the signal processing pipeline before the loop starts.
 		gain = 56 # dB
 		usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
-		usrp.set_rx_rate(self.rx_settings.sr0, 0)
-		usrp.set_tx_rate(self.rx_settings.sr0, 0)
-		usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(self.rx_settings.f_tune), 0)
-		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(self.rx_settings.f_tune), 0)
+		usrp.set_rx_rate(self.rx_config.sr0, 0)
+		usrp.set_tx_rate(self.rx_config.sr0, 0)
+		usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(self.rx_config.f_tune), 0)
+		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(self.rx_config.f_tune), 0)
 		usrp.set_rx_gain(gain, 0)
 		usrp.set_tx_gain(gain, 0)
 		DBGPRINT("RX gain range:      {}".format( str(usrp.get_rx_gain_range(0))[:-1] ))
@@ -104,7 +104,7 @@ class RadioLoop:
 		DBGPRINT("usrp TX samplerate: {} ksps".format( round(usrp.get_tx_rate(0)*1e-3, 3) ))
 		DBGPRINT("usrp RX tune-f:     {} MHz".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
 		DBGPRINT("usrp TX tune-f:     {} MHz".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
-		self.rx 				= Receiver(settings=self.rx_settings)
+		self.rx 				= Receiver(config=self.rx_config)
 		#self.rx_thread 		= threading.Thread(target=self._recording_rx_loop,    args=(1024*4,), daemon=True) #TODO bufferlen as setting?
 		self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 1024*4), daemon=True) #TODO bufferlen as setting?
 		self.rx_process_thread 	= threading.Thread(target=self._rx_process_loop, args=tuple(),      daemon=True)
@@ -117,11 +117,11 @@ class RadioLoop:
 	def get_state(self):
 		with self.receiver_lock:
 			d_state = dict()
-			d_state["baudrate"] = self.rx_settings.baudrate
+			d_state["baudrate"] = self.rx_config.baudrate
 			d_state["frequency-following-on"] = self.frequency_following
 			d_state["doppler-correction-on"] = self.use_doppler_correction
-			d_state["f-sdr-tune"] = self.rx_settings.f_tune
-			d_state["f-center"] = self.rx_settings.f_center
+			d_state["f-sdr-tune"] = self.rx_config.f_tune
+			d_state["f-center"] = self.rx_config.f_center
 			if self.last_verified_freq[1] == 0.0:
 				d_state["f-last-reception"] = None
 			else:
@@ -134,8 +134,8 @@ class RadioLoop:
 
 	def set_baudrate(self, baudrate:int):
 		with self.receiver_lock:
-			self.rx.switch_baudrate(baudrate=baudrate, sps=self.rx.settings.sps)
-			self.rx_settings.baudrate = baudrate
+			self.rx.switch_baudrate(baudrate=baudrate, sps=self.rx.config.sps)
+			self.rx_config.baudrate = baudrate
 
 
 
@@ -150,33 +150,33 @@ class RadioLoop:
 	def _get_transmit_frequency(self, as_offset:bool):
 		if self.frequency_following and ((time.monotonic() - self.last_verified_freq[1]) < 60.0) and (self.last_verified_freq[1] > 0):
 			f_offset = self.last_verified_freq[0]
-			f_recv_abs = f_offset + self.rx_settings.f_tune
+			f_recv_abs = f_offset + self.rx_config.f_tune
 			if self.use_doppler_correction:
-				f_use_abs, _ = doppler_correction(f_received=f_recv_abs, f_original=self.rx_settings.f_center, f_at_target=self.rx_settings.f_center)
+				f_use_abs, _ = doppler_correction(f_received=f_recv_abs, f_original=self.rx_config.f_center, f_at_target=self.rx_config.f_center)
 			else:
 				f_use_abs = f_recv_abs
 		else:
-			f_use_abs = self.rx_settings.f_center
+			f_use_abs = self.rx_config.f_center
 		if as_offset:
-			return f_use_abs - self.rx_settings.f_tune
+			return f_use_abs - self.rx_config.f_tune
 		return f_use_abs
 
 
 	def _compose_samples(self, payload, usrp_reshape, as_c64):
 		f_use_offset = self._get_transmit_frequency(as_offset=True)
-		f_offset_nrm = f_use_offset / self.rx_settings.sr0
+		f_offset_nrm = f_use_offset / self.rx_config.sr0
 		pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
 		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (self.preamble_bits, bits) )
-		sps = self.rx_settings.sr0 / self.rx_settings.baudrate
-		n_silence_start = int(self.rx_settings.sr0 * 5e-3) # TODO: this should be a setting
-		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.rx_settings.mod_index, shaper_mode=1,
-							   shaper_BT_prod=self.rx_settings.BT, shaper_n_taps=int(sps*4)+1, n_silence_start=n_silence_start, n_silence_end=0)
+		sps = self.rx_config.sr0 / self.rx_config.baudrate
+		n_silence_start = int(self.rx_config.sr0 * 5e-3) # TODO: this should be a setting
+		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.rx_config.mod_index, shaper_mode=1,
+							   shaper_BT_prod=self.rx_config.BT, shaper_n_taps=int(sps * 4) + 1, n_silence_start=n_silence_start, n_silence_end=0)
 		if usrp_reshape:
 			samples = np.reshape(samples, (1, len(samples)))
 		if as_c64:
 			samples = np.array(samples, dtype=np.complex64)
-		return samples, f_use_offset+self.rx_settings.f_tune
+		return samples, f_use_offset+self.rx_config.f_tune
 
 
 	def _recording_rx_loop(self, rx_buffer_len):
@@ -211,7 +211,7 @@ class RadioLoop:
 			else:
 				DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
 			n_received += rx_buffer_len
-			t_next = t0 + ((n_received + rx_buffer_len) / self.rx_settings.sr0)
+			t_next = t0 + ((n_received + rx_buffer_len) / self.rx_config.sr0)
 			t_sleep = max(0, t_next - time.perf_counter())
 
 
@@ -250,7 +250,7 @@ class RadioLoop:
 	def _rx_process_loop(self):
 		while self.on:
 			try:
-				rx_samples = self._internal_sample_que.get(timeout=0.25)
+				rx_samples = self._internal_sample_que.get(timeout=0.20)
 				with self.receiver_lock:
 					rx_pls = self.rx.push_samples(batch=rx_samples, give_bits=False)
 					for rx_pl, rx_pl_f_offset in rx_pls:
@@ -258,7 +258,7 @@ class RadioLoop:
 							del self.own_recently_sent[rx_pl]
 							DBGPRINT("Discarded a self-reception.")
 							continue
-						DBGPRINT("Radio decoded a frame at {} MHz: {}".format(round( (self.rx_settings.f_tune+rx_pl_f_offset)*1e-6, 4), rx_pl ))
+						DBGPRINT("Radio decoded a frame at {} MHz: {}".format(round((self.rx_config.f_tune + rx_pl_f_offset) * 1e-6, 4), rx_pl))
 						self.last_verified_freq = rx_pl_f_offset, time.monotonic()
 						if not self.que_radio_to_skylink.full():
 							self.que_radio_to_skylink.put_nowait(rx_pl)
@@ -281,7 +281,7 @@ class RadioLoop:
 		tx_metadata = uhd.types.TXMetadata()
 		while self.on:
 			try:
-				payload = self.que_skylink_to_radio.get(timeout=0.25)
+				payload = self.que_skylink_to_radio.get(timeout=0.20)
 				with self.receiver_lock:
 					self._clean_own_sent()
 					self.own_recently_sent[payload] = time.monotonic()
@@ -290,7 +290,7 @@ class RadioLoop:
 					N = samplearr.shape[1]
 
 					idx = 0
-					dtt = N / self.rx_settings.sr0
+					dtt = N / self.rx_config.sr0
 				t_end = time.perf_counter() + dtt
 				self.self_mute = True  # the 5ms initial silence in composed samples also ensures this will have effect.
 				while idx < N:

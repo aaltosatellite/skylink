@@ -4,7 +4,7 @@ from kuokka.lib_tools import make_samples
 import time
 import numpy as np
 from kuokka.radio_loop import RadioLoop
-from kuokka.lib_receiver import ReceiverSettings
+from kuokka.lib_receiver import ReceiverConfig
 from mtools.tools_dsp import waterfall_mx
 from matplotlib import pyplot as plt
 from scipy.signal import firwin
@@ -50,9 +50,9 @@ def test_sample_modulation_speed(sr, baudrate, BT):
 
 
 def test_packet_generation_speed(sr, baudrate, BT):
-	settings = ReceiverSettings(sr0=sr, baudrate=baudrate, bufferlen=800000, batch_maxlen=16000, f_tune=437e6, f_center=437.025e6)
-	settings.BT = BT
-	radioloop = RadioLoop(rx_settings=settings)
+	rx_config = ReceiverConfig(sr0=sr, baudrate=baudrate, bufferlen=800000, batch_maxlen=16000, f_tune=437e6, f_center=437.025e6)
+	rx_config.BT = BT
+	radioloop = RadioLoop(rx_config=rx_config)
 	pl = os.urandom(200)
 
 	samples, _ = radioloop._compose_samples(payload=pl, usrp_reshape=False, as_c64=True)
@@ -86,11 +86,11 @@ def compare_generated_to_recording(fpath):
 	recorded = get_samples(fpath)
 	recorded = recorded / np.average( np.abs(recorded))
 
-	settings = ReceiverSettings(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=16000, f_tune=437.00e6, f_center=437.1e6)
-	settings.sps = 41
-	settings.BT = -1
-	settings.mod_index = 0.5
-	radioloop = RadioLoop(rx_settings=settings)
+	rx_config = ReceiverConfig(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=16000, f_tune=437.00e6, f_center=437.1e6)
+	rx_config.sps = 41
+	rx_config.BT = -1
+	rx_config.mod_index = 0.5
+	radioloop = RadioLoop(rx_config=rx_config)
 	n_init_silence = int(1e6 * (0.0414 + 0.1))
 	samples = np.zeros( n_init_silence, dtype=np.complex128 )
 	pl = os.urandom(36)

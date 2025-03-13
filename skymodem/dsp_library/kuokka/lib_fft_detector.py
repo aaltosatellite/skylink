@@ -81,7 +81,7 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, f_center_search_map, mod_
 	statemx[0,6]  = int(masklen)
 	statemx[0,7]  = int(start_margin_mpr * fftlen)
 	statemx[0,8]  = int(end_margin_mpr * fftlen)
-	statemx[0,10] = 0.5**(1 / ((200*8*sps + n_delay + start_margin_mpr*fftlen)/jumplen))  # c_f_decay    was[0.5**( 1 / (T_f_decay*sps*baudrate/jumplen))]
+	statemx[0,10] = 0.5**(1 / (200*8*sps/jumplen))  # c_f_decay    was[0.5**( 1 / (T_f_decay*sps*baudrate/jumplen))]   [0.5**(1 / ((200*8*sps + n_delay + start_margin_mpr*fftlen)/jumplen))]
 	statemx[0,11] = 20*200*8*sps / jumplen	# on_count_limit  was[5.0*sps*baudrate / jumplen]
 
 	statemx[0,20] = 0 		# idx  (this runs from (fftlen-jumplen) to fftlen-1 and then an fft is called)
@@ -116,6 +116,7 @@ def set_f_center_search_map(statemx, search_map):
 	assert len(search_map) == statemx[0,0]
 	assert len(search_map) == statemx.shape[1]
 	statemx[7,:] = search_map
+	statemx[3,:] = 0
 
 
 
@@ -168,6 +169,7 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 			#fft = np.abs(np.fft.fftshift(np.fft.fft(window)))
 			fft = np.abs(compute_fft(window))
 			statemx[2,:] = fft
+			statemx[3,:] = 0
 			for i0 in range(fftlen -masklen +1):
 				i_center = i0 + masklen//2
 				if f_center_search_map[i_center] == 0:

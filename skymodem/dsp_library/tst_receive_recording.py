@@ -1,5 +1,5 @@
 import numpy as np
-from kuokka.lib_receiver import ReceiverSettings, Receiver, precompile_receiver
+from kuokka.lib_receiver import ReceiverConfig, Receiver, precompile_receiver
 from mtools.tools_dsp import create_resampler, resampler_execute
 from mtools.tools_dsp import waterfall_mx
 from matplotlib import pyplot as plt
@@ -32,22 +32,22 @@ def receive_a_recording():
 	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * (fshift0+(f_center-f_tune)))
 	expected_relative_f = (f_center-f_tune) / (baudrate*sps)
 
-	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=3400000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
-	settings.sps 					= sps
-	settings.lp_cutoff_coeff 		= 0.625 #0.625
-	settings.mod_index				= mod_index
-	settings.BT						= BT
+	rx_config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=3400000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
+	rx_config.sps 					= sps
+	rx_config.lp_cutoff_coeff 		= 0.625 #0.625
+	rx_config.mod_index				= mod_index
+	rx_config.BT					= BT
 
-	precompile_receiver(rx_settings=settings, do_print=True)
-	rx = Receiver(settings=settings)
-	rx2 = Receiver(settings=settings)
+	precompile_receiver(rx_config=rx_config, do_print=True)
+	rx = Receiver(config=rx_config)
+	rx2 = Receiver(config=rx_config)
 
 	t0 = time.perf_counter()
-	rx.switch_baudrate(baudrate=9600*2, sps=settings.sps)
+	rx.switch_baudrate(baudrate=9600*2, sps=rx_config.sps)
 	dt = (time.perf_counter() - t0)
 	print("Baudrate switch in: {} s".format( round(dt, 3) ))
 
-	rx.switch_baudrate(baudrate=9600, sps=settings.sps)
+	rx.switch_baudrate(baudrate=9600, sps=rx_config.sps)
 
 
 	if True:
@@ -114,10 +114,12 @@ def receive_a_recording():
 
 	print("Got {} bits".format(len(bits)))
 	print("Got {} payloads".format(len(pl_list)))
+	print("with avg length of {}".format( np.average([len(x[0]) for x in pl_list]) ))
+	print("(from {} to {})".format( np.min([len(x[0]) for x in pl_list]), np.max([len(x[0]) for x in pl_list]) ))
 	print("Relative freq should be ~{}".format( round(expected_relative_f, 4) ))
 
 	for pl_bytes, pl_f in pl_list:
-		print(round(pl_f, 4), ":", pl_bytes)
+		print(round(pl_f, 4), ":", len(pl_bytes), pl_bytes)
 	xx = np.arange(len(rx.center_f_array))
 	fig = plt.figure(figsize=(14,14))
 	ax1 = fig.add_subplot(211)

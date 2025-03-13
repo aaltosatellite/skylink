@@ -3,7 +3,7 @@ from kuokka.lib_framing import frame_packet
 from kuokka.lib_reedsolomon import get_default_rs
 from mtools.tools_dsp import resampler_execute, create_resampler
 from kuokka.lib_tools import DEFAULT_SYNCHWORD
-from kuokka.lib_receiver import Receiver, ReceiverSettings
+from kuokka.lib_receiver import Receiver, ReceiverConfig
 from mtools.tools_dsp import waterfall_mx
 from kuokka.lib_tools import make_samples, radionoise
 import time
@@ -49,15 +49,15 @@ def tst0():
 	f_tune				= 437.1e6
 	f_center			= 437.00e6 + 125e3
 
-	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
-	settings.sps 					= sps
-	settings.baudrate 				= baudrate
-	settings.lp_cutoff_coeff 		= 0.625 #0.625
-	settings.mod_index				= mod_index
-	settings.mask_mode				= 1
+	config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
+	config.sps 					= sps
+	config.baudrate 				= baudrate
+	config.lp_cutoff_coeff 		= 0.625 #0.625
+	config.mod_index				= mod_index
+	config.mask_mode				= 1
 
-	rx = Receiver(settings=settings)
-	rx2 = Receiver(settings=settings)
+	rx = Receiver(config=config)
+	rx2 = Receiver(config=config)
 
 
 	if True:
@@ -125,19 +125,19 @@ def tst1(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 	f_offset0_rel		= (f_center - f_tune) / sr0
 
 
-	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center-f_doppler*0.5)
-	settings.sps 					= sps
-	settings.baudrate 				= baudrate
-	settings.lp_cutoff_coeff 		= 0.625
-	settings.mod_index				= mod_index
-	settings.mask_mode				= 1
+	config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center - f_doppler * 0.5)
+	config.sps 					= sps
+	config.baudrate 				= baudrate
+	config.lp_cutoff_coeff 		= 0.625
+	config.mod_index				= mod_index
+	config.mask_mode				= 1
 
 
 
 	tgen0 = time.perf_counter()
 	r_ratio				= sps * baudrate / sr0
 	sps0 				= sr0 / baudrate
-	nnoise1 = int(1.2 * (1/10) * (1/settings.c_stat_update) * settings.jumplen * sr0 / (settings.sps * settings.baudrate))
+	nnoise1 = int(1.2 * (1/10) * (1/config.c_stat_update) * config.jumplen * sr0 / (config.sps * config.baudrate))
 	samples = np.zeros(nnoise1, dtype=np.complex128)
 	bitstrings = list()
 	for i_packet in range(n_packets):
@@ -152,12 +152,12 @@ def tst1(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 	nsamples = len(samples)
 	samples = samples + radionoise(n=nsamples, sr=sr0, W_per_Hz=noiseamp)
 	if do_print:
-		print("\t{} samples.  {} buffers".format(nsamples , round(r_ratio * nsamples / settings.bufferlen, 1) ))
+		print("\t{} samples.  {} buffers".format(nsamples , round(r_ratio * nsamples / config.bufferlen, 1) ))
 		print("\tCorresponding to {} s".format( round(nsamples/sr0, 2) ))
 		print("\tgenerated in {} ms".format( round( 1e3*(time.perf_counter()-tgen0), 0 ) ))
 		print("")
 
-	rx = Receiver(settings=settings)
+	rx = Receiver(config=config)
 
 
 	if do_waterfall:
@@ -290,15 +290,15 @@ def tst2_pl_mode(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 	f_center			= f_tune + 21e3
 	f_offset0_rel		= (f_center - f_tune) / sr0
 
-	settings = ReceiverSettings(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
-	settings.m_halflen				= 15
+	config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
+	config.m_halflen				= 15
 
-	settings.sps 					= sps
-	settings.baudrate 				= baudrate
-	settings.lp_cutoff_coeff 		= 0.625
-	settings.mod_index				= mod_index
-	settings.mask_mode				= 1
-	settings.BT						= BT_prod
+	config.sps 					= sps
+	config.baudrate 				= baudrate
+	config.lp_cutoff_coeff 		= 0.625
+	config.mod_index				= mod_index
+	config.mask_mode				= 1
+	config.BT						= BT_prod
 
 
 	rs_mx, rs_cfg = get_default_rs()
@@ -306,7 +306,7 @@ def tst2_pl_mode(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 	tgen0 = time.perf_counter()
 	r_ratio				= sps * baudrate / sr0
 	sps0 				= sr0 / baudrate
-	nnoise1 = int(1.2 * (1/10) * (1/settings.c_stat_update) * settings.jumplen * sr0 / (settings.sps * settings.baudrate))
+	nnoise1 = int(1.2 * (1/10) * (1/config.c_stat_update) * config.jumplen * sr0 / (config.sps * config.baudrate))
 	samples = np.zeros(nnoise1, dtype=np.complex128)
 	payloads = list()
 	for i_packet in range(n_packets):
@@ -324,7 +324,7 @@ def tst2_pl_mode(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 	nsamples = len(samples)
 	samples = samples + radionoise(n=nsamples, sr=sr0, W_per_Hz=noiseamp)
 	if do_print:
-		print("\t{} samples.  {} buffers".format(nsamples , round(r_ratio * nsamples / settings.bufferlen, 1) ))
+		print("\t{} samples.  {} buffers".format(nsamples , round(r_ratio * nsamples / config.bufferlen, 1) ))
 		print("\tCorresponding to {} s".format( round(nsamples/sr0, 2) ))
 		print("\tgenerated in {} ms".format( round( 1e3*(time.perf_counter()-tgen0), 0 ) ))
 		print("")
@@ -332,7 +332,7 @@ def tst2_pl_mode(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 	if do_waterfall:
 		waterfall_mx(samples=samples, fftlen=2048, fft_jump=1024, srate=sr0, plot_and_show=True, y_is_time=True)
 
-	rx = Receiver(settings=settings)
+	rx = Receiver(config=config)
 
 	recvd_payloads = list()
 	feed_head = 0

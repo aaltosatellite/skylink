@@ -5,9 +5,9 @@ from c_skylink import SkyLink, SkyConfiguration, mod_time_ticks, num_virtual_cha
 import time
 from datetime import datetime as dtime
 
-EKEY_SKY_PAYLOAD 			= 0
-EKEY_SKY_ARQ_CONNECTED 		= 1
-EKEY_SKY_ARQ_DISCONNECTED 	= 2
+EKEY_SKY_PAYLOAD 			= 100
+EKEY_SKY_ARQ_CONNECTED 		= 101
+EKEY_SKY_ARQ_DISCONNECTED 	= 102
 
 DEBUG_PRINT_ON = True
 def DBGPRINT(*args, **kwargs):

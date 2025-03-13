@@ -2,7 +2,8 @@
 This file will contain the main application logic for the SkyModem application.
 """
 import threading
-from dsp_library.kuokka.radio_loop import RadioLoop, ReceiverSettings
+from dsp_library.kuokka.radio_loop import RadioLoop, ReceiverConfig
+from kuokka.lib_tools import get_doppler_low_high
 from cython_skylink import SkyLinkLoop, SkyConfiguration, EKEY_SKY_ARQ_DISCONNECTED, EKEY_SKY_PAYLOAD, EKEY_SKY_ARQ_CONNECTED
 from cython_skylink import num_virtual_channels, arq_state_off
 import zmq
@@ -74,10 +75,10 @@ def bind_vc_sockets(vc_base, num_channels):
 
 
 class SkyModem:
-	def __init__(self, receiver_settings:ReceiverSettings, skylink_config:SkyConfiguration, hmac_key_list, vc_port_base):
+	def __init__(self, rx_config:ReceiverConfig, skylink_config:SkyConfiguration, hmac_key_list, vc_port_base):
 		self.on = True
 		self.hmac_key_list = hmac_key_list
-		self.radio_loop = RadioLoop(rx_settings=receiver_settings)
+		self.radio_loop = RadioLoop(rx_config=rx_config)
 		self.skylink_loop = SkyLinkLoop(config=skylink_config, key_list=hmac_key_list,
 										que_payloads_from_radio=self.radio_loop.que_radio_to_skylink,
 										que_payloads_to_radio=self.radio_loop.que_skylink_to_radio)
@@ -175,35 +176,35 @@ class SkyModem:
 			self.pub_sockets[ichannel].send(json.dumps(frame_d).encode("utf8"))
 
 
-	def _modem_to_zmq_loop(self):
+	def _modem_to_zmq_loop(self): # downlink
 		while self.on:
 			try:
-				ekey, ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.15)
-				DBGPRINT("skylink-vc-{} -> pub-zmq. len: {}".format(ichannel, len(rdata)))
-				assert ichannel in range(num_virtual_channels)
-				with self.action_lock:
-					self._process_skylink_msg(ekey=ekey, ichannel=ichannel, data=rdata)
+				ekey, ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.20)
 			except Empty:
 				continue
 			except Exception as e:
 				DBGPRINT("SkyModem Exception (skylink_reception_loop): ", e)
 				self.close()
 				break
+			DBGPRINT("skylink-vc-{} -> pub-zmq. len: {}".format(ichannel, len(rdata)))
+			assert ichannel in range(num_virtual_channels)
+			with self.action_lock:
+				self._process_skylink_msg(ekey=ekey, ichannel=ichannel, data=rdata)
 
 
-	def _zmq_to_modem_loop(self):
+	def _zmq_to_modem_loop(self): # uplink
 		while self.on:
 			try:
-				ichannel, uplink_json = self.sub_que.get(timeout=0.15)
-				DBGPRINT("sub-zmq -> skylink-vc-{}. len: {}".format(ichannel, len(uplink_json)))
-				with self.action_lock:
-					self._process_uplink_json(ichannel, uplink_json)
+				ichannel, uplink_json = self.sub_que.get(timeout=0.20)
 			except Empty:
-				pass
+				continue
 			except Exception as e:
 				DBGPRINT("SkyModem Exception (sub_que_loop): ", e)
 				self.close()
 				break
+			DBGPRINT("sub-zmq -> skylink-vc-{}. len: {}".format(ichannel, len(uplink_json)))
+			with self.action_lock:
+				self._process_uplink_json(ichannel, uplink_json)
 
 
 	def _process_uplink_json(self, ichannel, uplink_json):
@@ -282,20 +283,33 @@ class SkyModem:
 
 
 
+def get_receiver_config(f_center):
+	from kuokka.lib_tools import determine_ftune_and_min_sr
+	f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0, multiplier=2.0)
+	f_tune, minimum_samplerate = determine_ftune_and_min_sr(f_center_min=f_center_min, f_center_max=f_center_max, max_signal_bandwidth=9600*4*1.2)
+	assert minimum_samplerate < 2e6
+	if minimum_samplerate > 1e6:
+		sr = 2e6
+	else:
+		sr = 1e6
+	rx_config = ReceiverConfig(sr0=sr, baudrate=9600, bufferlen=800000, batch_maxlen=32000, f_tune=f_tune, f_center=f_center)
+	return rx_config
 
 
 
 
 if __name__ == '__main__':
-	key0 = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F"
+	key0 = b""
 	if key0 == b"":
 		print("Check HMAC Key!")
 		exit()
 	hmac_keys = [key0, key0, key0, key0]
-	rcv_settings = ReceiverSettings(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=32000, f_tune=437.100e6, f_center=437.125e6)
-	skylink_configuration = SkyConfiguration()
+	#rx_config_ = ReceiverConfig(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=32000, f_tune=437.100e6, f_center=437.125e6)
+	rx_config_ = get_receiver_config(f_center=437.1250e6)
+	print("Tuning to: {} MHz".format(round(rx_config_.f_tune*1e-6, 4)))
+	skylink_config_ = SkyConfiguration()
 
-	modem = SkyModem(receiver_settings=rcv_settings, skylink_config=skylink_configuration, hmac_key_list=hmac_keys, vc_port_base=7100)
+	modem = SkyModem(rx_config=rx_config_, skylink_config=skylink_config_, hmac_key_list=hmac_keys, vc_port_base=7100)
 	modem.start()
 	modem.radio_loop.set_doppler_correction(False)
 	try:

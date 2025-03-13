@@ -1,12 +1,12 @@
 import time, os, pickle
 import numpy as np
 from kuokka.lib_pll_detector import create_pll_detection_statemx, pll_detect_and_freq_determ_one
-from mtools.tools_math import random_point_on_sphere, npv3
-from mtools.tools_dsp import waterfall_mx, resampler_execute_stream, resampler_execute, create_resampler
+from mtools.tools_dsp import waterfall_mx, resampler_execute, create_resampler
 from kuokka.lib_tools import make_samples, radionoise
 from matplotlib import pyplot as plt
 from sdr_recorder import get_samples, fpaths
 from kuokka.lib_fft_detector import create_fft_centering_statemx, fft_detect_and_freq_determ
+
 
 
 
@@ -17,7 +17,7 @@ def compare():
 	nsamples 		= int(sr * 6.0)
 
 	f_offset_rel 	= 0.09
-	noise_power 	= 0.2 / 9600  # ~0.2 is doable with fft.
+	noise_power 	= 0.13 / 9600  # ~0.2 is doable with fft.
 	mod_idx 		= 0.5
 	BT 				= 0.5
 
@@ -101,8 +101,8 @@ def compare():
 	ax3 = fig.add_subplot(313)
 
 	#ax1.plot(xx_n, pll_f_arr)
-	ax1.plot(xx_n[::10], pll_center_f_arr[::10], label="PLL")
-	ax1.plot(xx_n[::10], fft_center_f_arr[::10], label="FFT", color="red")
+	ax1.plot(xx_n[::30], pll_center_f_arr[::30], label="PLL")
+	ax1.plot(xx_n[::30], fft_center_f_arr[::30], label="FFT", color="red")
 
 	y_up = f_offset_rel + 9600*0.1/sr
 	y_mid = f_offset_rel - 9600*0.0/sr
@@ -113,17 +113,17 @@ def compare():
 	ax1.plot([i0_,i1_], [y_mid,y_mid], linestyle="--", color="black")
 	ax1.plot([i0_,i1_], [y_down,y_down], linestyle="--", color="black")
 
-	ax1.plot(xx_n[::10],  noiseless_amp[::10]-0.5, linestyle="--", color="black")
+	ax1.plot(xx_n[::30],  noiseless_amp[::30]-0.5, linestyle="--", color="black")
 
 	ax1.legend()
 	ax1.grid()
 
 
-	ax2.plot(xx_t, instr_arr[:,2])
+	ax2.plot(xx_t[::20], instr_arr[:,2][::20])
 	ax2.grid()
 
-	ax3.plot(xx_t, instr_arr[:,0], label="avg")
-	ax3.plot(xx_t, instr_arr[:,1], label="var")
+	ax3.plot(xx_t[::20], instr_arr[:,0][::20], label="avg")
+	ax3.plot(xx_t[::20], instr_arr[:,1][::20], label="var")
 	ax3.grid()
 	ax3.legend()
 
@@ -155,7 +155,8 @@ def center_acquisition():
 	samples = noise.copy()
 	samples[i_tx_begin:i_tx_begin + len(tx_samples)] += tx_samples
 
-	samples = get_samples(fpath=fpath6)
+	fpath, centerf = fpaths[7]
+	samples = get_samples(fpath=fpath)
 	#waterfall_mx(samples=samples, fftlen=1024*2, fft_jump=1024, srate=sr, plot_and_show=True, y_is_time=False)
 	samples = samples / np.average( np.abs(samples[int(2.5e6):int(2.6e6)]) )
 

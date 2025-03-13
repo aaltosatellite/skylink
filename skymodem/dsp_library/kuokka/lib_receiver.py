@@ -4,12 +4,12 @@ from .lib_demodulation import demodulation_sequence, create_DSD_statemx, DSD_buf
 from .lib_symsynching import create_classic_JPL_statemx
 from .lib_fft_detector import fft_detect_and_freq_determ, create_fft_centering_statemx, set_f_center_search_map
 from .lib_framing import create_deframer, deframe, RS_MAX_ENCODED_LEN, frame_packet, RS_MAX_PL_LEN
-from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples, get_frequency_search_map
+from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples, get_frequency_search_map, get_doppler_low_high
 from .lib_reedsolomon import get_default_rs
 from .lib_resampler import resampler_execute_stream, create_resampler
 
 
-class ReceiverSettings:
+class ReceiverConfig:
 	def __init__(self, sr0, baudrate, bufferlen, batch_maxlen, f_tune, f_center):
 		assert sr0 > (baudrate * 2)
 		self.f_tune 			= f_tune		# tuned frequency of the radio in absolute Hz (for example 350.0e6)
@@ -120,10 +120,9 @@ class ReceiverSettings:
 		return self.lp_cutoff_coeff / self.sps
 
 	def get_f_center_search_map(self):
-		df_doppler = self.f_center * (((3e8+7500)/3e8) - 1)  # approximate maximum doppler shift for LEO orbital speed
-		df_search_sideband = df_doppler * 2.0
-		f_center_min_nrm = (self.f_center - self.f_tune - df_search_sideband) / (self.baudrate * self.sps)
-		f_center_max_nrm = (self.f_center - self.f_tune + df_search_sideband) / (self.baudrate * self.sps)
+		f_center_min, f_center_max = get_doppler_low_high(f_center=self.f_center, v_relative=7500.0, multiplier=2.0)
+		f_center_min_nrm = (f_center_min - self.f_tune) / (self.baudrate * self.sps)
+		f_center_max_nrm = (f_center_max - self.f_tune) / (self.baudrate * self.sps)
 		f_center_search_map = get_frequency_search_map(fftlen=self.fftlen, f_min_nrm=f_center_min_nrm, f_max_nrm=f_center_max_nrm)
 		return f_center_search_map
 
@@ -135,10 +134,10 @@ class ReceiverSettings:
 
 
 class Receiver:
-	def __init__(self, settings:ReceiverSettings):
-		settings.check_validity()
-		self.settings = settings
-		self.bufferlen 			= int(settings.bufferlen)
+	def __init__(self, config:ReceiverConfig):
+		config.check_validity()
+		self.config 			= config
+		self.bufferlen 			= int(config.bufferlen)
 		self.rs_array 			= np.zeros(self.bufferlen, dtype=np.complex128)
 		self.center_f_array 	= np.zeros(self.bufferlen, dtype=np.float64)
 		self.dmd_array 			= np.zeros(self.bufferlen, dtype=np.float64)
@@ -164,28 +163,28 @@ class Receiver:
 		self.dt_array			= np.zeros(5, dtype=np.float64)
 		self._setup()
 		# This series of baudrate switches pre-generates correlation masks to memory.
-		_br = self.settings.baudrate
-		_sps = self.settings.sps
+		_br = self.config.baudrate
+		_sps = self.config.sps
 		self.switch_baudrate(baudrate=9600, sps=_sps)
 		self.switch_baudrate(baudrate=9600*2, sps=_sps)
 		self.switch_baudrate(baudrate=9600*2*2, sps=_sps)
 		self.switch_baudrate(baudrate=_br, sps=_sps)
 
 	def _setup(self):
-		settings = self.settings
-		f_cutoff = settings.get_r_rate() * settings.rs_f_cutoff_coeff
-		f_center_search_map = settings.get_f_center_search_map()
-		self.resampler_statemx = create_resampler(m_halflen=settings.m_halflen, n_banks=settings.n_banks, r_rate=settings.get_r_rate(), f_cutoff=f_cutoff, allow_aliasing=False)
-		self.FFTstatemx = create_fft_centering_statemx(fftlen=settings.fftlen, jumplen=settings.jumplen, sps=settings.sps, f_center_search_map=f_center_search_map, mod_index=settings.mod_index,
-													   BT=settings.BT, c_stat_update=settings.c_stat_update, n_delay=settings.n_delay, fft_trigger_on_level=settings.fft_trigger_on_level,
-													   fft_trigger_off_level=settings.fft_trigger_off_level, masklen=settings.get_masklen(), avg0=0.0, var0=1.0, mask_mode=settings.mask_mode,
-													   start_margin_mpr=settings.start_margin_mpr, end_margin_mpr=settings.end_margin_mpr)
-		self.JPLstatemx = create_classic_JPL_statemx(N_eps=settings.sps, n_decay=settings.JPL_n_decay)
-		self.DSDstatemx = create_DSD_statemx(lp_ntaps=settings.lp_ntaps, lp_cutoff=settings.get_lp_cutoff(), synch_delay_mpr_f=settings.synch_delay_mpr, sps_f=settings.sps)
-		self.deframermx = create_deframer(use_scrambler=settings.use_scrambler, use_rs=settings.use_rs, data_maxlen=settings.data_maxlen,
-										  synchword=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, synch_threshold=settings.synch_threshold)
-		a = int(settings.batch_maxlen * settings.get_r_rate() * 2)
-		b = int((settings.start_margin_mpr + settings.end_margin_mpr) * (settings.fftlen+settings.jumplen))
+		config = self.config
+		f_cutoff = config.get_r_rate() * config.rs_f_cutoff_coeff
+		f_center_search_map = config.get_f_center_search_map()
+		self.resampler_statemx = create_resampler(m_halflen=config.m_halflen, n_banks=config.n_banks, r_rate=config.get_r_rate(), f_cutoff=f_cutoff, allow_aliasing=False)
+		self.FFTstatemx = create_fft_centering_statemx(fftlen=config.fftlen, jumplen=config.jumplen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index,
+													   BT=config.BT, c_stat_update=config.c_stat_update, n_delay=config.n_delay, fft_trigger_on_level=config.fft_trigger_on_level,
+													   fft_trigger_off_level=config.fft_trigger_off_level, masklen=config.get_masklen(), avg0=0.0, var0=1.0, mask_mode=config.mask_mode,
+													   start_margin_mpr=config.start_margin_mpr, end_margin_mpr=config.end_margin_mpr)
+		self.JPLstatemx = create_classic_JPL_statemx(N_eps=config.sps, n_decay=config.JPL_n_decay)
+		self.DSDstatemx = create_DSD_statemx(lp_ntaps=config.lp_ntaps, lp_cutoff=config.get_lp_cutoff(), synch_delay_mpr_f=config.synch_delay_mpr, sps_f=config.sps)
+		self.deframermx = create_deframer(use_scrambler=config.use_scrambler, use_rs=config.use_rs, data_maxlen=config.data_maxlen,
+										  synchword=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, synch_threshold=config.synch_threshold)
+		a = int(config.batch_maxlen * config.get_r_rate() * 2)
+		b = int((config.start_margin_mpr + config.end_margin_mpr) * (config.fftlen+config.jumplen))
 		self.buffer_roll_limit 	= self.bufferlen - (a + b + 4)
 		assert self.buffer_roll_limit > (self.bufferlen * 0.9), self.buffer_roll_limit/self.bufferlen
 
@@ -197,9 +196,9 @@ class Receiver:
 	def switch_baudrate(self, baudrate, sps):
 		assert type(sps) == int
 		assert sps > 1
-		self.settings.baudrate = baudrate
-		self.settings.sps = sps
-		self.settings.check_validity()
+		self.config.baudrate = baudrate
+		self.config.sps = sps
+		self.config.check_validity()
 		self._setup()
 
 
@@ -254,7 +253,7 @@ class Receiver:
 	def _split_payloads(self, payloads, delimits, frequencies):
 		pl_list = list()
 		for i_pl, (i0,i1) in enumerate(delimits):
-			pl_list.append( (bytes(payloads[i0:i1]), frequencies[i_pl] * self.settings.sps*self.settings.baudrate) )
+			pl_list.append((bytes(payloads[i0:i1]), frequencies[i_pl] * self.config.sps * self.config.baudrate))
 			assert len(pl_list[-1][0]) == (i1-i0)
 		return pl_list
 
@@ -282,19 +281,18 @@ class Receiver:
 
 
 # PRECOMPILE RECEIVER ====================================================================================================
-def get_a_precompiling_sampleset(rx_settings:ReceiverSettings, do_print=False):
-	sr0 = rx_settings.sr0
-	baudrate = rx_settings.baudrate
-	sps = rx_settings.sps
-	BT = rx_settings.BT
+def get_a_precompiling_sampleset(rx_config:ReceiverConfig, do_print=False):
+	sr0 = rx_config.sr0
+	baudrate = rx_config.baudrate
+	BT = rx_config.BT
 
-	rel_offset_raw = 0.1 * (sps*baudrate/sr0)
+	rel_offset_raw = (rx_config.f_center-rx_config.f_tune) / sr0  #0.1 * (sps*baudrate/sr0)
 	rs_mx, rs_cfg = get_default_rs()
 	pl = np.random.randint(0,255, RS_MAX_PL_LEN-2)
 	bitstring = frame_packet(pl=pl, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
-	transmission = make_samples(sps_f=sr0/baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=rx_settings.mod_index, shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
+	transmission = make_samples(sps_f=sr0/baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=rx_config.mod_index, shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
 
-	n_fft_calibration = int(12 * rx_settings.jumplen * (1/rx_settings.c_stat_update) / 3)
+	n_fft_calibration = int(12 * rx_config.jumplen * (1 / rx_config.c_stat_update) / 3)
 	nsamples = int(n_fft_calibration + 1.0*sr0 + len(transmission) + 1.0*sr0)
 	i0 = int(n_fft_calibration + 1.0*sr0)
 	if do_print:
@@ -306,25 +304,25 @@ def get_a_precompiling_sampleset(rx_settings:ReceiverSettings, do_print=False):
 	samples[i0:i0+len(transmission)] += transmission
 	return samples
 
-def precompile_receiver(rx_settings:ReceiverSettings, do_print=False):
+def precompile_receiver(rx_config:ReceiverConfig, do_print=False):
 	if do_print:
 		print("[Precompiling]")
 	t0 = time.perf_counter()
 	if do_print:
 		print("\t[Generating sampleset]")
-	samples = get_a_precompiling_sampleset(rx_settings, do_print)
+	samples = get_a_precompiling_sampleset(rx_config, do_print)
 	samples = np.array(samples, dtype=np.complex128)
 	t1 = time.perf_counter()
 	nsamples = len(samples)
-	rx1 = Receiver(settings=rx_settings)
-	rx2 = Receiver(settings=rx_settings)
+	rx1 = Receiver(config=rx_config)
+	rx2 = Receiver(config=rx_config)
 	c = 0
 	ret_pls1 = list()
 	ret_pls2 = list()
 	if do_print:
 		print("\t[Processing]")
 	while c < nsamples:
-		c2 = min(c+rx_settings.batch_maxlen//2, nsamples)
+		c2 = min(c + rx_config.batch_maxlen // 2, nsamples)
 		batch = samples[c:c2]
 		ret1 = rx1.push_samples(batch=batch, give_bits=False)
 		ret2 = rx2.push_samples(batch=np.complex64(batch), give_bits=False)
