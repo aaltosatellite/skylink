@@ -6,7 +6,7 @@ from mtools.tools_dsp import waterfall_mx, create_resampler, resampler_execute
 from kuokka.lib_fft_detector import create_fft_centering_statemx, fft_detect_and_freq_determ
 from kuokka.lib_pll_detector import create_frequency_mapper_statev, pll_detect_and_freq_determ
 from mtools.tools_dsp import create_pll_statevector, create_trigger_statevector, create_winstd_statemx
-from kuokka.lib_tools import radionoise, make_samples
+from kuokka.lib_tools import radionoise, make_samples, get_frequency_search_map
 
 
 
@@ -34,16 +34,17 @@ def speedbench_fft_detect(sps, baudrate):
 	jumplen 				= fftlen//2
 	c_stat_update 			= 1/700
 	n_delay 				= fftlen*5
-	T_f_decay 				= 0.5
 	fft_trigger_on_level 	= 5.5
 	fft_trigger_off_level 	= 2.0
 	masklen 				= int(2.5 * 0.5 * fftlen / sps)*2 + 1
-	search_space_triplet 	= (f_tune, f_signal-doppler_max*1.2, f_signal+doppler_max*1.2 )
+	f_center_min_nrm		= (f_signal-doppler_max*1.2-f_tune)/sr
+	f_center_max_nrm		= (f_signal+doppler_max*1.2-f_tune)/sr
+	f_center_search_map		= get_frequency_search_map(fftlen=fftlen, f_min_nrm=f_center_min_nrm, f_max_nrm=f_center_max_nrm)
 	start_margin_mpr		= 3.0
 	end_margin_mpr			= 1.5
 	mask_mode				= 1
-	fft_statemx = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, baudrate=baudrate, search_space_triplet=search_space_triplet,
-											   mod_index=mod_idx, BT=BT, c_stat_update=c_stat_update, n_delay=n_delay, T_f_decay=T_f_decay,
+	fft_statemx = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, f_center_search_map=f_center_search_map,
+											   mod_index=mod_idx, BT=BT, c_stat_update=c_stat_update, n_delay=n_delay,
 											   fft_trigger_on_level=fft_trigger_on_level, fft_trigger_off_level=fft_trigger_off_level,
 								 			   masklen=masklen, avg0=0.0, var0=1.0, mask_mode=mask_mode,
 											   start_margin_mpr=start_margin_mpr, end_margin_mpr=end_margin_mpr)
@@ -214,7 +215,6 @@ def tst_fft_center_detect_1(inputmode):
 	jumplen				= 1024//2		# !		(fftlen / [2,3,4])
 	c_stat_update		= 1 / 700		# -		([400:2000])
 	n_delay				= fftlen*5
-	T_f_decay			= 0.5
 	trigger_on_lvl		= 5.5								# !!!	(4.5 < _ < 9)
 	trigger_off_lvl		= 2.0
 	masklen				= int(0.5 * 2.5*fftlen/sps)*2 +1	# !		( int( [0.8:1.2] * fftlen/sps)  )
@@ -225,15 +225,17 @@ def tst_fft_center_detect_1(inputmode):
 	#f_tune = 437e6
 	#f_signal = 437.125e6
 	#doppler_max = 10928.125  # 10928.125
-	search_space_triplet = (f_tune, f_signal-doppler_max*1.2, f_signal+doppler_max*1.2 )
+	f_center_min_nrm	 = (f_signal-f_tune-doppler_max*1.2) / sr
+	f_center_max_nrm	 = (f_signal-f_tune+doppler_max*1.2) / sr
+	f_center_search_map		= get_frequency_search_map(fftlen=fftlen, f_min_nrm=f_center_min_nrm, f_max_nrm=f_center_max_nrm)
 
 	center_f_arr_fft0 	= np.zeros(nsamples, dtype=np.float64) -1
 	center_f_arr_fft1 	= np.zeros(nsamples, dtype=np.float64) -1
 	instr_arr 		= np.zeros((nsamples,3), dtype=np.float64) -1
 
 	print("Creating statemx.")
-	statemx0 = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, baudrate=baudrate, search_space_triplet=search_space_triplet,
-											mod_index=mod_index, BT=BT, c_stat_update=c_stat_update, n_delay=n_delay, T_f_decay=T_f_decay,
+	statemx0 = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, f_center_search_map=f_center_search_map,
+											mod_index=mod_index, BT=BT, c_stat_update=c_stat_update, n_delay=n_delay,
 											fft_trigger_on_level=trigger_on_lvl, fft_trigger_off_level=trigger_off_lvl, masklen=masklen,
 											avg0=0.0, var0=1.0, mask_mode=mask_mode, start_margin_mpr=start_margin_mpr, end_margin_mpr=end_margin_mpr)
 

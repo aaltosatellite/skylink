@@ -334,6 +334,49 @@ def doppler_correction(f_received, f_original, f_at_target):
 	return f_send, v_src # v_src is the derivative of separating distance. (negative if satellite is approaching)
 
 
+def determine_ftune_and_min_sr(f_center_min, f_center_max, max_signal_bandwidth):
+	assert f_center_max >= f_center_min
+	assert f_center_min > 0.0
+	f_center_mid = (f_center_min + f_center_max) / 2
+	f_center_span = f_center_max - f_center_min
+	side_band = (max_signal_bandwidth/2 + f_center_span/2) * 1.1 + 10e3
+	# f_tune + side_band * 1.3 = f_center   -->    f_tune = f_center - 1.3*side_band
+	# f_nyq = side_band * 1.3 * 2   -->   samplerate = side_band * 1.3 * 2 * 2
+	f_tune = f_center_mid - side_band
+	minimum_samplerate = (f_center_mid + side_band - f_tune) * 2
+	return f_tune, minimum_samplerate
+
+
+def determine_min_resampled_rate(f_tune, f_center_min, f_center_max, signal_bandwidth):
+	assert f_tune > 0
+	assert signal_bandwidth > 0
+	assert f_center_max >= f_center_min
+	assert f_center_min > 0.0
+	f_center_mid = (f_center_min + f_center_max) / 2
+	f_center_span = f_center_max - f_center_min
+	side_band = (signal_bandwidth/2 + f_center_span/2) * 1.1 + 10e3
+	high_edge = f_center_mid + side_band
+	low_edge  = f_center_mid - side_band
+	f_nyq_new = max(abs(high_edge - f_tune), abs(low_edge - f_tune))
+	minimum_samplerate = f_nyq_new * 2
+	return minimum_samplerate
+
+
+def get_frequency_search_map(fftlen, f_min_nrm, f_max_nrm):
+	assert f_min_nrm <= f_max_nrm
+	assert abs(f_min_nrm) < 0.5
+	assert abs(f_max_nrm) < 0.5
+	freqs = np.fft.fftshift( np.fft.fftfreq(fftlen, d=1.0) )
+	df = freqs[1] - freqs[0]
+	assert f_max_nrm > f_min_nrm
+	mapping = np.zeros(fftlen, dtype=np.int64)
+	for i,f in enumerate(freqs):
+		if (f >= (f_min_nrm-df)) and (f <= (f_max_nrm+df)):
+			mapping[i] = 1
+	assert np.sum(mapping) > 0, mapping
+	return mapping
+
+
 
 
 def pll_df_std0_polyfit(c_freq, c_limit):

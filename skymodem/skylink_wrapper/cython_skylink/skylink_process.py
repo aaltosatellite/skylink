@@ -9,7 +9,7 @@ from datetime import datetime as dtime
 DEBUG_PRINT_ON = True
 def DBGPRINT(*args, **kwargs):
 	ts = "[{}]".format( dtime.now().isoformat()[-15:] )
-	ts += " "*(17-len(ts)) + "[SkyLink]  "
+	ts += " "*(17-len(ts)) + "[SkyLink]  " + " "
 	first, args = args[0], args[1:]
 	if DEBUG_PRINT_ON:
 		print(ts+str(first), *args, **kwargs)
@@ -79,12 +79,7 @@ class SkyLinkLoop(threading.Thread):
 				while not self.que_payloads_from_radio.empty():
 					pl = self.que_payloads_from_radio.get_nowait()
 					sky_rx_ret = self.skylink.sky_rx(pl)
-					color_code = "\033[92m"  # Green (default when no errors)
-					if sky_rx_ret == -7:
-						color_code = "\033[93m"  # Yellow
-					elif sky_rx_ret < 0:
-						color_code = "\033[91m"  # Red
-					DBGPRINT(f"+[SkyLink][skylink was given a pl. sky_rx returned {color_code}{sky_rx_ret}\033[0m]")
+					DBGPRINT("Was given a frame of {} bytes. sky_rx returned {}.".format(len(pl), sky_rx_ret))
 					sleeptime = 0.0
 
 				while True:
@@ -93,7 +88,7 @@ class SkyLinkLoop(threading.Thread):
 					tx_i, frame_bytes = self.skylink.sky_tx()
 					if tx_i == 0:
 						break
-					DBGPRINT("[transmits {} bytes]".format(len(frame_bytes)))
+					DBGPRINT("Transmitting a frame of {} bytes.".format(len(frame_bytes)))
 					self.que_payloads_to_radio.put_nowait(frame_bytes)
 					sleeptime = 0.0
 
@@ -102,7 +97,7 @@ class SkyLinkLoop(threading.Thread):
 						ri, rb = self.skylink.sky_vc_read_next_received(ichannel)
 						if ri < 0:
 							break
-						DBGPRINT("[vc {} received {} bytes]".format(ichannel, len(rb)))
+						DBGPRINT("VC {} received {} bytes.".format(ichannel, len(rb)))
 						self.que_received_messages.put_nowait( (ichannel, rb) )
 						sleeptime = 0.0
 

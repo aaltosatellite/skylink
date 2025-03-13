@@ -14,7 +14,7 @@ from datetime import datetime as dtime
 DEBUG_PRINT_ON = True
 def DBGPRINT(*args, **kwargs):
 	ts = "[{}]".format( dtime.now().isoformat()[-15:] )
-	ts += " "*(17-len(ts)) + "[RadioLoop]"
+	ts += " "*(17-len(ts)) + "[RadioLoop]" + " "
 	first, args = args[0], args[1:]
 	if DEBUG_PRINT_ON:
 		print(ts+str(first), *args, **kwargs)
@@ -24,7 +24,7 @@ def DBGPRINT(*args, **kwargs):
 
 class RadioLoop:
 	def __init__(self, rx_settings:ReceiverSettings):
-		DBGPRINT("[Precompile DSP]")
+		DBGPRINT("Precompile DSP")
 		precompile_receiver(rx_settings, do_print=False)
 		self.rx_settings 				= rx_settings
 		self.frequency_following 		= True
@@ -68,7 +68,7 @@ class RadioLoop:
 		sdr = SoapySDR.Device(args)
 		sdr.setSampleRate(SOAPY_SDR_RX, 0, sample_rate)
 		sdr.setFrequency(SOAPY_SDR_RX, 0, center_freq)
-		DBGPRINT("[Gain Range: {}]".format( sdr.getGainRange()))
+		DBGPRINT("Gain Range: {}".format( sdr.getGainRange()))
 		#txStream = sdr.setupStream(SOAPY_SDR_TX, SOAPY_SDR_CF32)
 		#sdr.writeStream()
 		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
@@ -87,7 +87,6 @@ class RadioLoop:
 		# TODO implement soapy version ------------------------------------
 
 	def usrp_start(self):
-		self.rx = Receiver(settings=self.rx_settings)
 		# This noise injection enforces the jit-compilation of much of the signal processing pipeline before the loop starts.
 		gain = 56 # dB
 		usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
@@ -97,13 +96,16 @@ class RadioLoop:
 		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(self.rx_settings.f_tune), 0)
 		usrp.set_rx_gain(gain, 0)
 		usrp.set_tx_gain(gain, 0)
-		DBGPRINT("[RX Gain Range: {}]".format( usrp.get_rx_gain_range() ))
-		DBGPRINT("[TX Gain Range: {}]".format( usrp.get_tx_gain_range() ))
-		DBGPRINT("[usrp RX samplerate:  {} ksps]".format( round(usrp.get_rx_rate(0)*1e-3, 3) ))
-		DBGPRINT("[usrp TX samplerate:  {} ksps]".format( round(usrp.get_tx_rate(0)*1e-3, 3) ))
-		DBGPRINT("[usrp RX center-f:  {} MHz]".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
-		DBGPRINT("[usrp TX center-f:  {} MHz]".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
-		#self.rx_thread 			= threading.Thread(target=self._recording_rx_loop,    args=(1024*4,), daemon=True) #TODO bufferlen as setting?
+		DBGPRINT("RX gain range:      {}".format( str(usrp.get_rx_gain_range(0))[:-1] ))
+		DBGPRINT("TX gain range:      {}".format( str(usrp.get_tx_gain_range(0))[:-1] ))
+		DBGPRINT("usrp RX gain:       {}".format( usrp.get_rx_gain(0) ))
+		DBGPRINT("usrp TX gain:       {}".format( usrp.get_tx_gain(0) ))
+		DBGPRINT("usrp RX samplerate: {} ksps".format( round(usrp.get_rx_rate(0)*1e-3, 3) ))
+		DBGPRINT("usrp TX samplerate: {} ksps".format( round(usrp.get_tx_rate(0)*1e-3, 3) ))
+		DBGPRINT("usrp RX tune-f:     {} MHz".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
+		DBGPRINT("usrp TX tune-f:     {} MHz".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
+		self.rx 				= Receiver(settings=self.rx_settings)
+		#self.rx_thread 		= threading.Thread(target=self._recording_rx_loop,    args=(1024*4,), daemon=True) #TODO bufferlen as setting?
 		self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 1024*4), daemon=True) #TODO bufferlen as setting?
 		self.rx_process_thread 	= threading.Thread(target=self._rx_process_loop, args=tuple(),      daemon=True)
 		self.tx_thread 			= threading.Thread(target=self._usrp_tx_loop,    args=(usrp, 1024*4), daemon=True) #TODO bufferlen as setting?
@@ -129,6 +131,11 @@ class RadioLoop:
 	def set_doppler_correction(self, toggle:bool):
 		with self.receiver_lock:
 			self.use_doppler_correction = bool(toggle)
+
+	def set_baudrate(self, baudrate:int):
+		with self.receiver_lock:
+			self.rx.switch_baudrate(baudrate=baudrate, sps=self.rx.settings.sps)
+			self.rx_settings.baudrate = baudrate
 
 
 
@@ -198,11 +205,11 @@ class RadioLoop:
 			cursor += rx_buffer_len
 			if cursor > (len(samples) - rx_buffer_len):
 				cursor = 0
-				DBGPRINT("\n[CURSROR ZEROED]\n")
+				DBGPRINT("Recordning cursor zeroed.")
 			if not self._internal_sample_que.full():
 				self._internal_sample_que.put_nowait(batch)
 			else:
-				DBGPRINT("[WARNING! radio-to-process queue overflow!]  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
+				DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
 			n_received += rx_buffer_len
 			t_next = t0 + ((n_received + rx_buffer_len) / self.rx_settings.sr0)
 			t_sleep = max(0, t_next - time.perf_counter())
@@ -222,8 +229,8 @@ class RadioLoop:
 		rx_streamer.issue_stream_cmd(stream_cmd)
 		while self.on:
 			try:
-				# if (n_rx_loops % 1000) == 0:
-				# 	DBGPRINT("rx-#{}".format(n_rx_loops))
+				if (n_rx_loops % 1000) == 0:
+					DBGPRINT("(rx-#{})".format(n_rx_loops))
 				rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
 				assert rx_ret == rx_buffer_len
 				#if self.self_mute:
@@ -231,11 +238,11 @@ class RadioLoop:
 				if not self._internal_sample_que.full():
 					self._internal_sample_que.put_nowait(recv_buffer[0,:].copy())
 				else:
-					DBGPRINT("[WARNING: radio-to-process queue overflow!]")
+					DBGPRINT("WARNING: radio-to-process queue overflow!")
 					raise Exception("radio-loop: radio-to-process queue overflow.")
 				n_rx_loops += 1
 			except Exception as e:
-				DBGPRINT("[Exception (rx-radio-rcv-thread)]", e)
+				DBGPRINT("Exception (rx-radio-rcv-thread)", e)
 				self.on = False
 				break
 
@@ -247,21 +254,21 @@ class RadioLoop:
 				with self.receiver_lock:
 					rx_pls = self.rx.push_samples(batch=rx_samples, give_bits=False)
 					for rx_pl, rx_pl_f_offset in rx_pls:
-						# if rx_pl in self.own_recently_sent: ##### Commented out to ease debugging, helps compare packets received and sent when testing ARQ.
-						# 	del self.own_recently_sent[rx_pl]
-						# 	DBGPRINT("[Discarded a self-reception]")
-						# 	continue
-						DBGPRINT("[radio decoded a frame at {} MHz: \n\033[92m{}\033[0m]\n".format(round( (self.rx_settings.f_tune+rx_pl_f_offset)*1e-6, 4), rx_pl ))
+						if rx_pl in self.own_recently_sent:
+							del self.own_recently_sent[rx_pl]
+							DBGPRINT("Discarded a self-reception.")
+							continue
+						DBGPRINT("Radio decoded a frame at {} MHz: {}".format(round( (self.rx_settings.f_tune+rx_pl_f_offset)*1e-6, 4), rx_pl ))
 						self.last_verified_freq = rx_pl_f_offset, time.monotonic()
 						if not self.que_radio_to_skylink.full():
 							self.que_radio_to_skylink.put_nowait(rx_pl)
 						else:
-							DBGPRINT("[WARNING: radio-to-skylink queue full]")
-							raise Exception("[process-to-skylink queue overflow]")
+							DBGPRINT("WARNING: radio-to-skylink queue full")
+							raise Exception("process-to-skylink queue overflow")
 			except Empty:
 				pass
 			except Exception as e:
-				DBGPRINT("[Exception (rx-process-thread)]", e)
+				DBGPRINT("Exception (rx-process-thread)", e)
 				self.on = False
 				break
 
@@ -279,7 +286,7 @@ class RadioLoop:
 					self._clean_own_sent()
 					self.own_recently_sent[payload] = time.monotonic()
 					samplearr, f_use_abs = self._compose_samples(payload, usrp_reshape=True, as_c64=True)
-					DBGPRINT("[transmission center freq:  {} MHz]".format( f_use_abs * 1e-6, 4 ))
+					DBGPRINT("tx start at {} MHz".format( f_use_abs * 1e-6, 4 ))
 					N = samplearr.shape[1]
 
 					idx = 0
@@ -294,11 +301,11 @@ class RadioLoop:
 				t_to_end = max(0, t_end - time.perf_counter())
 				time.sleep(t_to_end + 0.0e-3)
 				self.self_mute = False
-				DBGPRINT("[end of tx. sleep of {} ms.]".format( round(t_to_end*1e3, 2) ))
+				DBGPRINT("tx end. sleep of {}/{} ms.".format( round(t_to_end*1e3, 2), round(dtt*1e3, 2) ))
 			except Empty:
 				pass
 			except Exception as e:
-				DBGPRINT("[Exception (tx-thread)]", e)
+				DBGPRINT("Exception (tx-thread)", e)
 				self.on = False
 				break
 

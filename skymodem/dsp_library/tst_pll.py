@@ -55,8 +55,8 @@ def compare():
 	mask_mode = 1
 	fftlen = 1024
 	masklen = int(0.5 * (1 + 1.5*(mask_mode==1)) * fftlen / sps)*2 + 1
-	fft_statemx = create_fft_centering_statemx(fftlen=fftlen, jumplen=fftlen//2, sps=sps, baudrate=baudrate, search_space_triplet=(-1,-1,-1),
-											   mod_index=mod_idx, BT=BT, c_stat_update=1/700, n_delay=fftlen*5, T_f_decay=1.5,
+	fft_statemx = create_fft_centering_statemx(fftlen=fftlen, jumplen=fftlen//2, sps=sps, f_center_search_map=np.ones(fftlen)*1.0,
+											   mod_index=mod_idx, BT=BT, c_stat_update=1/700, n_delay=fftlen*5,
 											   fft_trigger_on_level=5.5, fft_trigger_off_level=2.0, masklen=masklen, avg0=0.0, var0=1.0,
 											   mask_mode=mask_mode, start_margin_mpr=4.0, end_margin_mpr=1.5)
 

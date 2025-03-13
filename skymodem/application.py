@@ -15,7 +15,7 @@ DEBUG_PRINT_ON = True
 
 def DBGPRINT(*args, **kwargs):
 	ts = "[{}]".format( dtime.now().isoformat()[-15:] )
-	ts += " "*(17-len(ts)) + "[SkyModem] "
+	ts += " "*(17-len(ts)) + "[SkyModem] " + " "
 	first, args = args[0], args[1:]
 	if DEBUG_PRINT_ON:
 		print(ts+str(first), *args, **kwargs)
@@ -44,7 +44,6 @@ def sub_socket_loop(sub_sock:zmq.Socket, sub_que:Queue, ID, parent_obj):
 	while parent_obj.on:
 		try:
 			rcv_msg = sub_sock.recv()
-			#DBGPRINT("+[zmq-sub-socket-{} received {} bytes]".format(ID, len(rcv_msg)), flush=True)
 			sub_que.put_nowait((ID, rcv_msg))
 		except zmq.Again:
 			pass
@@ -145,9 +144,9 @@ class SkyModem:
 		self.radio_loop.usrp_start() # TODO choose usrp or Soapy (or a sample file)
 		self.arq_check_thread 			= threading.Thread(target=self._check_arq_loop, args=tuple(), daemon=True)
 		self.arq_check_thread.start()
-		self.sub_que_process_thread 	= threading.Thread(target=self._sub_que_loop, args=tuple(), daemon=True)
+		self.sub_que_process_thread 	= threading.Thread(target=self._zmq_to_skylink_loop, args=tuple(), daemon=True)
 		self.sub_que_process_thread.start()
-		self.skylink_reception_thread 	= threading.Thread(target=self._skylink_reception_loop, args=tuple(), daemon=True)
+		self.skylink_reception_thread 	= threading.Thread(target=self._skylink_to_zmq_loop, args=tuple(), daemon=True)
 		self.skylink_reception_thread.start()
 
 
@@ -193,15 +192,12 @@ class SkyModem:
 				self.session_id_list[ichannel] = session_id_list[ichannel]
 
 
-	def _skylink_reception_loop(self):
+	def _skylink_to_zmq_loop(self):
 		while self.on:
 			try:
 				ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.15)
-				#rdata = rdata[0:-4]
-				DBGPRINT("[skylink-vc-{} -> pub-zmq. len: {}]: \n\033[96m{}\033[0m\n".format(ichannel, len(rdata), rdata))
-				if not ichannel in range(num_virtual_channels):
-					DBGPRINT("vc number in skylink reception out of bounds: {}".format(ichannel))
-					continue
+				DBGPRINT("skylink-vc-{} -> pub-zmq. len: {}".format(ichannel, len(rdata)))
+				assert ichannel in range(num_virtual_channels)
 				with self.action_lock:
 					frame_d = dict()
 					frame_d["packet_type"] 	= "tm"
@@ -220,13 +216,13 @@ class SkyModem:
 				break
 
 
-	def _sub_que_loop(self):
+	def _zmq_to_skylink_loop(self):
 		while self.on:
 			try:
 				ID, msg = self.sub_que.get(timeout=0.15)
-				DBGPRINT("[sub-zmq -> skylink-vc-{}. len: {}]".format(ID, len(msg)))
+				DBGPRINT("sub-zmq -> skylink-vc-{}. len: {}".format(ID, len(msg)))
 				with self.action_lock:
-					self._process_sub_que_frame(ID, msg)
+					self._process_sub_que_json(ID, msg)
 			except Empty:
 				pass
 			except Exception as e:
@@ -235,14 +231,14 @@ class SkyModem:
 				break
 
 
-	def _process_sub_que_frame(self, ID, msg):
+	def _process_sub_que_json(self, ID, msg):
 		if not ID in range(num_virtual_channels):
-			DBGPRINT("[error: ID not in vc range: {}]".format(ID))
+			DBGPRINT("error: ID not in vc range: {}".format(ID))
 			return
 		ichannel = ID
 		frame_dict = json.loads( msg )
 		if not type(frame_dict) == dict:
-			DBGPRINT("[error: json was not a dict:{}]".format(type(frame_dict)))
+			DBGPRINT("error: json was not a dict:{}".format(type(frame_dict)))
 			return
 
 		if "data" in frame_dict:
@@ -252,13 +248,13 @@ class SkyModem:
 			data = bytes(ints)
 			send_ret = self.skylink_loop.send(ichannel=ichannel, data=data)
 			if send_ret < 0:
-				DBGPRINT("[error: sky_vc_push_packet_to_send error: {}]".format(send_ret))
+				DBGPRINT("error: sky_vc_push_packet_to_send error: {}".format(send_ret))
 
 		if "metadata" in frame_dict:
 			response_dict = dict()
 			control_dict = frame_dict["metadata"]
 			if not "cmd" in control_dict:
-				DBGPRINT("[No 'cmd' field in control_dict]")
+				DBGPRINT("No 'cmd' field in control_dict")
 				return
 			ctrl_command = control_dict["cmd"]
 			if ctrl_command == "get_state":
@@ -295,6 +291,10 @@ class SkyModem:
 			elif ctrl_command == "debug":
 				DBGPRINT("command unimplemented 5")			# TODO
 				return
+			elif ctrl_command == "set_baudrate":
+				assert control_dict["baudrate"] in (9600, 9600*2, 9600*4), "invalid baudrate field in control_dict"
+				self.radio_loop.set_baudrate(control_dict["baudrate"])
+
 			else:
 				DBGPRINT("Unknown control command: {}".format(ctrl_command))
 				return

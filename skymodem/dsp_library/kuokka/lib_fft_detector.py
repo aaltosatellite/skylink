@@ -6,7 +6,6 @@ from .lib_tools import make_samples
 _fft_mask_dict = dict()
 
 
-
 def construct_fft_mask(sps, mod_index, BT, fftlen, masklen, nn):
 	for key,val in _fft_mask_dict.items():
 		k_sps, k_mod_idx, k_BT, k_fftlen, k_masklen, k_nn = key
@@ -38,15 +37,13 @@ def construct_fft_mask(sps, mod_index, BT, fftlen, masklen, nn):
 	return mask
 
 
-def get_frequency_search_space_indexing(fftlen, sr, masklen, f_tune, f_center_min, f_center_max):
+def get_frequency_search_space_indexing(fftlen, masklen, f_center_min, f_center_max):
 	assert (masklen%2) == 1
-	if (f_tune == -1) and (f_center_min == -1) and (f_center_max == -1):
-		return np.arange(fftlen -masklen +1, dtype=np.int64) + masklen//2
-
-	freqs = np.fft.fftshift( np.fft.fftfreq(fftlen, d=1.0/sr) ) + f_tune
+	assert f_center_min <= f_center_max
+	assert abs(f_center_min) < 0.5
+	assert abs(f_center_max) < 0.5
+	freqs = np.fft.fftshift( np.fft.fftfreq(fftlen, d=1.0) )
 	df = freqs[1] - freqs[0]
-	#assert f_center_min >= freqs[0], (f_center_min, freqs[0])
-	#assert f_center_max <= freqs[-1], (f_center_max, freqs[-1])
 	assert f_center_max > f_center_min
 	indexes = np.zeros(fftlen, dtype=np.int64)
 	n_idxs = 0
@@ -56,7 +53,7 @@ def get_frequency_search_space_indexing(fftlen, sr, masklen, f_tune, f_center_mi
 		if (f >= (f_center_min-df)) and (f <= (f_center_max+df)):
 			indexes[n_idxs] = i_fft
 			n_idxs += 1
-	assert n_idxs > 0, (f_center_min, f_center_max, f_center_max - f_center_min, freqs[1]-freqs[0], fftlen - masklen +1, f_center_max > freqs[masklen//2], f_center_min < freqs[fftlen - masklen//2])
+	assert n_idxs > 0, (f_center_min, f_center_max)
 	return indexes[:n_idxs]
 
 
@@ -65,17 +62,15 @@ def get_frequency_search_space_indexing(fftlen, sr, masklen, f_tune, f_center_mi
 
 
 #@njit(cache=True)
-def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_triplet, mod_index, BT, c_stat_update, n_delay, T_f_decay, fft_trigger_on_level, fft_trigger_off_level, masklen, avg0, var0, mask_mode, start_margin_mpr, end_margin_mpr):
+def create_fft_centering_statemx(fftlen, jumplen, sps, f_center_search_map, mod_index, BT, c_stat_update, n_delay, fft_trigger_on_level, fft_trigger_off_level, masklen, avg0, var0, mask_mode, start_margin_mpr, end_margin_mpr):
 	assert var0 > 0
 	assert fftlen >= 32
 	assert mask_mode in (0,1)
 	assert (masklen % 2) == 1
-	assert T_f_decay > 0
+	assert masklen >= 1
 	assert int(start_margin_mpr*fftlen) < n_delay
-	f_tune, f_center_min, f_center_max = search_space_triplet
-	search_indexes = get_frequency_search_space_indexing(fftlen=fftlen, sr=sps*baudrate, masklen=masklen, f_tune=f_tune, f_center_min=f_center_min, f_center_max=f_center_max)
-	n_search = len(search_indexes)
-
+	assert len(f_center_search_map) == fftlen
+	
 	statemx = np.zeros( (8,fftlen) ,dtype=np.float64 )
 	statemx[0,0]  = fftlen
 	statemx[0,1]  = jumplen
@@ -86,9 +81,8 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_tr
 	statemx[0,6]  = int(masklen)
 	statemx[0,7]  = int(start_margin_mpr * fftlen)
 	statemx[0,8]  = int(end_margin_mpr * fftlen)
-	statemx[0,9] = n_search
-	statemx[0,10] = 0.5**( 1 / (T_f_decay*sps*baudrate/jumplen))  # c_f_decay
-	statemx[0,11] = 5.0 * sps*baudrate / jumplen	# on_count_limit
+	statemx[0,10] = 0.5**(1 / ((200*8*sps + n_delay + start_margin_mpr*fftlen)/jumplen))  # c_f_decay    was[0.5**( 1 / (T_f_decay*sps*baudrate/jumplen))]
+	statemx[0,11] = 20*200*8*sps / jumplen	# on_count_limit  was[5.0*sps*baudrate / jumplen]
 
 	statemx[0,20] = 0 		# idx  (this runs from (fftlen-jumplen) to fftlen-1 and then an fft is called)
 	statemx[0,21] = -1.0	# f_center
@@ -108,13 +102,20 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, baudrate, search_space_tr
 	statemx[3,:]  = 0.0		# fft mask-correlation
 	statemx[4,:]  = 0.0		# window (real) (the only reason this matrix would be complex...)
 	statemx[5,:]  = 0.0		# window (imag) (the only reason this matrix would be complex...)
-	statemx[7,:n_search] = search_indexes
+	statemx[7,:]  = f_center_search_map
 
 	if mask_mode == 0:
 		statemx[6, 0:masklen]	+= 1.0		# band mask constant term
 	else:
 		statemx[6, 0:masklen]  	+= construct_fft_mask(sps=sps, mod_index=mod_index, BT=BT, fftlen=fftlen, masklen=masklen, nn=1000) # empiric mask
 	return statemx
+
+
+
+def set_f_center_search_map(statemx, search_map):
+	assert len(search_map) == statemx[0,0]
+	assert len(search_map) == statemx.shape[1]
+	statemx[7,:] = search_map
 
 
 
@@ -138,7 +139,6 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 	masklen 		= int(statemx[0,6])
 	start_margin	= int(statemx[0,7])
 	end_margin		= int(statemx[0,8])
-	n_search		= int(statemx[0,9])
 	c_f_decay		= statemx[0,10]
 	on_count_limit	= statemx[0,11]
 
@@ -155,7 +155,7 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 	corrmax_sum 	= statemx[0,31]
 	on_counter		= statemx[0,32]
 	window 			= statemx[4,:] + 1j*statemx[5,:]
-	search_indexes  = statemx[7,:n_search]
+	f_center_search_map  	= statemx[7,:]
 
 	D_stat_update 	= int(1.0/c_stat_update)
 	center_f_head = center_f_head0
@@ -168,15 +168,16 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 			#fft = np.abs(np.fft.fftshift(np.fft.fft(window)))
 			fft = np.abs(compute_fft(window))
 			statemx[2,:] = fft
-			for i_search in range(n_search):
-				i_fft = int(search_indexes[i_search])
-				i0 = i_fft - masklen//2
-				i1 = i_fft + masklen//2 + 1
+			for i0 in range(fftlen -masklen +1):
+				i_center = i0 + masklen//2
+				if f_center_search_map[i_center] == 0:
+					continue
+				i1 = i0 + masklen
 				assert i0 >= 0
 				assert i0 <= (fftlen-masklen)
 				assert i1 >= masklen
 				assert i1 <= fftlen
-				statemx[3,i_fft] = np.sum(statemx[2,i0:i1] * statemx[6,0:masklen])
+				statemx[3,i_center] = np.sum(statemx[2,i0:i1] * statemx[6,0:masklen])
 
 			argmax 		= np.argmax(statemx[3,:])
 			corrmax 	= (statemx[3,argmax] - running_avg) / (running_var**0.5) * (stat_upd_count > D_stat_update)
@@ -185,15 +186,12 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 
 			if not trig_on:
 				for _ in range(1 + 1*(stat_upd_count < D_stat_update)):
-					#i_fft = int(search_indexes[np.random.randint(0, n_search)])
 					i_fft = argmax
 					running_avg, running_var = avg_var_upd(avg0=running_avg, var0=running_var, val=statemx[3, i_fft], c_update=c_stat_update, update_count=stat_upd_count)
 					stat_upd_count += 1
 			if trig_on and (not trig_on_prev):
 				#print("    trigger (",corrmax, running_avg, running_var, ")")
 				f_switch 			= (1,0)[f_switch]
-				#corrmaxfmax_sum 	= 0.0
-				#corrmax_sum 		= 0.0
 				center_f_arr[max(0,center_f_head-start_margin):center_f_head] = f_switch-10
 			if trig_on:						# fft-mask correlator triggered.
 				f_center_arr[f_switch] =  (corrmaxfmax_sum + corrmax*statemx[1,:][argmax]) / (corrmax_sum + corrmax)
@@ -245,7 +243,6 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 
 
 
-
 @njit(cache=True)
 def avg_var_upd(avg0, var0, val, c_update, update_count):
 	Dup = 1 + (1 / c_update)
@@ -261,7 +258,6 @@ def avg_var_upd(avg0, var0, val, c_update, update_count):
 	varup = (val-avg0)**2
 	var = var0 + (varup - var0)*c_update 		# is always positive, as it should be
 	return avg, var
-
 
 
 
