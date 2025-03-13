@@ -255,7 +255,8 @@ class RadioLoop:
 					rx_pls = self.rx.push_samples(batch=rx_samples, give_bits=False)
 					for rx_pl, rx_pl_f_offset in rx_pls:
 						if rx_pl in self.own_recently_sent:
-							del self.own_recently_sent[rx_pl]
+							self._clean_own_sent()
+							#del self.own_recently_sent[rx_pl]
 							DBGPRINT("Discarded a self-reception.")
 							continue
 						DBGPRINT("Radio decoded a frame at {} MHz: {}".format(round((self.rx_config.f_tune + rx_pl_f_offset) * 1e-6, 4), rx_pl))

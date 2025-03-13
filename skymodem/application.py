@@ -165,6 +165,7 @@ class SkyModem:
 			self.session_id_list[ichannel] = session_id
 		if ekey == EKEY_SKY_PAYLOAD:
 			assert type(data) == bytes
+			DBGPRINT("pl of len {} -> pub-zmq-{}.".format(len(data), ichannel))
 			frame_d = dict()
 			frame_d["packet_type"] 	= "tm"
 			frame_d["timestamp"] 	= dtime.now().isoformat()
@@ -186,7 +187,6 @@ class SkyModem:
 				DBGPRINT("SkyModem Exception (skylink_reception_loop): ", e)
 				self.close()
 				break
-			DBGPRINT("skylink-vc-{} -> pub-zmq. len: {}".format(ichannel, len(rdata)))
 			assert ichannel in range(num_virtual_channels)
 			with self.action_lock:
 				self._process_skylink_msg(ekey=ekey, ichannel=ichannel, data=rdata)

@@ -83,7 +83,7 @@ class SkyLinkLoop(threading.Thread):
 				while not self.que_payloads_from_radio.empty():
 					pl = self.que_payloads_from_radio.get_nowait()
 					sky_rx_ret = self.skylink.sky_rx(pl)
-					DBGPRINT("Was given a frame of {} bytes. sky_rx returned {}.".format(len(pl), sky_rx_ret))
+					DBGPRINT("Was given a downlink frame of {} bytes. sky_rx returned {}.".format(len(pl), sky_rx_ret))
 					sleeptime = 0.0
 
 				state_d_l = self.skylink.sky_get_state()
@@ -104,7 +104,7 @@ class SkyLinkLoop(threading.Thread):
 					tx_i, frame_bytes = self.skylink.sky_tx()
 					if tx_i == 0:
 						break
-					DBGPRINT("Transmitting a frame of {} bytes.".format(len(frame_bytes)))
+					DBGPRINT("Transmitting a frame of {} bytes uplink.".format(len(frame_bytes)))
 					self.que_payloads_to_radio.put_nowait(frame_bytes)
 					sleeptime = 0.0
 

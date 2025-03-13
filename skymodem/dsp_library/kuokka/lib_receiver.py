@@ -250,6 +250,7 @@ class Receiver:
 			return bits
 		return ret
 
+
 	def _split_payloads(self, payloads, delimits, frequencies):
 		pl_list = list()
 		for i_pl, (i0,i1) in enumerate(delimits):
@@ -257,13 +258,13 @@ class Receiver:
 			assert len(pl_list[-1][0]) == (i1-i0)
 		return pl_list
 
+
 	def _buffer_roll_1(self):
 		self.rs_array[0:self.rs_head-self.bufferhalf] 				= self.rs_array[self.bufferhalf:self.rs_head]
 		self.center_f_array[0:self.center_f_head-self.bufferhalf] 	= self.center_f_array[self.bufferhalf:self.center_f_head]
 		self.fft_instr_array[0:self.center_f_head-self.bufferhalf] 	= self.fft_instr_array[self.bufferhalf:self.center_f_head]
 		self.rs_head 			= self.rs_head - self.bufferhalf
 		self.center_f_head 		= self.center_f_head - self.bufferhalf
-		#self.demodulation_head = max(0,self.demodulation_head - self.bufferhalf)
 		self.demodulation_head 	= self.demodulation_head - self.bufferhalf
 
 
@@ -304,6 +305,7 @@ def get_a_precompiling_sampleset(rx_config:ReceiverConfig, do_print=False):
 	samples[i0:i0+len(transmission)] += transmission
 	return samples
 
+
 def precompile_receiver(rx_config:ReceiverConfig, do_print=False):
 	if do_print:
 		print("[Precompiling]")
@@ -335,11 +337,6 @@ def precompile_receiver(rx_config:ReceiverConfig, do_print=False):
 	if do_print:
 		print("\t[Precompiled in {} s.  ({} s for samples)]".format( round(t2-t0, 3), round(t1-t0, 3)  ))
 # PRECOMPILE RECEIVER ====================================================================================================
-
-
-
-
-
 
 
 
