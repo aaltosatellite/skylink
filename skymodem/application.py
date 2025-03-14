@@ -238,6 +238,7 @@ class SkyModem:
 				response_dict["state"] 	= list_of_vc_state_dicts
 			elif ctrl_command == "flush":
 				self.skylink_loop.flush(ichannel=ichannel)
+				response_dict["rsp"] = "ack"
 			elif ctrl_command == "get_stats":
 				sky_stats_d = self.skylink_loop.sky_get_stats()
 				response_dict["rsp"] = "stats"
@@ -257,6 +258,7 @@ class SkyModem:
 				response_dict["session_identifier"] = self.skylink_loop.sky_get_state()[ichannel]["session_identifier"] #session_identifier
 			elif ctrl_command == "arq_disconnect":
 				self.skylink_loop.arq_disconnect(ichannel=ichannel)
+				response_dict["rsp"] = "ack"
 			elif ctrl_command == "mac_reset":
 				DBGPRINT("command unimplemented 3")			# TODO
 				return
@@ -269,6 +271,7 @@ class SkyModem:
 			elif ctrl_command == "set_baudrate":
 				assert control_dict["baudrate"] in (9600, 9600*2, 9600*4), "invalid baudrate field in control_dict"
 				self.radio_loop.set_baudrate(control_dict["baudrate"])
+				response_dict["rsp"] = "ack"
 
 			else:
 				DBGPRINT("Unknown control command: {}".format(ctrl_command))
@@ -299,7 +302,7 @@ def get_receiver_config(f_center):
 
 
 if __name__ == '__main__':
-	key0 = b""
+	key0 = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
 	if key0 == b"":
 		print("Check HMAC Key!")
 		exit()
@@ -322,7 +325,3 @@ if __name__ == '__main__':
 	except KeyboardInterrupt:
 		pass
 	modem.close()
-
-
-
-
