@@ -64,7 +64,7 @@ void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* vchannel, uint32_t identifie
 int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint32_t identifier);
 
 // If too much time has passed since previous successful communication, fall back to non-reliable state.
-void sky_vc_check_timeouts(SkyVirtualChannel* vchannel, sky_tick_t now, sky_tick_t timeout);
+void sky_vc_check_timeouts(SkyVirtualChannel* vchannel, sky_tick_t now, sky_tick_t timeout, SkyDiagnostics* diag);
 
 
 
@@ -78,7 +78,7 @@ int sky_vc_push_packet_to_send(SkyVirtualChannel *vchannel, const uint8_t *paylo
 int sky_vc_send_buffer_is_full(SkyVirtualChannel* vchannel);
 
 // Reads next message to be sent.
-int sky_vc_read_packet_for_tx(SkyVirtualChannel *vchannel, uint8_t *tgt, sky_arq_sequence_t *sequence, int include_resend);
+int sky_vc_read_packet_for_tx(SkyVirtualChannel *vchannel, uint8_t *tgt, sky_arq_sequence_t *sequence, int include_resend, SkyDiagnostics *diag);
 
 // Returns the number of messages in buffer.
 int sky_vc_count_packets_to_tx(SkyVirtualChannel* vchannel, int include_resend);
@@ -93,7 +93,7 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_t
  * Fills the frame with a packet if there is something to send.
  * Returns boolean 0/1 as to if it actually wrote a frame.
  */
-int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmitFrame *tx_frame, sky_tick_t now, uint16_t frames_sent_in_this_vc_window);
+int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmitFrame *tx_frame, sky_tick_t now, uint16_t frames_sent_in_this_vc_window, SkyDiagnostics *diag);
 //======================================================================================================================
 //======================================================================================================================
 

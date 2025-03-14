@@ -147,7 +147,7 @@ int sendRing_count_free_send_slots(SkySendRing* sendRing);
 int sendRing_count_packets_to_send(SkySendRing* sendRing, int include_resend);
 
 /* Reads a payload to target. Writes sequence number to "sequence" pointer. Returns the (nonnegative) number of bytes read, or a negative error code. */
-int sendRing_read_to_tx(SkySendRing *sendRing, SkyElementBuffer *elementBuffer, uint8_t *target, sky_arq_sequence_t *sequence, int include_resend);
+int sendRing_read_to_tx(SkySendRing *sendRing, SkyElementBuffer *elementBuffer, uint8_t *target, sky_arq_sequence_t *sequence, int include_resend, SkyDiagnostics *diag);
 
 /* Writes sequence and length of the next payload to be sent into according pointer aguments. Returns 0 on success, negative error code otherwise. */
 int sendRing_peek_next_tx_size_and_sequence(SkySendRing *sendRing, SkyElementBuffer *elementBuffer, int include_resend, sky_arq_sequence_t *sequence);

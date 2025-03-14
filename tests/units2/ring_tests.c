@@ -210,6 +210,7 @@ TEST(wipe_rings)
  */
 TEST(push_and_read_packets)
 {
+	SkyDiagnostics diag;
 	// Create a send and a receive ring.
 	SkyRcvRing *rcv_ring = sky_rcv_ring_create(/* length */ 20, /* horizon_width */ 3, /* initial_sequence */ 0);
 	SkySendRing *send_ring = sky_send_ring_create(/* length */ 20, /* initial_sequence */ 0);
@@ -284,7 +285,7 @@ TEST(push_and_read_packets)
 
 	// Read the data from the element buffer.
 	uint8_t readout[120];
-	ret = sendRing_read_to_tx(send_ring, eb, readout, &send_ring->buff[0].sequence, 0);
+	ret = sendRing_read_to_tx(send_ring, eb, readout, &send_ring->buff[0].sequence, 0, &diag);
 	ASSERT(ret == 120);
 	ASSERT_MEMORY(readout, payload, ret);
 
@@ -325,6 +326,7 @@ TEST(push_and_read_packets)
  */
 TEST(wrap_around)
 {
+	SkyDiagnostics diag;
 	// Create a send ring and a receive ring and push multiple packets to them
 	// in order to have packets on both sides of the wrap around.
 	SkyRcvRing *rcv_ring = sky_rcv_ring_create(/* length */ 8, /* horizon_width */ 3, /* initial_sequence */ 250);
@@ -427,7 +429,7 @@ TEST(wrap_around)
 	{
 		printf("Reading packet #%d\n", i);
 		uint8_t readout[120];
-		int read = sendRing_read_to_tx(send_ring, eb, readout, &send_ring->buff[i].sequence, 0);
+		int read = sendRing_read_to_tx(send_ring, eb, readout, &send_ring->buff[i].sequence, 0, &diag);
 		ASSERT(read >= block_len, "Packet %d was not read from send ring. Error code: %d", i, read);
 		ASSERT_MEMORY(readout, &payload[12 * i], block_len);
 	}
@@ -567,6 +569,7 @@ TEST(lost_packets)
 // Test continuous pushing of packets to rings. (Should not cause any problems.)
 TEST(continuous_pushing)
 {
+	SkyDiagnostics diag;
 	int n = 3000; // Amount of packets to be pushed. Make smaller for faster testing.
 	// Create a new virtual channel instance
 	SkyVCConfig config = {
@@ -622,7 +625,7 @@ TEST(continuous_pushing)
 				ASSERT(read == 64, "Packet: %d, was not read properly. Error code: %d", (i-1)*5+j, read);
 
 				// Read packets to send ring.
-				read = sky_vc_read_packet_for_tx(vc, read_pl, &s, 0);
+				read = sky_vc_read_packet_for_tx(vc, read_pl, &s, 0, &diag);
 				int advanced = sendRing_clean_tail_up_to(vc->sendRing, vc->elementBuffer, vc->sendRing->tx_sequence);
 				ASSERT(read == 64, "Packet: %d was not read properly. Error code: %d", (i-1)*5+j, read);
 				ASSERT(advanced == 1, "Packet: %d tail was not advanced properly up to it. Error code: %d", i*5+j, advanced);
