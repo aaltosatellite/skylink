@@ -259,7 +259,7 @@ class RadioLoop:
 							#del self.own_recently_sent[rx_pl]
 							DBGPRINT("Discarded a self-reception.")
 							continue
-						DBGPRINT("Radio decoded a frame at {} MHz: {}".format(round((self.rx_config.f_tune + rx_pl_f_offset) * 1e-6, 4), rx_pl))
+						DBGPRINT("Radio decoded a frame at {} MHz: \n\033[92m{}\033[0m\n".format(round( (self.rx_config.f_tune+rx_pl_f_offset)*1e-6, 4), rx_pl ))
 						self.last_verified_freq = rx_pl_f_offset, time.monotonic()
 						if not self.que_radio_to_skylink.full():
 							self.que_radio_to_skylink.put_nowait(rx_pl)

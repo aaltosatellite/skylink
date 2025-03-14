@@ -3,9 +3,9 @@ This file will contain the main application logic for the SkyModem application.
 """
 import threading
 from dsp_library.kuokka.radio_loop import RadioLoop, ReceiverConfig
-from kuokka.lib_tools import get_doppler_low_high
-from cython_skylink import SkyLinkLoop, SkyConfiguration, EKEY_SKY_ARQ_DISCONNECTED, EKEY_SKY_PAYLOAD, EKEY_SKY_ARQ_CONNECTED
-from cython_skylink import num_virtual_channels, arq_state_off
+from dsp_library.kuokka.lib_tools import get_doppler_low_high
+from skylink_wrapper.cython_skylink import SkyLinkLoop, SkyConfiguration, EKEY_SKY_ARQ_DISCONNECTED, EKEY_SKY_PAYLOAD, EKEY_SKY_ARQ_CONNECTED
+from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_off
 import zmq
 import time
 import json
@@ -165,7 +165,7 @@ class SkyModem:
 			self.session_id_list[ichannel] = session_id
 		if ekey == EKEY_SKY_PAYLOAD:
 			assert type(data) == bytes
-			DBGPRINT("pl of len {} -> pub-zmq-{}.".format(len(data), ichannel))
+			DBGPRINT("[VC: {} -> pub-zmq. len: {}]: \n\033[96m{}\033[0m\n".format(ichannel, len(data), data))
 			frame_d = dict()
 			frame_d["packet_type"] 	= "tm"
 			frame_d["timestamp"] 	= dtime.now().isoformat()
@@ -284,7 +284,7 @@ class SkyModem:
 
 
 def get_receiver_config(f_center):
-	from kuokka.lib_tools import determine_ftune_and_min_sr
+	from dsp_library.kuokka.lib_tools import determine_ftune_and_min_sr
 	f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0, multiplier=2.0)
 	f_tune, minimum_samplerate = determine_ftune_and_min_sr(f_center_min=f_center_min, f_center_max=f_center_max, max_signal_bandwidth=9600*4*1.2)
 	assert minimum_samplerate < 2e6

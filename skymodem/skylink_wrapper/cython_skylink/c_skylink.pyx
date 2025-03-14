@@ -22,7 +22,7 @@ arq_state_on			= c_skylink.ARQ_STATE_ON
 
 class ArqConfig:
 	timeout_ticks		 	= 26000
-	idle_frame_threshold 	= 6500
+	idle_frame_threshold 	= 3000
 	idle_frames_per_window 	= 1
 
 class HMACConfig:

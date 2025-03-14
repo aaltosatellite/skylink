@@ -83,7 +83,12 @@ class SkyLinkLoop(threading.Thread):
 				while not self.que_payloads_from_radio.empty():
 					pl = self.que_payloads_from_radio.get_nowait()
 					sky_rx_ret = self.skylink.sky_rx(pl)
-					DBGPRINT("Was given a downlink frame of {} bytes. sky_rx returned {}.".format(len(pl), sky_rx_ret))
+					color_code = "\033[92m"  # Green (default when no errors)
+					if sky_rx_ret == -7:
+						color_code = "\033[93m"  # Yellow
+					elif sky_rx_ret < 0:
+						color_code = "\033[91m"  # Red
+					DBGPRINT(f"Was given a downlink frame of {len(pl)} bytes. sky_rx returned {color_code}{sky_rx_ret}\033[0m]")
 					sleeptime = 0.0
 
 				state_d_l = self.skylink.sky_get_state()
