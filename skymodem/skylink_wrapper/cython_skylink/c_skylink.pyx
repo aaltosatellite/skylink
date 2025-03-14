@@ -273,14 +273,15 @@ cdef class SkyLink:
 		dd["rx_fec_ok"] = stats.rx_fec_ok
 		dd["rx_fec_fail"] = stats.rx_fec_fail
 		dd["rx_fec_errs"] = stats.rx_fec_errs
-		dd["rx_arq_resets"] = stats.rx_arq_resets
+		dd["arq_rx_timeouts"] = stats.arq_rx_timeouts
+		dd["arq_tx_timeouts"] = stats.arq_tx_timeouts
+		dd["arq_retransmits"] = stats.arq_retransmits
 		dd["rx_hmac_fail"] = stats.rx_hmac_fail
 		dd["tx_frames"] = stats.tx_frames
 		dd["tx_bytes"] = stats.tx_bytes
 		dd["vc"] = list()
 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
 			dd["vc"].append( dict() )
-			dd["vc"][i]["arq_retransmits"] = stats.vc_stats[i].arq_retransmits
 			dd["vc"][i]["total_tx_frames"] = stats.vc_stats[i].tx_frames
 			dd["vc"][i]["total_rx_frames"] = stats.vc_stats[i].rx_frames
 		return dd
