@@ -162,7 +162,7 @@ int sky_vc_arq_disconnect(SkyVirtualChannel *vchannel)
 
 
 // Check ARQ connection timeout conditions
-void sky_vc_check_timeouts(SkyVirtualChannel *vchannel, sky_tick_t now, sky_tick_t timeout)
+void sky_vc_check_timeouts(SkyVirtualChannel *vchannel, sky_tick_t now, sky_tick_t timeout, SkyDiagnostics *diag)
 {
 	// If ARQ is off, so nothing to do here.
 	if (vchannel->arq_state == ARQ_STATE_OFF)
@@ -173,9 +173,10 @@ void sky_vc_check_timeouts(SkyVirtualChannel *vchannel, sky_tick_t now, sky_tick
 	int rx_timeout = wrap_time_ticks(now - vchannel->last_rx_tick) > timeout;
 
 	// Force connection to off state in case timeout has occurred.
-	if (tx_timeout || rx_timeout)
+	if (tx_timeout || rx_timeout){
+		tx_timeout ? diag->arq_tx_timeouts++ : diag->arq_rx_timeouts++;
 		sky_vc_wipe_to_arq_off_state(vchannel);
-
+	}
 }
 
 //===== SKYLINK VIRTUAL CHANNEL ========================================================================================
@@ -216,18 +217,18 @@ int sky_vc_count_packets_to_tx(SkyVirtualChannel* vchannel, int include_resend)
 }
 
 // Reads the next packet to be sent to tgt. Returns the number of bytes written on success, or a negative error code.
-int sky_vc_read_packet_for_tx(SkyVirtualChannel *vchannel, uint8_t *target, sky_arq_sequence_t *sequence, int include_resend)
+int sky_vc_read_packet_for_tx(SkyVirtualChannel *vchannel, uint8_t *target, sky_arq_sequence_t *sequence, int include_resend, SkyDiagnostics *diag)
 {
-	return sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, target, sequence, include_resend);
+	return sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, target, sequence, include_resend, diag);
 }
 
 /*
 Read the next packet to be sent to target and moves the tail up to the first untransmitted packet.
 Returns the number of bytes written on success, or a negative error code.
 */
-int sky_vc_read_packet_for_tx_monotonic(SkyVirtualChannel *vchannel, uint8_t *tgt, sky_arq_sequence_t *sequence)
+int sky_vc_read_packet_for_tx_monotonic(SkyVirtualChannel *vchannel, uint8_t *tgt, sky_arq_sequence_t *sequence, SkyDiagnostics *diag)
 {
-	int read = sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tgt, sequence, 0);
+	int read = sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tgt, sequence, 0, diag);
 	if (read < 0)
 		return read;
 
@@ -385,7 +386,7 @@ Fills the frame with a packet if there is something to send.
 
 Returns boolean 0/1 as to if it actually wrote a frame.
 */
-int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmitFrame *tx_frame, sky_tick_t now, uint16_t frames_sent_in_this_vc_window)
+int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmitFrame *tx_frame, sky_tick_t now, uint16_t frames_sent_in_this_vc_window, SkyDiagnostics *diag)
 {
 
 	switch (vchannel->arq_state) {
@@ -403,7 +404,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 
 
 			// Read the packet to the frame.
-			int read = sky_vc_read_packet_for_tx_monotonic(vchannel, tx_frame->ptr, &sequence);
+			int read = sky_vc_read_packet_for_tx_monotonic(vchannel, tx_frame->ptr, &sequence, diag);
 			SKY_ASSERT(read >= 0)
 
 			// Update the frame
@@ -484,7 +485,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 				sky_frame_add_extension_arq_sequence(tx_frame, packet_sequence);
 
 				// Copy the packet to the frame
-				int read = sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tx_frame->ptr, &packet_sequence, 1);
+				int read = sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tx_frame->ptr, &packet_sequence, 1, diag);
 				SKY_ASSERT(read >= 0);
 
 				// Update the frame.
@@ -496,7 +497,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 			else {
 				/* If the payload for some reason is too large, remove it nonetheless. */
 				uint8_t tmp_tgt[300];
-				sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tmp_tgt, &packet_sequence, 1);
+				sendRing_read_to_tx(vchannel->sendRing, vchannel->elementBuffer, tmp_tgt, &packet_sequence, 1, diag);
 				SKY_PRINTF(SKY_DIAG_BUG, "Too large of a packet to fit! Discarding it!\n");
 				return SKY_RET_NO_SPACE_FOR_PAYLOAD;
 			}

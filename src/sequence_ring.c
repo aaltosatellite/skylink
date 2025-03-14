@@ -490,14 +490,16 @@ static int sendRing_read_recall_packet_to_tx_(SkySendRing *sendRing, SkyElementB
 Read a payload from the elementBuffer to target. If include_resend is not 0, try to read a packet that is scheduled for retransmission.
 Returns the number of bytes read or a negative error code.
 */
-int sendRing_read_to_tx(SkySendRing *sendRing, SkyElementBuffer *elementBuffer, uint8_t *tgt, sky_arq_sequence_t *sequence, int include_resend)
+int sendRing_read_to_tx(SkySendRing *sendRing, SkyElementBuffer *elementBuffer, uint8_t *tgt, sky_arq_sequence_t *sequence, int include_resend, SkyDiagnostics *diag)
 {
 	int read = SKY_RET_RING_EMPTY;
 	//If include_resend is not 0, try to read a packet that is scheduled for retransmission.
 	if (include_resend && (sendRing->resend_count > 0)) {
 		read = sendRing_read_recall_packet_to_tx_(sendRing, elementBuffer, tgt, sequence);
-		if (read >= 0) 
+		if (read >= 0){
+			diag->arq_retransmits++;
 			return read;
+		}
 	}
 	read = sendRing_read_new_packet_to_tx_(sendRing, elementBuffer, tgt, sequence);
 	return read;

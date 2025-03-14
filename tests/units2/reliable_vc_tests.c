@@ -256,6 +256,7 @@ TEST(vc_content_to_send)
 	//SkyHandle handle = sky_create(&config);
 	SkyVirtualChannel* vc = sky_vc_create(&config.vc[0]);
 
+	SkyDiagnostics diag;
 	// ARQ OFF, simply tests if there is content to send.:
 	// Check that there is no content to send.
 	int ret = sky_vc_content_to_send(vc, &config, 0, 0);
@@ -307,7 +308,7 @@ TEST(vc_content_to_send)
 
 	// Remove content to send.
 	uint8_t dump[1000];
-	sendRing_read_to_tx(vc->sendRing, vc->elementBuffer, dump, &seq, 0);
+	sendRing_read_to_tx(vc->sendRing, vc->elementBuffer, dump, &seq, 1, &diag);
 
 	// Send ring head and tx head.
 	ASSERT(vc->sendRing->head == 1, "Head was not 1 it was %d", vc->sendRing->head);

@@ -27,9 +27,6 @@ extern unsigned int sky_diag_mask;
  */
 typedef struct
 {
-	// Total number of retransmitted frames using this virtual channel. This is not actually updated anywhere.
-	uint16_t arq_retransmits;
-	//uint16_t arq_dunno;
 
 	/*
 	 * Total number of transmitted frames using this virtual channel.
@@ -88,9 +85,17 @@ struct sky_diag
 	uint16_t rx_hmac_fail;
 
 	/*
-	 * Number of bytes errors corrected
+	 * ARQ timeouts due to no response from the other side.
 	 */
-	uint16_t rx_arq_resets;
+	uint16_t arq_rx_timeouts;
+
+	/*
+	 * ARQ transmission timeout.
+	 */
+	uint16_t arq_tx_timeouts;
+
+	// Total number of retransmitted frames.
+	uint16_t arq_retransmits;
 
 	/*
 	 * Total number of transmitted frames

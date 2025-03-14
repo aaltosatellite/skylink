@@ -138,9 +138,8 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 
 	// Check the virtual channels' timeout conditions.
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i)  // TODO: Do only every N ticks?
-		sky_vc_check_timeouts(self->virtual_channels[i], now, self->conf->arq.timeout_ticks);
+		sky_vc_check_timeouts(self->virtual_channels[i], now, self->conf->arq.timeout_ticks, self->diag);
 
-	//if (!can_send) return 0; ?????????
 
 	// Pick a virtual channel to transmit on.
 	int vc = _sky_tx_pick_vc(self, now);
@@ -149,7 +148,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 
 	// No need to transmit.
 	if (!can_send || vc < 0)
-		return 0; // This is supposed to return 0, Not "-1": sky_tx returns a boolean value as to if there is need to send something.
+		return 0;
 
 	// Advance round robin index for virtual channels.
 	_sky_tx_advance_vc_round_robin(self);
@@ -191,7 +190,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	_sky_tx_extension_eval_hmac_reset(self, &tx_frame, vc);
 
 	/* Fill rest of the frame with payload data and necessary ARQ extensions. */
-	int ret = sky_vc_fill_frame(self->virtual_channels[vc], self->conf, &tx_frame, now, self->mac->frames_sent_in_current_window_per_vc[vc]);
+	int ret = sky_vc_fill_frame(self->virtual_channels[vc], self->conf, &tx_frame, now, self->mac->frames_sent_in_current_window_per_vc[vc], self->diag);
 
 	// If there was an error, return it.
 	if (ret < 0)
