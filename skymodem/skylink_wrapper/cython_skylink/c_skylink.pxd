@@ -153,7 +153,6 @@ cdef extern from "reliable_vc.h":
 
 cdef extern from "diag.h":
 	ctypedef struct SkyVCDiagnostics:
-		uint16_t arq_retransmits;
 		uint16_t tx_frames;
 		uint16_t rx_frames;
 
@@ -178,6 +177,9 @@ cdef extern from "skylink.h":
 		uint16_t rx_fec_octs;
 		uint16_t rx_fec_errs;
 		uint16_t rx_hmac_fail;
+		uint16_t arq_rx_timeouts;
+		uint16_t arq_tx_timeouts;
+		uint16_t arq_retransmits;
 		uint16_t rx_arq_resets;
 		uint16_t tx_frames;
 		uint16_t tx_bytes;
