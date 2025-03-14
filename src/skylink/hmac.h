@@ -4,15 +4,15 @@
 
 #include "skylink/skylink.h"
 #include "skylink/conf.h"
-
+#include "ext/blake3/blake3.h"
 
 /* HMAC trailer length */
 #define SKY_HMAC_LENGTH                 (4) // bytes
-
+#define SKY_MAX_HMAC_KEY_COUNT			(4)
 
 typedef struct {
-	const uint8_t* key;
-	const unsigned int len;
+	uint8_t key[BLAKE3_KEY_LEN];
+	unsigned int len;
 } SkyHMACKey;
 
 
@@ -34,7 +34,7 @@ typedef struct
 struct sky_hmac
 {
 	// HMAC keys
-	const SkyHMACKey *keys;
+	SkyHMACKey keys[SKY_MAX_HMAC_KEY_COUNT];
 	unsigned int num_keys;
 
 	/* Array of per virtual channel HMAC states */
