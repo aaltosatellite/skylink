@@ -52,7 +52,7 @@ def corrupt_n_bits_of_bitarr(bitarr, n_corrupt):
 
 
 
-def test_ccsds_whitener(do_print):
+def utest_CCSDS_whitening_pseudorandom(do_print):
 	bitref = "111111110100100000001110110000001001101"  #Ref: CCSDS 131.0-B-4, 10.4.1
 	byteref = np.array([0xff, 0x48, 0x0e, 0xc0, 0x9a, 0x0d], dtype=np.int32)
 	Ba, ba = CCSDS_TM_whitener_sequence(8 * 6)
@@ -75,14 +75,15 @@ def test_ccsds_whitener(do_print):
 			if (ii%24) == 23:
 				print("")
 		print("]")
+	print("\t[Passes.]")
 	print("## CCSDS whitening pseudorandom ================================")
 	print("")
 
 
 
-def test_chip_symrate_configuration_math(do_plot):
+def utest_chip_symbolrate_config_math(do_plot):
 	print("")
-	print("## Testing symbolrate configuration math is consistent =========")
+	print("## Chip symbolrate config math ================================")
 	max_E = 0x0a
 	symrate_cap = CC1125_symbolrate_for_M_E(SRATE_M=2 ** 20 - 1, SRATE_E=max_E)
 	n_rounds = 100000
@@ -96,6 +97,7 @@ def test_chip_symrate_configuration_math(do_plot):
 	print("\tFor 9600: {}".format(CC1125_symbolrate_for_M_E(*CC1125_M_E_for_symbolrate(9600))))
 	print("\tFor 800:  {}".format(CC1125_symbolrate_for_M_E(*CC1125_M_E_for_symbolrate(800))))
 	print("\tFor 120:  {}".format(CC1125_symbolrate_for_M_E(*CC1125_M_E_for_symbolrate(800))))
+	print("\t[Passes.]")
 	print("## =============================================================")
 	print("")
 	if do_plot:
@@ -122,8 +124,8 @@ def test_chip_symrate_configuration_math(do_plot):
 
 
 
-def test_peak_deviation_algos_cohere():
-	print("## Peak deviation config math ============================================")
+def utest_chip_peak_deviation_config_math():
+	print("## Chip peak deviation config math ======================================")
 	print("\tAlgorithm for obtaining E & M gives the best or second best combination.")
 	max_diff = (40e6 / (2**24)) * (2**7)
 	n_rep = 4000
@@ -144,6 +146,7 @@ def test_peak_deviation_algos_cohere():
 		#	print("\t{} better params.".format(n_better_params))
 		assert n_better_params <= 1
 	print("\tIn all {} attempts, this held true.".format(n_rep))
+	print("\t[Passes.]")
 	print("## Peak deviation config math ============================================")
 	print("")
 
@@ -174,9 +177,9 @@ def plot_peak_deviations():
 
 
 
-def test_golay():
+def utest_golay24():
 	print("")
-	print("## Golay24 test ==============================================")
+	print("## Golay24 ===================================================")
 	print("\tno errors:")
 	for x in range(2**12 -1):
 		encoded = encode_golay24(x)
@@ -232,6 +235,7 @@ def test_golay():
 		decoded = decode_golay24(enc_scrambled)[0]
 		assert (decoded == x) or (decoded == -1), (x, encoded, decoded)
 	print("\t\tAll decoded successfully OR recognized as corrupt")
+	print("\t[Passes.]")
 	print("## Golay24 test ==============================================")
 
 def speedbench_golay():
@@ -274,7 +278,7 @@ def speedbench_golay():
 
 
 
-def test_rs_1():
+def utest_Reed_Solomon_1():
 	rs_mx, rs_cfg = get_default_rs()
 	print("")
 	print("## Reed Solomon 1 =============================================")
@@ -289,12 +293,13 @@ def test_rs_1():
 				assert len(decoded) == len(msg)
 				assert np.allclose(decoded, msg)
 	print("\tAll with less than 16 errors corrected successfully.")
+	print("\t[Passes.]")
 	print("## Reed Solomon ===============================================")
 	print("")
 
 
 
-def test_rs_2(do_plot):
+def utest_Reed_Solomon_2(do_plot):
 	rs_mx, rs_cfg = get_default_rs()
 	nrep = 320
 	n_error_array = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,]
@@ -330,6 +335,7 @@ def test_rs_2(do_plot):
 			errorcount_arr.append( errorcount_sum / max(1,okcount) )
 	print("\tAll with less than 16 errors corrected successfully.")
 	print("\tDecoding probability drops off after 16 as expected.")
+	print("\t[Passes.]")
 	print("## Reed Solomon ===============================================")
 	print("")
 
@@ -402,7 +408,7 @@ def speedbench_Reed_Solomon():
 
 
 
-def test_synchword_deframing():
+def utest_synchword_deframing():
 	print("")
 	print("## Synchword deframing =============================================")
 	synchbits0 = np.zeros(32, dtype=np.int32)
@@ -444,12 +450,13 @@ def test_synchword_deframing():
 			ok, latest_bits, bit_idx, n_errors = deframe_synchword(bit=b, latest_bits=latest_bits, synchword=DEFAULT_SYNCHWORD, synch_length_mask=synch_len_mask, synchword_len=32, synch_threshold=threshold)
 			min_error = min(min_error, n_errors)
 		print("\tsmallest error in a noise of {}M length: {}".format( round(1e-6 * nn, 3), min_error))
+	print("\t[Passes.]")
 	print("## =================================================================")
 	print("")
 
 
 
-def test_framing_1():
+def utest_framing_basic_test_1():
 	print("")
 	print("## Framing basic test 1 ========================================")
 	print("\tTest framing and deframing on packets over all lengths")
@@ -472,13 +479,13 @@ def test_framing_1():
 				assert len(payload_delimits) == 1, (len(payload_delimits), pl_len, n_corrupt, deframermx[1,0])
 				pl = payloads[payload_delimits[0,0]:payload_delimits[0,1]]
 				assert np.all(pl == pl_chars)
-	print("\tPasses.")
+	print("\t[Passes.]")
 	print("## =============================================================")
 	print("")
 
 
 
-def test_framing_2():
+def utest_framing_basic_test_2():
 	print("")
 	print("## Framing basic test 2 ========================================")
 	print("\tTest framing and deframing on two packets")
@@ -522,7 +529,7 @@ def test_framing_2():
 		assert np.all(pl_list[0] == pl_chars1)
 		assert np.all(pl_list[1] == pl_chars2)
 	assert double_ret > 0
-	print("\tPasses.")
+	print("\t[Passes.]")
 	print("## Framing basic test ==========================================")
 	print("")
 
@@ -591,17 +598,17 @@ def speedbench_framing():
 
 
 
-test_ccsds_whitener(do_print=False)
-test_chip_symrate_configuration_math(do_plot=False)
-test_peak_deviation_algos_cohere()
+utest_CCSDS_whitening_pseudorandom(do_print=False)
+utest_chip_symbolrate_config_math(do_plot=False)
+utest_chip_peak_deviation_config_math()
 #plot_peak_deviations()
 
-test_golay()
-test_synchword_deframing()
-test_rs_1()
-test_rs_2(do_plot=True)
-test_framing_1()
-test_framing_2()
+utest_golay24()
+utest_synchword_deframing()
+utest_Reed_Solomon_1()
+utest_Reed_Solomon_2(do_plot=True)
+utest_framing_basic_test_1()
+utest_framing_basic_test_2()
 
 speedbench_golay()
 speedbench_Reed_Solomon()

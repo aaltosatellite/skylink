@@ -6,7 +6,7 @@ from mtools.tools_dsp import waterfall_mx, create_resampler, resampler_execute
 from kuokka.lib_fft_detector import create_fft_centering_statemx, fft_detect_and_freq_determ
 from kuokka.lib_pll_detector import create_frequency_mapper_statev, pll_detect_and_freq_determ
 from mtools.tools_dsp import create_pll_statevector, create_trigger_statevector, create_winstd_statemx
-from kuokka.lib_tools import radionoise, make_samples, get_frequency_search_map
+from kuokka.lib_tools import radionoise, make_samples, get_frequency_search_map, get_doppler_low_high
 
 
 
@@ -69,14 +69,13 @@ def speedbench_fft_detect(sps, baudrate):
 	overmatch = speed / sr
 	core_fraction	= (1/overmatch) / 1.0
 	budget_fraction	= (1/overmatch) / 0.5
-	print("")
-	print("-- fft detection (no signal) -----------------------")
-	print("speed:              {} Ms/s".format( round( 1e-6*speed, 3) ))
-	print("overmatch:          {}".format( round( overmatch, 3) ))
-	print("core use:           {} %".format( round( 100*core_fraction, 2) ))
-	print("budget use:         {} %".format( round( 100*budget_fraction, 2) ))
-	print("----------------------------------------------------")
-
+	print("-- FFT-DETECTION -----------------------------------")
+	print("sps:{}        baudrate:{}".format(sps, baudrate))
+	print("no signal:")
+	print("\tspeed:              {} Ms/s".format( round( 1e-6*speed, 3) ))
+	print("\tovermatch:          {}".format( round( overmatch, 3) ))
+	print("\tcore use:           {} %".format( round( 100*core_fraction, 2) ))
+	print("\tbudget use:         {} %".format( round( 100*budget_fraction, 2) ))
 
 	sample_head = 0
 	center_f_head = 0
@@ -91,11 +90,11 @@ def speedbench_fft_detect(sps, baudrate):
 	overmatch = speed / sr
 	core_fraction	= (1/overmatch) / 1.0
 	budget_fraction	= (1/overmatch) / 0.5
-	print("-- fft detection (with signal) ---------------------")
-	print("speed:              {} Ms/s".format( round( 1e-6*speed, 3) ))
-	print("overmatch:          {}".format( round( overmatch, 3) ))
-	print("core use:           {} %".format( round( 100*core_fraction, 2) ))
-	print("budget use:         {} %".format( round( 100*budget_fraction, 2) ))
+	print("With signal:")
+	print("\tspeed:              {} Ms/s".format( round( 1e-6*speed, 3) ))
+	print("\tovermatch:          {}".format( round( overmatch, 3) ))
+	print("\tcore use:           {} %".format( round( 100*core_fraction, 2) ))
+	print("\tbudget use:         {} %".format( round( 100*budget_fraction, 2) ))
 	print("----------------------------------------------------")
 	print("")
 
@@ -108,95 +107,45 @@ def speedbench_fft_detect(sps, baudrate):
 
 
 
+def tst_fft_center_detect_1():
+	f_tune 			= 437.1e6
+	f_signal 		= 437.125e6
+	f_offset 		= f_signal - f_tune
+	doppler_max 	= 10928.125  # 10928.125
+	sps				= 21
+	baudrate		= 9600
+	sr 				= sps*baudrate
+	nnoise_init		= sps * 1400 * 14
+	nnoise_mid		= sps * 200
+	nnoise_end		= sps * 1200
+	BT = -1
+	f_offset_rel1 	= f_offset / sr
+	f_offset_rel2 	= f_offset / sr
+	f_offset_rel3 	= f_offset / sr
 
-
-
-
-
-
-
-
-
-def tst_fft_center_detect_1(inputmode):
-	if inputmode == "A":
-		f_tune 		= 437e6
-		f_signal 	= 437.02e6
-		f_offset 	= f_signal - f_tune
-		doppler_max = 10928.125  # 10928.125
-		sps				= 17
-		baudrate		= 9600
-		sr 				= sps*baudrate
-		nnoise_init		= sps * 1400 * 4
-		nnoise_mid		= sps * 200
-		nnoise_end		= sps * 1200
-		BT = -1
-		f_offset_rel1 	= f_offset / sr
-		f_offset_rel2 	= f_offset / sr
-		f_offset_rel3 	= f_offset / sr
-
-		f_offset_rel	= 0.0
-		mod_index 		= 0.707
-		bits 			= np.random.randint(0,2, 600)*2-1
-		sig_samples1 	= make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_rel1, power=1.0, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=-1, shaper_n_taps=sps*6+1)
-		sig_samples2 	= make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_rel2, power=1.0, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=-1, shaper_n_taps=sps*6+1)
-		sig_samples3 	= make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_rel3, power=1.0, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=-1, shaper_n_taps=sps*6+1)
-		nsignal			= len(sig_samples1)
-		noise1 			= np.zeros(nnoise_init, dtype=np.complex128)
-		noise2 			= np.zeros(nnoise_mid, dtype=np.complex128)
-		noise3 			= np.zeros(nnoise_end, dtype=np.complex128)
-		samples0 		= np.concatenate( (noise1, sig_samples1, noise2, sig_samples2, noise2, sig_samples3, noise3) )
-		samples0		= samples0
-		nsamples 		= len(samples0)
-		samples 		= samples0.copy()
-		sig_x_arr 		= np.zeros( (3,2) )
-		sig_x_arr[0]	= np.array( (nnoise_init, nnoise_init+nsignal))
-		sig_x_arr[1]	= np.array( (nnoise_init+nsignal+nnoise_mid, nnoise_init+nsignal*2+nnoise_mid))
-		sig_x_arr[2]	= np.array( (nnoise_init+nsignal*2+nnoise_mid*2, nnoise_init+nsignal*3+nnoise_mid*2))
-		sig_y_arr		= np.zeros( (3,2) )
-		sig_y_arr[0]	= np.array( (f_offset_rel1, f_offset_rel1) )
-		sig_y_arr[1]	= np.array( (f_offset_rel2, f_offset_rel2) )
-		sig_y_arr[2]	= np.array( (f_offset_rel3, f_offset_rel3) )
-		samples 		= samples + radionoise(n=len(samples), sr=sr, W_per_Hz=0.20/9600)
-
-	else:
-		fpath = "/home/elmore/datasetit/radiotallenteet/uhf-nayte-{}.dat".format(96)
-		f = open(fpath, "rb")
-		samples0 = pickle.loads(f.read())
-		f.close()
-		assert type(samples0) == np.ndarray, type(samples0)
-		assert samples0.dtype in (np.complex128, np.complex64), samples0.dtype
-		sr0 			= 1e6
-		f_offset0 		= 1.2445e5
-		f_offset 		= 10.0e3
-		# CUT
-		cut_idx_0 = 3750000 + np.random.randint(0, 1024*100)
-		samples0 = samples0[cut_idx_0:4500000]
-		samples0 = samples0 * np.exp(2j*np.pi * (1/sr0) * (f_offset-f_offset0)*np.arange(len(samples0)))
-		initial_avgamp = np.average( np.abs(samples0) )
-		samples0 = samples0 * (1/initial_avgamp)
-		samples0 = samples0 +  radionoise(n=len(samples0), sr=sr0, W_per_Hz=0.20/9600)
-		print("\tinitial avg amplitude: ",initial_avgamp)
-
-		f_tune = 437e6
-		f_signal = f_tune + f_offset
-		doppler_max = 10928.125  # 10928.125
-
-		sps 			= 21
-		baudrate 		= 9600
-		r_rate 			= (sps*baudrate)/sr0
-		sr 				= r_rate * sr0
-		rs_f_cutoff 	= r_rate * 0.4999
-		rsmplr 			= create_resampler(m_halflen=17, n_banks=64, r_rate=r_rate, f_cutoff=rs_f_cutoff, allow_aliasing=False)
-		rs_samples0 	= resampler_execute(samples=samples0, statemx=rsmplr)
-		f_offset_rel 	= f_offset / sr
-		samples  		= rs_samples0.copy()
-		nsamples 		= len(samples)
-		sig_x_arr 		= np.zeros( (1,2) )
-		sig_x_arr[0]	= np.array( (4.255e4, 5.33e4))
-		sig_y_arr		= np.zeros( (1,2) )
-		sig_y_arr[0]	= np.array( (f_offset,f_offset) ) / sr
-		mod_index		= 0.5
-		BT				= -1
+	f_offset_rel	= 0.0
+	mod_index 		= 0.707
+	bits 			= np.random.randint(0,2, 600)*2-1
+	sig_samples1 	= make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_rel1, power=1.0, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=-1, shaper_n_taps=sps*6+1)
+	sig_samples2 	= make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_rel2, power=1.0, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=-1, shaper_n_taps=sps*6+1)
+	sig_samples3 	= make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_rel3, power=1.0, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=-1, shaper_n_taps=sps*6+1)
+	nsignal			= len(sig_samples1)
+	noise1 			= np.zeros(nnoise_init, dtype=np.complex128)
+	noise2 			= np.zeros(nnoise_mid, dtype=np.complex128)
+	noise3 			= np.zeros(nnoise_end, dtype=np.complex128)
+	samples0 		= np.concatenate( (noise1, sig_samples1, noise2, sig_samples2, noise2, sig_samples3, noise3) )
+	samples0		= samples0
+	nsamples 		= len(samples0)
+	samples 		= samples0.copy()
+	sig_x_arr 		= np.zeros( (3,2) )
+	sig_x_arr[0]	= np.array( (nnoise_init, nnoise_init+nsignal))
+	sig_x_arr[1]	= np.array( (nnoise_init+nsignal+nnoise_mid, nnoise_init+nsignal*2+nnoise_mid))
+	sig_x_arr[2]	= np.array( (nnoise_init+nsignal*2+nnoise_mid*2, nnoise_init+nsignal*3+nnoise_mid*2))
+	sig_y_arr		= np.zeros( (3,2) )
+	sig_y_arr[0]	= np.array( (f_offset_rel1, f_offset_rel1) )
+	sig_y_arr[1]	= np.array( (f_offset_rel2, f_offset_rel2) )
+	sig_y_arr[2]	= np.array( (f_offset_rel3, f_offset_rel3) )
+	samples 		= samples + radionoise(n=len(samples), sr=sr, W_per_Hz=0.050/9600)
 
 
 	curtain_arr = np.abs( samples )
@@ -211,27 +160,28 @@ def tst_fft_center_detect_1(inputmode):
 
 	# FFT DETECTION =======================================================================================================================================
 	#============================================
-	fftlen				= 1024			# !		(1024,  2048, 512)
-	jumplen				= 1024//2		# !		(fftlen / [2,3,4])
-	c_stat_update		= 1 / 700		# -		([400:2000])
+	fftlen				= 1024
+	jumplen				= 1024//2
+	c_stat_update		= 1 / 700
 	n_delay				= fftlen*5
-	trigger_on_lvl		= 5.5								# !!!	(4.5 < _ < 9)
-	trigger_off_lvl		= 2.0
-	masklen				= int(0.5 * 2.5*fftlen/sps)*2 +1	# !		( int( [0.8:1.2] * fftlen/sps)  )
-	mask_mode			= 1				# !!	( -1 <= _ <= 1 )
-	start_margin_mpr	= 3.0			# !!!
-	end_margin_mpr  	= 1.5			# !
+	trigger_on_lvl		= 5.5
+	trigger_off_lvl		= 0.0
+	masklen				= int(0.5 * 2.5*fftlen/sps)*2 +1
+	mask_mode			= 1
+	start_margin_mpr	= 3.0
+	end_margin_mpr  	= 1.5
 	#============================================
 	#f_tune = 437e6
 	#f_signal = 437.125e6
 	#doppler_max = 10928.125  # 10928.125
-	f_center_min_nrm	 = (f_signal-f_tune-doppler_max*1.2) / sr
-	f_center_max_nrm	 = (f_signal-f_tune+doppler_max*1.2) / sr
-	f_center_search_map		= get_frequency_search_map(fftlen=fftlen, f_min_nrm=f_center_min_nrm, f_max_nrm=f_center_max_nrm)
+	f_center_min_nrm 	= (f_signal-f_tune-doppler_max*1.2) / sr
+	f_center_max_nrm 	= (f_signal-f_tune+doppler_max*1.2) / sr
+	f_center_search_map	= get_frequency_search_map(fftlen=fftlen, f_min_nrm=f_center_min_nrm, f_max_nrm=f_center_max_nrm)
+	#f_center_search_map = np.ones(fftlen)*1.0
 
 	center_f_arr_fft0 	= np.zeros(nsamples, dtype=np.float64) -1
 	center_f_arr_fft1 	= np.zeros(nsamples, dtype=np.float64) -1
-	instr_arr 		= np.zeros((nsamples,3), dtype=np.float64) -1
+	instr_arr 			= np.zeros((nsamples,3), dtype=np.float64) -1
 
 	print("Creating statemx.")
 	statemx0 = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, f_center_search_map=f_center_search_map,
@@ -273,7 +223,6 @@ def tst_fft_center_detect_1(inputmode):
 	avg_arr = instr_arr[:,0]
 	var_arr = instr_arr[:,1]
 	fftmax_arr = instr_arr[:,2]
-
 	# FFT DETECTION =======================================================================================================================================
 
 
@@ -344,14 +293,14 @@ def tst_fft_center_detect_1(inputmode):
 
 
 
-tst_fft_center_detect_1(inputmode="A")
-
-speedbench_fft_detect(sps=21, baudrate=9600)
-speedbench_fft_detect(sps=17, baudrate=9600)
-speedbench_fft_detect(sps=8, baudrate=9600*16)
-speedbench_fft_detect(sps=6, baudrate=9600*16)
 
 
+speedbench_fft_detect(sps=20, baudrate=9600)
+speedbench_fft_detect(sps=20, baudrate=9600*2)
+speedbench_fft_detect(sps=20, baudrate=9600*4)
+
+
+tst_fft_center_detect_1()
 
 
 

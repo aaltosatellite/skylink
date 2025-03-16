@@ -81,8 +81,8 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, f_center_search_map, mod_
 	statemx[0,6]  = int(masklen)
 	statemx[0,7]  = int(start_margin_mpr * fftlen)
 	statemx[0,8]  = int(end_margin_mpr * fftlen)
-	statemx[0,10] = 0.5**(1 / (200*8*sps/jumplen))  # c_f_decay    was[0.5**( 1 / (T_f_decay*sps*baudrate/jumplen))]   [0.5**(1 / ((200*8*sps + n_delay + start_margin_mpr*fftlen)/jumplen))]
-	statemx[0,11] = 20*200*8*sps / jumplen	# on_count_limit  was[5.0*sps*baudrate / jumplen]
+	statemx[0,10] = 0.5**(1 / (256*8*sps/jumplen))  # c_f_decay    was[0.5**( 1 / (T_f_decay*sps*baudrate/jumplen))]   [0.5**(1 / ((200*8*sps + n_delay + start_margin_mpr*fftlen)/jumplen))]
+	statemx[0,11] = 30*256*8*sps / jumplen	# on_count_limit  was[5.0*sps*baudrate / jumplen]
 
 	statemx[0,20] = 0 		# idx  (this runs from (fftlen-jumplen) to fftlen-1 and then an fft is called)
 	statemx[0,21] = -1.0	# f_center

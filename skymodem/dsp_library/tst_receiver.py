@@ -1,14 +1,15 @@
 import numpy as np
 from kuokka.lib_framing import frame_packet
-from kuokka.lib_reedsolomon import get_default_rs
-from mtools.tools_dsp import resampler_execute, create_resampler
-from kuokka.lib_tools import DEFAULT_SYNCHWORD
-from kuokka.lib_receiver import Receiver, ReceiverConfig
+from kuokka.lib_reedsolomon import get_default_rs, RS_MAX_ENCODED_LEN, RS_MAX_PL_LEN, RS_MIN_ENCODED_LEN
+from kuokka.lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_BITS, DEFAULT_SYNCHWORD_LEN, ints_to_bits
+from kuokka.lib_receiver import Receiver, ReceiverConfig, precompile_receiver
 from mtools.tools_dsp import waterfall_mx
+from mtools.tools_system import mpr_set
 from kuokka.lib_tools import make_samples, radionoise
-import time
+import time, os
 from matplotlib import pyplot as plt
-from sdr_recorder import get_samples, fpaths
+from copy import deepcopy
+
 
 """
 savior_params["sps"] 				= 21		# param ~
@@ -36,232 +37,224 @@ savior_params["mod_index"] 			= 0.7		# param !
 
 
 
-def tst0():
-	samples = get_samples(0)
-	sr0 = 1e6
+def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payloads, noisePpHz, T_init_silence, T_interval_array, T_end_silence):
+	assert len(T_interval_array) == (n_payloads-1)
+	f_ofst_nrm = (f_center - f_tune) / sr0
+	preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
+	rs_mx, rs_cfg = get_default_rs()
+	payload_istart_iend_list = list()
+	n_init_samples = int(sr0 * T_init_silence)
+	n_end_samples = int(sr0 * T_end_silence)
+	samples = np.zeros(n_init_samples, dtype=np.complex128)
+
+	for i_pl in range(n_payloads):
+		pl = os.urandom(np.random.randint(1,RS_MAX_PL_LEN))
+		pl_char_ints = np.array(bytearray(pl), dtype=np.int64)
+		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
+		bits = np.concatenate( (preamble_bits, bits) )
+		tx_sps = sr0 / baudrate
+		pl_samples = make_samples(sps_f=tx_sps, bitstring=bits, f_offset=f_ofst_nrm, power=1.0, mod_index=mod_index, shaper_mode=1,
+							   shaper_BT_prod=BT, shaper_n_taps=int(tx_sps*4)+1, n_silence_start=0, n_silence_end=0)
+		payload_istart_iend_list.append( (pl, len(samples), len(samples)+len(pl_samples)) )
+		samples = np.concatenate((samples, pl_samples))
+		if i_pl < (n_payloads -1):
+			n_interval = int(sr0 * T_interval_array[i_pl])
+			samples = np.concatenate((samples, np.zeros(n_interval, dtype=np.complex128)))
+
+
+	samples = np.concatenate( (samples,np.zeros(n_end_samples, dtype=np.complex128)))
+	samples = samples + radionoise(n=len(samples), sr=sr0, W_per_Hz=noisePpHz)
+	return samples, payload_istart_iend_list
+
+
+
+
+
+def feed_samples_to_a_receiver(rx_config, samples, max_batchlen, do_precompile=False):
+	if do_precompile:
+		precompile_receiver(rx_config=rx_config, do_print=True)
+	rx = Receiver(config=rx_config)
 	nsamples = len(samples)
-	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * -100e3)
-
-	baudrate			= 9600			# tx param
-	sps  				= 27			# todo measure final A against a spectrum of sps's....
-	mod_index			= 0.7			# tx param
-	batch_maxlen 		= 6000
-	f_tune				= 437.1e6
-	f_center			= 437.00e6 + 125e3
-
-	config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
-	config.sps 					= sps
-	config.baudrate 				= baudrate
-	config.lp_cutoff_coeff 		= 0.625 #0.625
-	config.mod_index				= mod_index
-	config.mask_mode				= 1
-
-	rx = Receiver(config=config)
-	rx2 = Receiver(config=config)
-
-
-	if True:
-		waterfall_mx(samples=samples, fftlen=1024, fft_jump=1024, srate=sr0, plot_and_show=True, y_is_time=True)
-
-		fftstate = rx.FFTstatemx
-		mask0 = np.zeros(1024)
-		scan_idxs = np.int64(fftstate[7,:int(fftstate[0,10])])
-		mask0[scan_idxs] = 1
-		resampler = create_resampler(m_halflen=21, n_banks=64, r_rate=sps*baudrate/sr0, f_cutoff=0.499*sps*baudrate/sr0, allow_aliasing=False)
-		samples_rs = resampler_execute(samples=samples, statemx=resampler)
-		mx, extent, aspect = waterfall_mx(samples=samples_rs, fftlen=1024, fft_jump=1024, srate=sps*baudrate, plot_and_show=False, y_is_time=True)
-		mx[10] = mask0
-		mx[11] = mask0
-		mx[12] = mask0
-		fig = plt.figure(figsize=(14,14))
-		ax = fig.add_subplot(111)
-		ax.imshow(mx, origin="lower",  extent=extent, aspect=aspect)
-		fig.set_layout_engine("tight")
-		plt.show()
-
-
-
-	bits = np.zeros(0, dtype=np.int64)
-	pl_list = list()
-	feed_head = 0
-	dt_total = 0
-	while feed_head < nsamples:
-		batchlen = np.random.randint(0, batch_maxlen)
-		batch = samples[feed_head : feed_head+batchlen]
-
+	c = 0
+	pl_f_cursor_list = list()
+	dt_total = 0.0
+	while c < len(samples):
+		batchlen = min(max_batchlen, nsamples - c)
+		batch = samples[c:c+batchlen]
+		c += batchlen
 		t0 = time.perf_counter()
-		ret = rx.push_samples(batch=batch, give_bits=True)
+		ret_list = rx.push_samples(batch, give_bits=False)
 		dt_total += (time.perf_counter() - t0)
+		for (pl, f_nrm) in ret_list:
+			pl_f_cursor_list.append( (pl, float(f_nrm), c) )
+	return pl_f_cursor_list, rx.dt_array, dt_total
 
-		ret2 = rx2.push_samples(batch=batch, give_bits=False)
-		if ret2:
-			pl_list.extend(ret2)
 
-		bits = np.concatenate( (bits, ret) )
-		feed_head += batchlen
+
+
+def tgt_loop(ii, noisePpHz, rx_config, n_payloads, f_tune, f_center_error, rel_baudrate_error, sr0, separate_triggers):
+	assert abs(rel_baudrate_error) < 1e-4
+	T_init_silence  = 1.25 * (1/rx_config.c_stat_update) * rx_config.jumplen / (rx_config.sps*rx_config.baudrate)
+	T_end_silence 	= 5.00 * rx_config.n_delay / (rx_config.sps*rx_config.baudrate)
+	T_separate_triggers = 3.0 * (rx_config.start_margin_mpr + rx_config.end_margin_mpr) * rx_config.fftlen / (rx_config.sps*rx_config.baudrate)
+	T_interval = 5e-3
+	nn = [x for x in ([12,]*int(n_payloads/12) + [n_payloads%12,]) if x>0]
+	if separate_triggers:
+		T_interval = T_separate_triggers
+	n_rcvd = 0
+	for n_pl_run in nn:
+		samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=rx_config.f_center+f_center_error, sr0=sr0,
+																  baudrate=rx_config.baudrate*(1+rel_baudrate_error), mod_index=rx_config.mod_index,
+																  BT=rx_config.BT, n_payloads=n_pl_run, noisePpHz=noisePpHz, T_init_silence=T_init_silence,
+																  T_interval_array=(T_interval,)*(n_pl_run-1), T_end_silence=T_end_silence)
+		pl_f_cursor_list, dt_array, dt_total = feed_samples_to_a_receiver(rx_config=rx_config, samples=samples, max_batchlen=512*2, do_precompile=False)
+		n_rcvd += len(pl_f_cursor_list)
+	reception_rate = n_rcvd / n_payloads
+	return ii, reception_rate
+
+def measure_curve_mpr(rx_config:ReceiverConfig, n_payloads, f_tune, f_center_error, rel_baudrate_error, sr0, noiseP_array, separate_triggers=False):
+	reception_rate_array = np.zeros(len(noiseP_array), dtype=np.float64) -1
+	argtuples = list()
+	for i_noise, noisePpHz in enumerate(noiseP_array):
+		argtuples.append( (i_noise, noisePpHz, rx_config, n_payloads, f_tune, f_center_error, rel_baudrate_error, sr0, separate_triggers) )
+	ret_list, _ = mpr_set(f=tgt_loop, argtuple_list=argtuples, ncores=7, Q_or_NS="NS", picklepack=True, verbose=False)
+	for i_noise, r_rate in ret_list:
+		reception_rate_array[i_noise] = r_rate
+	assert np.all(reception_rate_array >= 0)
+	return reception_rate_array
+
+
+
+
+
+
+
+
+
+
+
+
+def get_dealys(payload_istart_iend_list, pl_f_cursor_list, sr0):
+	pl_f_cursor_d = dict( [(x[0],x[1:3]) for x in pl_f_cursor_list] )
+	delays = np.zeros(len(payload_istart_iend_list))
+	for i_pl,(pl,i0,i1) in enumerate(payload_istart_iend_list):
+		if pl in pl_f_cursor_d:
+			lag_samples = pl_f_cursor_d[pl][1] - i1
+			assert lag_samples > 0
+			delays[i_pl] = lag_samples
+	return delays, delays * 1.0 / sr0
+
+
+
+def speed_printout(dt_array, dt_total, nsamples, sr0):
 	speed = nsamples / dt_total
 	overmatch = speed / sr0
 	budget_fraction	= (1/overmatch) / 0.5
-
-	print("Got {} bits".format(len(bits)))
-	print("Got {} payloads".format(len(pl_list)))
-
-
-
-
-
-def tst1(n_packets, do_waterfall=False, do_print=False, do_plots=False):
-	sr0					= 1.0e6
-	baudrate			= 9600		# tx param
-	sps  				= 17		# todo measure final A against a spectrum of sps's....
-	mod_index			= 0.5		# tx param
-	BT_prod				= -1.0		# tx param
-	nbits 				= 32 + 24 + 8*(32 + 120)  # = 1272
-	noiseamp 			= 0.020 / 9600
-	batch_maxlen 		= 6000
-	f_tune				= 437.0e6
-	f_center			= 437.00e6 - 25e3
-	f_doppler			= f_center * ((3e8 + 7500) / 3e8) - f_center
-	f_offset0_rel		= (f_center - f_tune) / sr0
+	cpu_fraction	= (1/overmatch) / 1.0
+	print("="*50)
+	print("\tspeed:          {} Ms/s".format( round(1e-6 * speed, 2) ))
+	print("\tovermatch:      {}".format( round(overmatch, 2) ))
+	print("\tbudget use:     {} %".format( round( 100*budget_fraction , 2) ))
+	print("\tcpu core use:   {} %".format( round( 100*cpu_fraction , 2) ))
+	print("\t\tpart 1:            {} %".format( round( 100*dt_array[0]/np.sum(dt_array) , 2) ))
+	print("\t\tpart 2:            {} %".format( round( 100*dt_array[1]/np.sum(dt_array) , 2) ))
+	print("\t\tpart 3:            {} %".format( round( 100*dt_array[2]/np.sum(dt_array) , 2) ))
+	print("\t\tpart 4:            {} %".format( round( 100*dt_array[3]/np.sum(dt_array) , 2) ))
+	print("="*50)
 
 
-	config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center - f_doppler * 0.5)
-	config.sps 					= sps
-	config.baudrate 				= baudrate
-	config.lp_cutoff_coeff 		= 0.625
-	config.mod_index				= mod_index
-	config.mask_mode				= 1
+def random_receiver_config_from_choises(attrname_array_d:dict, rx_config_basis:ReceiverConfig):
+	rx_config = deepcopy(rx_config_basis)
+	for attrname in attrname_array_d.keys():
+		val = attrname_array_d[attrname][np.random.randint(len(attrname_array_d[attrname]))]
+		assert hasattr(rx_config, attrname)
+		setattr(rx_config, attrname, val)
+	return rx_config
+# ============================================================================================================================================================================================
+# ============================================================================================================================================================================================
+# ============================================================================================================================================================================================
 
 
 
-	tgen0 = time.perf_counter()
-	r_ratio				= sps * baudrate / sr0
-	sps0 				= sr0 / baudrate
-	nnoise1 = int(1.2 * (1/10) * (1/config.c_stat_update) * config.jumplen * sr0 / (config.sps * config.baudrate))
-	samples = np.zeros(nnoise1, dtype=np.complex128)
-	bitstrings = list()
-	for i_packet in range(n_packets):
-		bitstring 			= np.random.randint(0, 2, nbits)*2 - 1
-		signal = make_samples(sps_f=sps0, bitstring=bitstring, f_offset=f_offset0_rel, power=1, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=BT_prod, shaper_n_taps=int(10*sps0)+1)
-		npad = int(len(signal) * 0.05)
-		pad = np.zeros(npad, dtype=np.complex128)
-		samples = np.concatenate( (samples, signal, pad) )
-		bitstrings.append(bitstring)
-	endpad = np.zeros(int(nnoise1/3), dtype=np.complex128)
-	samples = np.concatenate( (samples, endpad) )
-	nsamples = len(samples)
-	samples = samples + radionoise(n=nsamples, sr=sr0, W_per_Hz=noiseamp)
-	if do_print:
-		print("\t{} samples.  {} buffers".format(nsamples , round(r_ratio * nsamples / config.bufferlen, 1) ))
-		print("\tCorresponding to {} s".format( round(nsamples/sr0, 2) ))
-		print("\tgenerated in {} ms".format( round( 1e3*(time.perf_counter()-tgen0), 0 ) ))
-		print("")
 
-	rx = Receiver(config=config)
+def basic_test_A():
+	f_tune 		= 437.1e6
+	f_center 	= 437.125e6
+	sr0 		= 1e6
+	baudrate	= 9600
+	n_payloads	= 12
+	rx_config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
+	rx_config.mod_index = 0.7
+	rx_config.BT = -1
 
+	print("[Generating samples]")
+	samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=f_center+3.1e3, sr0=sr0,
+															  baudrate=baudrate*(1+1.5e-5), mod_index=rx_config.mod_index, BT=rx_config.BT,
+															  n_payloads=n_payloads, noisePpHz=0.16/baudrate, T_init_silence=2.0,
+															  T_interval_array=(5e-3,)*(n_payloads-1), T_end_silence=0.5)
+	print("[Feeding samples]")
+	pl_f_cursor_list, dt_array, dt_total = feed_samples_to_a_receiver(rx_config=rx_config, samples=samples, max_batchlen=512*2, do_precompile=True)
+	#pl_f_cursor_d = dict( [(x[0],x[1:3]) for x in pl_f_cursor_list] )
 
-	if do_waterfall:
-		waterfall_mx(samples=samples, fftlen=1024, fft_jump=1024, srate=sr0, plot_and_show=True, y_is_time=True)
+	print("\n\n")
+	print("Received {}/{} payloads.".format(len(pl_f_cursor_list), n_payloads))
+	speed_printout(dt_array=dt_array, dt_total=dt_total, nsamples=len(samples), sr0=sr0)
 
-		fftstate = rx.FFTstatemx
-		mask0 = np.zeros(1024)
-		scan_idxs = np.int64(fftstate[7,:int(fftstate[0,10])])
-		print("scan indexes:",scan_idxs)
-		mask0[scan_idxs] = 1
-		resampler = create_resampler(m_halflen=21, n_banks=64, r_rate=sps*baudrate/sr0, f_cutoff=0.499*sps*baudrate/sr0, allow_aliasing=False)
-		samples_rs = resampler_execute(samples=samples, statemx=resampler)
-		mx, extent, aspect = waterfall_mx(samples=samples_rs, fftlen=1024, fft_jump=1024, srate=sps*baudrate, plot_and_show=False, y_is_time=True)
-		mx[100] = mask0
-		mx[101] = mask0
-		mx[102] = mask0
-		fig = plt.figure(figsize=(14,14))
-		ax = fig.add_subplot(111)
-		ax.imshow(mx, origin="lower",  extent=extent, aspect=aspect)
-		fig.set_layout_engine("tight")
-		plt.show()
+	delays_s, delays_t = get_dealys(payload_istart_iend_list=payload_istart_iend_list, pl_f_cursor_list=pl_f_cursor_list, sr0=sr0)
+	for i_pl,_ in enumerate(payload_istart_iend_list):
+		if delays_s[i_pl] > 0:
+			print("pl #{}:  lags {} ms.  ({} samples)".format(i_pl, round(1e3*delays_t[i_pl],1), delays_s[i_pl]))
+		else:
+			print("pl #{}:  missing".format(i_pl))
 
 
 
-	bits = np.zeros(0, dtype=np.int64)
-	feed_head = 0
-	dt_total = 0
-	while feed_head < nsamples:
-		batchlen = np.random.randint(0, batch_maxlen)
-		batch = samples[feed_head : feed_head+batchlen]
-		t0 = time.perf_counter()
-		ret = rx.push_samples(batch=batch, give_bits=True)
-		dt_total += (time.perf_counter() - t0)
-		bits = np.concatenate( (bits, ret) )
-		feed_head += batchlen
-	speed = nsamples / dt_total
-	overmatch = speed / sr0
-	budget_fraction	= (1/overmatch) / 0.5
+def measure_curve_for_default_config():
+	f_tune 		= 437.1e6
+	f_center 	= 437.125e6
+	sr0 		= 1e6
+	baudrate	= 9600
+	n_payloads	= 32
+	rx_config1 = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
+	rx_config2 = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
+	rx_config3 = ReceiverConfig(sr0=sr0, baudrate=4800, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
+	rx_config2.mod_index = 0.7
+	rx_config2.BT = -1
 
-	match_sums = list()
-	errorcounts = list()
-	for i_packet in range(n_packets):
-		corr = np.correlate(bits, bitstrings[i_packet])
-		maxcorr = np.max(corr)
-		match_sum = nbits - (nbits-maxcorr)//2
-		match_sums.append(match_sum)
-		errorcounts.append( nbits - match_sum )
+	rel_noiseP_array = np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.26]) # , 0.28
+	noiseP_array1 = rel_noiseP_array / 9600
+	noiseP_array2 = rel_noiseP_array / 9600
+	noiseP_array3 = rel_noiseP_array / 9600
 
-	if do_print:
-		print("\t{} bits output".format( len(bits) ))
-		print("="*50)
-		print("\tspeed:          {} Ms/s".format( round(1e-6 * speed, 2) ))
-		print("\tovermatch:      {}".format( round(overmatch, 2) ))
-		print("\tbudget use:     {} %".format( round( 100*budget_fraction , 2) ))
-		print("="*50)
-		for i_packet in range(n_packets):
-			print("\t#{} match sum:    {} ({} %) ({} errors)".format(i_packet, match_sums[i_packet],  round(100* match_sums[i_packet] / nbits,1), errorcounts[i_packet] ))
-		print("")
+	print("1/6")
+	reception_rate_array1 = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array1)
+	print("2/6")
+	reception_rate_array1_sep = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array1, separate_triggers=True)
+	print("3/6")
+	reception_rate_array2 = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array2)
+	print("4/6")
+	reception_rate_array2_sep = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array2, separate_triggers=True)
+	print("5/6")
+	reception_rate_array3 = measure_curve_mpr(rx_config=rx_config3, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array3)
+	print("6/6")
+	reception_rate_array3_sep = measure_curve_mpr(rx_config=rx_config3, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array3, separate_triggers=True)
 
 
-	avg_arr = rx.fft_instr_array[:,0]
-	var_arr = rx.fft_instr_array[:,1]
-	fftmax_arr = rx.fft_instr_array[:,2]
-	if do_plots:
-		fig = plt.figure(figsize=(14,11))
-		ax1 = fig.add_subplot(311)
-		ax2 = fig.add_subplot(312)
-		ax3 = fig.add_subplot(313)
+	fig = plt.figure(figsize=(15,11))
+	ax1 = fig.add_subplot(111)
+	ax1.set_title("Reception rate")
 
-		ax1.plot(rx.center_f_array * sps * baudrate)
-		ax1.grid()
-
-		ax2.plot(avg_arr)
-		ax2.plot(var_arr)
-		ax2.grid()
-
-		ax3.plot(fftmax_arr)
-		ax3.grid()
-
-		fig.set_layout_engine("tight")
-		plt.show()
-
-	return np.array(match_sums), np.array(errorcounts)
-
-
-
-def round_1():
-	n_packets = 16
-	n_rep = 20
-	errorcounts = np.zeros(n_packets) * 0.0
-	for _ in range(n_rep):
-		ms_, ec_ = tst1(n_packets=n_packets, do_waterfall=False, do_print=True, do_plots=False)
-		errorcounts += ec_
-	errorcounts = errorcounts / n_rep
-
-	fig = plt.figure(figsize=(14,11))
-	ax1 = fig.add_subplot(211)
-	ax2 = fig.add_subplot(212)
-
-	ax1.plot(errorcounts)
+	ax1.plot(rel_noiseP_array, reception_rate_array1, label="default", color="blue")
+	ax1.plot(rel_noiseP_array, reception_rate_array1_sep, label="default", linestyle="--", color="blue")
+	ax1.plot(rel_noiseP_array, reception_rate_array2, label="mod_idx=0.7, BT=-1", color="orange")
+	ax1.plot(rel_noiseP_array, reception_rate_array2_sep, label="mod_idx=0.7, BT=-1", linestyle="--", color="orange")
+	ax1.plot(rel_noiseP_array, reception_rate_array3, label="default @ 4800", color="red")
+	ax1.plot(rel_noiseP_array, reception_rate_array3_sep, label="default @ 4800 (separate)", linestyle="--", color="red")
+	ax1.set_xlabel("relative noise power per 1/baudrate")
+	#ax1.semilogx()
+	ax1.set_ylabel("%")
 	ax1.grid()
-
-	ax2.grid()
-
+	ax1.legend()
 
 	fig.set_layout_engine("tight")
 	plt.show()
@@ -273,123 +266,29 @@ def round_1():
 
 
 
+def optimizer_A():
+	f_tune 		= 437.1e6
+	f_center 	= 437.125e6
+	sr0 		= 1e6
+	n_payloads	= 12
+	mod_index 	= 0.5
+	BT 			= 0.5
 
+	samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=f_center+3.1e3, sr0=sr0,
+															  baudrate=9600*(1+1.5e-5), mod_index=mod_index, BT=BT,
+															  n_payloads=n_payloads, noisePpHz=0.16/9600, T_init_silence=2.0,
+															  T_interval_array=(5e-3,)*(n_payloads-1), T_end_silence=0.5)
 
+	rx_config_basis = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
+	rx_config_basis.mod_index = mod_index
+	rx_config_basis.BT = BT
+	attrname_array_d = {
+		"lp_cutoff_coeff" : [float(x) for x in np.linspace(0.5,1.5, 64)*0.630],
+		"synch_delay_mpr" : [float(x) for x in np.linspace(5.0,30.0, 64)],
+		"n_delay" :         [int(x) for x in np.linspace(2.0,6.0, 64)*1024],
+	}
 
-
-
-def tst2_pl_mode(n_packets, do_waterfall=False, do_print=False, do_plots=False):
-	sr0					= 1.0e6
-	baudrate			= 9600		# tx param
-	sps  				= 12		# todo measure final A against a spectrum of sps's....
-	mod_index			= 0.7		# tx param
-	BT_prod				= -1.0		# tx param
-	noiseamp 			= 0.20 / 9600
-	batch_maxlen 		= 6000
-	f_tune				= 437.1e6
-	f_center			= f_tune + 21e3
-	f_offset0_rel		= (f_center - f_tune) / sr0
-
-	config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=600000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
-	config.m_halflen				= 15
-
-	config.sps 					= sps
-	config.baudrate 				= baudrate
-	config.lp_cutoff_coeff 		= 0.625
-	config.mod_index				= mod_index
-	config.mask_mode				= 1
-	config.BT						= BT_prod
-
-
-	rs_mx, rs_cfg = get_default_rs()
-
-	tgen0 = time.perf_counter()
-	r_ratio				= sps * baudrate / sr0
-	sps0 				= sr0 / baudrate
-	nnoise1 = int(1.2 * (1/10) * (1/config.c_stat_update) * config.jumplen * sr0 / (config.sps * config.baudrate))
-	samples = np.zeros(nnoise1, dtype=np.complex128)
-	payloads = list()
-	for i_packet in range(n_packets):
-		pl_ints = np.random.randint(0, 256, 100)
-		bitstring = frame_packet(pl=pl_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
-		bitstring = np.concatenate( (np.array((1,0,1,0,1,0,1,0,1,0)), bitstring) )
-		bitstring = bitstring*2 -1
-		signal = make_samples(sps_f=sps0, bitstring=bitstring, f_offset=f_offset0_rel, power=1, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=BT_prod, shaper_n_taps=int(10*sps0)+1)
-		npad = int(len(signal) * 0.05)
-		pad = np.zeros(npad, dtype=np.complex128)
-		samples = np.concatenate( (samples, signal, pad) )
-		payloads.append( bytes(list(pl_ints)) )
-	endpad = np.zeros(int(nnoise1/3), dtype=np.complex128)
-	samples = np.concatenate( (samples, endpad) )
-	nsamples = len(samples)
-	samples = samples + radionoise(n=nsamples, sr=sr0, W_per_Hz=noiseamp)
-	if do_print:
-		print("\t{} samples.  {} buffers".format(nsamples , round(r_ratio * nsamples / config.bufferlen, 1) ))
-		print("\tCorresponding to {} s".format( round(nsamples/sr0, 2) ))
-		print("\tgenerated in {} ms".format( round( 1e3*(time.perf_counter()-tgen0), 0 ) ))
-		print("")
-
-	if do_waterfall:
-		waterfall_mx(samples=samples, fftlen=2048, fft_jump=1024, srate=sr0, plot_and_show=True, y_is_time=True)
-
-	rx = Receiver(config=config)
-
-	recvd_payloads = list()
-	feed_head = 0
-	dt_total = 0
-	while feed_head < nsamples:
-		batchlen = np.random.randint(1000, batch_maxlen)
-		batch = samples[feed_head : feed_head+batchlen]
-		feed_head += batchlen
-		t0 = time.perf_counter()
-		ret = rx.push_samples(batch=batch, give_bits=False)
-		dt_total += (time.perf_counter() - t0)
-		if not (ret is None):
-			recvd_payloads.extend([x[0] for x in ret])  #take just the bytes, discard frequencies.
-			assert type(ret[-1]) == bytes
-	speed = nsamples / dt_total
-	overmatch = speed / sr0
-	core_fraction	= (1/overmatch) / 1.00
-	budget_fraction	= (1/overmatch) / 0.5
-
-	ratio = len(recvd_payloads) / n_packets
-
-	if do_print:
-		print("="*50)
-		print("\tspeed:          {} Ms/s".format( round(1e-6 * speed, 2) ))
-		print("\tovermatch:      {}".format( round(overmatch, 2) ))
-		print("\tcore use:       {} %".format( round( 100*core_fraction , 2) ))
-		print("\tbudget use:     {} %".format( round( 100*budget_fraction , 2) ))
-		print("="*50)
-		print("{} / {} payloads received. ({} %)".format(len(recvd_payloads), n_packets, round(100*ratio,1) ))
-		for i_pl in range(n_packets):
-			print("\t#{}:  {}".format(i_pl, str( payloads[i_pl] in recvd_payloads ) ))
-		print("")
-
-
-	avg_arr = rx.fft_instr_array[:,0]
-	var_arr = rx.fft_instr_array[:,1]
-	fftmax_arr = rx.fft_instr_array[:,2]
-	if do_plots:
-		fig = plt.figure(figsize=(14,11))
-		ax1 = fig.add_subplot(311)
-		ax2 = fig.add_subplot(312)
-		ax3 = fig.add_subplot(313)
-
-		ax1.plot(rx.center_f_array * sps * baudrate)
-		ax1.grid()
-
-		ax2.plot(avg_arr)
-		ax2.plot(var_arr)
-		ax2.grid()
-
-		ax3.plot(fftmax_arr)
-		ax3.grid()
-
-		fig.set_layout_engine("tight")
-		plt.show()
-
-	return len(recvd_payloads), ratio
+	rx_config = random_receiver_config_from_choises(attrname_array_d=attrname_array_d, rx_config_basis=rx_config_basis)
 
 
 
@@ -400,24 +299,9 @@ def tst2_pl_mode(n_packets, do_waterfall=False, do_print=False, do_plots=False):
 
 
 
+basic_test_A()
 
-
-
-
-
-
-
-
-tst0()
-
-#tst1(n_packets=16, do_waterfall=True, do_print=True, do_plots=True)
-#print("----------------------")
-#tst2_pl_mode(n_packets=16, do_waterfall=True, do_print=True, do_plots=True)
-
-
-
-
-
+measure_curve_for_default_config()
 
 
 

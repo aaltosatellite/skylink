@@ -13,10 +13,10 @@ from sdr_recorder import get_samples, fpaths
 
 
 def receive_a_recording():
-	fpath, fshift0 = fpaths[7]
+	fpath, fshift0, known_payloads = fpaths[7]
 	samples = get_samples(fpath)
-	for _ in range(int(1.8*1e6/8000.0)):
-		samples = np.concatenate( (samples[0:8000] , samples) )
+	prepend = np.concatenate( (samples[0:8000],)*int(1.8*1e6/8000.0) )
+	samples = np.concatenate( (prepend, samples) )
 	sr0 = 1e6
 	nsamples = len(samples)
 
@@ -45,18 +45,13 @@ def receive_a_recording():
 	t0 = time.perf_counter()
 	rx.switch_baudrate(baudrate=9600*2, sps=rx_config.sps)
 	dt = (time.perf_counter() - t0)
-	print("Baudrate switch in: {} s".format( round(dt, 3) ))
-
 	rx.switch_baudrate(baudrate=9600, sps=rx_config.sps)
-
+	print("Baudrate switch in: {} ms".format( round(dt*1e3, 1) ))
 
 	if True:
 		waterfall_mx(samples=samples, fftlen=1024, fft_jump=1024, srate=sr0, plot_and_show=True, y_is_time=True)
-
 		fftstate = rx.FFTstatemx
-		mask0 = np.zeros(1024)
-		scan_idxs = np.int64(fftstate[7,:int(fftstate[0,9])])
-		mask0[scan_idxs] = 1
+		mask0 = fftstate[7,:]
 		resampler = create_resampler(m_halflen=21, n_banks=64, r_rate=sps*baudrate/sr0, f_cutoff=0.499*sps*baudrate/sr0, allow_aliasing=False)
 		samples_rs = resampler_execute(samples=samples, statemx=resampler)
 		mx, extent, aspect = waterfall_mx(samples=samples_rs, fftlen=1024, fft_jump=1024, srate=sps*baudrate, plot_and_show=False, y_is_time=True)
@@ -64,16 +59,11 @@ def receive_a_recording():
 		mx[11] = mask0
 		mx[12] = mask0
 		mx[13] = mask0
-		print("mask[::4]", mask0[::4])
 		fig = plt.figure(figsize=(14,14))
 		ax = fig.add_subplot(111)
 		ax.imshow(mx, origin="lower",  extent=extent, aspect=aspect)
 		fig.set_layout_engine("tight")
 		plt.show()
-
-	batch0 = samples[0 : 400]
-	rx.push_samples(batch=batch0, give_bits=True)
-	rx.push_samples(batch=batch0, give_bits=True)
 
 	bits = np.zeros(0, dtype=np.int64)
 	pl_list = list()
