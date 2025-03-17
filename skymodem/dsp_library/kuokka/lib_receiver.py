@@ -2,7 +2,7 @@ import time
 import numpy as np
 from .lib_demodulation import demodulation_sequence, create_DSD_statemx, DSD_buffer_roll
 from .lib_symsynching import create_classic_JPL_statemx
-from .lib_fft_detector import fft_detect_and_freq_determ, create_fft_centering_statemx, set_f_center_search_map
+from .lib_fft_detector import fft_detect_and_freq_determ, create_fft_centering_statemx, set_f_center_search_map, get_masklen
 from .lib_framing import create_deframer, deframe, RS_MAX_ENCODED_LEN, frame_packet, RS_MAX_PL_LEN
 from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples, get_frequency_search_map, get_doppler_low_high
 from .lib_reedsolomon import get_default_rs
@@ -12,38 +12,39 @@ from .lib_resampler import resampler_execute_stream, create_resampler
 class ReceiverConfig:
 	def __init__(self, sr0, baudrate, bufferlen, batch_maxlen, f_tune, f_center):
 		assert sr0 > (baudrate * 2)
-		self.f_tune 			= f_tune		# tuned frequency of the radio in absolute Hz (for example 350.0e6)
-		self.f_center 			= f_center		# the (absolute) frequency of the transmissions in absolute Hz (for example 350.12e6)
-		self.sr0 				= sr0			# raw samplerate of the radio. Will be downsampled with a rate of baudrate*sps/sr0
-		self.baudrate			= baudrate		# baudrate of the transmission
+		self.f_tune 			= f_tune		# Tuned frequency of the radio in absolute Hz (for example 350.0e6)
+		self.f_center 			= f_center		# The (absolute) frequency of the transmissions in absolute Hz (for example 350.12e6)
+		self.sr0 				= sr0			# Raw samplerate of the radio. Will be downsampled with a rate of baudrate*sps/sr0
+		self.baudrate			= baudrate		# Baudrate of the transmission
 		self.bufferlen			= bufferlen
 		self.batch_maxlen		= batch_maxlen
 		# resampling ---------------------------------------
-		self.sps 				= 21			# !			# sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate.
-		self.m_halflen 			= 21			# !
-		self.n_banks 			= 64
-		self.rs_f_cutoff_coeff 	= 0.499						# determines lowpass associated with the resampling. In interval (0 : 0.5)
+		self.sps 				= 21			# ? sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Effect on performance seems suspiciously small...
+		self.m_halflen 			= 21			# ? Determines resampling accuracy. Should be an odd integer larger than 9. Larger number increases both accuracy and computation cost.
+		self.n_banks 			= 64			# ~ Number of resampling banks. No huge effect on performance, and 64 seems good for all purposes.
+		self.rs_f_cutoff_coeff 	= 0.499			# ~ Lowpass associated with the resampling. In interval (0:0.5). 0.499 still enables some aliasing at edges.
 		# --------------------------------------------------
 		# fft detection ------------------------------------
-		self.fftlen 			= 1024			# ~
-		self.jumplen 			= 512			# ~
-		self.mod_index 			= 0.5			# ~
-		self.BT 				= 0.5			# ~
-		self.c_stat_update 		= 1/700.0		# ~ D-vs-c
-		self.n_delay			= 1024*5
-		self.fft_trigger_on_level 	= 7.0		# !!  (was 5.5)
-		self.fft_trigger_off_level 	= 2.0		# !!
-		self.mask_mode 			= 1	# !
-		self.start_margin_mpr 	= 3.0			# !
-		self.end_margin_mpr 	= 1.5			# ~
+		self.fftlen 			= 1024			# ? Length of the fft window in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
+		self.jumplen 			= 512			# ! fft window moves forward in 'jumplen' steps. when jumplen = fftlen//2, all samples are present in two fft's.
+		self.mod_index 			= 0.5			# P Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
+		self.BT 				= 0.5			# P Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering.
+		self.c_stat_update 		= 1/700.0		# ? Running average and variance of the fft-mask correlation are updated by this coeff, as per:  avg = avg + (measurement - avg) * c_stat_update
+		self.n_delay			= 1024*5		# ! Center frequency estimate is collected for this many samples ahead of demodulation. TODO should be in symbols?
+		self.fft_trigger_on_level 	= 7.0		# ! Signal detection threshold in fft-mask correlation. Units in 'standard deviations above average' (non-software-optimizable?) (was 5.5)
+		self.fft_trigger_off_level 	= 2.0		# ! Signal off threshold in fft-mask correlation. Units in 'standard deviations above average' (non-software-optimizable?)
+		self.mask_mode 			= 1				# ! Type of correlation mask used in detection. 0: a vector of ones. 1: an empirically averaged mask. 1 should be more performant.
+		self.start_margin_mpr 	= 3.0			# ! A signal detection is extended back by (start_margin_mpr*fftlen) samples to time before detection. TODO should be in symbols?
+		self.end_margin_mpr 	= 1.5			# ! A signal detection is extended forward by (start_margin_mpr*fftlen) samples to time after detection. TODO should be in symbols?
+		self.doppler_velocity	= 7500.0*2.0	# ~ Determines the frequency band above and below the center frequency where the demodulator looks for signals.
 		# --------------------------------------------------
 		# JPL synchronizer ---------------------------------
-		self.JPL_n_decay 		= 30.0			# ! D-vs-c
+		self.JPL_n_decay 		= 32.0			# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
 		# --------------------------------------------------
 		# demodulation -------------------------------------
-		self.lp_ntaps			= 161			# ~
-		self.lp_cutoff_coeff	= 0.630			# !
-		self.synch_delay_mpr	= 18.0			# !
+		self.lp_ntaps			= 161			# ? number of taps in the low-pass filter in demodulation
+		self.lp_cutoff_coeff	= 0.630			# ! cutoff frequency of the low-pass filter, as multiples of baudrate
+		self.synch_delay_mpr	= 16.0			# ! demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
 		# --------------------------------------------------
 		# framing ------------------------------------------
 		self.use_scrambler 		= True
@@ -53,20 +54,24 @@ class ReceiverConfig:
 		# --------------------------------------------------
 
 	def check_validity(self):
-		if not ((self.f_tune == -1) and (self.f_center == -1)):
-			assert self.f_tune >= 0
-			assert self.f_center >= 0
-			assert abs(self.f_tune - self.f_center) < (0.5 * self.sps * self.baudrate)
-			fft_df = (self.sps * self.baudrate) / self.fftlen
-			assert abs(self.f_tune - self.f_center) < ((0.5 * self.sps * self.baudrate) - ((self.get_masklen()//2)*fft_df))
-			assert (abs(self.f_tune - self.f_center) + (0.5*self.baudrate*max(self.mod_index,1))) < (self.rs_f_cutoff_coeff*self.sps*self.baudrate)
-		assert 1e3 < self.sr0 < 12e6
+		assert self.f_tune >= 1.0
+		assert self.f_center >= 1.0
+		assert 1e3 < self.sr0 < 32e6
+		assert abs(self.f_tune - self.f_center) < (0.5 * self.sps * self.baudrate)
+		fft_df = (self.sps * self.baudrate) / self.fftlen
+		halfmask_bw = (1 + get_masklen(fftlen=self.fftlen, sps=self.sps, mask_mode=self.mask_mode)//2) * fft_df
+		f_center_min, f_center_max = get_doppler_low_high(f_center=self.f_center, v_relative=self.doppler_velocity, multiplier=1.0)
+		f_center_min_nrm = (f_center_min - halfmask_bw - self.f_tune) / (self.baudrate * self.sps)
+		f_center_max_nrm = (f_center_max + halfmask_bw - self.f_tune) / (self.baudrate * self.sps)
+		assert abs(f_center_min_nrm) < 0.5
+		assert abs(f_center_max_nrm) < 0.5
+
 		assert 0 < self.baudrate < (self.sr0/2)
 		assert 10000 < self.bufferlen < 100e6
 		assert type(self.bufferlen) == int
 		assert 100 < self.batch_maxlen < (0.05*self.bufferlen)
 		assert type(self.batch_maxlen) == int
-		assert 2 < self.sps <= (self.sr0 / self.baudrate)
+		assert 2 < self.sps <= 100
 		assert type(self.sps) == int
 		assert 5 < self.m_halflen < 42
 		assert type(self.m_halflen) == int
@@ -83,8 +88,8 @@ class ReceiverConfig:
 		assert (self.BT >= 0.5) or (self.BT == -1)
 		assert 0 < self.c_stat_update <= 1.0
 		assert type(self.n_delay) == int
-		assert self.fftlen <= self.n_delay < self.fftlen*40
-		assert self.n_delay > (self.start_margin_mpr*self.fftlen)
+		assert self.fftlen <= self.n_delay < self.fftlen*20
+		assert self.n_delay > (self.start_margin_mpr*self.fftlen)	###
 		assert -1.0 <= self.fft_trigger_on_level <= 32.0
 		assert -1.0 <= self.fft_trigger_off_level <= 9.0
 		assert self.fft_trigger_off_level <= self.fft_trigger_on_level
@@ -97,6 +102,7 @@ class ReceiverConfig:
 		assert (self.lp_ntaps % 2) == 1
 		assert 0 < self.lp_cutoff_coeff < (0.5*self.sps)
 		assert 0 <= self.synch_delay_mpr <= 64.0
+		assert (self.synch_delay_mpr*self.sps) < (self.end_margin_mpr*self.fftlen)  ###
 		assert type(self.use_scrambler) == bool
 		assert type(self.use_rs) == bool
 		assert type(self.synch_threshold) == int
@@ -110,20 +116,11 @@ class ReceiverConfig:
 		r_rate = self.sps * self.baudrate / self.sr0
 		return r_rate
 
-	def get_masklen(self):
-		if self.mask_mode == 0:
-			return int(0.5 * self.fftlen / self.sps)*2 + 1  #TODO the best centering correlator should really be researched...
-		return int(0.5 * 2.5 * self.fftlen / self.sps)*2 + 1  #TODO the best centering correlator should really be researched...
-
-	def get_lp_cutoff(self):
-		# lp_cutoff_coeff * baudrate / sr
-		return self.lp_cutoff_coeff / self.sps
-
 	def get_f_center_search_map(self):
-		f_center_min, f_center_max = get_doppler_low_high(f_center=self.f_center, v_relative=7500.0, multiplier=2.0)
+		f_center_min, f_center_max = get_doppler_low_high(f_center=self.f_center, v_relative=self.doppler_velocity, multiplier=1.0)
 		f_center_min_nrm = (f_center_min - self.f_tune) / (self.baudrate * self.sps)
 		f_center_max_nrm = (f_center_max - self.f_tune) / (self.baudrate * self.sps)
-		f_center_search_map = get_frequency_search_map(fftlen=self.fftlen, f_min_nrm=f_center_min_nrm, f_max_nrm=f_center_max_nrm)
+		f_center_search_map = get_frequency_search_map(fftlen=self.fftlen, f_min_nrm=f_center_min_nrm, f_max_nrm=f_center_max_nrm, assert_in_window=True)
 		return f_center_search_map
 
 
@@ -177,10 +174,10 @@ class Receiver:
 		self.resampler_statemx = create_resampler(m_halflen=config.m_halflen, n_banks=config.n_banks, r_rate=config.get_r_rate(), f_cutoff=f_cutoff, allow_aliasing=False)
 		self.FFTstatemx = create_fft_centering_statemx(fftlen=config.fftlen, jumplen=config.jumplen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index,
 													   BT=config.BT, c_stat_update=config.c_stat_update, n_delay=config.n_delay, fft_trigger_on_level=config.fft_trigger_on_level,
-													   fft_trigger_off_level=config.fft_trigger_off_level, masklen=config.get_masklen(), avg0=0.0, var0=1.0, mask_mode=config.mask_mode,
+													   fft_trigger_off_level=config.fft_trigger_off_level, avg0=0.0, var0=1.0, mask_mode=config.mask_mode,
 													   start_margin_mpr=config.start_margin_mpr, end_margin_mpr=config.end_margin_mpr)
 		self.JPLstatemx = create_classic_JPL_statemx(N_eps=config.sps, n_decay=config.JPL_n_decay)
-		self.DSDstatemx = create_DSD_statemx(lp_ntaps=config.lp_ntaps, lp_cutoff=config.get_lp_cutoff(), synch_delay_mpr_f=config.synch_delay_mpr, sps_f=config.sps)
+		self.DSDstatemx = create_DSD_statemx(lp_ntaps=config.lp_ntaps, lp_cutoff_coeff=config.lp_cutoff_coeff, synch_delay_mpr_f=config.synch_delay_mpr, sps_f=config.sps)
 		self.deframermx = create_deframer(use_scrambler=config.use_scrambler, use_rs=config.use_rs, data_maxlen=config.data_maxlen,
 										  synchword=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, synch_threshold=config.synch_threshold)
 		a = int(config.batch_maxlen * config.get_r_rate() * 2)

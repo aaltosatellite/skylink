@@ -299,6 +299,7 @@ class RadioLoop:
 						tx_metadata.end_of_burst = True
 					tx_streamer.send(samplearr[0,idx:idx+tx_batch_len], tx_metadata)
 					idx += tx_batch_len
+				tx_metadata.end_of_burst = False
 				t_to_end = max(0, t_end - time.perf_counter())
 				time.sleep(t_to_end + 0.0e-3)
 				self.self_mute = False

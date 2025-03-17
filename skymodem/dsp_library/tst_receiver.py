@@ -9,7 +9,8 @@ from kuokka.lib_tools import make_samples, radionoise
 import time, os
 from matplotlib import pyplot as plt
 from copy import deepcopy
-
+from datetime import datetime as dtime
+import pickle
 
 """
 savior_params["sps"] 				= 21		# param ~
@@ -165,11 +166,34 @@ def speed_printout(dt_array, dt_total, nsamples, sr0):
 
 def random_receiver_config_from_choises(attrname_array_d:dict, rx_config_basis:ReceiverConfig):
 	rx_config = deepcopy(rx_config_basis)
-	for attrname in attrname_array_d.keys():
-		val = attrname_array_d[attrname][np.random.randint(len(attrname_array_d[attrname]))]
-		assert hasattr(rx_config, attrname)
-		setattr(rx_config, attrname, val)
-	return rx_config
+	for _ in range(100):
+		try:
+			for attrname in attrname_array_d.keys():
+				val = attrname_array_d[attrname][np.random.randint(len(attrname_array_d[attrname]))]
+				assert hasattr(rx_config, attrname)
+				setattr(rx_config, attrname, val)
+			rx_config.check_validity()
+			return rx_config
+		except:
+			continue
+	raise AssertionError("All 100 rx_configs failed validity check.")
+
+def save_result(rx_config:ReceiverConfig, n_payloads, noiseP_array, reception_rate_array, A, dpath):
+	dd = {
+		"version" : 2.0,
+		"ts": dtime.now().isoformat(),
+		"rx_config": rx_config.__dict__,
+		"n_payloads": n_payloads,
+		"noiseP_array" : noiseP_array,
+		"reception_rate_array": reception_rate_array,
+		"A": A
+	}
+	assert os.path.isdir(dpath)
+	letters1 = "".join([chr(x) for x in np.random.randint(ord("A"), ord("Z")+1, 3)])
+	letters2 = "".join([chr(x) for x in np.random.randint(ord("A"), ord("Z")+1, 3)])
+	f = open(os.path.join(dpath, "kuokka-curve-result-{}-{}.pkl".format(letters1,letters2)), "wb")
+	f.write(pickle.dumps(dd))
+	f.close()
 # ============================================================================================================================================================================================
 # ============================================================================================================================================================================================
 # ============================================================================================================================================================================================
@@ -213,7 +237,6 @@ def measure_curve_for_default_config():
 	f_tune 		= 437.1e6
 	f_center 	= 437.125e6
 	sr0 		= 1e6
-	baudrate	= 9600
 	n_payloads	= 32
 	rx_config1 = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
 	rx_config2 = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
@@ -239,7 +262,6 @@ def measure_curve_for_default_config():
 	print("6/6")
 	reception_rate_array3_sep = measure_curve_mpr(rx_config=rx_config3, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array3, separate_triggers=True)
 
-
 	fig = plt.figure(figsize=(15,11))
 	ax1 = fig.add_subplot(111)
 	ax1.set_title("Reception rate")
@@ -263,6 +285,15 @@ def measure_curve_for_default_config():
 
 
 
+def surf_integral(x_arr, y_arr):
+	A = 0
+	assert len(x_arr) > 1
+	assert len(x_arr) == len(y_arr)
+	for i in range(len(x_arr)-1):
+		assert x_arr[i+1] > x_arr[i]
+		dx = x_arr[i+1] - x_arr[i]
+		A += dx * (y_arr[i] + y_arr[i+1])*0.5
+	return A
 
 
 
@@ -270,39 +301,57 @@ def optimizer_A():
 	f_tune 		= 437.1e6
 	f_center 	= 437.125e6
 	sr0 		= 1e6
-	n_payloads	= 12
+	n_payloads	= 32
 	mod_index 	= 0.5
 	BT 			= 0.5
+	f_center_error = 3e3
+	rel_baudrate_error = 1.5e-5
 
-	samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=f_center+3.1e3, sr0=sr0,
-															  baudrate=9600*(1+1.5e-5), mod_index=mod_index, BT=BT,
-															  n_payloads=n_payloads, noisePpHz=0.16/9600, T_init_silence=2.0,
-															  T_interval_array=(5e-3,)*(n_payloads-1), T_end_silence=0.5)
+	rel_noiseP_array 	= np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26]) # , 0.28
+	noiseP_array 		= rel_noiseP_array / 9600
 
 	rx_config_basis = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
 	rx_config_basis.mod_index = mod_index
 	rx_config_basis.BT = BT
+
 	attrname_array_d = {
-		"lp_cutoff_coeff" : [float(x) for x in np.linspace(0.5,1.5, 64)*0.630],
-		"synch_delay_mpr" : [float(x) for x in np.linspace(5.0,30.0, 64)],
-		"n_delay" :         [int(x) for x in np.linspace(2.0,6.0, 64)*1024],
+		"sps": 				[12,13,14,15,16,17,18,19,20,21,22,23,25,26],
+		"lp_cutoff_coeff" : [float(x) for x in np.linspace(0.5,1.5, 64) * 0.630],
+		"synch_delay_mpr" : [float(x) for x in np.linspace(0.5,2.0, 64) * 18.0],
+		"n_delay" :         [int(x)   for x in np.linspace(0.3,1.1, 64) * 5*1024],
+		"start_margin_mpr" :[float(x) for x in np.linspace(0.5,2.0, 64) * 3.0],
+		"end_margin_mpr" :  [float(x) for x in np.linspace(0.5,2.0, 64) * 1.5],
 	}
 
-	rx_config = random_receiver_config_from_choises(attrname_array_d=attrname_array_d, rx_config_basis=rx_config_basis)
+	basisA = 0.0
+	for _ in range(3):
+		reception_rate_array = measure_curve_mpr(rx_config=rx_config_basis, n_payloads=n_payloads, f_tune=f_tune, f_center_error=f_center_error,
+												 rel_baudrate_error=rel_baudrate_error, sr0=sr0, noiseP_array=noiseP_array, separate_triggers=False)
+		A = surf_integral(x_arr=noiseP_array, y_arr=reception_rate_array)
+		print("(basis-A: {})".format(A))
+		basisA += A
+	basisA = basisA / 3
+	print("basis-A: {}".format(basisA))
 
-
-
-
-
+	ii = 0
+	t00 = time.monotonic()
+	while (time.monotonic()-t00) < (60*45):
+		ii += 1
+		rx_config = random_receiver_config_from_choises(attrname_array_d=attrname_array_d, rx_config_basis=rx_config_basis)
+		reception_rate_array = measure_curve_mpr(rx_config=rx_config, n_payloads=n_payloads, f_tune=f_tune, f_center_error=f_center_error,
+											 rel_baudrate_error=rel_baudrate_error, sr0=sr0, noiseP_array=noiseP_array, separate_triggers=False)
+		A = surf_integral(x_arr=noiseP_array, y_arr=reception_rate_array)
+		print("#{} A: {}".format(ii, A))
+		save_result(rx_config=rx_config, n_payloads=n_payloads, noiseP_array=noiseP_array, reception_rate_array=reception_rate_array, A=A, dpath="/home/elmore/datasetit/mc_results/")
+		print("(saved)")
 
 
 
 
 
 basic_test_A()
-
-measure_curve_for_default_config()
-
+#measure_curve_for_default_config()
+optimizer_A()
 
 
 

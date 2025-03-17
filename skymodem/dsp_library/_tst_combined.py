@@ -12,7 +12,7 @@ def speedbench_demod_synch_decide(sps, baudrate, lp_ntaps):
 	nsamples = int(batchlen * (n_rep+2) + 10)
 	sr = baudrate * sps
 	# ====================================
-	lp_cutoff 		= 9600 * 0.63 / sr
+	lp_cutoff_coeff 		= 0.63
 	JPL_n_decay 	= 12
 	JPL_delay_mpr	= 6.0
 	# ====================================
@@ -21,7 +21,7 @@ def speedbench_demod_synch_decide(sps, baudrate, lp_ntaps):
 	dmd_arr = np.zeros(nsamples, dtype=np.float64)
 	synch_arr = np.zeros((nsamples,3), dtype=np.int64)
 	JPLstatemx = create_classic_JPL_statemx(N_eps=sps, n_decay=JPL_n_decay)
-	demodmx = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff=lp_cutoff, synch_delay_mpr_f=JPL_delay_mpr, sps_f=float(sps))
+	demodmx = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff_coeff=lp_cutoff_coeff, synch_delay_mpr_f=JPL_delay_mpr, sps_f=float(sps))
 
 	demod_synch_decide(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=0, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx.copy(), demodmx=demodmx.copy())
 	demod_synch_decide(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=0, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx.copy(), demodmx=demodmx.copy())

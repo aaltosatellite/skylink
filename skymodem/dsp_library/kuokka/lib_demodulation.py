@@ -59,14 +59,14 @@ def DSD_buffer_roll(demodmx, buffers_receded_by):
 
 
 
-def create_DSD_statemx(lp_ntaps, lp_cutoff, synch_delay_mpr_f, sps_f):
+def create_DSD_statemx(lp_ntaps, lp_cutoff_coeff, synch_delay_mpr_f, sps_f):
 	assert lp_ntaps > 10
 	assert (lp_ntaps % 2) == 1
-	assert lp_cutoff > 0
-	assert lp_cutoff < 0.5
+	assert (lp_cutoff_coeff/sps_f) > 0
+	assert (lp_cutoff_coeff/sps_f) < 0.5
 	assert synch_delay_mpr_f >= 0
 	assert sps_f >= 1
-	lp_taps = firwin(numtaps=lp_ntaps, cutoff=lp_cutoff, fs=1.0, pass_zero=True)
+	lp_taps = firwin(numtaps=lp_ntaps, cutoff=lp_cutoff_coeff/sps_f, fs=1.0, pass_zero=True)
 	demodmx = np.zeros( (2+len(lp_taps), len(lp_taps)), dtype=np.complex128 )
 	demodmx[0,0] = 0.0							# f_shift phase
 	demodmx[0,1] = 1.0							# lowpass previous sample

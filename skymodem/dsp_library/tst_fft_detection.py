@@ -36,7 +36,6 @@ def speedbench_fft_detect(sps, baudrate):
 	n_delay 				= fftlen*5
 	fft_trigger_on_level 	= 5.5
 	fft_trigger_off_level 	= 2.0
-	masklen 				= int(2.5 * 0.5 * fftlen / sps)*2 + 1
 	f_center_min_nrm		= (f_signal-doppler_max*1.2-f_tune)/sr
 	f_center_max_nrm		= (f_signal+doppler_max*1.2-f_tune)/sr
 	f_center_search_map		= get_frequency_search_map(fftlen=fftlen, f_min_nrm=f_center_min_nrm, f_max_nrm=f_center_max_nrm)
@@ -46,8 +45,7 @@ def speedbench_fft_detect(sps, baudrate):
 	fft_statemx = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, f_center_search_map=f_center_search_map,
 											   mod_index=mod_idx, BT=BT, c_stat_update=c_stat_update, n_delay=n_delay,
 											   fft_trigger_on_level=fft_trigger_on_level, fft_trigger_off_level=fft_trigger_off_level,
-								 			   masklen=masklen, avg0=0.0, var0=1.0, mask_mode=mask_mode,
-											   start_margin_mpr=start_margin_mpr, end_margin_mpr=end_margin_mpr)
+								 			   avg0=0.0, var0=1.0, mask_mode=mask_mode, start_margin_mpr=start_margin_mpr, end_margin_mpr=end_margin_mpr)
 
 	center_f_arr = np.zeros(nsamples, dtype=np.float64)
 	instr_arr = np.zeros((nsamples,3), dtype=np.float64)
@@ -166,7 +164,6 @@ def tst_fft_center_detect_1():
 	n_delay				= fftlen*5
 	trigger_on_lvl		= 5.5
 	trigger_off_lvl		= 0.0
-	masklen				= int(0.5 * 2.5*fftlen/sps)*2 +1
 	mask_mode			= 1
 	start_margin_mpr	= 3.0
 	end_margin_mpr  	= 1.5
@@ -186,7 +183,7 @@ def tst_fft_center_detect_1():
 	print("Creating statemx.")
 	statemx0 = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, f_center_search_map=f_center_search_map,
 											mod_index=mod_index, BT=BT, c_stat_update=c_stat_update, n_delay=n_delay,
-											fft_trigger_on_level=trigger_on_lvl, fft_trigger_off_level=trigger_off_lvl, masklen=masklen,
+											fft_trigger_on_level=trigger_on_lvl, fft_trigger_off_level=trigger_off_lvl,
 											avg0=0.0, var0=1.0, mask_mode=mask_mode, start_margin_mpr=start_margin_mpr, end_margin_mpr=end_margin_mpr)
 
 	print("Runnign fft centering and detection in one go")

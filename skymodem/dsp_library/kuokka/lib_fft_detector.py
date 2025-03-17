@@ -37,7 +37,14 @@ def construct_fft_mask(sps, mod_index, BT, fftlen, masklen, nn):
 	return mask
 
 
-def get_frequency_search_space_indexing(fftlen, masklen, f_center_min, f_center_max):
+def get_masklen(fftlen, sps, mask_mode): #TODO the best centering correlator should really be researched...
+	if mask_mode == 0:
+		return int(0.5 * fftlen / sps)*2 + 1
+	return int(0.5 * 2.5 * fftlen / sps)*2 + 1
+
+
+
+def get_frequency_search_space_indexing(fftlen, masklen, f_center_min, f_center_max): #TODO delete?
 	assert (masklen%2) == 1
 	assert f_center_min <= f_center_max
 	assert abs(f_center_min) < 0.5
@@ -62,15 +69,14 @@ def get_frequency_search_space_indexing(fftlen, masklen, f_center_min, f_center_
 
 
 #@njit(cache=True)
-def create_fft_centering_statemx(fftlen, jumplen, sps, f_center_search_map, mod_index, BT, c_stat_update, n_delay, fft_trigger_on_level, fft_trigger_off_level, masklen, avg0, var0, mask_mode, start_margin_mpr, end_margin_mpr):
+def create_fft_centering_statemx(fftlen, jumplen, sps, f_center_search_map, mod_index, BT, c_stat_update, n_delay, fft_trigger_on_level, fft_trigger_off_level, avg0, var0, mask_mode, start_margin_mpr, end_margin_mpr):
 	assert var0 > 0
 	assert fftlen >= 32
 	assert mask_mode in (0,1)
-	assert (masklen % 2) == 1
-	assert masklen >= 1
 	assert int(start_margin_mpr*fftlen) < n_delay
 	assert len(f_center_search_map) == fftlen
-	
+
+	masklen = get_masklen(fftlen=fftlen, sps=sps, mask_mode=mask_mode)
 	statemx = np.zeros( (8,fftlen) ,dtype=np.float64 )
 	statemx[0,0]  = fftlen
 	statemx[0,1]  = jumplen

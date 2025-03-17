@@ -7,7 +7,7 @@ from dsp_library.kuokka.lib_tools import get_doppler_low_high
 from skylink_wrapper.cython_skylink import SkyLinkLoop, SkyConfiguration, EKEY_SKY_ARQ_DISCONNECTED, EKEY_SKY_PAYLOAD, EKEY_SKY_ARQ_CONNECTED
 from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_off
 import zmq
-import time
+import time, sys
 import json
 from datetime import datetime as dtime
 from queue import Queue, Empty
@@ -128,7 +128,8 @@ class SkyModem:
 
 
 	def get_modem_state(self):
-		return self.radio_loop.get_state()
+		with self.action_lock:
+			return self.radio_loop.get_state()
 
 
 	def start(self):
@@ -143,6 +144,23 @@ class SkyModem:
 		self.sub_que_process_thread.start()
 		self.skylink_reception_thread 	= threading.Thread(target=self._modem_to_zmq_loop, args=tuple(), daemon=True)
 		self.skylink_reception_thread.start()
+
+
+	## PRIVATE FUNCTIONS =====================================================================================================================================================================
+	## =======================================================================================================================================================================================
+	def _modem_to_zmq_loop(self): # downlink
+		while self.on:
+			try:
+				ekey, ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.20)
+			except Empty:
+				continue
+			except Exception as e:
+				DBGPRINT("SkyModem Exception (skylink_reception_loop): ", e)
+				self.close()
+				break
+			assert ichannel in range(num_virtual_channels)
+			with self.action_lock:
+				self._process_skylink_msg(ekey=ekey, ichannel=ichannel, data=rdata)
 
 
 	def _process_skylink_msg(self, ekey, ichannel, data):
@@ -175,21 +193,6 @@ class SkyModem:
 			meta_d["vc"] 		= ichannel
 			frame_d["metadata"] = meta_d
 			self.pub_sockets[ichannel].send(json.dumps(frame_d).encode("utf8"))
-
-
-	def _modem_to_zmq_loop(self): # downlink
-		while self.on:
-			try:
-				ekey, ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.20)
-			except Empty:
-				continue
-			except Exception as e:
-				DBGPRINT("SkyModem Exception (skylink_reception_loop): ", e)
-				self.close()
-				break
-			assert ichannel in range(num_virtual_channels)
-			with self.action_lock:
-				self._process_skylink_msg(ekey=ekey, ichannel=ichannel, data=rdata)
 
 
 	def _zmq_to_modem_loop(self): # uplink
@@ -229,7 +232,7 @@ class SkyModem:
 			response_dict = dict()
 			control_dict = frame_dict["metadata"]
 			if not "cmd" in control_dict:
-				DBGPRINT("No 'cmd' field in control_dict")
+				DBGPRINT("error: No 'cmd' field in control_dict")
 				return
 			ctrl_command = control_dict["cmd"]
 			if ctrl_command == "get_state":
@@ -272,7 +275,6 @@ class SkyModem:
 				assert control_dict["baudrate"] in (9600, 9600*2, 9600*4), "invalid baudrate field in control_dict"
 				self.radio_loop.set_baudrate(control_dict["baudrate"])
 				response_dict["rsp"] = "ack"
-
 			else:
 				DBGPRINT("Unknown control command: {}".format(ctrl_command))
 				return
@@ -325,3 +327,4 @@ if __name__ == '__main__':
 	except KeyboardInterrupt:
 		pass
 	modem.close()
+	sys.exit(0)

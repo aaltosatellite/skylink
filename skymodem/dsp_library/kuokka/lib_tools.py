@@ -410,10 +410,12 @@ def determine_min_resampled_rate(f_tune, f_center_min, f_center_max, signal_band
 	return minimum_samplerate
 
 
-def get_frequency_search_map(fftlen, f_min_nrm, f_max_nrm):
+def get_frequency_search_map(fftlen, f_min_nrm, f_max_nrm, assert_in_window=True):
 	assert f_min_nrm <= f_max_nrm
-	assert abs(f_min_nrm) < 0.5
-	assert abs(f_max_nrm) < 0.5
+	assert abs(f_max_nrm) < 1.0e3 #asserts the frequencies given were indeed normalized, not absolute.
+	if assert_in_window:
+		assert abs(f_min_nrm) <= 0.5
+		assert abs(f_max_nrm) <= 0.5
 	freqs = np.fft.fftshift( np.fft.fftfreq(fftlen, d=1.0) )
 	df = freqs[1] - freqs[0]
 	assert f_max_nrm > f_min_nrm
