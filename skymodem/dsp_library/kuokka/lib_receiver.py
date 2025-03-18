@@ -26,7 +26,6 @@ class ReceiverConfig:
 		# --------------------------------------------------
 		# fft detection ------------------------------------
 		self.fftlen 			= 1024			# ? Length of the fft window in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
-		self.jumplen 			= 512			# ! fft window moves forward in 'jumplen' steps. when jumplen = fftlen//2, all samples are present in two fft's.
 		self.mod_index 			= 0.5			# P Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
 		self.BT 				= 0.5			# P Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering.
 		self.c_stat_update 		= 1/700.0		# ? Running average and variance of the fft-mask correlation are updated by this coeff, as per:  avg = avg + (measurement - avg) * c_stat_update
@@ -81,8 +80,6 @@ class ReceiverConfig:
 		assert 0 < self.rs_f_cutoff_coeff < 0.5
 		assert self.fftlen in (256, 512, 1024, 2048)
 		assert type(self.fftlen) == int
-		assert 10 <= self.jumplen < (2*self.fftlen)
-		assert type(self.jumplen) == int
 		assert 0.5 <= self.mod_index < 10.0
 		assert type(self.BT) in (float, int)
 		assert (self.BT >= 0.5) or (self.BT == -1)
@@ -172,7 +169,7 @@ class Receiver:
 		f_cutoff = config.get_r_rate() * config.rs_f_cutoff_coeff
 		f_center_search_map = config.get_f_center_search_map()
 		self.resampler_statemx = create_resampler(m_halflen=config.m_halflen, n_banks=config.n_banks, r_rate=config.get_r_rate(), f_cutoff=f_cutoff, allow_aliasing=False)
-		self.FFTstatemx = create_fft_centering_statemx(fftlen=config.fftlen, jumplen=config.jumplen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index,
+		self.FFTstatemx = create_fft_centering_statemx(fftlen=config.fftlen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index,
 													   BT=config.BT, c_stat_update=config.c_stat_update, n_delay=config.n_delay, fft_trigger_on_level=config.fft_trigger_on_level,
 													   fft_trigger_off_level=config.fft_trigger_off_level, avg0=0.0, var0=1.0, mask_mode=config.mask_mode,
 													   start_margin_mpr=config.start_margin_mpr, end_margin_mpr=config.end_margin_mpr)
@@ -181,7 +178,7 @@ class Receiver:
 		self.deframermx = create_deframer(use_scrambler=config.use_scrambler, use_rs=config.use_rs, data_maxlen=config.data_maxlen,
 										  synchword=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, synch_threshold=config.synch_threshold)
 		a = int(config.batch_maxlen * config.get_r_rate() * 2)
-		b = int((config.start_margin_mpr + config.end_margin_mpr) * (config.fftlen+config.jumplen))
+		b = int((config.start_margin_mpr + config.end_margin_mpr + 1) * config.fftlen)
 		self.buffer_roll_limit 	= self.bufferlen - (a + b + 4)
 		assert self.buffer_roll_limit > (self.bufferlen * 0.9), self.buffer_roll_limit/self.bufferlen
 
@@ -290,9 +287,9 @@ def get_a_precompiling_sampleset(rx_config:ReceiverConfig, do_print=False):
 	bitstring = frame_packet(pl=pl, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
 	transmission = make_samples(sps_f=sr0/baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=rx_config.mod_index, shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
 
-	n_fft_calibration = int(12 * rx_config.jumplen * (1 / rx_config.c_stat_update) / 3)
-	nsamples = int(n_fft_calibration + 1.0*sr0 + len(transmission) + 1.0*sr0)
-	i0 = int(n_fft_calibration + 1.0*sr0)
+	n_fft_calibration = int(1.3 * rx_config.sr0 * (rx_config.fftlen*0.5) * (1 / rx_config.c_stat_update) / (rx_config.baudrate*rx_config.sps))
+	nsamples = int(n_fft_calibration + len(transmission) + 1.0*sr0)
+	i0 = int(n_fft_calibration)
 	if do_print:
 		print("\tEquivalent times per sample segment:")
 		print("\t\t{} s for fft-calibration".format( round( n_fft_calibration/sr0 , 3 ) ))

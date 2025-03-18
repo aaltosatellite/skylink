@@ -69,7 +69,7 @@ def get_frequency_search_space_indexing(fftlen, masklen, f_center_min, f_center_
 
 
 #@njit(cache=True)
-def create_fft_centering_statemx(fftlen, jumplen, sps, f_center_search_map, mod_index, BT, c_stat_update, n_delay, fft_trigger_on_level, fft_trigger_off_level, avg0, var0, mask_mode, start_margin_mpr, end_margin_mpr):
+def create_fft_centering_statemx(fftlen, sps, f_center_search_map, mod_index, BT, c_stat_update, n_delay, fft_trigger_on_level, fft_trigger_off_level, avg0, var0, mask_mode, start_margin_mpr, end_margin_mpr):
 	assert var0 > 0
 	assert fftlen >= 32
 	assert mask_mode in (0,1)
@@ -77,6 +77,7 @@ def create_fft_centering_statemx(fftlen, jumplen, sps, f_center_search_map, mod_
 	assert len(f_center_search_map) == fftlen
 
 	masklen = get_masklen(fftlen=fftlen, sps=sps, mask_mode=mask_mode)
+	jumplen = int(fftlen/2)
 	statemx = np.zeros( (8,fftlen) ,dtype=np.float64 )
 	statemx[0,0]  = fftlen
 	statemx[0,1]  = jumplen

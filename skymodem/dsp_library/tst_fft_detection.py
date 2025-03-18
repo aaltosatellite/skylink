@@ -31,7 +31,6 @@ def speedbench_fft_detect(sps, baudrate):
 	samples1 = samples1 + radionoise(n=nsamples, sr=sr, W_per_Hz=0.2/baudrate)
 
 	fftlen 					= 1024
-	jumplen 				= fftlen//2
 	c_stat_update 			= 1/700
 	n_delay 				= fftlen*5
 	fft_trigger_on_level 	= 5.5
@@ -42,7 +41,7 @@ def speedbench_fft_detect(sps, baudrate):
 	start_margin_mpr		= 3.0
 	end_margin_mpr			= 1.5
 	mask_mode				= 1
-	fft_statemx = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, f_center_search_map=f_center_search_map,
+	fft_statemx = create_fft_centering_statemx(fftlen=fftlen, sps=sps, f_center_search_map=f_center_search_map,
 											   mod_index=mod_idx, BT=BT, c_stat_update=c_stat_update, n_delay=n_delay,
 											   fft_trigger_on_level=fft_trigger_on_level, fft_trigger_off_level=fft_trigger_off_level,
 								 			   avg0=0.0, var0=1.0, mask_mode=mask_mode, start_margin_mpr=start_margin_mpr, end_margin_mpr=end_margin_mpr)
@@ -159,7 +158,6 @@ def tst_fft_center_detect_1():
 	# FFT DETECTION =======================================================================================================================================
 	#============================================
 	fftlen				= 1024
-	jumplen				= 1024//2
 	c_stat_update		= 1 / 700
 	n_delay				= fftlen*5
 	trigger_on_lvl		= 5.5
@@ -181,7 +179,7 @@ def tst_fft_center_detect_1():
 	instr_arr 			= np.zeros((nsamples,3), dtype=np.float64) -1
 
 	print("Creating statemx.")
-	statemx0 = create_fft_centering_statemx(fftlen=fftlen, jumplen=jumplen, sps=sps, f_center_search_map=f_center_search_map,
+	statemx0 = create_fft_centering_statemx(fftlen=fftlen, sps=sps, f_center_search_map=f_center_search_map,
 											mod_index=mod_index, BT=BT, c_stat_update=c_stat_update, n_delay=n_delay,
 											fft_trigger_on_level=trigger_on_lvl, fft_trigger_off_level=trigger_off_lvl,
 											avg0=0.0, var0=1.0, mask_mode=mask_mode, start_margin_mpr=start_margin_mpr, end_margin_mpr=end_margin_mpr)
