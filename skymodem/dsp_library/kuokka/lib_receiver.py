@@ -29,21 +29,21 @@ class ReceiverConfig:
 		self.mod_index 			= 0.5			# P Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
 		self.BT 				= 0.5			# P Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering.
 		self.c_stat_update 		= 1/700.0		# ? Running average and variance of the fft-mask correlation are updated by this coeff, as per:  avg = avg + (measurement - avg) * c_stat_update
-		self.n_delay			= 1024*5		# ! Center frequency estimate is collected for this many samples ahead of demodulation. TODO should be in symbols?
+		self.centering_delay_mpr	= 2.0 #5.0	# ! Center frequency estimate is collected for this many samples ahead of demodulation. TODO should be in symbols?
 		self.fft_trigger_on_level 	= 7.0		# ! Signal detection threshold in fft-mask correlation. Units in 'standard deviations above average' (non-software-optimizable?) (was 5.5)
 		self.fft_trigger_off_level 	= 2.0		# ! Signal off threshold in fft-mask correlation. Units in 'standard deviations above average' (non-software-optimizable?)
 		self.mask_mode 			= 1				# ! Type of correlation mask used in detection. 0: a vector of ones. 1: an empirically averaged mask. 1 should be more performant.
-		self.start_margin_mpr 	= 3.0			# ! A signal detection is extended back by (start_margin_mpr*fftlen) samples to time before detection. TODO should be in symbols?
-		self.end_margin_mpr 	= 1.5			# ! A signal detection is extended forward by (start_margin_mpr*fftlen) samples to time after detection. TODO should be in symbols?
+		self.start_margin_mpr 	= 1.3 #3.0		# ! A signal detection is extended back by (start_margin_mpr*fftlen) samples to time before detection. TODO should be in symbols?
+		self.end_margin_mpr 	= 1.3 #1.5		# ! A signal detection is extended forward by (start_margin_mpr*fftlen) samples to time after detection. TODO should be in symbols?
 		self.doppler_velocity	= 7500.0*2.0	# ~ Determines the frequency band above and below the center frequency where the demodulator looks for signals.
 		# --------------------------------------------------
 		# JPL synchronizer ---------------------------------
-		self.JPL_n_decay 		= 32.0			# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
+		self.JPL_n_decay 		= 40.0 #32		# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
 		# --------------------------------------------------
 		# demodulation -------------------------------------
 		self.lp_ntaps			= 161			# ? number of taps in the low-pass filter in demodulation
-		self.lp_cutoff_coeff	= 0.630			# ! cutoff frequency of the low-pass filter, as multiples of baudrate
-		self.synch_delay_mpr	= 16.0			# ! demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
+		self.lp_cutoff_coeff	= 0.583 #0.639	# ! cutoff frequency of the low-pass filter, as multiples of baudrate
+		self.synch_delay_mpr	= 20.0 #16		# ! demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
 		# --------------------------------------------------
 		# framing ------------------------------------------
 		self.use_scrambler 		= True
@@ -78,15 +78,14 @@ class ReceiverConfig:
 		assert 24 < self.n_banks < 240
 		assert type(self.n_banks) == int
 		assert 0 < self.rs_f_cutoff_coeff < 0.5
-		assert self.fftlen in (256, 512, 1024, 2048)
+		#assert self.fftlen in (256, 512, 1024, 2048)
 		assert type(self.fftlen) == int
 		assert 0.5 <= self.mod_index < 10.0
 		assert type(self.BT) in (float, int)
 		assert (self.BT >= 0.5) or (self.BT == -1)
 		assert 0 < self.c_stat_update <= 1.0
-		assert type(self.n_delay) == int
-		assert self.fftlen <= self.n_delay < self.fftlen*20
-		assert self.n_delay > (self.start_margin_mpr*self.fftlen)	###
+		assert 1 <= self.centering_delay_mpr < 20
+		assert self.centering_delay_mpr > self.start_margin_mpr	###
 		assert -1.0 <= self.fft_trigger_on_level <= 32.0
 		assert -1.0 <= self.fft_trigger_off_level <= 9.0
 		assert self.fft_trigger_off_level <= self.fft_trigger_on_level
@@ -170,7 +169,7 @@ class Receiver:
 		f_center_search_map = config.get_f_center_search_map()
 		self.resampler_statemx = create_resampler(m_halflen=config.m_halflen, n_banks=config.n_banks, r_rate=config.get_r_rate(), f_cutoff=f_cutoff, allow_aliasing=False)
 		self.FFTstatemx = create_fft_centering_statemx(fftlen=config.fftlen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index,
-													   BT=config.BT, c_stat_update=config.c_stat_update, n_delay=config.n_delay, fft_trigger_on_level=config.fft_trigger_on_level,
+													   BT=config.BT, c_stat_update=config.c_stat_update, centering_delay_mpr=config.centering_delay_mpr, fft_trigger_on_level=config.fft_trigger_on_level,
 													   fft_trigger_off_level=config.fft_trigger_off_level, avg0=0.0, var0=1.0, mask_mode=config.mask_mode,
 													   start_margin_mpr=config.start_margin_mpr, end_margin_mpr=config.end_margin_mpr)
 		self.JPLstatemx = create_classic_JPL_statemx(N_eps=config.sps, n_decay=config.JPL_n_decay)

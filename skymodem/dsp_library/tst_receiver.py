@@ -66,61 +66,89 @@ def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payl
 	return samples, payload_istart_iend_list
 
 
-def feed_samples_to_a_receiver(rx_config, samples, default_batchlen, do_precompile=False):
+def feed_samples_to_a_receiver(rx_config, samples, payload_istart_iend_list, default_batchlen, do_precompile=False):
 	if do_precompile:
 		precompile_receiver(rx_config=rx_config, do_print=True)
 	rx = Receiver(config=rx_config)
 	nsamples = len(samples)
 	c = 0
 	pl_f_cursor_list = list()
-	dt_total = 0.0
+	t_signal = 0.0
+	t_silence = 0.0
 	while c < len(samples):
 		batchlen = min(default_batchlen, nsamples - c)
 		batch = samples[c:c+batchlen]
-		c += batchlen
 		t0 = time.perf_counter()
 		ret_list = rx.push_samples(batch, give_bits=False)
-		dt_total += (time.perf_counter() - t0)
+		dt_ = time.perf_counter() - t0
+		batch_contains_signal = any([(not ((c>i1) or ((c+batchlen)<i0))) for (_,i0,i1) in payload_istart_iend_list])
+		if batch_contains_signal:
+			t_signal += dt_
+		else:
+			t_silence += dt_
+		c += batchlen
 		for (pl, f_nrm) in ret_list:
 			pl_f_cursor_list.append( (pl, float(f_nrm), c) )
-	return pl_f_cursor_list, rx.dt_array, dt_total
+	return pl_f_cursor_list, rx.dt_array, t_signal, t_silence
 
 
-def tgt_loop(ii, noisePpHz, rx_config, n_payloads, f_tune, f_center_error, rel_baudrate_error, sr0, separate_triggers):
+def tgt_loop(ii, noisePpHz, rx_config, n_payloads, f_center_error, rel_baudrate_error, separate_triggers):
 	assert abs(rel_baudrate_error) < 1e-4
 	T_init_silence  = 1.25 * (1/rx_config.c_stat_update) * (rx_config.fftlen/2) / (rx_config.sps*rx_config.baudrate)
-	T_end_silence 	= 5.00 * rx_config.n_delay / (rx_config.sps*rx_config.baudrate)
+	T_end_silence 	= 5.00 * rx_config.centering_delay_mpr * rx_config.fftlen / (rx_config.sps*rx_config.baudrate)
 	T_separate_triggers = 3.0 * (rx_config.start_margin_mpr + rx_config.end_margin_mpr) * rx_config.fftlen / (rx_config.sps*rx_config.baudrate)
 	T_interval = 5e-3
 	nn = [x for x in ([12,]*int(n_payloads/12) + [n_payloads%12,]) if x>0]
 	if separate_triggers:
 		T_interval = T_separate_triggers
 	n_rcvd = 0
+	avg_delay_t = -1
 	for n_pl_run in nn:
-		samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=rx_config.f_center+f_center_error, sr0=sr0,
+		samples, payload_istart_iend_list = generate_test_samples(f_tune=rx_config.f_tune, f_center=rx_config.f_center+f_center_error, sr0=rx_config.sr0,
 																  baudrate=rx_config.baudrate*(1+rel_baudrate_error), mod_index=rx_config.mod_index,
 																  BT=rx_config.BT, n_payloads=n_pl_run, noisePpHz=noisePpHz, T_init_silence=T_init_silence,
 																  T_interval_array=(T_interval,)*(n_pl_run-1), T_end_silence=T_end_silence)
-		pl_f_cursor_list, dt_array, dt_total = feed_samples_to_a_receiver(rx_config=rx_config, samples=samples, default_batchlen=512*2, do_precompile=False)
+		pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(rx_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=int(0.001*rx_config.sr0), do_precompile=False)
 		n_rcvd += len(pl_f_cursor_list)
+		delays_s, delays_t = get_dealys(payload_istart_iend_list=payload_istart_iend_list, pl_f_cursor_list=pl_f_cursor_list, sr0=rx_config.sr0)
+		if any(delays_t > 0):
+			avg_delay_t = np.average([x for x in delays_t if x > 0])
 	reception_rate = n_rcvd / n_payloads
-	return ii, reception_rate
+	return ii, reception_rate, avg_delay_t
 
 
-def measure_curve_mpr(rx_config:ReceiverConfig, n_payloads, f_tune, f_center_error, rel_baudrate_error, sr0, noiseP_array, separate_triggers=False):
+def measure_curve_mpr(rx_config:ReceiverConfig, n_payloads, f_center_error, rel_baudrate_error, noiseP_array, separate_triggers=False):
 	reception_rate_array = np.zeros(len(noiseP_array), dtype=np.float64) -1
+	delay_array = np.zeros(len(noiseP_array), dtype=np.float64) -2
 	argtuples = list()
 	for i_noise, noisePpHz in enumerate(noiseP_array):
-		argtuples.append( (i_noise, noisePpHz, rx_config, n_payloads, f_tune, f_center_error, rel_baudrate_error, sr0, separate_triggers) )
+		argtuples.append( (i_noise, noisePpHz, rx_config, n_payloads, f_center_error, rel_baudrate_error, separate_triggers) )
 	ret_list, _ = mpr_set(f=tgt_loop, argtuple_list=argtuples, ncores=7, Q_or_NS="NS", picklepack=True, verbose=False)
-	for i_noise, r_rate in ret_list:
+	for i_noise, r_rate, avg_delay_t in ret_list:
 		reception_rate_array[i_noise] = r_rate
+		delay_array[i_noise] = avg_delay_t
 	assert np.all(reception_rate_array >= 0)
-	return reception_rate_array
+	assert np.all(delay_array > -2)
+	return reception_rate_array, delay_array
 
 
-
-
+def measure_execution_speed(rx_config:ReceiverConfig):
+	T_init_silence_minim  = 1.25 * (1/rx_config.c_stat_update) * (rx_config.fftlen/2) / (rx_config.sps*rx_config.baudrate)
+	assert T_init_silence_minim < 5.0
+	T_init_silence = 5.0
+	T_end_silence_minim 	= 4.00 * rx_config.centering_delay_mpr * rx_config.fftlen / (rx_config.sps*rx_config.baudrate)
+	assert T_end_silence_minim < 0.5
+	T_end_silence = 0.5
+	#T_separate_triggers = 3.0 * (rx_config.start_margin_mpr + rx_config.end_margin_mpr) * rx_config.fftlen / (rx_config.sps*rx_config.baudrate)
+	T_interval = 5e-3
+	samples, payload_istart_iend_list = generate_test_samples(f_tune=rx_config.f_tune, f_center=rx_config.f_center+1e3, sr0=rx_config.sr0,
+																  baudrate=rx_config.baudrate*(1+1.5e-5), mod_index=rx_config.mod_index,
+																  BT=rx_config.BT, n_payloads=8, noisePpHz=0.02/rx_config.baudrate, T_init_silence=T_init_silence,
+																  T_interval_array=(T_interval,)*(8-1), T_end_silence=T_end_silence)
+	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(rx_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list,  default_batchlen=int(0.001*rx_config.sr0), do_precompile=False)
+	n_samples = len(samples)
+	n_signal_samples = sum([i1-i0 for (f,i0,i1) in payload_istart_iend_list])
+	return dt_array, t_signal, t_silence, n_samples, n_signal_samples
 
 
 
@@ -140,8 +168,8 @@ def get_dealys(payload_istart_iend_list, pl_f_cursor_list, sr0):
 	return delays, delays * 1.0 / sr0
 
 
-def speed_printout(dt_array, dt_total, nsamples, sr0):
-	speed = nsamples / dt_total
+def speed_printout(dt_array, t_total, nsamples, sr0):
+	speed = nsamples / t_total
 	overmatch = speed / sr0
 	budget_fraction	= (1/overmatch) / 0.5
 	cpu_fraction	= (1/overmatch) / 1.0
@@ -154,7 +182,7 @@ def speed_printout(dt_array, dt_total, nsamples, sr0):
 	print("\t\tpart 2:            {} %".format( round( 100*dt_array[1]/np.sum(dt_array) , 2) ))
 	print("\t\tpart 3:            {} %".format( round( 100*dt_array[2]/np.sum(dt_array) , 2) ))
 	print("\t\tpart 4:            {} %".format( round( 100*dt_array[3]/np.sum(dt_array) , 2) ))
-	print("\t\tparts of total:    {} %".format( round( 100*np.sum(dt_array)/dt_total , 2) ))
+	print("\t\tparts of total:    {} %".format( round( 100*np.sum(dt_array)/t_total , 2) ))
 	print("="*50)
 
 
@@ -184,15 +212,16 @@ def surf_integral(x_arr, y_arr):
 	return A
 
 
-def save_result(rx_config:ReceiverConfig, n_payloads, noiseP_array, reception_rate_array, A, dpath):
+def save_result(rx_config:ReceiverConfig, n_payloads, noiseP_array, reception_rate_array, A, avg_delay, dpath):
 	dd = {
-		"version" : 2.0,
+		"version" : 3.0,
 		"ts": dtime.now().isoformat(),
 		"rx_config": rx_config.__dict__,
 		"n_payloads": n_payloads,
 		"noiseP_array" : noiseP_array,
 		"reception_rate_array": reception_rate_array,
-		"A": A
+		"A": A,
+		"avg_delay": avg_delay
 	}
 	assert os.path.isdir(dpath)
 	letters1 = "".join([chr(x) for x in np.random.randint(ord("A"), ord("Z")+1, 3)])
@@ -226,6 +255,22 @@ def load_results(dpath, minimum_version, fname_contains, mandatory_d_keys):
 		except:
 			pass
 	return results
+
+def load_top_configs(dpath, minimum_version, fname_contains, mandatory_d_keys, top_n):
+	default_config = ReceiverConfig(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=16000, f_tune=437.1e6, f_center=437.125e6)
+	results = load_results(dpath=dpath, minimum_version=minimum_version, fname_contains=fname_contains, mandatory_d_keys=mandatory_d_keys)
+	results = sorted(results, key=lambda k: k["A"], reverse=True)
+	configs_dicts = list()
+	res_dicts = list()
+	for res in results[0:top_n]:
+		assert sorted(res["rx_config"].keys()) == sorted(list(default_config.__dict__.keys()))
+		config = deepcopy(default_config)
+		for k in res["rx_config"].keys():
+			assert hasattr(config, k)
+			setattr(config, k, res["rx_config"][k])
+		configs_dicts.append( [config, res] )
+		res_dicts.append(res)
+	return configs_dicts
 # ============================================================================================================================================================================================
 # ============================================================================================================================================================================================
 # ============================================================================================================================================================================================
@@ -250,12 +295,12 @@ def basic_test_A():
 															  n_payloads=n_payloads, noisePpHz=noisePpHz, T_init_silence=2.0,
 															  T_interval_array=(5e-3,)*(n_payloads-1), T_end_silence=0.5)
 	print("[Feeding samples]")
-	pl_f_cursor_list, dt_array, dt_total = feed_samples_to_a_receiver(rx_config=rx_config, samples=samples, default_batchlen=512*2, do_precompile=True)
+	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(rx_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=512*2, do_precompile=True)
 	#pl_f_cursor_d = dict( [(x[0],x[1:3]) for x in pl_f_cursor_list] )
 
 	print("\n\n")
 	print("Received {}/{} payloads.".format(len(pl_f_cursor_list), n_payloads))
-	speed_printout(dt_array=dt_array, dt_total=dt_total, nsamples=len(samples), sr0=sr0)
+	speed_printout(dt_array=dt_array, t_total=t_signal+t_silence, nsamples=len(samples), sr0=sr0)
 
 	delays_s, delays_t = get_dealys(payload_istart_iend_list=payload_istart_iend_list, pl_f_cursor_list=pl_f_cursor_list, sr0=sr0)
 	for i_pl,_ in enumerate(payload_istart_iend_list):
@@ -266,16 +311,17 @@ def basic_test_A():
 
 
 
-def measure_curve_for_default_config():
+def compare_default_optimod_4800():
 	f_tune 		= 437.1e6
 	f_center 	= 437.125e6
 	sr0 		= 1e6
 	n_payloads	= 32
 	rx_config1 = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
 	rx_config2 = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
-	rx_config3 = ReceiverConfig(sr0=sr0, baudrate=4800, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
 	rx_config2.mod_index = 0.7
 	rx_config2.BT = -1
+	rx_config3 = ReceiverConfig(sr0=sr0, baudrate=4800, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
+
 
 	rel_noiseP_array = np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.26]) # , 0.28
 	noiseP_array1 = rel_noiseP_array / 9600
@@ -283,17 +329,17 @@ def measure_curve_for_default_config():
 	noiseP_array3 = rel_noiseP_array / 9600
 
 	print("1/6")
-	reception_rate_array1 = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array1)
+	reception_rate_array1, _ = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array1)
 	print("2/6")
-	reception_rate_array1_sep = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array1, separate_triggers=True)
+	reception_rate_array1_sep, _ = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array1, separate_triggers=True)
 	print("3/6")
-	reception_rate_array2 = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array2)
+	reception_rate_array2, _ = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array2)
 	print("4/6")
-	reception_rate_array2_sep = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array2, separate_triggers=True)
+	reception_rate_array2_sep, _ = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array2, separate_triggers=True)
 	print("5/6")
-	reception_rate_array3 = measure_curve_mpr(rx_config=rx_config3, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array3)
+	reception_rate_array3, _ = measure_curve_mpr(rx_config=rx_config3, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array3)
 	print("6/6")
-	reception_rate_array3_sep = measure_curve_mpr(rx_config=rx_config3, n_payloads=n_payloads, f_tune=f_tune, f_center_error=3e3, rel_baudrate_error=1.5e-5, sr0=sr0, noiseP_array=noiseP_array3, separate_triggers=True)
+	reception_rate_array3_sep, _ = measure_curve_mpr(rx_config=rx_config3, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array3, separate_triggers=True)
 
 	fig = plt.figure(figsize=(15,11))
 	ax1 = fig.add_subplot(111)
@@ -316,6 +362,67 @@ def measure_curve_for_default_config():
 
 
 
+def compare_fftlens():
+	f_tune 		= 437.1e6
+	f_center 	= 437.125e6
+	sr0 		= 1e6
+	n_payloads	= 32
+	rx_config1 = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*8, f_tune=f_tune, f_center=f_center)
+	rx_config2 = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*8, f_tune=f_tune, f_center=f_center)
+	rx_config2.fftlen = 512 + 256
+
+	rel_noiseP_array = np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.26]) # , 0.28
+	noiseP_array1 = rel_noiseP_array / 9600
+	noiseP_array2 = rel_noiseP_array / 9600
+
+	print("1/4")
+	reception_rate_array1, _ = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array1)
+	print("2/4")
+	reception_rate_array1_sep, _ = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array1, separate_triggers=True)
+	print("3/4")
+	reception_rate_array2, _ = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array2)
+	print("4/4")
+	reception_rate_array2_sep, _ = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array2, separate_triggers=True)
+
+	fig = plt.figure(figsize=(15,11))
+	ax1 = fig.add_subplot(111)
+	ax1.set_title("Reception rate")
+
+	ax1.plot(rel_noiseP_array, reception_rate_array1, label="default", color="blue")
+	ax1.plot(rel_noiseP_array, reception_rate_array1_sep, label="default", linestyle="--", color="blue")
+	ax1.plot(rel_noiseP_array, reception_rate_array2, label="fftlen={}".format(rx_config2.fftlen), color="orange")
+	ax1.plot(rel_noiseP_array, reception_rate_array2_sep, label="fftlen={}".format(rx_config2.fftlen), linestyle="--", color="orange")
+	ax1.set_xlabel("relative noise power per 1/baudrate")
+	#ax1.semilogx()
+	ax1.set_ylabel("%")
+	ax1.grid()
+	ax1.legend()
+
+	fig.set_layout_engine("tight")
+	plt.show()
+
+
+def compare_timings():
+	f_tune 		= 437.1e6
+	f_center 	= 437.125e6
+	sr0 		= 1e6
+	n_payloads	= 32
+	rx_config_default = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*8, f_tune=f_tune, f_center=f_center)
+	config_optim_1 = deepcopy(rx_config_default)
+	config_optim_1.sps = 19
+	config_optim_1.lp_cutoff_coeff = 0.583
+	config_optim_1.centering_delay_mpr = 2.0
+	config_optim_1.start_margin_mpr = 1.3
+	config_optim_1.end_margin_mpr = 1.3
+	config_optim_1.synch_delay_mpr = 16
+	config_optim_1.JPL_n_decay = 44
+
+	dt_array, t_signal, t_silence, n_samples, n_signal_samples = measure_execution_speed(rx_config=rx_config_default)
+	dt_array, t_signal, t_silence, n_samples, n_signal_samples = measure_execution_speed(rx_config=rx_config_default)
+	print("Default:  t_total: {} ms,   t_signal: {} ms".format(round( 1e3*(t_silence+t_signal), 2),  round(1e3*t_signal, 2) ))
+
+	dt_array, t_signal, t_silence, n_samples, n_signal_samples = measure_execution_speed(rx_config=config_optim_1)
+	print("Optim 1:  t_total: {} ms,   t_signal: {} ms".format(round( 1e3*(t_silence+t_signal), 2),  round(1e3*t_signal, 2) ))
 
 
 
@@ -339,63 +446,87 @@ def optimizer_A():
 	rx_config_basis.mod_index = mod_index
 	rx_config_basis.BT = BT
 	attrname_array_d = {
-		"sps": 				[12,13,14,15,16,17,18,19,20,21,22,23,25,26],
-		"lp_cutoff_coeff" : [float(x) for x in np.linspace(0.5,1.5, 64) * 0.630],
-		"n_delay" :         [int(x)   for x in np.linspace(0.3,1.1, 64) * 5*1024],
-		"start_margin_mpr" :[float(x) for x in np.linspace(0.5,2.0, 64) * 3.0],
-		"end_margin_mpr" :  [float(x) for x in np.linspace(0.5,2.0, 64) * 1.5],
-		"synch_delay_mpr" : [float(x) for x in np.linspace(0.5,2.0, 64) * 18.0],
-		"JPL_n_decay" :     [int(x)   for x in np.linspace(0.5,2.0, 64) * 32],
+		"sps": 				    [12,13,14,15,16,17,18,19,20,21,22,23,25,26],
+		"lp_cutoff_coeff" :     [float(x) for x in np.linspace(0.8,1.1, 128) * 0.630],
+		"centering_delay_mpr" : [float(x) for x in np.linspace(0.1,1.1, 128) * 5.0],
+		"start_margin_mpr" :    [float(x) for x in np.linspace(0.1,2.0, 128) * 3.0],
+		"end_margin_mpr" :      [float(x) for x in np.linspace(0.1,2.0, 128) * 1.5],
+		"synch_delay_mpr" :     [float(x) for x in np.linspace(0.1,2.0, 128) * 18.0],
+		"JPL_n_decay" :         [int(x)   for x in np.linspace(0.1,2.0, 128) * 32],
 	}
 
 	basisA = 0.0
 	for _ in range(3):
-		reception_rate_array = measure_curve_mpr(rx_config=rx_config_basis, n_payloads=n_payloads, f_tune=f_tune, f_center_error=f_center_error,
-												 rel_baudrate_error=rel_baudrate_error, sr0=sr0, noiseP_array=noiseP_array, separate_triggers=False)
+		reception_rate_array, delay_array = measure_curve_mpr(rx_config=rx_config_basis, n_payloads=n_payloads, f_center_error=f_center_error,
+												 rel_baudrate_error=rel_baudrate_error, noiseP_array=noiseP_array, separate_triggers=False)
 		A = surf_integral(x_arr=noiseP_array, y_arr=reception_rate_array)
-		print("(basis-A: {})".format(A))
+		avg_delay = np.average( [x for x in delay_array if x > 0] ) if any(delay_array > 0) else -1
+		print("(basis: A={},   delay={} ms)".format( round(A,8), round(avg_delay*1e3, 2)  ))
 		basisA += A
 	basisA = basisA / 3
 	print("basis-A: {}".format(basisA))
 
+	cfg_d_list = load_top_configs(dpath="/home/elmore/datasetit/mc_results/", minimum_version=0, fname_contains=["kuokka-curve",".pkl"], mandatory_d_keys=["n_payloads",], top_n=32)
+
 	ii = 0
 	t00 = time.monotonic()
-	while (time.monotonic()-t00) < (60*45):
-		ii += 1
-		rx_config = random_receiver_config_from_choises(attrname_array_d=attrname_array_d, rx_config_basis=rx_config_basis)
-		reception_rate_array = measure_curve_mpr(rx_config=rx_config, n_payloads=n_payloads, f_tune=f_tune, f_center_error=f_center_error,
-											 rel_baudrate_error=rel_baudrate_error, sr0=sr0, noiseP_array=noiseP_array, separate_triggers=False)
+	while (time.monotonic()-t00) < (60*60*2):
+		if ii < len(cfg_d_list):
+			rx_config = cfg_d_list[ii][0]
+			n_payloads_ = n_payloads * 12
+		else:
+			rx_config = random_receiver_config_from_choises(attrname_array_d=attrname_array_d, rx_config_basis=rx_config_basis)
+			n_payloads_ = n_payloads
+		reception_rate_array, delay_array = measure_curve_mpr(rx_config=rx_config, n_payloads=n_payloads_, f_center_error=f_center_error,
+											 rel_baudrate_error=rel_baudrate_error, noiseP_array=noiseP_array, separate_triggers=False)
 		A = surf_integral(x_arr=noiseP_array, y_arr=reception_rate_array)
-		print("#{} A: {}".format(ii, A))
-		save_result(rx_config=rx_config, n_payloads=n_payloads, noiseP_array=noiseP_array, reception_rate_array=reception_rate_array, A=A, dpath="/home/elmore/datasetit/mc_results/")
+		avg_delay = np.average( [x for x in delay_array if x > 0] ) if any(delay_array > 0) else -1
+		print("#{}  A={},   delay={} ms".format(ii+1, round(A,8),  round(avg_delay*1e3, 2)))
+		save_result(rx_config=rx_config, n_payloads=n_payloads_, noiseP_array=noiseP_array, reception_rate_array=reception_rate_array, A=A, avg_delay=avg_delay, dpath="/home/elmore/datasetit/mc_results/")
 		print("(saved)")
+		ii += 1
+
+
 
 
 def analyze_results_plot():
-	results = load_results(dpath="/home/elmore/datasetit/mc_results/", minimum_version=0, fname_contains=["kuokka-curve",".pkl"],
-						   mandatory_d_keys=["reception_rate_array", "A", "noiseP_array", "n_payloads", "rx_config"])
-	print("Loaded {} results".format(len(results)))
-
+	results = load_results(dpath="/home/elmore/datasetit/mc_results/", minimum_version=0, fname_contains=["kuokka-curve",".pkl"], mandatory_d_keys=["n_payloads",])
 	results = sorted(results, key=lambda k: k["A"], reverse=True)
+	results = [r for r in results if r["n_payloads"] > 32]
+	print("Loaded {} results".format(len(results)))
+	print("--- top-5 ----------------------------------------------")
+	for cfg, res_d in load_top_configs(dpath="/home/elmore/datasetit/mc_results/", minimum_version=0, fname_contains=["kuokka-curve",".pkl"], mandatory_d_keys=["n_payloads",], top_n=5):
+		print("A:{},  has delay:{}".format( res_d["A"], ("avg_delay" in res_d) ))
+		print(cfg.__dict__)
+		print("")
+	print("--------------------------------------------------------")
+
 	for res in results[0:4]:
 		print("(", res["A"], ")", end=" ")
-		for kname in ["sps", "lp_cutoff_coeff", "n_delay", "start_margin_mpr", "end_margin_mpr", "synch_delay_mpr", "JPL_n_decay"]:
+		for kname in ["sps", "lp_cutoff_coeff", "centering_delay_mpr", "start_margin_mpr", "end_margin_mpr", "synch_delay_mpr", "JPL_n_decay"]:
 			print(kname, ":", res["rx_config"][kname], end=",  ")
 		print("")
 
 	A_array = [d["A"] for d in results]
+	delay_array = list()
+	for d in results:
+		if "avg_delay" in d:
+			delay_array.append(d["avg_delay"])
+		else:
+			delay_array.append(0)
 	parameter_arrays = dict()
-	for parameter_name in ["sps", "lp_cutoff_coeff", "n_delay", "start_margin_mpr", "end_margin_mpr", "synch_delay_mpr", "JPL_n_decay"]:
+	for parameter_name in ["sps", "lp_cutoff_coeff", "centering_delay_mpr", "start_margin_mpr", "end_margin_mpr", "synch_delay_mpr", "JPL_n_decay"]:
 		parameter_arrays[parameter_name] = [d["rx_config"][parameter_name] for d in results]
 
-	plot_params = ["lp_cutoff_coeff", "n_delay", "start_margin_mpr", "end_margin_mpr"]
-	#plot_params = ["lp_cutoff_coeff", "n_delay", "synch_delay_mpr", "JPL_n_decay"]
-	fig = plt.figure(figsize=(15,11))
-	ax1 = fig.add_subplot(221)
-	ax2 = fig.add_subplot(222)
-	ax3 = fig.add_subplot(223)
-	ax4 = fig.add_subplot(224)
-	ax1.set_title("sps - A")
+	#plot_params = ["lp_cutoff_coeff", "centering_delay_mpr", "start_margin_mpr", "end_margin_mpr"]
+	plot_params = ["sps", "lp_cutoff_coeff", "centering_delay_mpr", "synch_delay_mpr", "JPL_n_decay", "start_margin_mpr"]
+	fig1 = plt.figure(figsize=(18,11))
+	ax1 = fig1.add_subplot(231)
+	ax2 = fig1.add_subplot(232)
+	ax3 = fig1.add_subplot(233)
+	ax4 = fig1.add_subplot(234)
+	ax5 = fig1.add_subplot(235)
+	ax6 = fig1.add_subplot(236)
 
 	ax1.scatter(parameter_arrays[plot_params[0]], A_array)
 	ax1.set_xlabel(plot_params[0])
@@ -417,16 +548,91 @@ def analyze_results_plot():
 	ax4.set_ylabel("A")
 	ax4.grid()
 
-	fig.set_layout_engine("tight")
+	ax5.scatter(parameter_arrays[plot_params[4]], A_array)
+	ax5.set_xlabel(plot_params[4])
+	ax5.set_ylabel("A")
+	ax5.grid()
+
+	ax6.scatter(parameter_arrays[plot_params[5]], A_array)
+	ax6.set_xlabel(plot_params[5])
+	ax6.set_ylabel("A")
+	ax6.grid()
+
+	fig1.set_layout_engine("tight")
+
+
+	fig2 = plt.figure(figsize=(15,11))
+	ax21 = fig2.add_subplot(221)
+	ax22 = fig2.add_subplot(222)
+	ax23 = fig2.add_subplot(223)
+	ax24 = fig2.add_subplot(224)
+
+	ax21.scatter(parameter_arrays["centering_delay_mpr"], parameter_arrays["start_margin_mpr"], c=A_array)
+	#ax21.set_xlabel(plot_params[3])
+	#ax21.set_ylabel("A")
+	ax21.grid()
+
+	ax22.scatter(parameter_arrays["centering_delay_mpr"], parameter_arrays["JPL_n_decay"], c=A_array)
+	#ax22.set_xlabel(plot_params[3])
+	#ax22.set_ylabel("A")
+	ax22.grid()
+
+	ax23.scatter(parameter_arrays["centering_delay_mpr"], parameter_arrays["synch_delay_mpr"], c=A_array)
+	#ax23.set_xlabel(plot_params[3])
+	#ax23.set_ylabel("A")
+	ax23.grid()
+
+	ax24.scatter(parameter_arrays["synch_delay_mpr"], parameter_arrays["JPL_n_decay"], c=A_array)
+	#ax24.set_xlabel(plot_params[3])
+	#ax24.set_ylabel("A")
+	ax24.grid()
+
+	fig2.set_layout_engine("tight")
+
+
+	fig3 = plt.figure(figsize=(15,11))
+	ax31 = fig3.add_subplot(221)
+	ax32 = fig3.add_subplot(222)
+	ax33 = fig3.add_subplot(223)
+	ax34 = fig3.add_subplot(224)
+
+	ax31.scatter(A_array, delay_array)
+	ax31.set_xlabel("A")
+	ax31.set_ylabel("delay")
+	ax31.grid()
+
+	ax32.scatter(parameter_arrays["centering_delay_mpr"], delay_array, c=A_array)
+	ax32.set_xlabel("centering_delay_mpr")
+	ax32.set_ylabel("delay")
+	ax32.grid()
+
+	ax33.scatter(parameter_arrays["synch_delay_mpr"], delay_array, c=A_array)
+	ax33.set_xlabel("synch_delay_mpr")
+	ax33.set_ylabel("delay")
+	ax33.grid()
+
+	ax34.scatter(parameter_arrays["start_margin_mpr"], delay_array, c=A_array)
+	ax34.set_xlabel("start_margin_mpr")
+	ax34.set_ylabel("delay")
+	ax34.grid()
+
+	fig3.set_layout_engine("tight")
+
+
 	plt.show()
 
 
 
-basic_test_A()
-#measure_curve_for_default_config()
+
+
+#basic_test_A()
+#compare_default_optimod_4800()
+#compare_fftlens()
+compare_timings()
+
+#analyze_results_plot()
 #optimizer_A()
 
-analyze_results_plot()
 
 
 

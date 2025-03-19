@@ -228,50 +228,45 @@ class RadioLoop:
 		n_rx_loops = 0
 		rx_streamer.issue_stream_cmd(stream_cmd)
 		while self.on:
-			try:
-				if (n_rx_loops % 1000) == 0:
-					DBGPRINT("(rx-#{})".format(n_rx_loops))
-				rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
-				assert rx_ret == rx_buffer_len
-				#if self.self_mute:
-				#	continue
-				if not self._internal_sample_que.full():
-					self._internal_sample_que.put_nowait(recv_buffer[0,:].copy())
-				else:
-					DBGPRINT("WARNING: radio-to-process queue overflow!")
-					raise Exception("radio-loop: radio-to-process queue overflow.")
-				n_rx_loops += 1
-			except Exception as e:
-				DBGPRINT("Exception (rx-radio-rcv-thread)", e)
-				self.on = False
-				break
+			if (n_rx_loops % 1000) == 0:
+				DBGPRINT("(rx-#{})".format(n_rx_loops))
+			rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
+			assert rx_ret == rx_buffer_len
+			#if self.self_mute:
+			#	continue
+			if not self._internal_sample_que.full():
+				self._internal_sample_que.put_nowait(recv_buffer[0,:].copy())
+			else:
+				DBGPRINT("WARNING: radio-to-process queue overflow!")
+				raise Exception("radio-loop: radio-to-process queue overflow.")
+			n_rx_loops += 1
 
 
 	def _rx_process_loop(self):
 		while self.on:
 			try:
 				rx_samples = self._internal_sample_que.get(timeout=0.20)
-				with self.receiver_lock:
-					rx_pls = self.rx.push_samples(batch=rx_samples, give_bits=False)
-					for rx_pl, rx_pl_f_offset in rx_pls:
-						if rx_pl in self.own_recently_sent:
-							self._clean_own_sent()
-							#del self.own_recently_sent[rx_pl]
-							DBGPRINT("Discarded a self-reception.")
-							continue
-						DBGPRINT("Radio decoded a frame at {} MHz: \n\033[92m{}\033[0m\n".format(round( (self.rx_config.f_tune+rx_pl_f_offset)*1e-6, 4), rx_pl ))
-						self.last_verified_freq = rx_pl_f_offset, time.monotonic()
-						if not self.que_radio_to_skylink.full():
-							self.que_radio_to_skylink.put_nowait(rx_pl)
-						else:
-							DBGPRINT("WARNING: radio-to-skylink queue full")
-							raise Exception("process-to-skylink queue overflow")
 			except Empty:
-				pass
+				continue
 			except Exception as e:
-				DBGPRINT("Exception (rx-process-thread)", e)
+				DBGPRINT("Queue.get() exception in rx_process_loop: ", e)
 				self.on = False
 				break
+			with self.receiver_lock:
+				rx_pls = self.rx.push_samples(batch=rx_samples, give_bits=False)
+				for rx_pl, rx_pl_f_offset in rx_pls:
+					if rx_pl in self.own_recently_sent:
+						self._clean_own_sent()
+						#del self.own_recently_sent[rx_pl]
+						DBGPRINT("Discarded a self-reception.")
+						continue
+					DBGPRINT("Radio decoded a frame at {} MHz: \n\033[92m{}\033[0m\n".format(round( (self.rx_config.f_tune+rx_pl_f_offset)*1e-6, 4), rx_pl ))
+					self.last_verified_freq = rx_pl_f_offset, time.monotonic()
+					if not self.que_radio_to_skylink.full():
+						self.que_radio_to_skylink.put_nowait(rx_pl)
+					else:
+						DBGPRINT("WARNING: radio-to-skylink queue full")
+						raise Exception("process-to-skylink queue overflow")
 
 
 	def _usrp_tx_loop(self, usrp:uhd.usrp.MultiUSRP, tx_batch_len):
@@ -283,33 +278,32 @@ class RadioLoop:
 		while self.on:
 			try:
 				payload = self.que_skylink_to_radio.get(timeout=0.20)
-				with self.receiver_lock:
-					self._clean_own_sent()
-					self.own_recently_sent[payload] = time.monotonic()
-					samplearr, f_use_abs = self._compose_samples(payload, usrp_reshape=True, as_c64=True)
-					DBGPRINT("tx start at {} MHz".format( f_use_abs * 1e-6, 4 ))
-					N = samplearr.shape[1]
-
-					idx = 0
-					dtt = N / self.rx_config.sr0
-				t_end = time.perf_counter() + dtt
-				self.self_mute = True  # the 5ms initial silence in composed samples also ensures this will have effect.
-				while idx < N:
-					if (N - idx) <= tx_batch_len:
-						tx_metadata.end_of_burst = True
-					tx_streamer.send(samplearr[0,idx:idx+tx_batch_len], tx_metadata)
-					idx += tx_batch_len
-				tx_metadata.end_of_burst = False
-				t_to_end = max(0, t_end - time.perf_counter())
-				time.sleep(t_to_end + 0.0e-3)
-				self.self_mute = False
-				DBGPRINT("tx end. sleep of {}/{} ms.".format( round(t_to_end*1e3, 2), round(dtt*1e3, 2) ))
 			except Empty:
-				pass
+				continue
 			except Exception as e:
-				DBGPRINT("Exception (tx-thread)", e)
+				DBGPRINT("Queue.get() exception (tx-thread):", e)
 				self.on = False
 				break
+			with self.receiver_lock:
+				self._clean_own_sent()
+				self.own_recently_sent[payload] = time.monotonic()
+				samplearr, f_use_abs = self._compose_samples(payload, usrp_reshape=True, as_c64=True)
+				N = samplearr.shape[1]
+				dtt = N / self.rx_config.sr0
+			DBGPRINT("tx start at {} MHz".format( f_use_abs * 1e-6, 4 ))
+			idx = 0
+			t_end = time.perf_counter() + dtt
+			self.self_mute = True  # the 5ms initial silence in composed samples also ensures this will have effect.
+			while idx < N:
+				if (N - idx) <= tx_batch_len:
+					tx_metadata.end_of_burst = True
+				tx_streamer.send(samplearr[0,idx:idx+tx_batch_len], tx_metadata)
+				idx += tx_batch_len
+			tx_metadata.end_of_burst = False
+			t_to_end = max(0, t_end - time.perf_counter())
+			time.sleep(t_to_end + 0.0e-3)
+			self.self_mute = False
+			DBGPRINT("tx end. sleep of {}/{} ms.".format( round(t_to_end*1e3, 2), round(dtt*1e3, 2) ))
 
 
 

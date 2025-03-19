@@ -48,7 +48,8 @@ def sub_socket_loop(sub_sock:zmq.Socket, sub_que:Queue, ichannel, parent_obj):
 			sub_que.put_nowait((ichannel, rcv_msg))
 		except zmq.Again:
 			pass
-		except:
+		except Exception as e:
+			DBGPRINT("Exception in zmq-subscribed socket loop: "+str(e))
 			break
 
 
@@ -155,7 +156,7 @@ class SkyModem:
 			except Empty:
 				continue
 			except Exception as e:
-				DBGPRINT("SkyModem Exception (skylink_reception_loop): ", e)
+				DBGPRINT("Exception (skylink_reception_loop): "+str(e))
 				self.close()
 				break
 			assert ichannel in range(num_virtual_channels)
@@ -202,7 +203,7 @@ class SkyModem:
 			except Empty:
 				continue
 			except Exception as e:
-				DBGPRINT("SkyModem Exception (sub_que_loop): ", e)
+				DBGPRINT("Exception (sub_que_loop): "+str(e))
 				self.close()
 				break
 			DBGPRINT("sub-zmq -> skylink-vc-{}. len: {}".format(ichannel, len(uplink_json)))

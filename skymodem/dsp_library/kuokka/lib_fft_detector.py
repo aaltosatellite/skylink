@@ -69,11 +69,11 @@ def get_frequency_search_space_indexing(fftlen, masklen, f_center_min, f_center_
 
 
 #@njit(cache=True)
-def create_fft_centering_statemx(fftlen, sps, f_center_search_map, mod_index, BT, c_stat_update, n_delay, fft_trigger_on_level, fft_trigger_off_level, avg0, var0, mask_mode, start_margin_mpr, end_margin_mpr):
+def create_fft_centering_statemx(fftlen, sps, f_center_search_map, mod_index, BT, c_stat_update, centering_delay_mpr, fft_trigger_on_level, fft_trigger_off_level, avg0, var0, mask_mode, start_margin_mpr, end_margin_mpr):
 	assert var0 > 0
 	assert fftlen >= 32
 	assert mask_mode in (0,1)
-	assert int(start_margin_mpr*fftlen) < n_delay
+	assert start_margin_mpr < centering_delay_mpr
 	assert len(f_center_search_map) == fftlen
 
 	masklen = get_masklen(fftlen=fftlen, sps=sps, mask_mode=mask_mode)
@@ -82,7 +82,7 @@ def create_fft_centering_statemx(fftlen, sps, f_center_search_map, mod_index, BT
 	statemx[0,0]  = fftlen
 	statemx[0,1]  = jumplen
 	statemx[0,2]  = c_stat_update
-	statemx[0,3]  = n_delay
+	statemx[0,3]  = int(centering_delay_mpr * fftlen)
 	statemx[0,4]  = fft_trigger_on_level
 	statemx[0,5]  = fft_trigger_off_level
 	statemx[0,6]  = int(masklen)
@@ -141,7 +141,7 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 	fftlen 			= int(statemx[0,0])
 	jumplen 		= int(statemx[0,1])
 	c_stat_update 	= statemx[0,2]
-	n_delay 		= int(statemx[0,3])
+	n_centering_delay = int(statemx[0,3])
 	trigger_on_lvl 	= statemx[0,4]
 	trigger_off_lvl = statemx[0,5]
 	masklen 		= int(statemx[0,6])
@@ -223,12 +223,12 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 		if trig_on:
 			center_f_arr[center_f_head] = f_switch-10
 
-		if (center_f_head-n_delay) >= 0:
-			if center_f_arr[center_f_head-n_delay] >= -0.5:
-				center_f_arr[center_f_head-n_delay] = -1.0
-			elif center_f_arr[center_f_head-n_delay] < -2.0:
-				f_side = int(center_f_arr[center_f_head-n_delay] + 10)
-				center_f_arr[center_f_head-n_delay] = f_center_arr[f_side]
+		if (center_f_head-n_centering_delay) >= 0:
+			if center_f_arr[center_f_head-n_centering_delay] >= -0.5:
+				center_f_arr[center_f_head-n_centering_delay] = -1.0
+			elif center_f_arr[center_f_head-n_centering_delay] < -2.0:
+				f_side = int(center_f_arr[center_f_head-n_centering_delay] + 10)
+				center_f_arr[center_f_head-n_centering_delay] = f_center_arr[f_side]
 		instr_arr[center_f_head,0] = running_avg
 		instr_arr[center_f_head,1] = running_var
 		instr_arr[center_f_head,2] = corrmax
@@ -248,7 +248,7 @@ def fft_detect_and_freq_determ(sample_arr, isample0, nsamples, center_f_arr, cen
 	statemx[0,32] = on_counter
 	statemx[4,:] = window.real
 	statemx[5,:] = window.imag
-	return center_f_head, max(0, center_f_head - (n_delay + 1))   # demodulation head. (the demodulation stage should be given samples up to this head)
+	return center_f_head, max(0, center_f_head - (n_centering_delay + 1))   # demodulation head. (the demodulation stage should be given samples up to this head)
 
 
 
