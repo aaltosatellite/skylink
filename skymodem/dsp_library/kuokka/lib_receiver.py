@@ -1,10 +1,11 @@
+import pickle
 import time
 import numpy as np
 from .lib_demodulation import demodulation_sequence, create_DSD_statemx, DSD_buffer_roll
 from .lib_symsynching import create_classic_JPL_statemx
 from .lib_fft_detector import fft_detect_and_freq_determ, create_fft_centering_statemx, set_f_center_search_map, get_masklen
 from .lib_framing import create_deframer, deframe, RS_MAX_ENCODED_LEN, frame_packet, RS_MAX_PL_LEN
-from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples, get_frequency_search_map, get_doppler_low_high
+from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples, get_frequency_search_map, get_doppler_low_high, ints_to_bits
 from .lib_reedsolomon import get_default_rs
 from .lib_resampler import resampler_execute_stream, create_resampler
 
@@ -19,7 +20,7 @@ class ReceiverConfig:
 		self.bufferlen			= bufferlen
 		self.batch_maxlen		= batch_maxlen
 		# resampling ---------------------------------------
-		self.sps 				= 21			# ? sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Effect on performance seems suspiciously small...
+		self.sps 				= 19			# ? sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Effect on performance seems suspiciously small...
 		self.m_halflen 			= 21			# ? Determines resampling accuracy. Should be an odd integer larger than 9. Larger number increases both accuracy and computation cost.
 		self.n_banks 			= 64			# ~ Number of resampling banks. No huge effect on performance, and 64 seems good for all purposes.
 		self.rs_f_cutoff_coeff 	= 0.499			# ~ Lowpass associated with the resampling. In interval (0:0.5). 0.499 still enables some aliasing at edges.
@@ -283,7 +284,9 @@ def get_a_precompiling_sampleset(rx_config:ReceiverConfig, do_print=False):
 	rel_offset_raw = (rx_config.f_center-rx_config.f_tune) / sr0  #0.1 * (sps*baudrate/sr0)
 	rs_mx, rs_cfg = get_default_rs()
 	pl = np.random.randint(0,255, RS_MAX_PL_LEN-2)
-	bitstring = frame_packet(pl=pl, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
+	preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
+	frame_bits = frame_packet(pl=pl, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
+	bitstring = np.concatenate( (preamble_bits, frame_bits) )
 	transmission = make_samples(sps_f=sr0/baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=rx_config.mod_index, shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
 
 	n_fft_calibration = int(1.3 * rx_config.sr0 * (rx_config.fftlen*0.5) * (1 / rx_config.c_stat_update) / (rx_config.baudrate*rx_config.sps))
@@ -294,9 +297,11 @@ def get_a_precompiling_sampleset(rx_config:ReceiverConfig, do_print=False):
 		print("\t\t{} s for fft-calibration".format( round( n_fft_calibration/sr0 , 3 ) ))
 		print("\t\t{} s for transmission".format( round( len(transmission)/sr0, 3)))
 		print("\t\t{} s for margins".format( round(2.0, 3) ))
-	samples = radionoise(n=nsamples, sr=sr0, W_per_Hz=0.01/baudrate)
-	samples[i0:i0+len(transmission)] += transmission
-	return samples
+	noiseless = np.zeros(nsamples, dtype=np.complex128)
+	noiseless[i0:i0+len(transmission)] += transmission
+	noisePpHz = 0.01/baudrate
+	noise = radionoise(n=nsamples, sr=sr0, W_per_Hz=noisePpHz)
+	return noiseless, noise, noisePpHz
 
 
 def precompile_receiver(rx_config:ReceiverConfig, do_print=False):
@@ -305,8 +310,8 @@ def precompile_receiver(rx_config:ReceiverConfig, do_print=False):
 	t0 = time.perf_counter()
 	if do_print:
 		print("\t[Generating sampleset]")
-	samples = get_a_precompiling_sampleset(rx_config, do_print)
-	samples = np.array(samples, dtype=np.complex128)
+	noiseless, noise, noisePpHz = get_a_precompiling_sampleset(rx_config, do_print)
+	samples = np.array(noiseless+noise, dtype=np.complex128)
 	t1 = time.perf_counter()
 	nsamples = len(samples)
 	rx1 = Receiver(config=rx_config)
@@ -325,6 +330,18 @@ def precompile_receiver(rx_config:ReceiverConfig, do_print=False):
 		ret_pls2.extend(ret2)
 		c = c2
 	t2 = time.perf_counter()
+	#if not ((len(ret_pls1) == 1) and (len(ret_pls2) == 1)):
+	#	dd = {
+	#		"noiseless":noiseless,
+	#		"config":rx_config.__dict__,
+	#		"noisePpHz":noisePpHz,
+	#		"only_noise":noise
+	#	}
+	#	letters = "".join([chr(x) for x in np.random.randint(ord("A"), ord("Z")+1, 3)])
+	#	f = open("precompile_fail_samples_and_config_{}.pkl".format(letters), "wb")
+	#	f.write(pickle.dumps(dd))
+	#	f.close()
+	#	print("Repro data written for ",letters)
 	assert len(ret_pls1) == 1, len(ret_pls1)
 	assert len(ret_pls2) == 1, len(ret_pls2)
 	if do_print:

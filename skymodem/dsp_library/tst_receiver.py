@@ -274,6 +274,29 @@ def load_top_configs(dpath, minimum_version, fname_contains, mandatory_d_keys, t
 # ============================================================================================================================================================================================
 # ============================================================================================================================================================================================
 # ============================================================================================================================================================================================
+def test_precompilation_success_rate(N):
+	f_tune 		= 437.1e6
+	f_center 	= 437.125e6
+	sr0 		= 1e6
+	baudrate	= 9600
+	basic_config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
+	basic_config.sps 					= 21
+	basic_config.centering_delay_mpr 	= 5.0
+	basic_config.start_margin_mpr 		= 3.0
+	basic_config.end_margin_mpr 		= 1.0
+	basic_config.lp_cutoff_coeff 		= 0.63
+	basic_config.JPL_n_decay 			= 32
+	basic_config.synch_delay_mpr		= 16.0
+	# new default (but sps=21) fails at: 	36, 16, 165, 272, 45
+	# new default fails at: 				-
+	# old default fails at:					107, 10, 22, 34, 54, 283,
+	# old default (0.02 noise) fails at:	48, 82, 7, 14, 95, 40, 61, 83, 10, 268, 5, 21
+	# old default (0.005 noise) fails at:	1, 102, 68, 10, 15
+	# old default (0.0001 noise) fails at:	36, 37, 1, 89, 1, 11
+	for i in range(N):
+		print("precompile: {}/{}".format(i+1, N))
+		precompile_receiver(rx_config=basic_config, do_print=False)
+
 
 
 
@@ -628,12 +651,12 @@ def analyze_results_plot():
 #basic_test_A()
 #compare_default_optimod_4800()
 #compare_fftlens()
-compare_timings()
+#compare_timings()
 
 #analyze_results_plot()
 #optimizer_A()
 
-
+test_precompilation_success_rate(1000)
 
 
 
