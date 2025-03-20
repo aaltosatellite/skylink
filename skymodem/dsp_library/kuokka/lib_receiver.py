@@ -20,7 +20,7 @@ class ReceiverConfig:
 		self.bufferlen			= bufferlen
 		self.batch_maxlen		= batch_maxlen
 		# resampling ---------------------------------------
-		self.sps 				= 19			# ? sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Effect on performance seems suspiciously small...
+		self.sps 				= 21			# ? sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Effect on performance seems suspiciously small...
 		self.m_halflen 			= 21			# ? Determines resampling accuracy. Should be an odd integer larger than 9. Larger number increases both accuracy and computation cost.
 		self.n_banks 			= 64			# ~ Number of resampling banks. No huge effect on performance, and 64 seems good for all purposes.
 		self.rs_f_cutoff_coeff 	= 0.499			# ~ Lowpass associated with the resampling. In interval (0:0.5). 0.499 still enables some aliasing at edges.
@@ -30,7 +30,7 @@ class ReceiverConfig:
 		self.mod_index 			= 0.5			# P Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
 		self.BT 				= 0.5			# P Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering.
 		self.c_stat_update 		= 1/700.0		# ? Running average and variance of the fft-mask correlation are updated by this coeff, as per:  avg = avg + (measurement - avg) * c_stat_update
-		self.centering_delay_mpr	= 2.0 #5.0	# ! Center frequency estimate is collected for this many samples ahead of demodulation. TODO should be in symbols?
+		self.centering_delay_mpr	= 2.0 #5.0	# ! Center frequency estimate is collected for (centering_delay_mpr*fftlen) samples ahead of demodulation. TODO should be in symbols?
 		self.fft_trigger_on_level 	= 7.0		# ! Signal detection threshold in fft-mask correlation. Units in 'standard deviations above average' (non-software-optimizable?) (was 5.5)
 		self.fft_trigger_off_level 	= 2.0		# ! Signal off threshold in fft-mask correlation. Units in 'standard deviations above average' (non-software-optimizable?)
 		self.mask_mode 			= 1				# ! Type of correlation mask used in detection. 0: a vector of ones. 1: an empirically averaged mask. 1 should be more performant.
