@@ -141,13 +141,15 @@ def resampler_execute_stream(in_arr, ii0, nsamples, out_arr, io0, statemx): # no
 	assert np.iscomplexobj(statemx)
 	n_banks = len(statemx) - 3
 	tau, dtau, bf, b, mu, state = (statemx[n_banks + 1][0:6]).real
+	#fshift_phase = 1j * statemx[n_banks + 1][6].real			# this line, and the three below, would be an inbuilt frequency shifter, that needs an extra argument "fshift_nrm"
 	b = int(b)
 	y0,y1 = statemx[n_banks + 2][0:2]
 	window = statemx[n_banks]
 	rs_head = io0
 	for ii in range(ii0, ii0+nsamples):
 		window = np.roll(window, 1)
-		window[0] = in_arr[ii]
+		window[0] = in_arr[ii] #* np.exp(fshift_phase)
+		#fshift_phase += 2j*np.pi*fshift_nrm
 		while b < n_banks:
 			if state == RESAMP_STATE_BOUNDARY:
 				y1 = np.dot(window, statemx[0])
@@ -170,6 +172,7 @@ def resampler_execute_stream(in_arr, ii0, nsamples, out_arr, io0, statemx): # no
 		b = b - n_banks
 	statemx[n_banks] = window
 	statemx[n_banks + 1][0:6] = tau,dtau,bf,float(b),mu,state
+	#statemx[n_banks + 1][6] = fshift_phase.imag
 	statemx[n_banks + 2][0:2] = y0,y1
 	return rs_head
 

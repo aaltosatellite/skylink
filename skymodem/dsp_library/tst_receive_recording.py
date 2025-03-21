@@ -22,7 +22,7 @@ def receive_a_recording():
 
 	#samples = np.concatenate( (samples[0:300000], samples) )
 	baudrate			= 9600			# tx param
-	sps  				= 21			# todo measure final A against a spectrum of sps's....
+	sps  				= 10			# todo measure final A against a spectrum of sps's....
 	mod_index			= 0.5			# tx param
 	BT 					= 0.5
 	batch_maxlen 		= 6000
@@ -51,7 +51,7 @@ def receive_a_recording():
 	if True:
 		waterfall_mx(samples=samples, fftlen=1024, fft_jump=1024, srate=sr0, plot_and_show=True, y_is_time=True)
 		fftstate = rx.FFTstatemx
-		mask0 = fftstate[7,:]
+		mask0 = fftstate[6,:]
 		resampler = create_resampler(m_halflen=21, n_banks=64, r_rate=sps*baudrate/sr0, f_cutoff=0.499*sps*baudrate/sr0, allow_aliasing=False)
 		samples_rs = resampler_execute(samples=samples, statemx=resampler)
 		mx, extent, aspect = waterfall_mx(samples=samples_rs, fftlen=1024, fft_jump=1024, srate=sps*baudrate, plot_and_show=False, y_is_time=True)
@@ -109,13 +109,14 @@ def receive_a_recording():
 	print("Relative freq should be ~{}".format( round(expected_relative_f, 4) ))
 
 	for pl_bytes, pl_f in pl_list:
-		print(round(pl_f, 4), ":", len(pl_bytes), pl_bytes)
+		print(round(pl_f/(sps*baudrate), 4), ":", len(pl_bytes), pl_bytes)
 	xx = np.arange(len(rx.center_f_array))
 	fig = plt.figure(figsize=(14,14))
 	ax1 = fig.add_subplot(211)
 	ax2 = fig.add_subplot(212)
 
 	ax1.plot( xx, rx.center_f_array )
+	ax1.plot( xx, np.abs(rx.rs_array) / np.max(np.abs(rx.rs_array)) )
 	ax1.grid()
 
 	ax2.plot( xx, rx.fft_instr_array[:,0] )

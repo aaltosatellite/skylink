@@ -366,11 +366,18 @@ def radionoise(n, sr, W_per_Hz):
 # SAMPLE GENERATION ==========================================================================================================================================================================
 
 
-def get_doppler_low_high(f_center, v_relative, multiplier):
+@njit(cache=True)
+def freq_shift_phased(batch, sr, fdelta, phase0):
+	shifted = batch * np.exp(2j*np.pi*(fdelta/sr)*np.arange(len(batch)) + phase0*1j)
+	phase1 = (phase0 + 2*np.pi*(fdelta/sr)*len(batch)) % (2*np.pi)
+	return shifted, phase1
+
+
+def get_doppler_low_high(f_center, v_relative):
 	c = 299792458.0
 	df_doppler = f_center * (((c+abs(v_relative))/c) - 1)
-	f_center_min = f_center - df_doppler * multiplier
-	f_center_max = f_center + df_doppler * multiplier
+	f_center_min = f_center - df_doppler
+	f_center_max = f_center + df_doppler
 	return f_center_min, f_center_max
 
 
@@ -395,21 +402,6 @@ def determine_ftune_and_min_sr(f_center_min, f_center_max, max_signal_bandwidth)
 	return f_tune, minimum_samplerate
 
 
-def determine_min_resampled_rate(f_tune, f_center_min, f_center_max, signal_bandwidth):
-	assert f_tune > 0
-	assert signal_bandwidth > 0
-	assert f_center_max >= f_center_min
-	assert f_center_min > 0.5
-	f_center_mid = (f_center_min + f_center_max) / 2
-	f_center_span = f_center_max - f_center_min
-	side_band = (signal_bandwidth/2 + f_center_span/2) * 1.1 + 10e3
-	high_edge = f_center_mid + side_band
-	low_edge  = f_center_mid - side_band
-	f_nyq_new = max(abs(high_edge - f_tune), abs(low_edge - f_tune))
-	minimum_samplerate = f_nyq_new * 2
-	return minimum_samplerate
-
-
 def get_frequency_search_map(fftlen, f_min_nrm, f_max_nrm, assert_in_window=True):
 	assert f_min_nrm <= f_max_nrm
 	assert abs(f_max_nrm) < 1.0e3 #asserts the frequencies given were indeed normalized, not absolute.
@@ -425,8 +417,6 @@ def get_frequency_search_map(fftlen, f_min_nrm, f_max_nrm, assert_in_window=True
 			mapping[i] = 1
 	assert np.sum(mapping) > 0, mapping
 	return mapping
-
-
 
 
 def pll_df_std0_polyfit(c_freq, c_limit):

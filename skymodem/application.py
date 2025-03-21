@@ -291,7 +291,7 @@ class SkyModem:
 
 def get_receiver_config(f_center):
 	from dsp_library.kuokka.lib_tools import determine_ftune_and_min_sr
-	f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0, multiplier=2.0)
+	f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
 	f_tune, minimum_samplerate = determine_ftune_and_min_sr(f_center_min=f_center_min, f_center_max=f_center_max, max_signal_bandwidth=9600*4*1.2)
 	assert minimum_samplerate < 2e6
 	if minimum_samplerate > 1e6:

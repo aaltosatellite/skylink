@@ -110,7 +110,7 @@ def make_symbol_filters(sps, mod_index, sinc_limit=0.5, ntaps=None, window=False
 def filter_demodulation_experiment(nbits, sps, baudrate, mod_index, noiseSPD, filters, waterfall=False, do_print=True):
 	sr 			= baudrate * sps
 	bits = np.random.randint(0,2, nbits)*2 -1
-	signal_samples = make_samples(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=-1, shaper_n_taps=31)
+	signal_samples = make_samples(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=31)
 	nsignal = len(signal_samples)
 	nnoise = nsignal//2 + int(sps*0.333)
 	noise_samples = np.zeros(nnoise, dtype=np.complex128)
@@ -362,8 +362,8 @@ def measure_curve_by_sinc_limit():
 	curves = list()
 	As = list()
 	for ii,sinc_limit in enumerate(sinc_limit_arr):
-		filters = make_symbol_filters(sps=9, mod_index=0.7, sinc_limit=sinc_limit, ntaps=9+4, window=False, use_firwin=False)
-		A, rateio_curve = measure_A(sps=9, baudrate=9600, mod_index=0.7, noise_arr=noise_arr, n_rep=n_rep, filters=filters)
+		filters = make_symbol_filters(sps=9, mod_index=0.5, sinc_limit=sinc_limit, ntaps=9+4, window=False, use_firwin=False)
+		A, rateio_curve = measure_A(sps=9, baudrate=9600, mod_index=0.5, noise_arr=noise_arr, n_rep=n_rep, filters=filters)
 		print("#{} SL:{}   A:{}".format(ii, sinc_limit, A))
 		curves.append(rateio_curve)
 		As.append(A)

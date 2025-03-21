@@ -1,12 +1,11 @@
 import numpy as np
 from matplotlib import pyplot as plt
-import pickle
 import time
-from mtools.tools_dsp import waterfall_mx, create_resampler, resampler_execute
+from mtools.tools_dsp import waterfall_mx
 from kuokka.lib_fft_detector import create_fft_centering_statemx, fft_detect_and_freq_determ
 from kuokka.lib_pll_detector import create_frequency_mapper_statev, pll_detect_and_freq_determ
 from mtools.tools_dsp import create_pll_statevector, create_trigger_statevector, create_winstd_statemx
-from kuokka.lib_tools import radionoise, make_samples, get_frequency_search_map, get_doppler_low_high
+from kuokka.lib_tools import radionoise, make_samples, get_frequency_search_map
 
 
 
