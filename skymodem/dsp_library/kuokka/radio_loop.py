@@ -232,7 +232,7 @@ class RadioLoop:
 				DBGPRINT("(rx-#{})".format(n_rx_loops))
 			rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
 			if rx_ret != rx_buffer_len:
-				print("RECV RETURNED NON-FULL BUFFER WITH RET VALUE ",rx_ret)
+				DBGPRINT("RECV RETURNED NON-FULL BUFFER WITH RET VALUE ",rx_ret)
 				#assert rx_ret == rx_buffer_len
 			#if self.self_mute:
 			#	continue
