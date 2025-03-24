@@ -150,7 +150,7 @@ class RadioLoop:
 	def _get_transmit_frequency(self, as_offset:bool):
 		if self.frequency_following and ((time.monotonic() - self.last_verified_freq[1]) < 60.0) and (self.last_verified_freq[1] > 0):
 			f_offset = self.last_verified_freq[0]
-			f_recv_abs = f_offset + self.rx_config.f_tune
+			f_recv_abs = f_offset + self.rx_config.f_center
 			if self.use_doppler_correction:
 				f_use_abs, _ = doppler_correction(f_received=f_recv_abs, f_original=self.rx_config.f_center, f_at_target=self.rx_config.f_center)
 			else:
@@ -231,11 +231,13 @@ class RadioLoop:
 			if (n_rx_loops % 1000) == 0:
 				DBGPRINT("(rx-#{})".format(n_rx_loops))
 			rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
-			assert rx_ret == rx_buffer_len
+			if rx_ret != rx_buffer_len:
+				print("RECV RETURNED NON-FULL BUFFER WITH RET VALUE ",rx_ret)
+				#assert rx_ret == rx_buffer_len
 			#if self.self_mute:
 			#	continue
 			if not self._internal_sample_que.full():
-				self._internal_sample_que.put_nowait(recv_buffer[0,:].copy())
+				self._internal_sample_que.put_nowait(recv_buffer[0,:rx_ret].copy())
 			else:
 				DBGPRINT("WARNING: radio-to-process queue overflow!")
 				raise Exception("radio-loop: radio-to-process queue overflow.")
@@ -260,7 +262,7 @@ class RadioLoop:
 						#del self.own_recently_sent[rx_pl]
 						DBGPRINT("Discarded a self-reception.")
 						continue
-					DBGPRINT("Radio decoded a frame at {} MHz: \n\033[92m{}\033[0m\n".format(round( (self.rx_config.f_tune+rx_pl_f_offset)*1e-6, 4), rx_pl ))
+					DBGPRINT("Radio decoded a frame at {} MHz: \n\033[92m{}\033[0m\n".format(round( (self.rx_config.f_center+rx_pl_f_offset)*1e-6, 4), rx_pl ))
 					self.last_verified_freq = rx_pl_f_offset, time.monotonic()
 					if not self.que_radio_to_skylink.full():
 						self.que_radio_to_skylink.put_nowait(rx_pl)
