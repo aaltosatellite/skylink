@@ -7,7 +7,7 @@ from .lib_framing import create_deframer, deframe, RS_MAX_ENCODED_LEN, frame_pac
 from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples, get_frequency_search_map, get_doppler_low_high, ints_to_bits, freq_shift_phased
 from .lib_reedsolomon import get_default_rs
 from .lib_resampler import resampler_execute_stream, create_resampler
-
+from .lib_div_resampler import staged_resampler_execute_stream, create_staged_resampler
 
 class ReceiverConfig:
 	def __init__(self, sr0, baudrate, bufferlen, batch_maxlen, f_tune, f_center):
@@ -23,8 +23,8 @@ class ReceiverConfig:
 		self.baudrate			= baudrate		# Baudrate of the transmission. Has a definite effect on performance. More so if resampling rate is not adjusted.
 		# --------------------------------------------------
 		# resampling ---------------------------------------
-		self.sps 				= 10 #21		# ? sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
-		self.m_halflen 			= 15			# ? Determines resampling accuracy. Should be an (odd?) integer. Minimum size should be determined. Larger number increases both accuracy and computation cost. Has a severe effect on performance.
+		self.sps 				= 9 #21		# ? sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
+		self.m_halflen 			= 13			# ? Determines resampling accuracy. Should be an (odd?) integer. Minimum size should be determined. Larger number increases both accuracy and computation cost. Has a severe effect on performance.
 		self.n_banks 			= 64			# ~ Number of resampling banks. No huge effect on performance, and 64 seems good for all purposes.
 		self.rs_f_cutoff_coeff 	= 0.499			# ~ Lowpass associated with the resampling. In interval (0:0.5). 0.499 still enables some aliasing at edges.
 		# --------------------------------------------------
@@ -139,6 +139,8 @@ class Receiver:
 		self.dmdsynch_head 		= 0
 		self.bit_head 			= 0
 		self.resampler_statemx 	= np.zeros((2,2), dtype=np.float64)
+		self.rsmpl_mx1 			= np.zeros((2,2), dtype=np.float64)
+		self.rsmpl_mx2 			= np.zeros((2,2), dtype=np.float64)
 		self.FFTstatemx 		= np.zeros((2,2), dtype=np.float64)
 		self.JPLstatemx 		= np.zeros((2,2), dtype=np.float64)
 		self.DSDstatemx 		= np.zeros((2,2), dtype=np.float64)
@@ -148,7 +150,7 @@ class Receiver:
 		self.rs_cfg 			= rs_cfg
 		self.centering_fdelta_nrm = 0.0
 		self.centering_phase 	= 0.0
-		self.dt_array			= np.zeros(5, dtype=np.float64)
+		self.dt_array			= np.zeros(6, dtype=np.float64)
 		self._setup()
 		# This series of baudrate switches pre-generates correlation masks to memory.
 		_br = self.config.baudrate
@@ -164,6 +166,9 @@ class Receiver:
 		f_center_search_map = config.get_f_center_search_map(is_precentered=True)
 		self.centering_fdelta_nrm = -(config.f_center - config.f_tune) / config.sr0
 		self.resampler_statemx = create_resampler(m_halflen=config.m_halflen, n_banks=config.n_banks, r_rate=config.get_r_rate(), f_cutoff=f_cutoff, allow_aliasing=False)
+		rsmpl_mx1, rsmpl_mx2 = create_staged_resampler(halflen_div=config.m_halflen+2, halflen_f=config.m_halflen-2, r_rate=config.get_r_rate(), n_banks=config.n_banks, f_cutoff=f_cutoff, allow_aliasing=False)
+		self.rsmpl_mx1 = rsmpl_mx1
+		self.rsmpl_mx2 = rsmpl_mx2
 		self.FFTstatemx = create_cont_center_statemx(fftlen=config.fftlen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index,
 														BT = config.BT, centering_delay_mpr=config.centering_delay_mpr, c_center_decay=config.c_center_decay)
 		self.JPLstatemx = create_classic_JPL_statemx(N_eps=config.sps, n_decay=config.JPL_n_decay)
@@ -195,22 +200,25 @@ class Receiver:
 
 		t0 = time.perf_counter()
 		batch2, self.centering_phase = freq_shift_phased(batch, sr=1.0, fdelta=self.centering_fdelta_nrm, phase0=self.centering_phase)
-		rs_head_new = resampler_execute_stream(in_arr=batch2, ii0=0, nsamples=len(batch2), out_arr=self.rs_array, io0=self.rs_head, statemx=self.resampler_statemx)
 		self.dt_array[0] += (time.perf_counter() - t0)
+
+		t0 = time.perf_counter()
+		rs_head_new = staged_resampler_execute_stream(in_arr=batch2, ii0=0, nsamples=len(batch2), out_arr=self.rs_array, io0=self.rs_head, mx1=self.rsmpl_mx1, mx2=self.rsmpl_mx2)
+		self.dt_array[1] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()
 		center_f_head_new, demodulation_head_new = fft_continuous_f_center(sample_arr=self.rs_array, isample0=self.rs_head, nsamples=rs_head_new - self.rs_head,
 																				center_f_arr=self.center_f_array, center_f_head0=self.center_f_head,
 																				statemx=self.FFTstatemx, instr_arr=self.fft_instr_array)
 		##self.center_f_array[self.demodulation_head:demodulation_head_new] = 0.152
-		self.dt_array[1] += (time.perf_counter() - t0)
+		self.dt_array[2] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()
 		dmdsynch_head_new, bit_head_new = demodulation_sequence(rs_arr=self.rs_array, centerf_arr=self.center_f_array, i_rs0=self.demodulation_head,
 																nsamples=demodulation_head_new - self.demodulation_head, dmd_arr=self.dmd_array, synch_arr=self.synch_array,
 																dmdsynch_head0=self.dmdsynch_head, JPLstatemx=self.JPLstatemx, demodmx=self.DSDstatemx,
 																bitarr=self.bit_array, bitfarr=self.bit_f_array, bit_head0=0)
-		self.dt_array[2] += (time.perf_counter() - t0)
+		self.dt_array[3] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()
 		if bit_head_new > 0:
@@ -221,7 +229,7 @@ class Receiver:
 				payloads, payload_delimits, payload_frequencies = deframe(bits=bits, bit_frequencies=bit_freqs, deframer_mx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
 				if len(payload_delimits) > 0:
 					ret = self._split_payloads(payloads=payloads, delimits=payload_delimits, frequencies=payload_frequencies)
-		self.dt_array[3] += (time.perf_counter() - t0)
+		self.dt_array[4] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()
 		self.rs_head = rs_head_new
@@ -233,7 +241,7 @@ class Receiver:
 			self._buffer_roll_1()
 		if self.dmdsynch_head >= self.buffer_roll_limit:
 			self._buffer_roll_2()
-		self.dt_array[4] += (time.perf_counter() - t0)
+		self.dt_array[5] += (time.perf_counter() - t0)
 
 		if give_bits:
 			return bits

@@ -160,10 +160,12 @@ def speed_printout(dt_array, t_total, nsamples, sr0):
 	print("\tovermatch:      {}".format( round(overmatch, 2) ))
 	print("\tbudget use:     {} %".format( round( 100*budget_fraction , 2) ))
 	print("\tcpu core use:   {} %".format( round( 100*cpu_fraction , 2) ))
-	print("\t\tpart 1:            {} %".format( round( 100*dt_array[0]/np.sum(dt_array) , 2) ))
-	print("\t\tpart 2:            {} %".format( round( 100*dt_array[1]/np.sum(dt_array) , 2) ))
-	print("\t\tpart 3:            {} %".format( round( 100*dt_array[2]/np.sum(dt_array) , 2) ))
-	print("\t\tpart 4:            {} %".format( round( 100*dt_array[3]/np.sum(dt_array) , 2) ))
+	for i_dt in range(len(dt_array)):
+		print("\t\tpart {}:            {} %".format(i_dt+1, round( 100*dt_array[i_dt]/np.sum(dt_array) , 2) ))
+	#print("\t\tpart 1:            {} %".format( round( 100*dt_array[0]/np.sum(dt_array) , 2) ))
+	#print("\t\tpart 2:            {} %".format( round( 100*dt_array[1]/np.sum(dt_array) , 2) ))
+	#print("\t\tpart 3:            {} %".format( round( 100*dt_array[2]/np.sum(dt_array) , 2) ))
+	#print("\t\tpart 4:            {} %".format( round( 100*dt_array[3]/np.sum(dt_array) , 2) ))
 	print("\t\tparts of total:    {} %".format( round( 100*np.sum(dt_array)/t_total , 2) ))
 	print("="*50)
 
@@ -446,12 +448,13 @@ def optimizer_A():
 	rx_config_basis.mod_index = mod_index
 	rx_config_basis.BT = BT
 	attrname_array_d = {
-		"sps": 				    [6,7,8,9,10,12,13,14,15,16,17,18,19,20,21,22,23,25,26],
+		"sps": 				    [6,7,8,9,10,12,13,14,15,16,17,18,19,20,22],
 		"lp_cutoff_coeff" :     [float(x) for x in np.linspace(0.8,1.1, 128) * 0.630],
 		"centering_delay_mpr" : [float(x) for x in np.linspace(0.1,2.0, 128) * 2.0],
 		"c_center_decay" :      [1-1/int(x) for x in np.geomspace(3,100, 32)],
 		"synch_delay_mpr" :     [float(x) for x in np.linspace(0.1,2.0, 128) * 18.0],
 		"JPL_n_decay" :         [int(x)   for x in np.linspace(0.6,2.0, 128) * 32],
+		"m_halflen" :           [10,12,13,15,17,19],
 	}
 
 	basisA = 0.0
@@ -489,8 +492,10 @@ def analyze_results_plot():
 	results = sorted(results, key=lambda k: k["A"], reverse=True)
 
 	#results = [r for r in results if r["n_payloads"] > 32]
-	results = [r for r in results if r["A"] > 1.05e-5]
-	results = [r for r in results if r["avg_delay"] < 0.02]
+	#results = [r for r in results if r["A"] > 1.0e-5]
+	#results = [r for r in results if r["avg_delay"] < 0.025]
+	#results = [r for r in results if r["rx_config"]["sps"] <= 10]
+	#results = [r for r in results if r["rx_config"]["m_halflen"] <= 13]
 
 	print("Loaded {} results".format(len(results)))
 	print("--- top-5 ----------------------------------------------")
@@ -502,60 +507,65 @@ def analyze_results_plot():
 
 	for res in results[0:4]:
 		print("(", res["A"], ")", end=" ")
-		for kname in ["sps", "lp_cutoff_coeff", "centering_delay_mpr", "c_center_decay", "synch_delay_mpr", "JPL_n_decay"]:
+		for kname in ["sps", "lp_cutoff_coeff", "centering_delay_mpr", "c_center_decay", "synch_delay_mpr", "JPL_n_decay", "m_halflen"]:
 			print(kname, ":", res["rx_config"][kname], end=",  ")
 		print("")
 
 	A_array = [d["A"] for d in results]
-	delay_array = list()
-	for d in results:
-		if "avg_delay" in d:
-			delay_array.append(d["avg_delay"])
-		else:
-			delay_array.append(0)
+	color_arr = [d["rx_config"]["m_halflen"] for d in results]
+	delay_array = [d["avg_delay"] for d in results]
+	color_arr = delay_array
+
+	parameter_names = ["sps", "lp_cutoff_coeff", "centering_delay_mpr", "c_center_decay", "synch_delay_mpr", "JPL_n_decay", "m_halflen"]
 	parameter_arrays = dict()
-	for parameter_name in ["sps", "lp_cutoff_coeff", "centering_delay_mpr", "c_center_decay", "synch_delay_mpr", "JPL_n_decay"]:
+	for parameter_name in parameter_names:
 		parameter_arrays[parameter_name] = [d["rx_config"][parameter_name] for d in results]
 
 	#plot_params = ["lp_cutoff_coeff", "centering_delay_mpr"]
-	plot_params = ["sps", "lp_cutoff_coeff", "centering_delay_mpr", "c_center_decay", "synch_delay_mpr", "JPL_n_decay"]
-	fig1 = plt.figure(figsize=(18,11))
-	ax1 = fig1.add_subplot(231)
-	ax2 = fig1.add_subplot(232)
-	ax3 = fig1.add_subplot(233)
-	ax4 = fig1.add_subplot(234)
-	ax5 = fig1.add_subplot(235)
-	ax6 = fig1.add_subplot(236)
+	plot_params = parameter_names
+	fig1 = plt.figure(figsize=(18,14))
+	ax1 = fig1.add_subplot(331)
+	ax2 = fig1.add_subplot(332)
+	ax3 = fig1.add_subplot(333)
+	ax4 = fig1.add_subplot(334)
+	ax5 = fig1.add_subplot(335)
+	ax6 = fig1.add_subplot(336)
+	ax7 = fig1.add_subplot(337)
 
-	ax1.scatter(parameter_arrays[plot_params[0]], A_array)
+	ax1.scatter(parameter_arrays[plot_params[0]], A_array, c=color_arr)
 	ax1.set_xlabel(plot_params[0])
 	ax1.set_ylabel("A")
 	ax1.grid()
 
-	ax2.scatter(parameter_arrays[plot_params[1]], A_array)
+	ax2.scatter(parameter_arrays[plot_params[1]], A_array, c=color_arr)
 	ax2.set_xlabel(plot_params[1])
 	ax2.set_ylabel("A")
 	ax2.grid()
 
-	ax3.scatter(parameter_arrays[plot_params[2]], A_array)
+	ax3.scatter(parameter_arrays[plot_params[2]], A_array, c=color_arr)
 	ax3.set_xlabel(plot_params[2])
 	ax3.set_ylabel("A")
 	ax3.grid()
 
-	ax4.scatter(parameter_arrays[plot_params[3]], A_array)
+	ax4.scatter(parameter_arrays[plot_params[3]], A_array, c=color_arr)
 	ax4.set_xlabel(plot_params[3])
 	ax4.set_ylabel("A")
 	ax4.grid()
 
-	ax5.scatter(parameter_arrays[plot_params[4]], A_array)
+	ax5.scatter(parameter_arrays[plot_params[4]], A_array, c=color_arr)
 	ax5.set_xlabel(plot_params[4])
 	ax5.set_ylabel("A")
 	ax5.grid()
 
-	ax6.scatter(parameter_arrays[plot_params[5]], A_array)
+	ax6.scatter(parameter_arrays[plot_params[5]], A_array, c=color_arr)
 	ax6.set_xlabel(plot_params[5])
 	ax6.set_ylabel("A")
 	ax6.grid()
+
+	ax7.scatter(parameter_arrays[plot_params[6]], A_array, c=color_arr)
+	ax7.set_xlabel(plot_params[6])
+	ax7.set_ylabel("A")
+	ax7.grid()
 
 	fig1.set_layout_engine("tight")
 
@@ -595,7 +605,7 @@ def analyze_results_plot():
 	ax33 = fig3.add_subplot(223)
 	ax34 = fig3.add_subplot(224)
 
-	ax31.scatter(A_array, delay_array)
+	ax31.scatter(A_array, delay_array, c=color_arr)
 	ax31.set_xlabel("A")
 	ax31.set_ylabel("delay")
 	ax31.grid()

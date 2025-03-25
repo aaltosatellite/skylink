@@ -22,21 +22,23 @@ def receive_a_recording():
 
 	#samples = np.concatenate( (samples[0:300000], samples) )
 	baudrate			= 9600			# tx param
-	sps  				= 10			# todo measure final A against a spectrum of sps's....
+	#sps  				= 10			# todo measure final A against a spectrum of sps's....
 	mod_index			= 0.5			# tx param
 	BT 					= 0.5
-	batch_maxlen 		= 6000
+	batch_maxlen 		= 1024*8
 	f_tune				= 437.1e6
 	f_center			= 437.00e6 + 125e3
 
 	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * (fshift0+(f_center-f_tune)))
-	expected_relative_f = (f_center-f_tune) / (baudrate*sps)
+
 
 	rx_config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=3400000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
-	rx_config.sps 					= sps
-	rx_config.lp_cutoff_coeff 		= 0.625 #0.625
+	#rx_config.sps 					= sps
 	rx_config.mod_index				= mod_index
 	rx_config.BT					= BT
+	sps = rx_config.sps
+
+	expected_relative_f = (f_center-f_tune) / (baudrate*sps)
 
 	precompile_receiver(rx_config=rx_config, do_print=True)
 	rx = Receiver(config=rx_config)
@@ -96,10 +98,13 @@ def receive_a_recording():
 	print("\tovermatch:      {}".format( round(overmatch, 2) ))
 	print("\tbudget use:     {} %".format( round( 100*budget_fraction , 2) ))
 	print("\tcpu core use:   {} %".format( round( 100*cpu_fraction , 2) ))
-	print("\t\tpart 1:            {} %".format( round( 100*rx.dt_array[0]/np.sum(rx.dt_array) , 2) ))
-	print("\t\tpart 2:            {} %".format( round( 100*rx.dt_array[1]/np.sum(rx.dt_array) , 2) ))
-	print("\t\tpart 3:            {} %".format( round( 100*rx.dt_array[2]/np.sum(rx.dt_array) , 2) ))
-	print("\t\tpart 4:            {} %".format( round( 100*rx.dt_array[3]/np.sum(rx.dt_array) , 2) ))
+	for i_dt in range(len(rx.dt_array)):
+		print("\t\tpart {}:            {} %".format(i_dt+1, round( 100*rx.dt_array[i_dt]/np.sum(rx.dt_array) , 2) ))
+	#print("\t\tpart 1:            {} %".format( round( 100*rx.dt_array[0]/np.sum(rx.dt_array) , 2) ))
+	#print("\t\tpart 2:            {} %".format( round( 100*rx.dt_array[1]/np.sum(rx.dt_array) , 2) ))
+	#print("\t\tpart 3:            {} %".format( round( 100*rx.dt_array[2]/np.sum(rx.dt_array) , 2) ))
+	#print("\t\tpart 4:            {} %".format( round( 100*rx.dt_array[3]/np.sum(rx.dt_array) , 2) ))
+	print("\t\tparts of total:    {} %".format( round( 100*np.sum(rx.dt_array)/dt_total , 2) ))
 	print("="*50)
 
 	print("Got {} bits".format(len(bits)))
