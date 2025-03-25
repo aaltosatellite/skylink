@@ -23,26 +23,26 @@ class ReceiverConfig:
 		self.baudrate			= baudrate		# Baudrate of the transmission. Has a definite effect on performance. More so if resampling rate is not adjusted.
 		# --------------------------------------------------
 		# resampling ---------------------------------------
-		self.sps 				= 9 #21		# ? sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
-		self.m_halflen 			= 13			# ? Determines resampling accuracy. Should be an (odd?) integer. Minimum size should be determined. Larger number increases both accuracy and computation cost. Has a severe effect on performance.
-		self.n_banks 			= 64			# ~ Number of resampling banks. No huge effect on performance, and 64 seems good for all purposes.
-		self.rs_f_cutoff_coeff 	= 0.499			# ~ Lowpass associated with the resampling. In interval (0:0.5). 0.499 still enables some aliasing at edges.
+		self.sps 				= 15 #21		# ! sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
+		self.m_halflen 			= 12			# ! Determines resampling accuracy. Should be an (odd?) integer. Minimum size should be determined. Larger number increases both accuracy and computation cost. Has a severe effect on performance.
+		self.n_banks 			= 64			# - Number of resampling banks. No huge effect on performance, and 64 seems good for all purposes.
+		self.rs_f_cutoff_coeff 	= 0.499			# - Lowpass associated with the resampling. In interval (0:0.5). 0.499 still enables some aliasing at edges.
 		# --------------------------------------------------
 		# fft detection ------------------------------------
-		self.fftlen 			= 1024			# ? Length of the fft window in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
-		self.mod_index 			= 0.5			# P Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
-		self.BT 				= 0.5			# P Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering.
-		self.centering_delay_mpr= 2.0 #2.0		# ! Center frequency estimate is collected for (centering_delay_mpr*fftlen) samples ahead of demodulation. TODO should be in symbols?
-		self.c_center_decay		= 0.95 #0.95	# ! Exponential decay factor of the center frequency correlation sum.
-		self.doppler_velocity	= 7500.0*2.0	# ~ Determines the frequency band above and below the center frequency where the demodulator looks for signals.
+		self.fftlen 			= 1024			# ! Length of the fft window in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
+		self.mod_index 			= 0.5			# - Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
+		self.BT 				= 0.5			# - Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering.
+		self.centering_delay_mpr= 2.5 #2.0		# ! Center frequency estimate is collected for (centering_delay_mpr*fftlen) samples ahead of demodulation. TODO should be in symbols?
+		self.c_center_decay		= 0.94 #0.95	# ! Exponential decay factor of the center frequency correlation sum.
+		self.doppler_velocity	= 7500.0*2.0	# v Determines the frequency band above and below the center frequency where the demodulator looks for signals.
 		# --------------------------------------------------
 		# JPL synchronizer ---------------------------------
-		self.JPL_n_decay 		= 30.0 #40		# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
+		self.JPL_n_decay 		= 30.0 #40		# ~ How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
 		# --------------------------------------------------
 		# demodulation -------------------------------------
-		self.lp_ntaps			= 161			# ? number of taps in the low-pass filter in demodulation
-		self.lp_cutoff_coeff	= 0.600 #0.583	# ! cutoff frequency of the low-pass filter, as multiples of baudrate
-		self.synch_delay_mpr	= 10.0 #20		# ! demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
+		self.lp_ntaps			= 161			# - number of taps in the low-pass filter in demodulation
+		self.lp_cutoff_coeff	= 0.600 #0.583	# - cutoff frequency of the low-pass filter, as multiples of baudrate
+		self.synch_delay_mpr	= 10.0 #20		# ~ demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
 		# --------------------------------------------------
 		# framing ------------------------------------------
 		self.use_scrambler 		= True
@@ -70,9 +70,8 @@ class ReceiverConfig:
 		assert type(self.batch_maxlen) == int
 		assert 2 < self.sps <= 100
 		assert type(self.sps) == int
-		assert 5 < self.m_halflen < 42
+		assert 4 < self.m_halflen < 42
 		assert type(self.m_halflen) == int
-		assert (self.m_halflen%2) == 1
 		assert 24 < self.n_banks < 240
 		assert type(self.n_banks) == int
 		assert 0 < self.rs_f_cutoff_coeff < 0.5

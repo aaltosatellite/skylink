@@ -106,9 +106,9 @@ class RadioLoop:
 		DBGPRINT("usrp TX tune-f:     {} MHz".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
 		self.rx 				= Receiver(config=self.rx_config)
 		#self.rx_thread 		= threading.Thread(target=self._recording_rx_loop,    args=(1024*4,), daemon=True) #TODO bufferlen as setting?
-		self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 1024*4), daemon=True) #TODO bufferlen as setting?
+		self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 1024*2), daemon=True) #TODO bufferlen as setting?
 		self.rx_process_thread 	= threading.Thread(target=self._rx_process_loop, args=tuple(),      daemon=True)
-		self.tx_thread 			= threading.Thread(target=self._usrp_tx_loop,    args=(usrp, 1024*4), daemon=True) #TODO bufferlen as setting?
+		self.tx_thread 			= threading.Thread(target=self._usrp_tx_loop,    args=(usrp, 1024*2), daemon=True) #TODO bufferlen as setting?
 		self.on = True
 		self.rx_thread.start()
 		self.rx_process_thread.start()
@@ -234,8 +234,8 @@ class RadioLoop:
 			if rx_ret != rx_buffer_len:
 				DBGPRINT("RECV RETURNED NON-FULL BUFFER WITH RET VALUE "+str(rx_ret))
 				#assert rx_ret == rx_buffer_len
-			#if self.self_mute:
-			#	continue
+			if self.self_mute:
+				continue
 			if not self._internal_sample_que.full():
 				self._internal_sample_que.put_nowait(recv_buffer[0,:rx_ret].copy())
 			else:
@@ -303,7 +303,7 @@ class RadioLoop:
 				idx += tx_batch_len
 			tx_metadata.end_of_burst = False
 			t_to_end = max(0, t_end - time.perf_counter())
-			time.sleep(t_to_end + 0.0e-3)
+			time.sleep(t_to_end + 1.0e-3)
 			self.self_mute = False
 			DBGPRINT("tx end. sleep of {}/{} ms.".format( round(t_to_end*1e3, 2), round(dtt*1e3, 2) ))
 
