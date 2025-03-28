@@ -15,7 +15,8 @@ def record():
 
 	sdr.setSampleRate(SOAPY_SDR_RX, 0, sr0)
 	sdr.setFrequency(SOAPY_SDR_RX, 0, f_center)
-	print("Gain Range: {}".format( sdr.getGainRange()))
+	print("Gain Range: {}".format( sdr.getGainRange(SOAPY_SDR_RX) ))
+	#sdr.setGain(SOAPY_SDR_RX, 40)
 	#txStream = sdr.setupStream(SOAPY_SDR_TX, SOAPY_SDR_CF32)
 	#sdr.writeStream()
 
