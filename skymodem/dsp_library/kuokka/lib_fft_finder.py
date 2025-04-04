@@ -1,15 +1,15 @@
 import numpy as np
 from numba import njit, objmode
-from .lib_tools import make_samples
+from .lib_tools import make_samples, njit_objmode_fft
 
 
 _fft_mask_dict = dict()
 
 
-def construct_fft_mask(sps, mod_index, BT, fftlen, masklen, nn):
+def construct_fft_mask(sps, mod_index, BT_rx_match, fftlen, masklen, nn):
 	for key,val in _fft_mask_dict.items():
 		k_sps, k_mod_idx, k_BT, k_fftlen, k_masklen, k_nn = key
-		if (sps == k_sps) and (mod_index == k_mod_idx) and (BT == k_BT) and (fftlen == k_fftlen) and (masklen == k_masklen) and (nn <= k_nn):
+		if (sps == k_sps) and (mod_index == k_mod_idx) and (BT_rx_match == k_BT) and (fftlen == k_fftlen) and (masklen == k_masklen) and (nn <= k_nn):
 			return val
 	assert (masklen % 2) == 1
 	nbits = int((fftlen*6 + sps*3 +1) / sps) + 1
@@ -17,7 +17,7 @@ def construct_fft_mask(sps, mod_index, BT, fftlen, masklen, nn):
 	n_stacked = 0
 	while n_stacked < nn:
 		bits = np.random.randint(0,2, nbits)*2 - 1
-		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=8*sps+1)
+		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_mode=1, shaper_BT_prod=BT_rx_match, shaper_n_taps=8*sps+1)
 		i0 = np.random.randint(1,int(sps*2))
 		n_snippets = int((len(samples)-i0)/fftlen) -1
 		assert n_snippets > 1
@@ -32,7 +32,7 @@ def construct_fft_mask(sps, mod_index, BT, fftlen, masklen, nn):
 	#mask = mask - np.min(mask)
 	mask = mask / np.max(mask)
 	#print("[Constructed fft mask in {} ms]".format(round(1e3*T_construct,1)))
-	_fft_mask_dict[ (sps, mod_index, BT, fftlen, masklen, nn) ] = mask
+	_fft_mask_dict[ (sps, mod_index, BT_rx_match, fftlen, masklen, nn) ] = mask
 	return mask
 
 
@@ -41,7 +41,7 @@ def get_empiric_masklen(fftlen, sps): #TODO this should be a function of mod_idx
 
 
 #@njit(cache=True)
-def create_cont_center_statemx(fftlen, sps, f_center_search_map, mod_index, BT, centering_delay_mpr, c_center_decay):
+def create_cont_center_statemx(fftlen, sps, f_center_search_map, mod_index, BT_rx_match, centering_delay_mpr, c_center_decay):
 	assert fftlen >= 32
 	assert len(f_center_search_map) == fftlen
 	assert 0.6 < c_center_decay < 1.0
@@ -60,7 +60,7 @@ def create_cont_center_statemx(fftlen, sps, f_center_search_map, mod_index, BT, 
 	statemx[2,:]  = 0.0		# fft mask-correlation
 	statemx[3,:]  = 0.0		# window (real) (the only reason this matrix would be complex...)
 	statemx[4,:]  = 0.0		# window (imag) (the only reason this matrix would be complex...)
-	statemx[5, 0:masklen]  	+= construct_fft_mask(sps=sps, mod_index=mod_index, BT=BT, fftlen=fftlen, masklen=masklen, nn=1000) # empiric mask
+	statemx[5, 0:masklen]  	+= construct_fft_mask(sps=sps, mod_index=mod_index, BT_rx_match=BT_rx_match, fftlen=fftlen, masklen=masklen, nn=1000) # empiric mask
 	statemx[6,:]  = f_center_search_map
 	return statemx
 
@@ -70,14 +70,6 @@ def set_f_center_search_map(statemx, search_map):
 	assert len(search_map) == statemx.shape[1]
 	statemx[6,:] = search_map
 	statemx[2,:] = 0
-
-
-@njit(cache=True)
-def compute_fft(x):
-	#y = np.zeros_like(x, dtype=np.complex128)
-	with objmode(y='complex128[:]'):
-		y = np.complex128(np.fft.fftshift(np.fft.fft(x)))
-	return y
 
 
 @njit(cache=True)
@@ -100,7 +92,7 @@ def fft_continuous_f_center(sample_arr, isample0, nsamples, center_f_arr, center
 		idx += 1
 		if idx == fftlen:
 			idx = fftlen - jumplen
-			fft = np.abs(compute_fft(window))
+			fft = np.abs(njit_objmode_fft(window))
 			if jumplen < fftlen:
 				window = np.roll(window, -jumplen)
 			for i0 in range(fftlen -masklen +1):

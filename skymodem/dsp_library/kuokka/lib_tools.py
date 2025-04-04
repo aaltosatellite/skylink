@@ -1,5 +1,6 @@
 import numpy as np
-from numba import njit, prange
+from numba import njit, prange, objmode
+import time
 
 
 #DEFAULT_SYNCHWORD = 0x930B51DE
@@ -231,7 +232,7 @@ def CC1125_DEV_M_E_for_peak_deviation(f_dev):
 
 # SAMPLE GENERATION ==========================================================================================================================================================================
 # SAMPLE GENERATION ==========================================================================================================================================================================
-GAUSS_STD_PER_HALFPOINTS = 1 / ((np.log(2) * 2) ** 0.5)
+GAUSS_STD_PER_HALFPOINTS = 1 / (2*np.sqrt(2*np.log(2)))
 @njit(cache=True)
 def gauss_curve(std, x):
 	a = 1/(std*np.sqrt(2*np.pi))
@@ -313,7 +314,7 @@ def fm_mod(f_signal_offset, peak_deviation, modulator):
 
 
 #@njit(cache=True)
-def make_samples(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.8, shaper_n_taps=301, n_silence_start=0, n_silence_end=0):
+def make_samples(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0):
 	assert abs(f_offset) < 0.5
 	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
 	# Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
@@ -366,6 +367,59 @@ def radionoise(n, sr, W_per_Hz):
 # SAMPLE GENERATION ==========================================================================================================================================================================
 
 
+
+
+
+
+
+
+# FFT ========================================================================================================================================================================================
+# FFT ========================================================================================================================================================================================
+@njit(cache=True)
+def njit_objmode_fft(x):
+	#y = np.zeros_like(x, dtype=np.complex128)
+	with objmode(y='complex128[:]'):
+		y = np.complex128(np.fft.fftshift(np.fft.fft(x)))
+	return y
+
+
+def time_fft_n(fftlen, nrep):
+	s = np.random.normal(0,1, fftlen) + np.random.normal(0,1,fftlen)*1j
+	njit_objmode_fft(s)
+	njit_objmode_fft(s)
+	t0 = time.perf_counter()
+	for _ in range(nrep):
+		x = njit_objmode_fft(s)
+	dt = (time.perf_counter() - t0) / nrep
+	return dt
+
+
+def choose_fftlen(len_ideal, window_halfwid):
+	assert len_ideal > 12
+	assert window_halfwid >= 1
+	assert window_halfwid < len_ideal
+	candidates = [x for x in range(int(len_ideal-window_halfwid), int(len_ideal+window_halfwid)) if (x%2)==0]
+	best_speed = 0.0
+	best_len = int(len_ideal)
+	for l in candidates:
+		dt = time_fft_n(fftlen=l, nrep=160)
+		speed = l/dt
+		if speed > best_speed:
+			best_speed = speed
+			best_len = l
+	return best_len, best_speed
+# FFT ========================================================================================================================================================================================
+# FFT ========================================================================================================================================================================================
+
+
+
+
+
+
+
+
+# FREQUENCY MANAGEMENT ==========================================================================================================================================================================
+# FREQUENCY MANAGEMENT ==========================================================================================================================================================================
 @njit(cache=True)
 def freq_shift_phased(batch, sr, fdelta, phase0):
 	shifted = batch * np.exp(2j*np.pi*(fdelta/sr)*np.arange(len(batch)) + phase0*1j)
@@ -417,6 +471,11 @@ def get_frequency_search_map(fftlen, f_min_nrm, f_max_nrm, assert_in_window=True
 			mapping[i] = 1
 	assert np.sum(mapping) > 0, mapping
 	return mapping
+# FREQUENCY MANAGEMENT ==========================================================================================================================================================================
+# FREQUENCY MANAGEMENT ==========================================================================================================================================================================
+
+
+
 
 
 def pll_df_std0_polyfit(c_freq, c_limit):
