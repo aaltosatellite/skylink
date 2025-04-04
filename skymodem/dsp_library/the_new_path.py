@@ -40,7 +40,7 @@ def test_centering_masks(nbits, sps, baudrate, mod_index, noiseSPD):
 	samples = samples + radionoise(n=nsamples, sr=sr, W_per_Hz=noiseSPD)
 
 	masklen = int(2.5 * 0.5 * 1024 / sps)*2 +1
-	mask = construct_fft_mask(sps=sps, mod_index=mod_index, BT=-1, fftlen=1024, masklen=masklen, nn=1000)
+	mask = construct_fft_mask(sps=sps, mod_index=mod_index, BT_=-1, fftlen=1024, masklen=masklen, nn=1000)
 	mask = mask - np.average(mask)
 	classic_mask = np.ones( int(0.5 * 1024 / sps)*2 +1, dtype=np.float64 )
 

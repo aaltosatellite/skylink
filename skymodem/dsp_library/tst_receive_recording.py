@@ -24,9 +24,9 @@ def receive_a_recording():
 	baudrate			= 9600			# tx param
 	#sps  				= 10			# todo measure final A against a spectrum of sps's....
 	mod_index			= 0.5			# tx param
-	BT 					= 0.5
+	BT_rx_match 		= 0.425
 	batch_maxlen 		= 1024*8
-	f_tune				= 437.1e6
+	f_tune				= 437.10e6
 	f_center			= 437.00e6 + 125e3
 
 	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * (fshift0+(f_center-f_tune)))
@@ -35,7 +35,7 @@ def receive_a_recording():
 	rx_config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=3400000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
 	#rx_config.sps 					= sps
 	rx_config.mod_index				= mod_index
-	rx_config.BT					= BT
+	rx_config.BT_rx_match			= BT_rx_match
 	sps = rx_config.sps
 
 	expected_relative_f = (f_center-f_tune) / (baudrate*sps)
@@ -43,6 +43,7 @@ def receive_a_recording():
 	precompile_receiver(rx_config=rx_config, do_print=True)
 	rx = Receiver(config=rx_config)
 	rx2 = Receiver(config=rx_config)
+	print("RX picked fftlen of {}".format(rx.get_fftlen()))
 
 	t0 = time.perf_counter()
 	rx.switch_baudrate(baudrate=9600*2, sps=rx_config.sps)
@@ -51,12 +52,13 @@ def receive_a_recording():
 	print("Baudrate switch in: {} ms".format( round(dt*1e3, 1) ))
 
 	if True:
-		waterfall_mx(samples=samples, fftlen=1024, fft_jump=1024, srate=sr0, plot_and_show=True, y_is_time=True)
+		fftlen = rx.get_fftlen()
+		waterfall_mx(samples=samples, fftlen=2048, fft_jump=2048//2, srate=sr0, plot_and_show=True, y_is_time=True)
 		fftstate = rx.FFTstatemx
 		mask0 = fftstate[6,:]
 		resampler = create_resampler(m_halflen=21, n_banks=64, r_rate=sps*baudrate/sr0, f_cutoff=0.499*sps*baudrate/sr0, allow_aliasing=False)
 		samples_rs = resampler_execute(samples=samples, statemx=resampler)
-		mx, extent, aspect = waterfall_mx(samples=samples_rs, fftlen=1024, fft_jump=1024, srate=sps*baudrate, plot_and_show=False, y_is_time=True)
+		mx, extent, aspect = waterfall_mx(samples=samples_rs, fftlen=fftlen, fft_jump=fftlen//2, srate=sps*baudrate, plot_and_show=False, y_is_time=True)
 		mx[10] = mask0
 		mx[11] = mask0
 		mx[12] = mask0
@@ -94,17 +96,13 @@ def receive_a_recording():
 	cpu_fraction	= (1/overmatch) / 1.0
 
 	print("="*50)
-	print("\tspeed:          {} Ms/s".format( round(1e-6 * speed, 2) ))
-	print("\tovermatch:      {}".format( round(overmatch, 2) ))
-	print("\tbudget use:     {} %".format( round( 100*budget_fraction , 2) ))
-	print("\tcpu core use:   {} %".format( round( 100*cpu_fraction , 2) ))
+	print("speed:          {} Ms/s".format( round(1e-6 * speed, 2) ))
+	print("overmatch:      {}".format( round(overmatch, 2) ))
+	print("budget use:     {} %".format( round( 100*budget_fraction , 2) ))
+	print("cpu core use:   {} %".format( round( 100*cpu_fraction , 2) ))
 	for i_dt in range(len(rx.dt_array)):
-		print("\t\tpart {}:            {} %".format(i_dt+1, round( 100*rx.dt_array[i_dt]/np.sum(rx.dt_array) , 2) ))
-	#print("\t\tpart 1:            {} %".format( round( 100*rx.dt_array[0]/np.sum(rx.dt_array) , 2) ))
-	#print("\t\tpart 2:            {} %".format( round( 100*rx.dt_array[1]/np.sum(rx.dt_array) , 2) ))
-	#print("\t\tpart 3:            {} %".format( round( 100*rx.dt_array[2]/np.sum(rx.dt_array) , 2) ))
-	#print("\t\tpart 4:            {} %".format( round( 100*rx.dt_array[3]/np.sum(rx.dt_array) , 2) ))
-	print("\t\tparts of total:    {} %".format( round( 100*np.sum(rx.dt_array)/dt_total , 2) ))
+		print("\tpart {}:            {} %".format(i_dt+1, round( 100*rx.dt_array[i_dt]/np.sum(rx.dt_array) , 2) ))
+	print("parts of total:    {} %".format( round( 100*np.sum(rx.dt_array)/dt_total , 2) ))
 	print("="*50)
 
 	print("Got {} bits".format(len(bits)))
@@ -114,19 +112,21 @@ def receive_a_recording():
 	print("Relative freq should be ~{}".format( round(expected_relative_f, 4) ))
 
 	for pl_bytes, pl_f in pl_list:
-		print(round(pl_f/(sps*baudrate), 4), ":", len(pl_bytes), pl_bytes)
-	xx = np.arange(len(rx.center_f_array))
+		print(round(1e-6*pl_f, 4), ":", len(pl_bytes), pl_bytes)
+	xx = np.arange(len(rx.center_f_array)) * 1000.0/(rx.config.sps*rx.config.baudrate)
+	x_t_s0_r10 = np.arange(len(samples[::20])) * 20 * 1000.0/sr0
 	fig = plt.figure(figsize=(14,14))
 	ax1 = fig.add_subplot(211)
 	ax2 = fig.add_subplot(212)
 
-	ax1.plot( xx, rx.center_f_array )
-	ax1.plot( xx, np.abs(rx.rs_array) / np.max(np.abs(rx.rs_array)) )
+	ax1.plot(xx, rx.center_f_array)
+	ax1.plot(xx, np.abs(rx.rs_array) / np.max(np.abs(rx.rs_array)))
+	#ax1.plot( x_t_s0_r10, np.abs(samples[::20]) / np.max(np.abs(samples[::20])) )
 	ax1.grid()
 
-	ax2.plot( xx, rx.fft_instr_array[:,0] )
-	ax2.plot( xx, rx.fft_instr_array[:,1] )
-	ax2.plot( xx, rx.fft_instr_array[:,2] )
+	ax2.plot(xx, rx.fft_instr_array[:,0] )
+	ax2.plot(xx, rx.fft_instr_array[:,1] )
+	ax2.plot(xx, rx.fft_instr_array[:,2] )
 	ax2.grid()
 
 	fig.set_layout_engine("tight")

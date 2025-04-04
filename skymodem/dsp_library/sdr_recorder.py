@@ -252,32 +252,32 @@ def load_samples(fpath):
 if __name__ == '__main__':
 	default_dpath = "/home/elmore/datasetit/radiotallenteet/"
 
-	#f_tune_ = 433.920e6
-	#sr_ = 1e6
-	#smpls = usrp_record(f_tune=f_tune_,  sr=sr_, t_total=3.0, gain=55, show=False)
-	#print("samples max amp:", np.max(np.abs(smpls)) )
-	#waterfall_mx(samples=smpls, fftlen=2048, fft_jump=1024, srate=sr_, plot_and_show=True, y_is_time=True)
+	f_tune_ = 436.0e6
+	sr_ = 4e6
+	smpls = usrp_record(f_tune=f_tune_,  sr=sr_, t_total=5.0, gain=55, show=False)
+	print("samples max amp:", np.max(np.abs(smpls)) )
+	waterfall_mx(samples=smpls, fftlen=2048, fft_jump=1024, srate=sr_, plot_and_show=True, y_is_time=True)
 	#store_samples(samples=smpls, dpath=default_dpath, fname_base="Clio", f_tune=f_tune_, sr=sr_)
 
-	smpls, f_tune_, sr_ = load_samples(fpath=default_dpath + "Clio-B.pkl")
-	print("Loaded {} samples".format(len(smpls)))
-	nn = len(smpls)
-	smpls = smpls[800000:2200000]
-	waterfall_mx(samples=smpls, fftlen=2048, fft_jump=1024, srate=sr_, plot_and_show=True, y_is_time=True)
+	#smpls, f_tune_, sr_ = load_samples(fpath=default_dpath + "Clio-B.pkl")
+	#print("Loaded {} samples".format(len(smpls)))
+	#nn = len(smpls)
+	#smpls = smpls[800000:2200000]
+	#waterfall_mx(samples=smpls, fftlen=2048, fft_jump=1024, srate=sr_, plot_and_show=True, y_is_time=True)
 
 	#lp_cutoff = 0.625 * baudrate / sr0
 	#lpfilter = firwin(numtaps=201, cutoff=lp_cutoff, pass_zero=True)
 	#lowpassed = np.convolve(samples, lpfilter)
-	zz = smpls * np.conj( np.roll(smpls, 1) )
-	dmd = np.arctan2(zz.imag, zz.real)
+	#zz = smpls * np.conj( np.roll(smpls, 1) )
+	#dmd = np.arctan2(zz.imag, zz.real)
 
-	xx = np.arange(len(dmd)) * (2*9600/sr_)
-	fig = plt.figure(figsize=(14,10))
-	ax1 = fig.add_subplot(111)
-	ax1.plot(xx[::10], dmd[::10])
-	ax1.grid()
-	fig.set_layout_engine("tight")
-	plt.show()
+	#xx = np.arange(len(dmd)) * (2*9600/sr_)
+	#fig = plt.figure(figsize=(14,10))
+	#ax1 = fig.add_subplot(111)
+	#ax1.plot(xx[::10], dmd[::10])
+	#ax1.grid()
+	#fig.set_layout_engine("tight")
+	#plt.show()
 
 	#usrp_transmit(samples=smpls, f_tune=f_tune_, sr=sr_, tx_gain=80, loop=False)
 

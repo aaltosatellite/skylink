@@ -2,77 +2,72 @@ import numpy as np
 from kuokka.lib_symsynching import create_classic_JPL_statemx
 from kuokka.lib_demodulation import create_DSD_statemx, demod_synch_decide
 import time
+from mtools.tools_dsp import waterfall_mx
 from kuokka.lib_tools import radionoise
+import os, pickle
+from matplotlib import pyplot as plt
+from kuokka.lib_receiver import ReceiverConfig, Receiver
 
 
 
-def speedbench_demod_synch_decide(sps, baudrate, lp_ntaps):
-	batchlen = 1024
-	n_rep = 40
-	nsamples = int(batchlen * (n_rep+2) + 10)
-	sr = baudrate * sps
-	# ====================================
-	lp_cutoff_coeff 		= 0.63
-	JPL_n_decay 	= 12
-	JPL_delay_mpr	= 6.0
-	# ====================================
-	samples = radionoise(n=nsamples, sr=sr, W_per_Hz=1.0)
-	center_f_arr = np.zeros(nsamples, dtype=np.float64) + 0.1
-	dmd_arr = np.zeros(nsamples, dtype=np.float64)
-	synch_arr = np.zeros((nsamples,3), dtype=np.int64)
-	JPLstatemx = create_classic_JPL_statemx(N_eps=sps, n_decay=JPL_n_decay)
-	demodmx = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff_coeff=lp_cutoff_coeff, synch_delay_mpr_f=JPL_delay_mpr, sps_f=float(sps))
-
-	demod_synch_decide(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=0, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx.copy(), demodmx=demodmx.copy())
-	demod_synch_decide(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=0, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx.copy(), demodmx=demodmx.copy())
-	demod_synch_decide(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=0, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=0, JPLstatemx=JPLstatemx.copy(), demodmx=demodmx.copy())
-	rs_head = 0
-	dmd_head = 0
-	t0 = time.perf_counter()
-	for _ in range(n_rep):
-		dmd_head, _, _ = demod_synch_decide(rs_arr=samples, center_f_arr=center_f_arr, i_rs0=rs_head, nsamples=batchlen, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=dmd_head, JPLstatemx=JPLstatemx, demodmx=demodmx)
-		rs_head += batchlen
-	T_total = (time.perf_counter() - t0)
-	T_sample = T_total/(batchlen * n_rep)
-	speed = 1/T_sample
-	overmatch = speed / sr
-	core_fraction	= (1/overmatch) / 1.0
-	budget_fraction	= (1/overmatch) / 0.5
-
-	print("")
-	print("-- demod_synch_decide() ---------------------")
-	print("T-sample:        {} ns/sample".format( round(1e9*T_sample, 1) ))
-	print("speed:           {} Ms/s".format( round(1e-6*speed, 3) ))
-	print("overmatch:       {}".format( round( overmatch, 3) ))
-	print("core use:        {} %".format( round(100 * core_fraction, 1) ))
-	print("budget use:      {} %".format( round(100 * budget_fraction, 1) ))
-	print("----------------------------------------------------")
-	print("")
+fpath1 = "/home/elmore/datasetit/radiotallenteet/uhf-radioloop-capture-GY.pkl"
+fpath2 = "/home/elmore/datasetit/radiotallenteet/uhf-radioloop-capture-WJ.pkl"
+fpath3 = "/home/elmore/datasetit/radiotallenteet/uhf-radioloop-capture-RQ.pkl"
+for fp in (fpath1,fpath2,fpath3):
+	assert os.path.isfile(fp)
 
 
 
 
+def draw(draw_time_series=False):
+	f = open(fpath3, "rb")
+	rd = f.read()
+	f.close()
+	samples = pickle.loads(rd)
+	print("Loaded {}".format( str(type(samples)) ))
+	print("Of len {}".format( len(samples) ))
+	nn = len(samples)
+	t_array = np.arange(nn) * (1/1e6)
+
+	if draw_time_series:
+		fig = plt.figure(figsize=(12,8))
+		fig.set_layout_engine("tight")
+		ax = fig.add_subplot(111)
+		ax.plot(t_array[::30], np.abs(samples)[::30])
+		ax.grid()
+		plt.show()
+
+	i0 = int(1e6 * 2.83)
+	i1 = int(1e6 * 2.91)
+	fshifter = np.exp(2j*np.pi * np.arange(0,i1-i0) * (0.12))
+	samples[i0:i1] = samples[i0:i1] * fshifter
+
+	config = ReceiverConfig(sr0=1e6, baudrate=9600, bufferlen=int(len(samples)*0.3), batch_maxlen=1024*16, f_tune=437.066e6, f_center=437.125e6)
+	config.c_center_decay = 0.9
+	r_rate = config.get_r_rate()
+	rx = Receiver(config=config)
+	batchlen = int(0.5*config.fftlen/r_rate)
+	fftcorr_mx = list()
+
+	c = 0
+	while c < len(samples)-batchlen:
+		rx.push_samples(batch=samples[c:c+batchlen], give_bits=False)
+		c += batchlen
+		line = rx.FFTstatemx[2,:]*1.0
+		line[np.argmax(line)] *= 100
+		fftcorr_mx.append( line )
+
+	fftcorr_mx = np.array(fftcorr_mx)
+	fftcorr_mx = np.log(fftcorr_mx+1)
+
+	fig = plt.figure(figsize=(12,8))
+	fig.set_layout_engine("tight")
+	ax = fig.add_subplot(111)
+	ax.imshow(fftcorr_mx)
+	ax.grid()
+	plt.show()
 
 
 
-
-if __name__ == '__main__':
-	speedbench_demod_synch_decide(sps=20, baudrate=9600, lp_ntaps=161)
-	speedbench_demod_synch_decide(sps=14, baudrate=9600*4, lp_ntaps=161)
-	speedbench_demod_synch_decide(sps=17, baudrate=9600, lp_ntaps=121)
-	speedbench_demod_synch_decide(sps=8, baudrate=9600*16, lp_ntaps=121)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+draw(draw_time_series=True)
 
