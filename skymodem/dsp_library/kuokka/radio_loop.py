@@ -84,6 +84,10 @@ class RadioLoop:
 
 
 	def soapy_start(self, sr0_rx, f_tune_rx):
+		"""
+		This start method will be called when used on the ground station machine.
+		The Soapy-code is incomplete, and will certainly not work yet. You will need to attach to a 'leecher' device created by the soapy-shared library.
+		"""
 		self.rx_config.sr0 = sr0_rx
 		self.rx_config.f_tune = f_tune_rx
 		DBGPRINT("SoapySDR start")
