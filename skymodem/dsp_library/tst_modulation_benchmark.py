@@ -2,8 +2,8 @@ import os
 from kuokka.lib_tools import make_samples
 import time
 import numpy as np
-from kuokka.radio_loop import RadioLoop
-from kuokka.lib_receiver import ReceiverConfig
+from radio_loop import RadioLoop
+from kuokka.lib_receiver import DSPConfig
 
 
 
@@ -40,7 +40,7 @@ def speedbench_raw_modulation(sr, baudrate, BT):
 
 
 def speedbench_packet_modulation(sr, baudrate, BT):
-	rx_config = ReceiverConfig(sr0=sr, baudrate=baudrate, bufferlen=800000, batch_maxlen=16000, f_tune=437e6, f_center=437.025e6)
+	rx_config = DSPConfig(rx_sr0=sr, baudrate=baudrate, bufferlen=800000, batch_maxlen=16000, rx_f_tune=437e6, rx_f_center=437.025e6)
 	rx_config.BT = BT
 	radioloop = RadioLoop(rx_config=rx_config)
 	pl = os.urandom(200)

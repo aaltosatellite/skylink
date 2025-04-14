@@ -2,7 +2,7 @@ import numpy as np
 from kuokka.lib_framing import frame_packet
 from kuokka.lib_reedsolomon import get_default_rs, RS_MAX_ENCODED_LEN, RS_MAX_PL_LEN, RS_MIN_ENCODED_LEN
 from kuokka.lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_BITS, DEFAULT_SYNCHWORD_LEN, ints_to_bits
-from kuokka.lib_receiver import Receiver, ReceiverConfig, precompile_receiver
+from kuokka.lib_receiver import Receiver, DSPConfig, precompile_receiver
 from mtools.tools_dsp import waterfall_mx
 from mtools.tools_system import mpr_set
 from kuokka.lib_tools import make_samples, radionoise
@@ -53,10 +53,10 @@ def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payl
 
 
 
-def feed_samples_to_a_receiver(rx_config:ReceiverConfig, samples, payload_istart_iend_list, default_batchlen, do_precompile=False):
+def feed_samples_to_a_receiver(dsp_config:DSPConfig, samples, payload_istart_iend_list, default_batchlen, do_precompile=False):
 	if do_precompile:
-		precompile_receiver(rx_config=rx_config, do_print=True)
-	rx = Receiver(config=rx_config)
+		precompile_receiver(dsp_config=dsp_config, sr0=1e6, f_tune=400e6, f_center=400.025e6, baudrate=9600, do_print=False)
+	rx = Receiver(config=dsp_config)
 	nsamples = len(samples)
 	c = 0
 	pl_f_cursor_list = list()
@@ -66,7 +66,7 @@ def feed_samples_to_a_receiver(rx_config:ReceiverConfig, samples, payload_istart
 		batchlen = min(default_batchlen, nsamples - c)
 		batch = samples[c:c+batchlen]
 		t0 = time.perf_counter()
-		ret_list = rx.push_samples(batch, give_bits=False)
+		ret_list = rx.process_samples(batch, give_bits=False)
 		dt_ = time.perf_counter() - t0
 		batch_contains_signal = any([(not ((c>i1) or ((c+batchlen)<i0))) for (_,i0,i1) in payload_istart_iend_list])
 		if batch_contains_signal:
@@ -80,22 +80,22 @@ def feed_samples_to_a_receiver(rx_config:ReceiverConfig, samples, payload_istart
 
 
 
-def tgt_loop(ii, noisePpHz, rx_config:ReceiverConfig, n_payloads, f_center_error, rel_baudrate_error):
+def tgt_loop(ii, noisePpHz, dsp_config:DSPConfig, n_payloads, f_center_error, rel_baudrate_error):
 	assert abs(rel_baudrate_error) < 1e-4
-	T_init_silence  = 2.00 * rx_config.fftlen_mpr*rx_config.sps / (rx_config.sps*rx_config.baudrate)
-	T_end_silence 	= 2.00 * rx_config.centering_delay_mpr * rx_config.fftlen_mpr*rx_config.sps / (rx_config.sps*rx_config.baudrate)
+	T_init_silence  = 2.00 * dsp_config.fftlen_mpr * dsp_config.sps / (dsp_config.sps * dsp_config.baudrate)
+	T_end_silence 	= 2.00 * dsp_config.centering_delay_mpr * dsp_config.fftlen_mpr * dsp_config.sps / (dsp_config.sps * dsp_config.baudrate)
 	T_interval 		= 3e-3
 	nn = [x for x in ([12,]*int(n_payloads/12) + [n_payloads%12,]) if x>0]
 	n_rcvd = 0
 	avg_delay_t = -1
 	for n_pl_run in nn:
-		samples, payload_istart_iend_list = generate_test_samples(f_tune=rx_config.f_tune, f_center=rx_config.f_center+f_center_error, sr0=rx_config.sr0,
-																  baudrate=rx_config.baudrate*(1+rel_baudrate_error), mod_index=rx_config.mod_index,
-																  BT=rx_config.BT_rx_match, n_payloads=n_pl_run, noisePpHz=noisePpHz, T_init_silence=T_init_silence,
+		samples, payload_istart_iend_list = generate_test_samples(f_tune=dsp_config.rx_f_tune, f_center=dsp_config.rx_f_center + f_center_error, sr0=dsp_config.rx_sr0,
+																  baudrate=dsp_config.baudrate * (1 + rel_baudrate_error), mod_index=dsp_config.mod_index,
+																  BT=dsp_config.BT_rx_match, n_payloads=n_pl_run, noisePpHz=noisePpHz, T_init_silence=T_init_silence,
 																  T_interval_array=(T_interval,)*(n_pl_run-1), T_end_silence=T_end_silence)
-		pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(rx_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=int(0.001*rx_config.sr0), do_precompile=False)
+		pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=dsp_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=int(0.001 * dsp_config.rx_sr0), do_precompile=False)
 		n_rcvd += len(pl_f_cursor_list)
-		delays_s, delays_t = get_dealys(payload_istart_iend_list=payload_istart_iend_list, pl_f_cursor_list=pl_f_cursor_list, sr0=rx_config.sr0)
+		delays_s, delays_t = get_dealys(payload_istart_iend_list=payload_istart_iend_list, pl_f_cursor_list=pl_f_cursor_list, sr0=dsp_config.rx_sr0)
 		if any(delays_t > 0):
 			avg_delay_t = np.average([x for x in delays_t if x > 0])
 	reception_rate = n_rcvd / n_payloads
@@ -103,7 +103,7 @@ def tgt_loop(ii, noisePpHz, rx_config:ReceiverConfig, n_payloads, f_center_error
 
 
 
-def measure_curve_mpr(rx_config:ReceiverConfig, n_payloads, f_center_error, rel_baudrate_error, noiseP_array):
+def measure_curve_mpr(rx_config:DSPConfig, n_payloads, f_center_error, rel_baudrate_error, noiseP_array):
 	reception_rate_array = np.zeros(len(noiseP_array), dtype=np.float64) -1
 	delay_array = np.zeros(len(noiseP_array), dtype=np.float64) -2
 	argtuples = list()
@@ -119,7 +119,7 @@ def measure_curve_mpr(rx_config:ReceiverConfig, n_payloads, f_center_error, rel_
 
 
 
-def measure_execution_speed(rx_config:ReceiverConfig):
+def measure_execution_speed(rx_config:DSPConfig):
 	T_init_silence_minim  = 2 * rx_config.fftlen_mpr*rx_config.sps / (rx_config.sps*rx_config.baudrate)
 	assert T_init_silence_minim < 5.0
 	T_init_silence = 5.0
@@ -127,11 +127,11 @@ def measure_execution_speed(rx_config:ReceiverConfig):
 	assert T_end_silence_minim < 0.5
 	T_end_silence = 0.5
 	T_interval = 5e-3
-	samples, payload_istart_iend_list = generate_test_samples(f_tune=rx_config.f_tune, f_center=rx_config.f_center+1e3, sr0=rx_config.sr0,
-																  baudrate=rx_config.baudrate*(1+1.5e-5), mod_index=rx_config.mod_index,
-																  BT=rx_config.BT_rx_match, n_payloads=8, noisePpHz=0.02/rx_config.baudrate, T_init_silence=T_init_silence,
-																  T_interval_array=(T_interval,)*(8-1), T_end_silence=T_end_silence)
-	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(rx_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list,  default_batchlen=int(0.001*rx_config.sr0), do_precompile=False)
+	samples, payload_istart_iend_list = generate_test_samples(f_tune=rx_config.rx_f_tune, f_center=rx_config.rx_f_center + 1e3, sr0=rx_config.rx_sr0,
+															  baudrate=rx_config.baudrate*(1+1.5e-5), mod_index=rx_config.mod_index,
+															  BT=rx_config.BT_rx_match, n_payloads=8, noisePpHz=0.02/rx_config.baudrate, T_init_silence=T_init_silence,
+															  T_interval_array=(T_interval,)*(8-1), T_end_silence=T_end_silence)
+	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=int(0.001 * rx_config.rx_sr0), do_precompile=False)
 	n_samples = len(samples)
 	n_signal_samples = sum([i1-i0 for (f,i0,i1) in payload_istart_iend_list])
 	return dt_array, t_signal, t_silence, n_samples, n_signal_samples
@@ -167,7 +167,7 @@ def speed_printout(dt_array, t_total, nsamples, sr0):
 
 
 
-def random_receiver_config_from_choises(attrname_array_d:dict, rx_config_basis:ReceiverConfig):
+def random_receiver_config_from_choises(attrname_array_d:dict, rx_config_basis:DSPConfig):
 	rx_config = deepcopy(rx_config_basis)
 	for _ in range(100):
 		try:
@@ -195,7 +195,7 @@ def surf_integral(x_arr, y_arr):
 
 
 
-def save_result(rx_config:ReceiverConfig, n_payloads, noiseP_array, reception_rate_array, A, avg_delay, dpath):
+def save_result(rx_config:DSPConfig, n_payloads, noiseP_array, reception_rate_array, A, avg_delay, dpath):
 	dd = {
 		"version" : 3.0,
 		"ts": dtime.now().isoformat(),
@@ -243,7 +243,7 @@ def load_results(dpath, minimum_version, fname_contains, mandatory_d_keys):
 
 
 def load_top_configs(dpath, minimum_version, fname_contains, mandatory_d_keys, top_n):
-	default_config = ReceiverConfig(sr0=1e6, baudrate=9600, bufferlen=800000, batch_maxlen=16000, f_tune=437.1e6, f_center=437.125e6)
+	default_config = DSPConfig(rx_sr0=1e6, rx_f_tune=437.1e6, rx_f_center=437.125e6, tx_sr0=1e6, tx_f_tune=437.1e6, tx_f_center=437.125e6, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
 	results = load_results(dpath=dpath, minimum_version=minimum_version, fname_contains=fname_contains, mandatory_d_keys=mandatory_d_keys)
 	results = sorted(results, key=lambda x: x["A"], reverse=True)
 	configs_dicts = list()
@@ -285,7 +285,7 @@ def test_precompilation_success_rate(N):
 	f_center 	= 437.125e6
 	sr0 		= 1e6
 	baudrate	= 9600
-	basic_config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
+	basic_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 8)
 	basic_config.sps 					= 21
 	basic_config.centering_delay_mpr 	= 5.0
 	basic_config.lp_cutoff_coeff 		= 0.63
@@ -299,7 +299,7 @@ def test_precompilation_success_rate(N):
 	# old default (0.0001 noise) fails at:	36, 37, 1, 89, 1, 11
 	for i in range(N):
 		print("precompile: {}/{}".format(i+1, N))
-		precompile_receiver(rx_config=basic_config, do_print=False)
+		precompile_receiver(dsp_config=basic_config, sr0=1e6, f_tune=400e6, f_center=400.025e6, baudrate=9600, do_print=False)
 
 
 
@@ -311,7 +311,7 @@ def basic_test_A():
 	sr0 		= 1e6
 	baudrate	= 9600
 	n_payloads	= 12
-	rx_config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
+	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	#rx_config.mod_index = 0.7
 	#rx_config.BT_rx_match = -1
 	noisePpHz = 0.16/baudrate
@@ -322,7 +322,7 @@ def basic_test_A():
 															  n_payloads=n_payloads, noisePpHz=noisePpHz, T_init_silence=2.0,
 															  T_interval_array=(5e-3,)*(n_payloads-1), T_end_silence=0.5)
 	print("[Feeding samples]")
-	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(rx_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=512*2, do_precompile=True)
+	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=512*2, do_precompile=True)
 	#pl_f_cursor_d = dict( [(x[0],x[1:3]) for x in pl_f_cursor_list] )
 
 	print("\n\n")
@@ -343,13 +343,16 @@ def compare_default_optimod_4800():
 	f_center 	= 437.125e6
 	sr0 		= 1e6
 	n_payloads	= 64*3
-	rx_config1 = ReceiverConfig(sr0=sr0, baudrate=9600//2, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
-	rx_config2 = ReceiverConfig(sr0=sr0, baudrate=9600*1, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
-	rx_config3 = ReceiverConfig(sr0=sr0, baudrate=9600*2, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
-	rx_config4 = ReceiverConfig(sr0=sr0, baudrate=9600*4, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
-	rx_config5 = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
+	rx_config1 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600 // 2, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config2 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600 * 1, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config3 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600 * 2, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config4 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600 * 4, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config5 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	rx_config5.mod_index = 0.7
 	rx_config5.BT_rx_match = -1
+	rx_config6 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config6.mod_index = 0.7
+	rx_config6.BT_rx_match = 0.5
 
 	rel_noiseP_array = np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34]) # , 0.28
 	noiseP_array1 = rel_noiseP_array / rx_config1.baudrate
@@ -357,18 +360,20 @@ def compare_default_optimod_4800():
 	noiseP_array3 = rel_noiseP_array / rx_config3.baudrate
 	noiseP_array4 = rel_noiseP_array / rx_config4.baudrate
 	noiseP_array5 = rel_noiseP_array / rx_config5.baudrate
+	noiseP_array6 = rel_noiseP_array / rx_config6.baudrate
 
-	print("1/5")
+	print("1/6")
 	reception_rate_array1, _ = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array1)
-	print("2/5")
+	print("2/6")
 	reception_rate_array2, _ = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array2)
-	print("3/5")
+	print("3/6")
 	reception_rate_array3, _ = measure_curve_mpr(rx_config=rx_config3, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array3)
-	print("4/5")
+	print("4/6")
 	reception_rate_array4, _ = measure_curve_mpr(rx_config=rx_config4, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array4)
-	print("4/5")
+	print("5/6")
 	reception_rate_array5, _ = measure_curve_mpr(rx_config=rx_config5, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array5)
-
+	print("6/6")
+	reception_rate_array6, _ = measure_curve_mpr(rx_config=rx_config6, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array6)
 
 	fig = plt.figure(figsize=(15,11))
 	ax1 = fig.add_subplot(111)
@@ -379,6 +384,7 @@ def compare_default_optimod_4800():
 	ax1.plot(rel_noiseP_array, reception_rate_array3, label="default @ {}".format(rx_config3.baudrate))
 	ax1.plot(rel_noiseP_array, reception_rate_array4, label="default @ {}".format(rx_config4.baudrate))
 	ax1.plot(rel_noiseP_array, reception_rate_array5, label="mod_idx=0.7, BT=-1 @ {}".format(rx_config5.baudrate), color="red", linestyle="--")
+	ax1.plot(rel_noiseP_array, reception_rate_array6, label="mod_idx=0.7, BT=0.5 @ {}".format(rx_config6.baudrate), color="blue", linestyle="--")
 	ax1.set_xlabel("RELATIVE noise power per 1/baudrate")
 	#ax1.semilogx()
 	ax1.set_ylabel("%")
@@ -395,8 +401,8 @@ def compare_fftlens():
 	f_center 	= 437.125e6
 	sr0 		= 1e6
 	n_payloads	= 32
-	rx_config1 = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*8, f_tune=f_tune, f_center=f_center)
-	rx_config2 = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*8, f_tune=f_tune, f_center=f_center)
+	rx_config1 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config2 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	rx_config2.fftlen = 512 + 256
 
 	rel_noiseP_array = np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.26]) # , 0.28
@@ -435,7 +441,7 @@ def compare_timings():
 	f_center 	= 437.125e6
 	sr0 		= 1e6
 	n_payloads	= 32
-	rx_config_default = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*8, f_tune=f_tune, f_center=f_center)
+	rx_config_default = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	config_optim_1 = deepcopy(rx_config_default)
 	config_optim_1.sps = 19
 	config_optim_1.lp_cutoff_coeff = 0.583
@@ -468,7 +474,7 @@ def optimizer_A():
 	rel_noiseP_array 	= np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26])   #,0.28
 	noiseP_array 		= rel_noiseP_array / 9600
 
-	rx_config_basis = ReceiverConfig(sr0=sr0, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16, f_tune=f_tune, f_center=f_center)
+	rx_config_basis = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
 	rx_config_basis.mod_index = mod_index
 	rx_config_basis.BT_rx_match = BT_rx_match
 	attrname_array_d = {
@@ -711,6 +717,8 @@ def analyze_results_plot():
 	fig3.set_layout_engine("tight")
 
 	plt.show()
+
+
 
 
 

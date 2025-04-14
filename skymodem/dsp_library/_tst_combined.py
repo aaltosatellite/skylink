@@ -6,7 +6,7 @@ from mtools.tools_dsp import waterfall_mx
 from kuokka.lib_tools import radionoise
 import os, pickle
 from matplotlib import pyplot as plt
-from kuokka.lib_receiver import ReceiverConfig, Receiver
+from kuokka.lib_receiver import DSPConfig, Receiver
 
 
 
@@ -42,7 +42,7 @@ def draw(draw_time_series=False):
 	fshifter = np.exp(2j*np.pi * np.arange(0,i1-i0) * (0.12))
 	samples[i0:i1] = samples[i0:i1] * fshifter
 
-	config = ReceiverConfig(sr0=1e6, baudrate=9600, bufferlen=int(len(samples)*0.3), batch_maxlen=1024*16, f_tune=437.066e6, f_center=437.125e6)
+	config = DSPConfig(rx_sr0=1e6, baudrate=9600, bufferlen=int(len(samples) * 0.3), batch_maxlen=1024 * 16, rx_f_tune=437.066e6, rx_f_center=437.125e6)
 	config.c_center_decay = 0.9
 	r_rate = config.get_r_rate()
 	rx = Receiver(config=config)
@@ -51,7 +51,7 @@ def draw(draw_time_series=False):
 
 	c = 0
 	while c < len(samples)-batchlen:
-		rx.push_samples(batch=samples[c:c+batchlen], give_bits=False)
+		rx.process_samples(batch=samples[c:c+batchlen], give_bits=False)
 		c += batchlen
 		line = rx.FFTstatemx[2,:]*1.0
 		line[np.argmax(line)] *= 100

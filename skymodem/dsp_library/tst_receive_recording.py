@@ -1,5 +1,5 @@
 import numpy as np
-from kuokka.lib_receiver import ReceiverConfig, Receiver, precompile_receiver
+from kuokka.lib_receiver import DSPConfig, Receiver, precompile_receiver
 from mtools.tools_dsp import create_resampler, resampler_execute
 from mtools.tools_dsp import waterfall_mx
 from matplotlib import pyplot as plt
@@ -32,7 +32,7 @@ def receive_a_recording():
 	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * (fshift0+(f_center-f_tune)))
 
 
-	rx_config = ReceiverConfig(sr0=sr0, baudrate=baudrate, bufferlen=3400000, batch_maxlen=batch_maxlen, f_tune=f_tune, f_center=f_center)
+	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=3400000, batch_maxlen=batch_maxlen)
 	#rx_config.sps 					= sps
 	rx_config.mod_index				= mod_index
 	rx_config.BT_rx_match			= BT_rx_match
@@ -40,7 +40,7 @@ def receive_a_recording():
 
 	expected_relative_f = (f_center-f_tune) / (baudrate*sps)
 
-	precompile_receiver(rx_config=rx_config, do_print=True)
+	precompile_receiver(dsp_config=rx_config, sr0=1e6, f_tune=400e6, f_center=400.025e6, baudrate=9600, do_print=True)
 	rx = Receiver(config=rx_config)
 	rx2 = Receiver(config=rx_config)
 	print("RX picked fftlen of {}".format(rx.get_fftlen()))
@@ -78,10 +78,10 @@ def receive_a_recording():
 		batch = samples[feed_head : feed_head+batchlen]
 
 		t0 = time.perf_counter()
-		ret_pl = rx.push_samples(batch=batch, give_bits=False)
+		ret_pl = rx.process_samples(batch=batch, give_bits=False)
 		dt_total += (time.perf_counter() - t0)
 
-		ret_b = rx2.push_samples(batch=batch, give_bits=True)
+		ret_b = rx2.process_samples(batch=batch, give_bits=True)
 
 		if ret_pl:
 			pl_list.extend(ret_pl)

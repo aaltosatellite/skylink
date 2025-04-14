@@ -4,22 +4,27 @@ from .lib_demodulation import demodulation_sequence, create_DSD_statemx, DSD_buf
 from .lib_symsynching import create_classic_JPL_statemx
 from .lib_fft_finder import create_cont_center_statemx, fft_continuous_f_center, set_f_center_search_map
 from .lib_framing import create_deframer, deframe, RS_MAX_ENCODED_LEN, frame_packet, RS_MAX_PL_LEN
-from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples, get_frequency_search_map, ints_to_bits, freq_shift_phased, choose_fftlen
+from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples, ints_to_bits, freq_shift_phased, choose_fftlen
 from .lib_reedsolomon import get_default_rs
 from .lib_div_resampler import staged_resampler_execute_stream, create_staged_resampler
+from .lib_tools import get_frequency_search_map
 
 
-class ReceiverConfig:
-	def __init__(self, sr0, baudrate, bufferlen, batch_maxlen, f_tune, f_center):
-		assert sr0 > (baudrate * 2)
+
+
+class DSPConfig:
+	def __init__(self, rx_sr0, rx_f_tune, rx_f_center, tx_sr0, tx_f_tune, tx_f_center, baudrate, bufferlen, batch_maxlen):
 		self.bufferlen			= bufferlen
 		self.batch_maxlen		= batch_maxlen
 		# radio device -------------------------------------
-		self.sr0 				= sr0			# Raw samplerate of the radio. Will be downsampled with a rate of baudrate*sps/sr0
-		self.f_tune 			= f_tune		# Tuned frequency of the radio in absolute Hz (for example 350.0e6)
+		self.rx_sr0 			= rx_sr0		# Raw samplerate of the radio. Will be downsampled with a rate of baudrate*sps/sr0
+		self.rx_f_tune 			= rx_f_tune		# Tuned frequency of the radio in absolute Hz (for example 350.0e6)
+		self.tx_sr0				= tx_sr0
+		self.tx_f_tune			= tx_f_tune
 		# --------------------------------------------------
 		# signal properties --------------------------------
-		self.f_center 			= f_center		# The (absolute) frequency of the transmissions in absolute Hz (for example 350.12e6)
+		self.rx_f_center 		= rx_f_center	# The (absolute) frequency of the transmissions in absolute Hz (for example 350.12e6)
+		self.tx_f_center 		= tx_f_center
 		self.baudrate			= baudrate		# Baudrate of the transmission. Has a definite effect on performance. More so if resampling rate is not adjusted.
 		# --------------------------------------------------
 		# resampling ---------------------------------------
@@ -51,23 +56,29 @@ class ReceiverConfig:
 		self.synch_threshold 	= 3
 		self.data_maxlen 		= RS_MAX_ENCODED_LEN
 		# --------------------------------------------------
+		# --------------------------------------------------
+		self.tx_BT				= 0.5
+		self.tx_mod_index		= 0.5
+		# --------------------------------------------------
 
 	def check_validity(self):
-		assert self.f_tune >= 1.0
-		assert self.f_center >= 1.0
-		assert 1e3 < self.sr0 < 32e6
-		assert (abs(self.f_tune - self.f_center) + self.search_halfband + self.baudrate*0.6) < (0.5 * self.sr0), "Radio tuned to this frequency with this samplerate cannot see the entire band."
-		assert ((self.search_halfband + self.baudrate*0.6) / (self.baudrate * self.sps)) < 0.5, "Resampling down to this sps at this baudrate cannot see the entire search band."
-
-		assert 0 < self.baudrate < (self.sr0/2)
 		assert 10000 < self.bufferlen < 100e6
 		assert type(self.bufferlen) == int
 		assert 100 < self.batch_maxlen < (0.05*self.bufferlen)
 		assert type(self.batch_maxlen) == int
+
+		for (sr0,f_tune,f_center) in [(self.rx_sr0, self.rx_f_tune, self.rx_f_center), (self.tx_sr0, self.tx_f_tune, self.tx_f_center)]:
+			assert 1e3 < sr0 < 32e6
+			assert f_tune >= 1.0
+			assert f_center >= 1.0
+			assert 0 < self.baudrate < (sr0/2)
+		assert (abs(self.rx_f_tune - self.rx_f_center) + self.search_halfband + self.baudrate * 0.6) < (0.5 * self.rx_sr0), "Radio tuned to this frequency with this samplerate cannot see the entire band."
+		assert ((self.search_halfband + self.baudrate*0.6) / (self.baudrate * self.sps)) < 0.5, "Resampling down to this sps at this baudrate cannot see the entire search band."
+
 		assert 2 < self.sps <= 100
 		assert type(self.sps) == int
 		assert 4 < self.d_halflen < 42
-		assert (self.d_halflen*2) > int(self.sr0/(self.baudrate*self.sps))
+		assert (self.d_halflen*2) > int(self.rx_sr0 / (self.baudrate * self.sps))
 		assert type(self.d_halflen) == int
 		assert 4 < self.f_halflen < 42
 		assert type(self.f_halflen) == int
@@ -94,9 +105,11 @@ class ReceiverConfig:
 		assert self.data_maxlen > 10
 		if self.use_rs:
 			assert self.data_maxlen == RS_MAX_ENCODED_LEN
+		assert (self.tx_BT >= 0.4) or (self.tx_BT == -1)
+		assert 0.5 <= self.tx_mod_index < 10.0
 
 	def get_r_rate(self):
-		r_rate = self.sps * self.baudrate / self.sr0
+		r_rate = self.sps * self.baudrate / self.rx_sr0
 		return r_rate
 
 	def get_f_center_search_map(self, fftlen, is_precentered:bool):
@@ -104,8 +117,8 @@ class ReceiverConfig:
 			f_center_min_nrm = -self.search_halfband / (self.baudrate * self.sps)
 			f_center_max_nrm = self.search_halfband / (self.baudrate * self.sps)
 		else:
-			f_center_min_nrm = (self.f_center - self.search_halfband - self.f_tune) / (self.baudrate * self.sps)
-			f_center_max_nrm = (self.f_center + self.search_halfband - self.f_tune) / (self.baudrate * self.sps)
+			f_center_min_nrm = (self.rx_f_center - self.search_halfband - self.rx_f_tune) / (self.baudrate * self.sps)
+			f_center_max_nrm = (self.rx_f_center + self.search_halfband - self.rx_f_tune) / (self.baudrate * self.sps)
 		f_center_search_map = get_frequency_search_map(fftlen=fftlen, f_min_nrm=f_center_min_nrm, f_max_nrm=f_center_max_nrm, assert_in_window=True)
 		return f_center_search_map
 
@@ -117,7 +130,7 @@ class ReceiverConfig:
 
 
 class Receiver:
-	def __init__(self, config:ReceiverConfig):
+	def __init__(self, config:DSPConfig):
 		config.check_validity()
 		self.config 			= config
 		self.bufferlen 			= int(config.bufferlen)
@@ -149,8 +162,8 @@ class Receiver:
 		self.dt_array			= np.zeros(6, dtype=np.float64)
 		self._setup()
 		# This series of baudrate switches pre-generates correlation masks to memory.
-		_br = self.config.baudrate
-		_sps = self.config.sps
+		#_br = self.config.baudrate
+		#_sps = self.config.sps
 		#self.switch_baudrate(baudrate=9600, sps=_sps)
 		#self.switch_baudrate(baudrate=9600*2, sps=_sps)
 		#self.switch_baudrate(baudrate=9600*2*2, sps=_sps)
@@ -162,7 +175,7 @@ class Receiver:
 		fftlen, _ = choose_fftlen(config.fftlen_mpr*config.sps, window_halfwid=int(0.06*config.fftlen_mpr*config.sps))
 		f_cutoff = config.get_r_rate() * config.rs_f_cutoff_coeff
 		f_center_search_map = config.get_f_center_search_map(fftlen=fftlen, is_precentered=True)
-		self.centering_fdelta_nrm = -(config.f_center - config.f_tune) / config.sr0
+		self.centering_fdelta_nrm = -(config.rx_f_center - config.rx_f_tune) / config.rx_sr0
 		rsmpl_mx1, rsmpl_mx2 = create_staged_resampler(halflen_div=config.d_halflen, halflen_f=config.f_halflen, r_rate=config.get_r_rate(), n_banks=config.n_banks, f_cutoff=f_cutoff, allow_aliasing=False)
 		self.rsmpl_mx1 = rsmpl_mx1
 		self.rsmpl_mx2 = rsmpl_mx2
@@ -176,6 +189,14 @@ class Receiver:
 		b = fftlen * 2
 		self.buffer_roll_limit 	= self.bufferlen - (a + b + 4)
 		assert self.buffer_roll_limit > (self.bufferlen * 0.9), self.buffer_roll_limit/self.bufferlen
+		self.rs_head 			= 0
+		self.center_f_head 		= 0
+		self.demodulation_head 	= 0
+		self.dmdsynch_head 		= 0
+		self.bit_head 			= 0
+		self.centering_phase 	= 0.0
+		self.dt_array *= 0.0
+
 
 	def get_fftlen(self):
 		fftlen1  = int(self.FFTstatemx[0,0])
@@ -189,6 +210,7 @@ class Receiver:
 
 
 	def switch_baudrate(self, baudrate, sps):
+		assert baudrate > 0
 		assert type(sps) == int
 		assert sps > 1
 		self.config.baudrate = baudrate
@@ -197,7 +219,7 @@ class Receiver:
 		self._setup()
 
 
-	def push_samples(self, batch, give_bits=False):
+	def process_samples(self, batch, give_bits=False):
 		ret = list()
 		bits = np.zeros(0, dtype=np.int64)
 
@@ -254,7 +276,8 @@ class Receiver:
 	def _split_payloads(self, payloads, delimits, nrm_offset_frequencies):
 		pl_list = list()
 		for i_pl, (i0,i1) in enumerate(delimits):
-			f_absolute = (nrm_offset_frequencies[i_pl] * self.config.sps * self.config.baudrate) + self.config.f_center
+			#f_offset_nrm = nrm_offset_frequencies[i_pl] + self.centering_fdelta_nrm
+			f_absolute = (nrm_offset_frequencies[i_pl] * self.config.sps * self.config.baudrate) + self.config.rx_f_center
 			pl_list.append((bytes(payloads[i0:i1]), f_absolute))
 			assert len(pl_list[-1][0]) == (i1-i0)
 		return pl_list
@@ -282,20 +305,16 @@ class Receiver:
 
 
 # PRECOMPILE RECEIVER ====================================================================================================
-def get_a_precompiling_sampleset(rx_config:ReceiverConfig, do_print=False):
-	sr0 = rx_config.sr0
-	baudrate = rx_config.baudrate
-	BT_rx_match = rx_config.BT_rx_match
-
-	rel_offset_raw = (rx_config.f_center-rx_config.f_tune) / sr0  #0.1 * (sps*baudrate/sr0)
+def get_a_precompiling_sampleset(dsp_config:DSPConfig, sr0, f_tune, f_center, baudrate, do_print=False):
+	rel_offset_raw = (f_center-f_tune) / sr0  #0.1 * (sps*baudrate/sr0)
 	rs_mx, rs_cfg = get_default_rs()
 	pl = np.random.randint(0,255, RS_MAX_PL_LEN-2)
 	preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
 	frame_bits = frame_packet(pl=pl, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
 	bitstring = np.concatenate( (preamble_bits, frame_bits) )
-	transmission = make_samples(sps_f=sr0/baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=rx_config.mod_index, shaper_mode=1, shaper_BT_prod=BT_rx_match, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
+	transmission = make_samples(sps_f=sr0/baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=dsp_config.mod_index, shaper_mode=1, shaper_BT_prod=dsp_config.BT_rx_match, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
 
-	n_fft_calibration = int( (rx_config.sr0/(rx_config.baudrate*rx_config.sps)) * 2*rx_config.fftlen_mpr*rx_config.sps )
+	n_fft_calibration = int( (sr0/(baudrate*dsp_config.sps)) * 2*dsp_config.fftlen_mpr*dsp_config.sps )
 	nsamples = int(n_fft_calibration + len(transmission) + 1.0*sr0)
 	i0 = int(n_fft_calibration)
 	if do_print:
@@ -305,33 +324,33 @@ def get_a_precompiling_sampleset(rx_config:ReceiverConfig, do_print=False):
 		print("\t\t{} s for margins".format( round(2.0, 3) ))
 	noiseless = np.zeros(nsamples, dtype=np.complex128)
 	noiseless[i0:i0+len(transmission)] += transmission
-	noisePpHz = 0.01/baudrate
+	noisePpHz = 0.02/baudrate
 	noise = radionoise(n=nsamples, sr=sr0, W_per_Hz=noisePpHz)
 	return noiseless, noise, noisePpHz
 
 
-def precompile_receiver(rx_config:ReceiverConfig, do_print=False):
+def precompile_receiver(dsp_config:DSPConfig, sr0, f_tune, f_center, baudrate, do_print=False):
 	if do_print:
 		print("[Precompiling]")
 	t0 = time.perf_counter()
 	if do_print:
 		print("\t[Generating sampleset]")
-	noiseless, noise, noisePpHz = get_a_precompiling_sampleset(rx_config, do_print)
+	noiseless, noise, noisePpHz = get_a_precompiling_sampleset(dsp_config, sr0, f_tune, f_center, baudrate, do_print)
 	samples = np.array(noiseless+noise, dtype=np.complex128)
 	t1 = time.perf_counter()
 	nsamples = len(samples)
-	rx1 = Receiver(config=rx_config)
-	rx2 = Receiver(config=rx_config)
+	rx1 = Receiver(config=dsp_config)
+	rx2 = Receiver(config=dsp_config)
 	c = 0
 	ret_pls1 = list()
 	ret_pls2 = list()
 	if do_print:
 		print("\t[Processing]")
 	while c < nsamples:
-		c2 = min(c + rx_config.batch_maxlen // 2, nsamples)
+		c2 = min(c + dsp_config.batch_maxlen // 2, nsamples)
 		batch = samples[c:c2]
-		ret1 = rx1.push_samples(batch=batch, give_bits=False)
-		ret2 = rx2.push_samples(batch=np.complex64(batch), give_bits=False)
+		ret1 = rx1.process_samples(batch=batch, give_bits=False)
+		ret2 = rx2.process_samples(batch=np.complex64(batch), give_bits=False)
 		ret_pls1.extend(ret1)
 		ret_pls2.extend(ret2)
 		c = c2

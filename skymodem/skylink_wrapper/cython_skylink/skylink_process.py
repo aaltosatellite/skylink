@@ -19,7 +19,7 @@ def DBGPRINT(*args, **kwargs):
 
 
 class SkyLinkLoop(threading.Thread):
-	def __init__(self, config:SkyConfiguration, key_list:list, que_payloads_from_radio, que_payloads_to_radio):
+	def __init__(self, config:SkyConfiguration, key_list:list, que_payloads_in, que_payloads_out):
 		super(SkyLinkLoop, self).__init__()
 		self.daemon = True
 		self.config = config
@@ -28,8 +28,8 @@ class SkyLinkLoop(threading.Thread):
 		self.skylink = SkyLink(config)
 		self.skylink.set_hmac_keys(key_list=key_list)
 		self.on = True
-		self.que_payloads_from_radio = que_payloads_from_radio
-		self.que_payloads_to_radio = que_payloads_to_radio
+		self.que_payloads_from_radio = que_payloads_in
+		self.que_payloads_to_radio = que_payloads_out
 		self.que_received_messages = Queue(1000)
 		self.session_id_list = [(0,arq_state_off),] * num_virtual_channels
 		self.lock = thrd.RLock()

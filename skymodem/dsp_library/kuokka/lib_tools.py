@@ -448,11 +448,9 @@ def determine_ftune_and_min_sr(f_center_min, f_center_max, max_signal_bandwidth)
 	assert f_center_min > 0.5
 	f_center_mid = (f_center_min + f_center_max) / 2
 	f_center_span = f_center_max - f_center_min
-	side_band = (max_signal_bandwidth/2 + f_center_span/2) * 1.1 + 10e3
-	# f_tune + side_band * 1.3 = f_center   -->    f_tune = f_center - 1.3*side_band
-	# f_nyq = side_band * 1.3 * 2   -->   samplerate = side_band * 1.3 * 2 * 2
+	side_band = (max_signal_bandwidth/2 + f_center_span/2) * 1.1 + 25e3
 	f_tune = f_center_mid - side_band
-	minimum_samplerate = (f_center_mid + side_band - f_tune) * 2
+	minimum_samplerate = (f_center_mid + side_band - f_tune) * 2  # == side_band * 4
 	return f_tune, minimum_samplerate
 
 
