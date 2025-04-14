@@ -130,8 +130,9 @@ def RS_encode(msg, rs_mx, rs_cfg):
 	alpha_to 	= rs_mx[1,1:1+rs_mx[1,0]]
 	index_of 	= rs_mx[2,1:1+rs_mx[2,0]]
 	poly 		= rs_mx[3,1:1+rs_mx[3,0]]
-	if len(msg) > cfg_coded_bytes:
-		raise AssertionError("Too long message to be coded with Reed Solomon")
+	assert len(msg) <= cfg_coded_bytes
+	#if len(msg) > cfg_coded_bytes:
+	#	raise AssertionError("Too long message to be coded with Reed Solomon")
 	parity = np.zeros(cfg_num_roots, dtype=np.int64) #Todo datatype!??
 
 
@@ -168,10 +169,12 @@ def RS_decode(msg, rs_mx, rs_cfg):
 	iprim, symbol_count = rs_mx[0,0:2]
 	alpha_to 	= rs_mx[1,1:1+rs_mx[1,0]]
 	index_of 	= rs_mx[2,1:1+rs_mx[2,0]]
-	if len(msg) < cfg_num_roots:
-		raise AssertionError("Too short message")
-	if len(msg) > (cfg_coded_bytes + cfg_num_roots):
-		raise AssertionError("Too long message: ",len(msg))
+	assert len(msg) >= cfg_num_roots
+	#if len(msg) < cfg_num_roots:
+	#	raise AssertionError("Too short message")
+	assert len(msg) <= (cfg_coded_bytes + cfg_num_roots)
+	#if len(msg) > (cfg_coded_bytes + cfg_num_roots):
+	#	raise AssertionError("Too long message: ",len(msg))
 
 	A0 = symbol_count
 	pad = cfg_coded_bytes - (len(msg) - cfg_num_roots)
