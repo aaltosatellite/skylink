@@ -94,8 +94,8 @@ class RadioLoop:
 		DBGPRINT("TX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_TX, 0) ))
 		DBGPRINT("RX gain:            {}".format( sdr.getGain(SOAPY_SDR_RX, 0) ))
 		DBGPRINT("TX gain:            {}".format( sdr.getGain(SOAPY_SDR_TX, 0) ))
-		self.rx_thread			= threading.Thread(target=self._soapy_rx_loop,   args=(sdr, 1024*2), daemon=True)
-		self.tx_thread 			= threading.Thread(target=self._soapy_tx_loop,   args=(sdr, 1024*2), daemon=True) #TODO bufferlen as setting?
+		self.rx_thread			= threading.Thread(target=self._soapy_rx_loop,   args=(sdr, 1024*4), daemon=True)
+		self.tx_thread 			= threading.Thread(target=self._soapy_tx_loop,   args=(sdr, 1024*4), daemon=True) #TODO bufferlen as setting?
 		self.on = True
 		self.rx_thread.start()
 		self.tx_thread.start()
