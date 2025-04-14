@@ -74,7 +74,9 @@ class RadioLoop:
 		"""
 		DBGPRINT("SoapySDR start")
 		args = dict(device="uhd")
-		sdr = SoapySDR.Device(args)[0] #args
+		sdr = SoapySDR.Device(args) #args
+		if type(sdr) == tuple:
+			sdr = sdr[0]
 		print(sdr)
 		DBGPRINT("SoapySDR driver key: ", sdr.getDriverKey())
 		DBGPRINT("SoapySDR driver key: ", sdr.getHardwareKey())
