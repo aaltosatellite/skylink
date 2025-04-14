@@ -318,7 +318,7 @@ def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequenc
 				#payload_delimits = np.resize( payload_delimits, (len(payload_delimits)+1, 2) )
 				payload_delimits[-1][0] = pl_head
 				payload_delimits[-1][1] = pl_head+pl_leng
-				payloads = np.concatenate( (payloads, np.zeros(pl_leng)) )
+				payloads = np.concatenate( (payloads, np.zeros(pl_leng, dtype=np.uint8)) )
 				#payloads = np.resize(payloads, len(payloads) + pl_leng)
 				payloads[pl_head:pl_head+pl_leng] = chars[0:pl_leng]
 				pl_head = pl_head + pl_leng
