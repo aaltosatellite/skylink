@@ -26,7 +26,7 @@ class SkyLinkLoop(threading.Thread):
 		self.name = bytes(config.identity).decode("utf8")
 		self.key_list = key_list
 		self.skylink = SkyLink(config)
-		self.skylink.set_hmac_keys(key_list=key_list)
+		self.skylink.set_hmac_keys(key_list)
 		self.on = True
 		self.que_payloads_from_radio = que_payloads_in
 		self.que_payloads_to_radio = que_payloads_out
