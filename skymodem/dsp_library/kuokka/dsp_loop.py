@@ -23,7 +23,7 @@ def DBGPRINT(*args, **kwargs):
 class DSPLoop:
 	def __init__(self, dsp_config:DSPConfig, que_rx_samples_in:Queue, que_rx_payloads_out:queue.Queue, que_tx_payloads_in:Queue, que_tx_samples_out:Queue):
 		DBGPRINT("Precompile DSP")
-		precompile_receiver(dsp_config, sr0=1e6, f_tune=dsp_config.rx_f_tune, f_center=dsp_config.rx_f_center, baudrate=dsp_config.baudrate, do_print=False)
+		precompile_receiver(dsp_config, do_print=False)
 		self.dsp_config 			= dsp_config
 		self.frequency_following 	= True
 		self.use_doppler_correction = True

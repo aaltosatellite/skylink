@@ -55,7 +55,7 @@ def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payl
 
 def feed_samples_to_a_receiver(dsp_config:DSPConfig, samples, payload_istart_iend_list, default_batchlen, do_precompile=False):
 	if do_precompile:
-		precompile_receiver(dsp_config=dsp_config, sr0=1e6, f_tune=400e6, f_center=400.025e6, baudrate=9600, do_print=False)
+		precompile_receiver(dsp_config=dsp_config, do_print=False)
 	rx = Receiver(config=dsp_config)
 	nsamples = len(samples)
 	c = 0
@@ -299,7 +299,7 @@ def test_precompilation_success_rate(N):
 	# old default (0.0001 noise) fails at:	36, 37, 1, 89, 1, 11
 	for i in range(N):
 		print("precompile: {}/{}".format(i+1, N))
-		precompile_receiver(dsp_config=basic_config, sr0=1e6, f_tune=400e6, f_center=400.025e6, baudrate=9600, do_print=False)
+		precompile_receiver(dsp_config=basic_config, do_print=False)
 
 
 

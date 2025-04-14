@@ -315,7 +315,7 @@ def fm_mod(f_signal_offset, peak_deviation, modulator):
 
 #@njit(cache=True)
 def make_samples(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0):
-	assert abs(f_offset) < 0.5
+	assert abs(f_offset) < 0.5, f_offset
 	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
 	# Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
 	# 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0

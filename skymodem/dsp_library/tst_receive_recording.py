@@ -40,7 +40,7 @@ def receive_a_recording():
 
 	expected_relative_f = (f_center-f_tune) / (baudrate*sps)
 
-	precompile_receiver(dsp_config=rx_config, sr0=1e6, f_tune=400e6, f_center=400.025e6, baudrate=9600, do_print=True)
+	precompile_receiver(dsp_config=rx_config, do_print=True)
 	rx = Receiver(config=rx_config)
 	rx2 = Receiver(config=rx_config)
 	print("RX picked fftlen of {}".format(rx.get_fftlen()))

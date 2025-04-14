@@ -305,16 +305,17 @@ class Receiver:
 
 
 # PRECOMPILE RECEIVER ====================================================================================================
-def get_a_precompiling_sampleset(dsp_config:DSPConfig, sr0, f_tune, f_center, baudrate, do_print=False):
-	rel_offset_raw = (f_center-f_tune) / sr0  #0.1 * (sps*baudrate/sr0)
+def get_a_precompiling_sampleset(dsp_config:DSPConfig, do_print=False):
+	sr0 = dsp_config.rx_sr0
+	rel_offset_raw = (dsp_config.rx_f_center-dsp_config.rx_f_tune) / sr0  #0.1 * (sps*baudrate/sr0)
 	rs_mx, rs_cfg = get_default_rs()
 	pl = np.random.randint(0,255, RS_MAX_PL_LEN-2)
 	preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
 	frame_bits = frame_packet(pl=pl, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
 	bitstring = np.concatenate( (preamble_bits, frame_bits) )
-	transmission = make_samples(sps_f=sr0/baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=dsp_config.mod_index, shaper_mode=1, shaper_BT_prod=dsp_config.BT_rx_match, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
+	transmission = make_samples(sps_f=sr0/dsp_config.baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=dsp_config.mod_index, shaper_mode=1, shaper_BT_prod=dsp_config.BT_rx_match, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
 
-	n_fft_calibration = int( (sr0/(baudrate*dsp_config.sps)) * 2*dsp_config.fftlen_mpr*dsp_config.sps )
+	n_fft_calibration = int( (sr0/(dsp_config.baudrate*dsp_config.sps)) * 2*dsp_config.fftlen_mpr*dsp_config.sps )
 	nsamples = int(n_fft_calibration + len(transmission) + 1.0*sr0)
 	i0 = int(n_fft_calibration)
 	if do_print:
@@ -324,18 +325,18 @@ def get_a_precompiling_sampleset(dsp_config:DSPConfig, sr0, f_tune, f_center, ba
 		print("\t\t{} s for margins".format( round(2.0, 3) ))
 	noiseless = np.zeros(nsamples, dtype=np.complex128)
 	noiseless[i0:i0+len(transmission)] += transmission
-	noisePpHz = 0.02/baudrate
+	noisePpHz = 0.02/dsp_config.baudrate
 	noise = radionoise(n=nsamples, sr=sr0, W_per_Hz=noisePpHz)
 	return noiseless, noise, noisePpHz
 
 
-def precompile_receiver(dsp_config:DSPConfig, sr0, f_tune, f_center, baudrate, do_print=False):
+def precompile_receiver(dsp_config:DSPConfig, do_print=False):
 	if do_print:
 		print("[Precompiling]")
 	t0 = time.perf_counter()
 	if do_print:
 		print("\t[Generating sampleset]")
-	noiseless, noise, noisePpHz = get_a_precompiling_sampleset(dsp_config, sr0, f_tune, f_center, baudrate, do_print)
+	noiseless, noise, noisePpHz = get_a_precompiling_sampleset(dsp_config, do_print)
 	samples = np.array(noiseless+noise, dtype=np.complex128)
 	t1 = time.perf_counter()
 	nsamples = len(samples)

@@ -74,8 +74,10 @@ class RadioLoop:
 		"""
 		DBGPRINT("SoapySDR start")
 		args = dict(device="uhd")
-		sdr = SoapySDR.Device(args)
+		sdr = SoapySDR.Device(args)[0] #args
+		print(sdr)
 		DBGPRINT("SoapySDR driver key: ", sdr.getDriverKey())
+		DBGPRINT("SoapySDR driver key: ", sdr.getHardwareKey())
 		DBGPRINT("Assuming we are on a SoapyShared leecher device.")
 		DBGPRINT("Radio parameters can not be changed, instead we config to what we believe they are.")
 		DBGPRINT("Assuming:  f-tune = {} MHz".format(self.radio_config.rx_f_tune))
@@ -84,6 +86,12 @@ class RadioLoop:
 		sdr.setSampleRate(SOAPY_SDR_TX, 0, self.radio_config.tx_sr0)
 		sdr.setFrequency(SOAPY_SDR_RX, 0, self.radio_config.rx_f_tune)
 		sdr.setFrequency(SOAPY_SDR_TX, 0, self.radio_config.tx_f_tune)
+		sdr.setGain(SOAPY_SDR_RX, 0, 56)
+		sdr.setGain(SOAPY_SDR_TX, 0, 56)
+		DBGPRINT("RX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_RX, 0) ))
+		DBGPRINT("TX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_TX, 0) ))
+		DBGPRINT("RX gain:            {}".format( sdr.getGain(SOAPY_SDR_RX, 0) ))
+		DBGPRINT("TX gain:            {}".format( sdr.getGain(SOAPY_SDR_TX, 0) ))
 		self.rx_thread			= threading.Thread(target=self._soapy_rx_loop,   args=(sdr, 1024*2), daemon=True)
 		self.tx_thread 			= threading.Thread(target=self._soapy_tx_loop,   args=(sdr, 1024*2), daemon=True) #TODO bufferlen as setting?
 		self.on = True
@@ -274,10 +282,10 @@ class RadioLoop:
 			if rx_ret != bufferlen:
 				DBGPRINT("RECV RETURNED NON-FULL BUFFER WITH RET VALUE "+str(rx_ret))
 				#assert rx_ret == rx_buffer_len
-			if self.self_mute:
-				continue
+			#if self.self_mute:
+			#	continue
 			if not self.que_rx_samples_out.full():
-				self.que_rx_samples_out.put_nowait(buff[0, :rx_ret].copy())
+				self.que_rx_samples_out.put_nowait(buff[:rx_ret].copy())
 			else:
 				DBGPRINT("WARNING: radio-to-process queue overflow!")
 				raise Exception("radio-loop: radio-to-process queue overflow.")
@@ -288,6 +296,7 @@ class RadioLoop:
 
 	def _soapy_tx_loop(self, sdr:SoapySDR.Device, batchlen):
 		txStream = sdr.setupStream(SOAPY_SDR_TX, SOAPY_SDR_CF32)
+		sdr.activateStream(txStream)
 		while self.on:
 			try:
 				samplearr = self.que_tx_samples_in.get(timeout=0.20)
@@ -298,15 +307,25 @@ class RadioLoop:
 				self.on = False
 				break
 			N = samplearr.shape[1]
+			samplearr = samplearr[0]
+			assert len(samplearr) == N
 			dtt = N / self.radio_config.tx_sr0
 			idx = 0
 			t_end = time.perf_counter() + dtt
 			self.self_mute = True  # the 5ms initial silence in composed samples also ensures this will have effect.
-			sdr.activateStream(txStream)
+
 			while idx < N:
-				txStream.writeStream([samplearr[idx:idx+batchlen]])
+				blen = min(batchlen, len(samplearr) - idx)
+				#t0 = time.perf_counter()
+				if idx < (len(samplearr)-batchlen):
+					sdr.writeStream(txStream, [samplearr[idx:idx+blen]], blen, timeoutUs=1000000)
+				else:
+					sdr.writeStream(txStream, [samplearr[idx:idx+blen]], blen, timeoutUs=1000000, flags=SoapySDR.SOAPY_SDR_END_BURST)
+				#print("written in ", round( 1e6*(time.perf_counter() - t0), 2), "µs")
 				idx += batchlen
-			sdr.deactivateStream(txStream)
+			#sdr.deactivateStream(txStream)
+			#sdr.closeStream(txStream)
+			#sdr.closeStream()
 			t_to_end = max(0, t_end - time.perf_counter())
 			time.sleep(t_to_end + 0.0e-3)
 			self.self_mute = False
