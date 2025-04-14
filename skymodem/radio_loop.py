@@ -270,19 +270,20 @@ class RadioLoop:
 	# === Soapy ==============================================================================================================================================================================
 	def _soapy_rx_loop(self, sdr:SoapySDR.Device, bufferlen):
 		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
+		timeout = int(1e6 * bufferlen * 0.7 / self.radio_config.rx_sr0)
 		n_rx_loops = 0
 		buff = np.zeros(bufferlen, np.complex64)
 		sdr.activateStream(rxStream)
 		while self.on:
 			if (n_rx_loops % 1000) == 0:
 				DBGPRINT("(rx-#{})".format(n_rx_loops))
-			ret = sdr.readStream(rxStream, [buff], bufferlen)
+			ret = sdr.readStream(rxStream, [buff], bufferlen, timeoutUs=timeout)
 			rx_ret = ret.ret
 			#print(ret.ret) #num samples or error code
 			#print(ret.flags) #flags set by receive operation
 			#print(ret.timeNs) #timestamp for receive buffer
-			if rx_ret != bufferlen:
-				DBGPRINT("RECV RETURNED NON-FULL BUFFER WITH RET VALUE "+str(rx_ret))
+			#if rx_ret != bufferlen:
+				#DBGPRINT("RECV RETURNED NON-FULL BUFFER WITH RET VALUE "+str(rx_ret))
 				#assert rx_ret == rx_buffer_len
 			#if self.self_mute:
 			#	continue
