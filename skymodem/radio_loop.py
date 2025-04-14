@@ -270,15 +270,21 @@ class RadioLoop:
 	# === Soapy ==============================================================================================================================================================================
 	def _soapy_rx_loop(self, sdr:SoapySDR.Device, bufferlen):
 		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
-		timeout = int(1e6 * bufferlen * 0.7 / self.radio_config.rx_sr0)
+		timeout = int(1e6 * bufferlen * 0.8 / self.radio_config.rx_sr0)
 		n_rx_loops = 0
-		buff = np.zeros(bufferlen, np.complex64)
+		buff = np.zeros(bufferlen*1024, np.complex64)
+		absolute_bufflen = len(buff)
+		n_rx_total = 0
+		avg_sr = 0.0
+		t00 = time.perf_counter()
 		sdr.activateStream(rxStream)
 		while self.on:
 			if (n_rx_loops % 1000) == 0:
-				DBGPRINT("(rx-#{})".format(n_rx_loops))
-			ret = sdr.readStream(rxStream, [buff], bufferlen, timeoutUs=timeout)
+				DBGPRINT("(rx-#{} (sr~{} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 2) ))
+			ret = sdr.readStream(rxStream, [buff], absolute_bufflen, timeoutUs=timeout)
 			rx_ret = ret.ret
+			n_rx_total += rx_ret
+			avg_sr = n_rx_total / (time.perf_counter() - t00)
 			#print(ret.ret) #num samples or error code
 			#print(ret.flags) #flags set by receive operation
 			#print(ret.timeNs) #timestamp for receive buffer
