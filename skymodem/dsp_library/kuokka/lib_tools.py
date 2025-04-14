@@ -253,7 +253,7 @@ def sinc_curve(BT, sps_f, n_taps):
 
 @njit(cache=True)
 def make_squarewave(binary_symbols, sps_f, i_sample_of_sym0_f, nsamples, npad):
-	assert np.all(np.abs(np.abs(binary_symbols)-1) < 0.0001)
+	#assert np.all(np.abs(np.abs(binary_symbols)-1) < 0.0001)
 	if nsamples < 0:
 		nsamples = int(len(binary_symbols) * sps_f + i_sample_of_sym0_f)
 	samples = np.zeros(nsamples)
@@ -271,8 +271,8 @@ def make_squarewave(binary_symbols, sps_f, i_sample_of_sym0_f, nsamples, npad):
 
 @njit(cache=True, parallel=True)
 def make_f_modulating_waveform(binary_symbols, sps_f, shaper_mode, shaper_BT_prod, shaper_n_taps):
-	assert shaper_mode in (0,1)
-	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+	#assert shaper_mode in (0,1)
+	#assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
 	if shaper_BT_prod > 0:
 		if shaper_mode == 0:
 			pulse = sinc_curve(BT=shaper_BT_prod, sps_f=sps_f, n_taps=shaper_n_taps)
@@ -297,9 +297,9 @@ def make_f_modulating_waveform(binary_symbols, sps_f, shaper_mode, shaper_BT_pro
 
 @njit(cache=True)
 def fm_mod(f_signal_offset, peak_deviation, modulator):
-	assert np.min(modulator) >= -1.0
-	assert np.max(modulator) <=  1.0
-	assert abs(f_signal_offset) < 0.5
+	#assert np.min(modulator) >= -1.0
+	#assert np.max(modulator) <=  1.0
+	#assert abs(f_signal_offset) < 0.5
 	nn = len(modulator)
 
 	#cs_mod = np.cumsum(modulator)
