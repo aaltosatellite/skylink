@@ -352,7 +352,7 @@ if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		assert sys.argv[1] in ("usrp", "soapy")
 		if sys.argv[1] == "soapy":
-			dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, f_tune=437e6, max_signal_bw=9600*4*1.2)
+			dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, f_tune=436e6, max_signal_bw=9600*4*1.2)
 	if dsp_config_ is None:
 		dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2)
 
