@@ -253,7 +253,7 @@ def sinc_curve(BT, sps_f, n_taps):
 
 @njit(cache=True)
 def make_squarewave(binary_symbols, sps_f, i_sample_of_sym0_f, nsamples, npad):
-	assert np.all(np.isclose(binary_symbols, 1) + np.isclose(binary_symbols, -1))
+	assert np.all(np.abs(np.abs(binary_symbols)-1) < 0.0001)
 	if nsamples < 0:
 		nsamples = int(len(binary_symbols) * sps_f + i_sample_of_sym0_f)
 	samples = np.zeros(nsamples)
