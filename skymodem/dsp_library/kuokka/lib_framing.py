@@ -312,14 +312,21 @@ def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequenc
 			if ok == 1:
 				#print("\t(Deframer finished successfully!)")
 				state = 0
-				payload_delimits = np.resize( payload_delimits, (len(payload_delimits)+1, 2) )
+				payload_delimits0 = np.zeros( (len(payload_delimits)+1, 2), dtype=np.int64 )
+				payload_delimits0[:len(payload_delimits),:] = payload_delimits
+				payload_delimits = payload_delimits0
+				#payload_delimits = np.resize( payload_delimits, (len(payload_delimits)+1, 2) )
 				payload_delimits[-1][0] = pl_head
 				payload_delimits[-1][1] = pl_head+pl_leng
-				payloads = np.resize(payloads, len(payloads) + pl_leng)
+				payloads = np.concatenate( (payloads, np.zeros(pl_leng)) )
+				#payloads = np.resize(payloads, len(payloads) + pl_leng)
 				payloads[pl_head:pl_head+pl_leng] = chars[0:pl_leng]
 				pl_head = pl_head + pl_leng
 				freq = (1.0e-9*frequency_sum) / (1.0*frequency_sum_count)
-				payload_frequencies = np.resize(payload_frequencies, len(payload_frequencies)+1)
+				payload_frequencies0 = np.zeros(len(payload_frequencies)+1, dtype=np.float64)
+				payload_frequencies0[:len(payload_frequencies)] = payload_frequencies
+				payload_frequencies = payload_frequencies0
+				#payload_frequencies = np.resize(payload_frequencies, len(payload_frequencies)+1)
 				payload_frequencies[-1] = freq
 			continue
 	deframer_mx[1,0] = state
