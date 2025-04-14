@@ -272,7 +272,7 @@ class RadioLoop:
 		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
 		timeout = int(1e6 * bufferlen * 0.8 / self.radio_config.rx_sr0)
 		n_rx_loops = 0
-		buff = np.zeros(bufferlen*600, np.complex64)
+		buff = np.zeros(2097152, np.complex64)
 		absolute_bufflen = len(buff)
 		n_rx_total = 0
 		avg_sr = 0.0
@@ -280,7 +280,7 @@ class RadioLoop:
 		sdr.activateStream(rxStream)
 		while self.on:
 			if (n_rx_loops % 1000) == 0:
-				DBGPRINT("(rx-#{} (sr~{} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 2) ))
+				DBGPRINT("(rx-#{} (sr~{} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4) ))
 			ret = sdr.readStream(rxStream, [buff], numElems=absolute_bufflen, timeoutUs=timeout)
 			rx_ret = ret.ret
 			n_rx_total += rx_ret
