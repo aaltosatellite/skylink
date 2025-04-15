@@ -67,51 +67,22 @@ class RadioLoop:
 			self._soapy_start()
 
 
-	def _soapy_start(self):
-		"""
-		This start method will be called when used on the ground station machine.
-		The Soapy-code is incomplete, and will certainly not work yet. You will need to attach to a 'leecher' device created by the soapy-shared library.
-		"""
-		DBGPRINT("SoapySDR start")
-		args = dict(device="uhd")
-		sdr = SoapySDR.Device(args) #args
-		if type(sdr) == tuple:
-			sdr = sdr[0]
-		print(sdr)
-		DBGPRINT("SoapySDR driver key: ", sdr.getDriverKey())
-		DBGPRINT("SoapySDR driver key: ", sdr.getHardwareKey())
-		DBGPRINT("Assuming we are on a SoapyShared leecher device.")
-		DBGPRINT("Radio parameters can not be changed, instead we config to what we believe they are.")
-		DBGPRINT("Assuming:  f-tune = {} MHz".format(self.radio_config.rx_f_tune))
-		DBGPRINT("Assuming:  	 sr > {} MS/s".format(self.radio_config.rx_sr0))
-		sdr.setSampleRate(SOAPY_SDR_RX, 0, self.radio_config.rx_sr0)
-		sdr.setSampleRate(SOAPY_SDR_TX, 0, self.radio_config.tx_sr0)
-		sdr.setFrequency(SOAPY_SDR_RX, 0, self.radio_config.rx_f_tune)
-		sdr.setFrequency(SOAPY_SDR_TX, 0, self.radio_config.tx_f_tune)
-		sdr.setGain(SOAPY_SDR_RX, 0, 56)
-		sdr.setGain(SOAPY_SDR_TX, 0, 56)
-		DBGPRINT("RX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_RX, 0) ))
-		DBGPRINT("TX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_TX, 0) ))
-		DBGPRINT("RX gain:            {}".format( sdr.getGain(SOAPY_SDR_RX, 0) ))
-		DBGPRINT("TX gain:            {}".format( sdr.getGain(SOAPY_SDR_TX, 0) ))
-		self.rx_thread			= threading.Thread(target=self._soapy_rx_loop,   args=(sdr, 1024*4), daemon=True)
-		self.tx_thread 			= threading.Thread(target=self._soapy_tx_loop,   args=(sdr, 1024*4), daemon=True) #TODO bufferlen as setting?
-		self.on = True
-		self.rx_thread.start()
-		self.tx_thread.start()
 
 
+	# === USRP ===============================================================================================================================================================================
+	# === USRP ===============================================================================================================================================================================
 	def _usrp_start(self):
 		# This noise injection enforces the jit-compilation of much of the signal processing pipeline before the loop starts.
 		DBGPRINT("USRP start")
-		gain = 56 # dB
+		rx_gain = 56 # dB
+		tx_gain = 56 # dB
 		usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
 		usrp.set_rx_rate(self.radio_config.rx_sr0, 0)
 		usrp.set_tx_rate(self.radio_config.tx_sr0, 0)
 		usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(self.radio_config.rx_f_tune), 0)
 		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(self.radio_config.tx_f_tune), 0)
-		usrp.set_rx_gain(gain, 0)
-		usrp.set_tx_gain(gain, 0)
+		usrp.set_rx_gain(rx_gain, 0)
+		usrp.set_tx_gain(tx_gain, 0)
 		DBGPRINT("RX gain range:      {}".format( str(usrp.get_rx_gain_range(0))[:-1] ))
 		DBGPRINT("TX gain range:      {}".format( str(usrp.get_tx_gain_range(0))[:-1] ))
 		DBGPRINT("usrp RX gain:       {}".format( usrp.get_rx_gain(0) ))
@@ -127,80 +98,6 @@ class RadioLoop:
 		self.tx_thread.start()
 
 
-	def recording_start(self, fpath=None, sr0=None, fcenter0=None):
-		DBGPRINT("Recording start")
-		import pickle
-		if fpath is None:
-			fpath, fcenter0, sr0 = ("/home/elmore/datasetit/radiotallenteet/uhf-965_437.0MHz-1000ksps.pickled",-124.0e3, 1e6)
-		f = open(fpath, "rb")
-		rd = f.read()
-		f.close()
-		samples = pickle.loads(rd)
-		samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/sr0) * (fcenter0+25e3))
-		assert len(samples.shape) == 1
-		assert type(samples) == np.ndarray
-		samples = np.complex64(samples)
-		self.radio_config.rx_sr0 	= sr0
-		self.radio_config.tx_sr0 	= sr0
-		self.radio_config.rx_f_tune = 437e6
-		self.radio_config.tx_f_tune = 437e6
-		self.radio_config.rx_f_center = self.radio_config.rx_f_tune + 25e3
-		self.radio_config.tx_f_center = self.radio_config.tx_f_tune + 25e3
-		self.rx_thread 			= threading.Thread(target=self._recording_rx_loop,  args=(samples, sr0), daemon=True) #TODO bufferlen as setting?
-		self.tx_thread 			= threading.Thread(target=self._recording_tx_loop,  args=tuple(),        daemon=True) #TODO bufferlen as setting?
-		self.on = True
-		self.rx_thread.start()
-		self.tx_thread.start()
-
-
-
-
-	# === RECORDING ==========================================================================================================================================================================
-	# === RECORDING ==========================================================================================================================================================================
-	def _recording_rx_loop(self, samples):
-		time.sleep(2)
-		nsamples = len(samples)
-		cursor = 0
-		n_received = 0
-		t0 = time.perf_counter()
-		t_sleep = 0.0
-		default_batchlen = 1024*2
-		while self.on:
-			time.sleep(t_sleep)
-			batchlen = min(default_batchlen, nsamples-cursor )
-			batch = samples[cursor:cursor+batchlen]
-			assert len(batch) == batchlen
-			cursor += batchlen
-			if cursor >= nsamples:
-				cursor = 0
-				DBGPRINT("Recordning cursor zeroed.")
-			if not self.que_rx_samples_out.full():
-				self.que_rx_samples_out.put_nowait(batch)
-			else:
-				DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
-			n_received += batchlen
-			t_next = t0 + ((n_received + batchlen) / self.radio_config.rx_sr0)
-			t_sleep = max(0, t_next - time.perf_counter())
-
-
-	def _recording_tx_loop(self):
-		while self.on:
-			try:
-				_ = self.que_tx_samples_in.get(timeout=0.20)
-			except Empty:
-				continue
-			except Exception as e:
-				DBGPRINT("Queue.get() exception (tx-thread):", e)
-				self.on = False
-				break
-	# === RECORDING ==========================================================================================================================================================================
-	# === RECORDING ==========================================================================================================================================================================
-
-
-
-
-	# === USRP ===============================================================================================================================================================================
-	# === USRP ===============================================================================================================================================================================
 	def _usrp_rx_loop(self, usrp:uhd.usrp.MultiUSRP, rx_buffer_len):
 		# Set up the stream and receive buffer
 		st_args = uhd.usrp.StreamArgs("fc32", "sc16")
@@ -265,9 +162,42 @@ class RadioLoop:
 
 
 
+	# === Soapy ==============================================================================================================================================================================
+	# === Soapy ==============================================================================================================================================================================
+	def _soapy_start(self):
+		"""
+		This start method will be called when used on the ground station machine.
+		The Soapy-code is incomplete, and will certainly not work yet. You will need to attach to a 'leecher' device created by the soapy-shared library.
+		"""
+		DBGPRINT("SoapySDR start")
+		args = dict(device="uhd")
+		sdr = SoapySDR.Device(args) #args
+		if type(sdr) == tuple:
+			sdr = sdr[0]
+		print(sdr)
+		DBGPRINT("SoapySDR driver key: ", sdr.getDriverKey())
+		DBGPRINT("SoapySDR driver key: ", sdr.getHardwareKey())
+		DBGPRINT("Assuming we are on a SoapyShared leecher device.")
+		DBGPRINT("Radio parameters can not be changed, instead we config to what we believe they are.")
+		DBGPRINT("Assuming:  f-tune = {} MHz".format(self.radio_config.rx_f_tune))
+		DBGPRINT("Assuming:  	 sr > {} MS/s".format(self.radio_config.rx_sr0))
+		sdr.setSampleRate(SOAPY_SDR_RX, 0, self.radio_config.rx_sr0)
+		sdr.setSampleRate(SOAPY_SDR_TX, 0, self.radio_config.tx_sr0)
+		sdr.setFrequency(SOAPY_SDR_RX, 0, self.radio_config.rx_f_tune)
+		sdr.setFrequency(SOAPY_SDR_TX, 0, self.radio_config.tx_f_tune)
+		sdr.setGain(SOAPY_SDR_RX, 0, 56)
+		sdr.setGain(SOAPY_SDR_TX, 0, 56)
+		DBGPRINT("RX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_RX, 0) ))
+		DBGPRINT("TX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_TX, 0) ))
+		DBGPRINT("RX gain:            {}".format( sdr.getGain(SOAPY_SDR_RX, 0) ))
+		DBGPRINT("TX gain:            {}".format( sdr.getGain(SOAPY_SDR_TX, 0) ))
+		self.rx_thread			= threading.Thread(target=self._soapy_rx_loop,   args=(sdr, 1024*4), daemon=True)
+		self.tx_thread 			= threading.Thread(target=self._soapy_tx_loop,   args=(sdr, 1024*4), daemon=True) #TODO bufferlen as setting?
+		self.on = True
+		self.rx_thread.start()
+		self.tx_thread.start()
 
-	# === Soapy ==============================================================================================================================================================================
-	# === Soapy ==============================================================================================================================================================================
+
 	def _soapy_rx_loop(self, sdr:SoapySDR.Device, bufferlen):
 		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
 		timeout = int(1e6 * bufferlen * 0.8 / self.radio_config.rx_sr0)
@@ -343,4 +273,71 @@ class RadioLoop:
 	# === Soapy ==============================================================================================================================================================================
 
 
+
+	# === RECORDING ==========================================================================================================================================================================
+	# === RECORDING ==========================================================================================================================================================================
+	def recording_start(self, fpath=None, sr0=None, fcenter0=None):
+		DBGPRINT("Recording start")
+		import pickle
+		if fpath is None:
+			fpath, fcenter0, sr0 = ("/home/elmore/datasetit/radiotallenteet/uhf-965_437.0MHz-1000ksps.pickled",-124.0e3, 1e6)
+		f = open(fpath, "rb")
+		rd = f.read()
+		f.close()
+		samples = pickle.loads(rd)
+		samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/sr0) * (fcenter0+25e3))
+		assert len(samples.shape) == 1
+		assert type(samples) == np.ndarray
+		samples = np.complex64(samples)
+		self.radio_config.rx_sr0 	= sr0
+		self.radio_config.tx_sr0 	= sr0
+		self.radio_config.rx_f_tune = 437e6
+		self.radio_config.tx_f_tune = 437e6
+		self.radio_config.rx_f_center = self.radio_config.rx_f_tune + 25e3
+		self.radio_config.tx_f_center = self.radio_config.tx_f_tune + 25e3
+		self.rx_thread 			= threading.Thread(target=self._recording_rx_loop,  args=(samples, sr0), daemon=True) #TODO bufferlen as setting?
+		self.tx_thread 			= threading.Thread(target=self._recording_tx_loop,  args=tuple(),        daemon=True) #TODO bufferlen as setting?
+		self.on = True
+		self.rx_thread.start()
+		self.tx_thread.start()
+
+
+	def _recording_rx_loop(self, samples):
+		time.sleep(2)
+		nsamples = len(samples)
+		cursor = 0
+		n_received = 0
+		t0 = time.perf_counter()
+		t_sleep = 0.0
+		default_batchlen = 1024*2
+		while self.on:
+			time.sleep(t_sleep)
+			batchlen = min(default_batchlen, nsamples-cursor )
+			batch = samples[cursor:cursor+batchlen]
+			assert len(batch) == batchlen
+			cursor += batchlen
+			if cursor >= nsamples:
+				cursor = 0
+				DBGPRINT("Recordning cursor zeroed.")
+			if not self.que_rx_samples_out.full():
+				self.que_rx_samples_out.put_nowait(batch)
+			else:
+				DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
+			n_received += batchlen
+			t_next = t0 + ((n_received + batchlen) / self.radio_config.rx_sr0)
+			t_sleep = max(0, t_next - time.perf_counter())
+
+
+	def _recording_tx_loop(self):
+		while self.on:
+			try:
+				_ = self.que_tx_samples_in.get(timeout=0.20)
+			except Empty:
+				continue
+			except Exception as e:
+				DBGPRINT("Queue.get() exception (tx-thread):", e)
+				self.on = False
+				break
+	# === RECORDING ==========================================================================================================================================================================
+	# === RECORDING ==========================================================================================================================================================================
 

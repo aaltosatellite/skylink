@@ -1,5 +1,5 @@
 import numpy as np
-from kuokka.lib_tools import make_samples, DEFAULT_SYNCHWORD_BITS
+from kuokka.lib_tools import make_samples2, DEFAULT_SYNCHWORD_BITS
 from sdr_recorder import get_samples, fpaths
 from mtools.tools_dsp import waterfall_mx
 from scipy.signal import firwin
@@ -15,9 +15,11 @@ def compare_generated_to_recording():
 	bitstring = np.random.randint(0,2, 256)*2 - 1
 	bitstring[0:32] = [1,-1]*16
 	bitstring[32:32+32] = DEFAULT_SYNCHWORD_BITS*2 -1
+	bitstring[64:64+8] = [1,1,-1,-1,-1, 1,1,1]
+	bitstring[64+8:64+8+12] = [-1,]*12
 	sr0 = 1e6
 	sps = sr0/9600
-	gen_samples = make_samples(sps_f=sps, bitstring=bitstring, f_offset=0.0, power=1.0, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.425, shaper_n_taps=int(sps)*6+1)  #BT=0.425
+	gen_samples, _ = make_samples2(sps_f=sps, bitstring=bitstring, f_offset=0.0, power=1.0, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.425)  #BT=0.425
 	gen_samples = np.concatenate( (np.zeros(1000, dtype=np.complex128), gen_samples, np.zeros(1000, dtype=np.complex128) ) )
 
 	lp_taps = firwin(numtaps=201, cutoff=0.9*9600/1e6, pass_zero=True)

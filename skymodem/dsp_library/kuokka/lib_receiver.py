@@ -4,7 +4,7 @@ from .lib_demodulation import demodulation_sequence, create_DSD_statemx, DSD_buf
 from .lib_symsynching import create_classic_JPL_statemx
 from .lib_fft_finder import create_cont_center_statemx, fft_continuous_f_center, set_f_center_search_map
 from .lib_framing import create_deframer, deframe, RS_MAX_ENCODED_LEN, frame_packet, RS_MAX_PL_LEN
-from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples, ints_to_bits, freq_shift_phased, choose_fftlen
+from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples2, ints_to_bits, freq_shift_phased, choose_fftlen
 from .lib_reedsolomon import get_default_rs
 from .lib_div_resampler import staged_resampler_execute_stream, create_staged_resampler
 from .lib_tools import get_frequency_search_map
@@ -29,7 +29,7 @@ class DSPConfig:
 		# --------------------------------------------------
 		# resampling ---------------------------------------
 		self.sps 				= 12 			# ! sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
-		self.d_halflen 			= 20			# ! Integer resampling lowpass filter halflen. Larger number increases both accuracy and computation cost. Has a minor effect on performance.
+		self.d_halflen 			= 28			# ! Integer resampling lowpass filter halflen. Larger number increases both accuracy and computation cost. Has a minor effect on performance.
 		self.f_halflen 			= 12			# ! Fractional resampling lowpass filter halflen. Larger number increases both accuracy and computation cost. Has a *major* effect on performance.
 		self.n_banks 			= 64			# - Number of resampling banks. Almost no effect on performance, and 64 seems good for all purposes.
 		self.rs_f_cutoff_coeff 	= 0.499			# - Lowpass associated with the resampling. In interval (0:0.5). 0.499 still enables some aliasing at edges.
@@ -78,7 +78,7 @@ class DSPConfig:
 		assert 2 < self.sps <= 100
 		assert type(self.sps) == int
 		assert 4 < self.d_halflen < 42
-		assert (self.d_halflen*2) > int(self.rx_sr0 / (self.baudrate * self.sps))
+		assert (self.d_halflen*2) > int(self.rx_sr0 / (self.baudrate * self.sps)),  (self.d_halflen*2, int(self.rx_sr0 / (self.baudrate * self.sps)))
 		assert type(self.d_halflen) == int
 		assert 4 < self.f_halflen < 42
 		assert type(self.f_halflen) == int
@@ -313,7 +313,7 @@ def get_a_precompiling_sampleset(dsp_config:DSPConfig, do_print=False):
 	preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
 	frame_bits = frame_packet(pl=pl, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
 	bitstring = np.concatenate( (preamble_bits, frame_bits) )
-	transmission = make_samples(sps_f=sr0/dsp_config.baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=dsp_config.mod_index, shaper_mode=1, shaper_BT_prod=dsp_config.BT_rx_match, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
+	transmission, _ = make_samples2(sps_f=sr0/dsp_config.baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=dsp_config.mod_index, shaper_mode=1, shaper_BT_prod=dsp_config.BT_rx_match, n_silence_start=0, n_silence_end=0)
 
 	n_fft_calibration = int( (sr0/(dsp_config.baudrate*dsp_config.sps)) * 2*dsp_config.fftlen_mpr*dsp_config.sps )
 	nsamples = int(n_fft_calibration + len(transmission) + 1.0*sr0)

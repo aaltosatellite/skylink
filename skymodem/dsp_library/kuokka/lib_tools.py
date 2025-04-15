@@ -271,8 +271,8 @@ def make_squarewave(binary_symbols, sps_f, i_sample_of_sym0_f, nsamples, npad):
 
 @njit(cache=True, parallel=True)
 def make_f_modulating_waveform(binary_symbols, sps_f, shaper_mode, shaper_BT_prod, shaper_n_taps):
-	#assert shaper_mode in (0,1)
-	#assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+	assert shaper_mode in (0,1)
+	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
 	if shaper_BT_prod > 0:
 		if shaper_mode == 0:
 			pulse = sinc_curve(BT=shaper_BT_prod, sps_f=sps_f, n_taps=shaper_n_taps)
@@ -282,13 +282,12 @@ def make_f_modulating_waveform(binary_symbols, sps_f, shaper_mode, shaper_BT_pro
 	else:
 		pulse = np.ones(1, dtype=np.float64)
 	npulse = len(pulse)
-	modulator0 = make_squarewave(binary_symbols=binary_symbols, sps_f=sps_f, i_sample_of_sym0_f=0.0, nsamples=-1, npad=len(pulse)//2)
+	modulator0 = make_squarewave(binary_symbols=binary_symbols, sps_f=sps_f, i_sample_of_sym0_f=0.0, nsamples=-1, npad=npulse//2)
 	if npulse > 1:
 		#modulator1 = np.correlate(modulator0, pulse)
 		modulator1 = np.zeros(len(modulator0)-npulse+1, dtype=np.float64)
 		for i in prange(len(modulator1)):
 			modulator1[i] = np.sum(pulse * modulator0[i:i+npulse])
-
 	else:
 		modulator1 = modulator0
 	modulator1 = modulator1 / np.max(np.abs(modulator1))
@@ -297,9 +296,9 @@ def make_f_modulating_waveform(binary_symbols, sps_f, shaper_mode, shaper_BT_pro
 
 @njit(cache=True)
 def fm_mod(f_signal_offset, peak_deviation, modulator):
-	#assert np.min(modulator) >= -1.0
-	#assert np.max(modulator) <=  1.0
-	#assert abs(f_signal_offset) < 0.5
+	assert np.min(modulator) >= -1.0
+	assert np.max(modulator) <=  1.0
+	assert abs(f_signal_offset) < 0.5
 	nn = len(modulator)
 
 	#cs_mod = np.cumsum(modulator)
@@ -313,22 +312,69 @@ def fm_mod(f_signal_offset, peak_deviation, modulator):
 	return signal
 
 
+@njit(cache=True)
+def fm_mod_expanding(f_signal_offset, peak_deviation, modulator, nsamples):
+	assert np.min(modulator) >= -1.0
+	assert np.max(modulator) <=  1.0
+	assert abs(f_signal_offset) < 0.5
+	ratio = float(len(modulator)) / nsamples
+	cs_mod = np.zeros(nsamples, dtype=np.float64)
+	cs_mod[0] = modulator[0]
+	for i in range(1,nsamples):
+		im = int(ratio * i)
+		cs_mod[i] = modulator[im] + cs_mod[i-1]
+	signal = np.exp((2j*np.pi) * (f_signal_offset * np.arange(nsamples) + cs_mod * peak_deviation)) # TODO: make the frequency offset it's own exp-multiplication. Math would be cleaner.
+	return signal
+
+
+
+
+
 #@njit(cache=True)
-def make_samples(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0):
-	assert abs(f_offset) < 0.5, f_offset
-	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+def make_samples1(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0):
+	"""
 	# Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
 	# 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0
 	# peak_dev = mod_index / (2*symboltime).                          peak_dev_physical = peak_dev * sr. accords to CC1125 (CC112X/CC1175) User's guide on page 26.
+	"""
+	assert abs(f_offset) < 0.5, f_offset
+	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+	assert np.all(np.isclose(np.abs(bitstring[0:34]), 1))
 	peak_dev	= mod_index / (sps_f*2.0)
 	modulator 	= make_f_modulating_waveform(bitstring, sps_f, shaper_mode, shaper_BT_prod, shaper_n_taps)
 	samples 	= fm_mod(f_offset, peak_dev, modulator)
-	#print(np.average(np.abs(samples)))
-	#samples 	= samples / np.average(np.abs(samples))
-	samples 	= samples * (power**0.5)
+	if power != 1:
+		samples 	= samples * (power**0.5)
 	if (n_silence_start > 0) or (n_silence_end > 0):
-		samples = np.concatenate( (np.zeros(n_silence_start, dtype=np.complex128), samples, np.zeros(n_silence_end, dtype=np.complex128)) )
-	return samples
+		samples 	= np.concatenate( (np.zeros(n_silence_start, dtype=np.complex128), samples, np.zeros(n_silence_end, dtype=np.complex128)) )
+	return samples, modulator
+
+
+def make_samples2(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, n_silence_start=0, n_silence_end=0):
+	"""
+	# Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
+	# 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0
+	# peak_dev = mod_index / (2*symboltime).                          peak_dev_physical = peak_dev * sr. accords to CC1125 (CC112X/CC1175) User's guide on page 26.
+	"""
+	assert abs(f_offset) < 0.5, f_offset
+	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+	assert np.all(np.isclose(np.abs(bitstring[0:34]), 1))
+	peak_dev	= mod_index / (sps_f*2.0)
+	i_sample_of_sym0_f = 0.0
+	sps_mod		= 14.0
+	nsamples 	= int(len(bitstring) * sps_f + i_sample_of_sym0_f)
+	modulator 	= make_f_modulating_waveform(bitstring, sps_mod, shaper_mode, shaper_BT_prod, int(sps_mod)*4+1)
+	samples 	= fm_mod_expanding(f_offset, peak_dev, modulator, nsamples)
+	if power != 1:
+		samples 	= samples * (power**0.5)
+	if (n_silence_start > 0) or (n_silence_end > 0):
+		samples 	= np.concatenate( (np.zeros(n_silence_start, dtype=np.complex128), samples, np.zeros(n_silence_end, dtype=np.complex128)) )
+	return samples, modulator
+
+
+
+
+
 
 
 @njit(cache=True)

@@ -2,12 +2,13 @@ import queue
 import numpy as np
 from .lib_receiver import Receiver, DSPConfig, precompile_receiver
 from .lib_framing import frame_packet
-from .lib_tools import doppler_correction, ints_to_bits, DEFAULT_SYNCHWORD_LEN, DEFAULT_SYNCHWORD, make_samples
+from .lib_tools import doppler_correction, ints_to_bits, DEFAULT_SYNCHWORD_LEN, DEFAULT_SYNCHWORD, make_samples2
 from .lib_reedsolomon import get_default_rs
 from datetime import datetime as dtime
 import threading
 from queue import Queue, Empty
 import time
+
 
 
 DEBUG_PRINT_ON = True
@@ -94,7 +95,8 @@ class DSPLoop:
 
 
 
-
+	# == private functions ===================================================================================================================================================================
+	# ========================================================================================================================================================================================
 	def _clean_own_sent(self):
 		for key in list(self.own_recently_sent):
 			if (time.monotonic() - self.own_recently_sent[key]) > 3.0:
@@ -116,6 +118,7 @@ class DSPLoop:
 
 
 	def _compose_samples(self, payload, usrp_reshape, as_c64):
+		t00 = time.perf_counter()
 		f_use_offset = self._get_transmit_frequency(as_offset=True)
 		f_offset_nrm = f_use_offset / self.dsp_config.tx_sr0
 		pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
@@ -123,13 +126,19 @@ class DSPLoop:
 		bits = np.concatenate( (self.preamble_bits, bits) )
 		sps = self.dsp_config.tx_sr0 / self.dsp_config.baudrate
 		n_silence_start = int(self.dsp_config.tx_sr0 * 2.0e-3) # TODO: this should be a setting?
-		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.dsp_config.tx_mod_index, shaper_mode=1,
-							   shaper_BT_prod=self.dsp_config.tx_BT, shaper_n_taps=int(sps * 4) + 1, n_silence_start=n_silence_start, n_silence_end=0)
+		dt1 = time.perf_counter() - t00
+		t00 = time.perf_counter()
+		samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.dsp_config.tx_mod_index, shaper_mode=1,
+							   shaper_BT_prod=self.dsp_config.tx_BT, n_silence_start=n_silence_start, n_silence_end=0)
+		#samples = np.exp(2j*np.pi*np.arange(len(samples)) * 0.005 )
+		dt2 = time.perf_counter() - t00
+		t00 = time.perf_counter()
 		if usrp_reshape:
 			samples = np.reshape(samples, (1, len(samples)))
 		if as_c64:
 			samples = np.array(samples, dtype=np.complex64)
-		return samples, f_use_offset+self.dsp_config.tx_f_tune
+		dt3 = time.perf_counter() - t00
+		return samples, f_use_offset+self.dsp_config.tx_f_tune, (dt1, dt2, dt3)
 
 
 	def _rx_loop(self):
@@ -172,7 +181,7 @@ class DSPLoop:
 				assert type(payload) in (bytes, bytearray)
 				self._clean_own_sent()
 				self.own_recently_sent[payload] = time.monotonic()
-				samplearr, f_use_abs = self._compose_samples(payload, usrp_reshape=True, as_c64=True)
+				samplearr, f_use_abs, _ = self._compose_samples(payload, usrp_reshape=True, as_c64=True)
 			DBGPRINT("tx start at {} MHz".format( f_use_abs * 1e-6, 4 ))
 			self.que_tx_samples_out.put(samplearr)
 
