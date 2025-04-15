@@ -328,7 +328,7 @@ def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, max_signal_bw)
 	print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
 	sr0 = 1e6
 	while sr0 < minimum_samplerate:
-		sr0 += 500e3
+		sr0 += 200e3
 	assert sr0 < 5e6
 	print("Using soapy-leecher radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr0*1e-6, 3) ))
 	radio_config 	= RadioConfig(mode="soapy", rx_sr=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr=sr0, tx_f_tune=f_tune, tx_f_center=f_center)
