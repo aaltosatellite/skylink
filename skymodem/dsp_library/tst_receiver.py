@@ -5,7 +5,7 @@ from kuokka.lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_BITS, DEFAULT_
 from kuokka.lib_receiver import Receiver, DSPConfig, precompile_receiver
 from mtools.tools_dsp import waterfall_mx
 from mtools.tools_system import mpr_set
-from kuokka.lib_tools import make_samples, radionoise
+from kuokka.lib_tools import make_samples2, radionoise
 import time, os
 from matplotlib import pyplot as plt
 from copy import deepcopy
@@ -38,8 +38,8 @@ def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payl
 		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (preamble_bits, bits) )
 		tx_sps = sr0 / baudrate
-		pl_samples = make_samples(sps_f=tx_sps, bitstring=bits, f_offset=f_ofst_nrm, power=1.0, mod_index=mod_index, shaper_mode=1,
-							   shaper_BT_prod=BT, shaper_n_taps=int(tx_sps*4)+1, n_silence_start=0, n_silence_end=0)
+		pl_samples, _ = make_samples2(sps_f=tx_sps, bitstring=bits, f_offset=f_ofst_nrm, power=1.0, mod_index=mod_index, shaper_mode=1,
+							   shaper_BT_prod=BT, n_silence_start=0, n_silence_end=0)
 		payload_istart_iend_list.append( (pl, len(samples), len(samples)+len(pl_samples)) )
 		samples = np.concatenate((samples, pl_samples))
 		if i_pl < (n_payloads -1):
@@ -156,13 +156,13 @@ def speed_printout(dt_array, t_total, nsamples, sr0):
 	budget_fraction	= (1/overmatch) / 0.5
 	cpu_fraction	= (1/overmatch) / 1.0
 	print("="*50)
-	print("\tspeed:          {} Ms/s".format( round(1e-6 * speed, 2) ))
-	print("\tovermatch:      {}".format( round(overmatch, 2) ))
-	print("\tbudget use:     {} %".format( round(100*budget_fraction, 2) ))
-	print("\tcpu core use:   {} %".format( round(100*cpu_fraction, 2) ))
+	print("speed:          {} Ms/s".format( round(1e-6 * speed, 2) ))
+	print("overmatch:      {}".format( round(overmatch, 2) ))
+	print("budget use:     {} %".format( round(100*budget_fraction, 2) ))
+	print("cpu core use:   {} %".format( round(100*cpu_fraction, 2) ))
 	for i_dt in range(len(dt_array)):
-		print("\t\tpart {}:            {} %".format(i_dt+1, round( 100*dt_array[i_dt]/np.sum(dt_array) , 2) ))
-	print("\t\tparts of total:    {} %".format( round( 100*np.sum(dt_array)/t_total , 2) ))
+		print("\tpart {}:            {} %".format(i_dt+1, round( 100*dt_array[i_dt]/np.sum(dt_array) , 2) ))
+	print("parts of total:    {} %".format( round( 100*np.sum(dt_array)/t_total , 2) ))
 	print("="*50)
 
 
@@ -314,15 +314,13 @@ def basic_test_A():
 	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	#rx_config.mod_index = 0.7
 	#rx_config.BT_rx_match = -1
-	noisePpHz = 0.16/baudrate
+	noisePpHz = 0.10/baudrate
 
 	print("[Generating samples]")
-	samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=f_center+3.1e3, sr0=sr0,
-															  baudrate=baudrate*(1+1.5e-5), mod_index=rx_config.mod_index, BT=rx_config.BT_rx_match,
-															  n_payloads=n_payloads, noisePpHz=noisePpHz, T_init_silence=2.0,
-															  T_interval_array=(5e-3,)*(n_payloads-1), T_end_silence=0.5)
+	samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=f_center+3.1e3, sr0=sr0, baudrate=baudrate*(1+1.5e-5), mod_index=rx_config.mod_index, BT=rx_config.BT_rx_match,
+															  n_payloads=n_payloads, noisePpHz=noisePpHz, T_init_silence=2.0, T_interval_array=(5e-3,)*(n_payloads-1), T_end_silence=2.0)
 	print("[Feeding samples]")
-	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=512*2, do_precompile=True)
+	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=1024*4, do_precompile=True)
 	#pl_f_cursor_d = dict( [(x[0],x[1:3]) for x in pl_f_cursor_list] )
 
 	print("\n\n")
@@ -724,8 +722,8 @@ def analyze_results_plot():
 
 
 
-#basic_test_A()
-compare_default_optimod_4800()
+basic_test_A()
+#compare_default_optimod_4800()
 
 #compare_fftlens()
 #compare_timings()
