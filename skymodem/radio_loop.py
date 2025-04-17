@@ -172,6 +172,7 @@ class RadioLoop:
 		DBGPRINT("SoapySDR start")
 		args = dict(device="uhd")
 		sdr = SoapySDR.Device(args) #args
+		SoapySDR.setLogLevel(SoapySDR.SOAPY_SDR_FATAL)
 		if type(sdr) == tuple:
 			sdr = sdr[0]
 		print(sdr)
