@@ -371,7 +371,6 @@ if __name__ == '__main__':
 	try:
 		while True:
 			#print(threading.active_count(), "threads active")
-			DBGPRINT("(avg amplitude ~ {})".format( modem.dsp_loop.rx.avg_amplitude ))
 			time.sleep(1.0)
 			if not modem.is_ok():
 				print("Modem is_ok() failed. Exiting.")

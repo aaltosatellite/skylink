@@ -156,7 +156,6 @@ class Receiver:
 		self.deframermx 		= np.zeros((2,2), dtype=np.float64)
 		self.white_noise		= np.zeros(config.batch_maxlen*10, dtype=np.complex64)
 		self.add_white_noise	= False
-		self.avg_amplitude		= 0.0
 		rs_mx, rs_cfg 			= get_default_rs()
 		self.rs_mx 				= rs_mx
 		self.rs_cfg 			= rs_cfg
@@ -239,17 +238,16 @@ class Receiver:
 
 		t0 = time.perf_counter()
 		rs_head_new = staged_resampler_execute_stream(in_arr=batch2, ii0=0, nsamples=len(batch2), out_arr=self.rs_array, io0=self.rs_head, mx1=self.rsmpl_mx1, mx2=self.rsmpl_mx2)
-		self.avg_amplitude = self.avg_amplitude + (np.average(np.abs(self.rs_array[self.rs_head:min(self.rs_head+32, rs_head_new)])) - self.avg_amplitude) * 0.05
-		if self.add_white_noise:
-			i = np.random.randint(0, 32)
-			self.rs_array[self.rs_head:rs_head_new] += self.white_noise[i:i+(rs_head_new - self.rs_head)]
+		#if self.add_white_noise:
+		#	i = np.random.randint(0, 32)
+		#	self.rs_array[self.rs_head:rs_head_new] += self.white_noise[i:i+(rs_head_new - self.rs_head)]
 		self.dt_array[1] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()
 		center_f_head_new, demodulation_head_new = fft_continuous_f_center(sample_arr=self.rs_array, isample0=self.rs_head, nsamples=rs_head_new - self.rs_head,
 																				center_f_arr=self.center_f_array, center_f_head0=self.center_f_head,
 																				statemx=self.FFTstatemx, instr_arr=self.fft_instr_array)
-		##self.center_f_array[self.demodulation_head:demodulation_head_new] = 0.152
+		#self.center_f_array[self.demodulation_head:demodulation_head_new] = 0.152
 		self.dt_array[2] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()
