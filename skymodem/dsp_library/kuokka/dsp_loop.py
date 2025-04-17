@@ -163,7 +163,7 @@ class DSPLoop:
 							DBGPRINT("Discarded self reception.")
 							continue
 						self.last_verified_freq = (rx_f_absolute, time.monotonic())
-						self.que_rcv_payloads_out.put( (rx_pl, rx_f_absolute) )
+						self.que_rcv_payloads_out.put( rx_pl )
 					c += default_batchlen
 
 
