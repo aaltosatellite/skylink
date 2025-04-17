@@ -324,7 +324,7 @@ def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, max_signal_bw)
 	f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
 	f_center_min = f_center_min - max_signal_bw/2
 	f_center_max = f_center_max + max_signal_bw/2
-	minimum_samplerate = max( abs(f_center_min - f_tune), abs(f_center_max - f_tune) ) * 3.12
+	minimum_samplerate = max( abs(f_center_min - f_tune), abs(f_center_max - f_tune) ) * 3.0
 	print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
 	sr0 = 1e6
 	while sr0 < minimum_samplerate:
