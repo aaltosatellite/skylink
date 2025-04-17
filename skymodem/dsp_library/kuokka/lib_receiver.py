@@ -29,7 +29,7 @@ class DSPConfig:
 		# --------------------------------------------------
 		# resampling ---------------------------------------
 		self.sps 				= 12 			# ! sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
-		self.d_halflen 			= 28			# ! Integer resampling lowpass filter halflen. Larger number increases both accuracy and computation cost. Has a minor effect on performance.
+		self.d_halflen 			= 32			# ! Integer resampling lowpass filter halflen. Larger number increases both accuracy and computation cost. Has a minor effect on performance.
 		self.f_halflen 			= 12			# ! Fractional resampling lowpass filter halflen. Larger number increases both accuracy and computation cost. Has a *major* effect on performance.
 		self.n_banks 			= 64			# - Number of resampling banks. Almost no effect on performance, and 64 seems good for all purposes.
 		self.rs_f_cutoff_coeff 	= 0.499			# - Lowpass associated with the resampling. In interval (0:0.5). 0.499 still enables some aliasing at edges.

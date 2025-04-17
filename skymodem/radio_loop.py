@@ -216,7 +216,7 @@ class RadioLoop:
 		sdr.activateStream(rxStream)
 		while self.on:
 			if (n_rx_loops % 2000) == 0:
-				DBGPRINT("(rx-#{} (sr~{} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4) ))
+				DBGPRINT("(rx-#{}) (sr~{} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4) ))
 			ret = sdr.readStream(rxStream, [buff], numElems=absolute_bufflen, timeoutUs=timeout)
 			rx_ret = ret.ret
 			n_rx_total += rx_ret

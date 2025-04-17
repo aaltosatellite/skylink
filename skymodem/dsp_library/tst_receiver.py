@@ -310,7 +310,7 @@ def test_precompilation_success_rate(N):
 def basic_test_A():
 	f_tune 		= 436.0e6
 	f_center 	= 437.125e6
-	sr0 		= 3e6
+	sr0 		= 3.6e6
 	baudrate	= 9600
 	n_payloads	= 12
 	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)

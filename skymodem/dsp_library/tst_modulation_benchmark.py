@@ -161,10 +161,10 @@ print("")
 #speedbench_packet_modulation(sr=1e6, baudrate=2 * 9600, BT=0.5)
 #speedbench_packet_modulation(sr=1e6, baudrate=4 * 9600, BT=0.5)
 #print("#####################")
-speedbench_packet_modulation(sr=2.6e6, baudrate=9600 //2, BT=0.5)
-speedbench_packet_modulation(sr=2.6e6, baudrate=1 * 9600, BT=0.5)
-speedbench_packet_modulation(sr=2.6e6, baudrate=2 * 9600, BT=0.5)
-speedbench_packet_modulation(sr=2.6e6, baudrate=4 * 9600, BT=0.5)
+speedbench_packet_modulation(sr=3.6e6, baudrate=9600 //2, BT=0.5)
+speedbench_packet_modulation(sr=3.6e6, baudrate=1 * 9600, BT=0.5)
+speedbench_packet_modulation(sr=3.6e6, baudrate=2 * 9600, BT=0.5)
+speedbench_packet_modulation(sr=3.6e6, baudrate=4 * 9600, BT=0.5)
 
 
 
