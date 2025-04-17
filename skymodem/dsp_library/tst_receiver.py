@@ -53,7 +53,7 @@ def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payl
 
 
 
-def feed_samples_to_a_receiver(dsp_config:DSPConfig, samples, payload_istart_iend_list, default_batchlen, do_precompile=False):
+def feed_samples_to_a_receiver(dsp_config:DSPConfig, samples, payload_istart_iend_list, default_batchlen, do_precompile=False, add_noise_amp=0.0):
 	if do_precompile:
 		precompile_receiver(dsp_config=dsp_config, do_print=False)
 	rx = Receiver(config=dsp_config)
@@ -62,6 +62,8 @@ def feed_samples_to_a_receiver(dsp_config:DSPConfig, samples, payload_istart_ien
 	pl_f_cursor_list = list()
 	t_signal = 0.0
 	t_silence = 0.0
+	if add_noise_amp > 0:
+		rx.set_additive_noise_amplitude(amplitude=add_noise_amp)
 	while c < len(samples):
 		batchlen = min(default_batchlen, nsamples - c)
 		batch = samples[c:c+batchlen]
@@ -306,9 +308,9 @@ def test_precompilation_success_rate(N):
 
 
 def basic_test_A():
-	f_tune 		= 437.1e6
+	f_tune 		= 436.0e6
 	f_center 	= 437.125e6
-	sr0 		= 1e6
+	sr0 		= 3e6
 	baudrate	= 9600
 	n_payloads	= 12
 	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
@@ -320,7 +322,7 @@ def basic_test_A():
 	samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=f_center+3.1e3, sr0=sr0, baudrate=baudrate*(1+1.5e-5), mod_index=rx_config.mod_index, BT=rx_config.BT_rx_match,
 															  n_payloads=n_payloads, noisePpHz=noisePpHz, T_init_silence=2.0, T_interval_array=(5e-3,)*(n_payloads-1), T_end_silence=2.0)
 	print("[Feeding samples]")
-	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=1024*4, do_precompile=True)
+	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=1024*4, do_precompile=True, add_noise_amp=0.01)
 	#pl_f_cursor_d = dict( [(x[0],x[1:3]) for x in pl_f_cursor_list] )
 
 	print("\n\n")
@@ -722,6 +724,7 @@ def analyze_results_plot():
 
 
 
+basic_test_A()
 basic_test_A()
 #compare_default_optimod_4800()
 

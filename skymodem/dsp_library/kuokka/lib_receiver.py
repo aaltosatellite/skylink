@@ -154,6 +154,9 @@ class Receiver:
 		self.JPLstatemx 		= np.zeros((2,2), dtype=np.float64)
 		self.DSDstatemx 		= np.zeros((2,2), dtype=np.float64)
 		self.deframermx 		= np.zeros((2,2), dtype=np.float64)
+		self.white_noise		= np.zeros(config.batch_maxlen*10, dtype=np.complex64)
+		self.add_white_noise	= False
+		self.avg_amplitude		= 0.0
 		rs_mx, rs_cfg 			= get_default_rs()
 		self.rs_mx 				= rs_mx
 		self.rs_cfg 			= rs_cfg
@@ -218,6 +221,13 @@ class Receiver:
 		self.config.check_validity()
 		self._setup()
 
+	def set_additive_noise_amplitude(self, amplitude):
+		if amplitude == 0:
+			self.add_white_noise = False
+		else:
+			self.add_white_noise = True
+			self.white_noise = np.random.normal(0,amplitude, self.config.batch_maxlen*10)
+
 
 	def process_samples(self, batch, give_bits=False):
 		ret = list()
@@ -229,6 +239,10 @@ class Receiver:
 
 		t0 = time.perf_counter()
 		rs_head_new = staged_resampler_execute_stream(in_arr=batch2, ii0=0, nsamples=len(batch2), out_arr=self.rs_array, io0=self.rs_head, mx1=self.rsmpl_mx1, mx2=self.rsmpl_mx2)
+		self.avg_amplitude = self.avg_amplitude + (np.average(np.abs(self.rs_array[self.rs_head:min(self.rs_head+32, rs_head_new)])) - self.avg_amplitude) * 0.05
+		if self.add_white_noise:
+			i = np.random.randint(0, 32)
+			self.rs_array[self.rs_head:rs_head_new] += self.white_noise[i:i+(rs_head_new - self.rs_head)]
 		self.dt_array[1] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()

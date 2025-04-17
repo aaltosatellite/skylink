@@ -109,11 +109,16 @@ class RadioLoop:
 		recv_buffer = np.zeros((1, rx_buffer_len), dtype=np.complex64)
 		metadata = uhd.types.RXMetadata()
 		n_rx_loops = 0
+		n_rx_total = 0
+		avg_sr = 0.0
+		t00 = time.perf_counter()
 		rx_streamer.issue_stream_cmd(stream_cmd)
 		while self.on:
-			if (n_rx_loops % 1000) == 0:
-				DBGPRINT("(rx-#{})".format(n_rx_loops))
+			if (n_rx_loops % 2000) == 0:
+				DBGPRINT("(rx-#{} (sr~{} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4) ))
 			rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
+			avg_sr = n_rx_total / (time.perf_counter() - t00)
+			n_rx_total += rx_ret
 			if rx_ret != rx_buffer_len:
 				DBGPRINT("RECV RETURNED NON-FULL BUFFER WITH RET VALUE "+str(rx_ret))
 				#assert rx_ret == rx_buffer_len
@@ -210,7 +215,7 @@ class RadioLoop:
 		t00 = time.perf_counter()
 		sdr.activateStream(rxStream)
 		while self.on:
-			if (n_rx_loops % 1000) == 0:
+			if (n_rx_loops % 2000) == 0:
 				DBGPRINT("(rx-#{} (sr~{} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4) ))
 			ret = sdr.readStream(rxStream, [buff], numElems=absolute_bufflen, timeoutUs=timeout)
 			rx_ret = ret.ret

@@ -55,18 +55,18 @@ def sub_socket_loop(sub_sock:zmq.Socket, sub_que:Queue, ichannel, parent_obj):
 			break
 
 
-def bind_vc_sockets(vc_base, num_channels):
+def bind_vc_sockets(vc_port_base, num_channels):
 	context = zmq.Context()
 	pub_sockets = list()
 	sub_sockets = list()
 	for i_vc in range(num_channels):
 		pub_sock = context.socket(zmq.PUB)
-		pub_sock.bind("tcp://*:{}".format( str(vc_base + i_vc*10) ))
+		pub_sock.bind("tcp://*:{}".format( str(vc_port_base + i_vc*10) ))
 		pub_sock.set(zmq.RCVTIMEO, 1000)
 		pub_sockets.append(pub_sock)
 
 		sub_sock = context.socket(zmq.SUB)
-		sub_sock.bind("tcp://*:{}".format( str(vc_base + i_vc*10 + 1) ))
+		sub_sock.bind("tcp://*:{}".format( str(vc_port_base + i_vc*10 + 1) ))
 		sub_sock.subscribe(b"")
 		sub_sock.set(zmq.RCVTIMEO, 1000)
 		sub_sockets.append(sub_sock)
@@ -92,7 +92,7 @@ class SkyModem:
 		self.skylink_loop = SkyLinkLoop(config=skylink_config, key_list=hmac_key_list, que_payloads_in=self.que_payloads_dsp_to_sky, que_payloads_out=self.que_payloads_sky_to_dsp)
 		self.sub_que_process_thread 	= threading.Thread(target=None, args=tuple())
 		self.skylink_reception_thread 	= threading.Thread(target=None, args=tuple())
-		pub_sockets, sub_sockets, context = bind_vc_sockets(vc_base=vc_port_base, num_channels=num_virtual_channels)
+		pub_sockets, sub_sockets, context = bind_vc_sockets(vc_port_base=vc_port_base, num_channels=num_virtual_channels)
 		self.pub_sockets = pub_sockets
 		self.sub_sockets = sub_sockets
 		self.zmq_ctx = context
@@ -349,20 +349,29 @@ if __name__ == '__main__':
 
 	dsp_config_, radio_config_ = None, None
 	import sys
-	if len(sys.argv) > 1:
-		assert sys.argv[1] in ("usrp", "soapy")
-		if sys.argv[1] == "soapy":
-			dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, f_tune=436e6, max_signal_bw=9600*4*1.2)
-	if dsp_config_ is None:
+	import argparse
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--mode",    type=str, default="usrp", choices=("usrp", "soapy"), required=False)
+	parser.add_argument("--vc_base", type=int, default=7100,   required=False)
+	_args = parser.parse_args(sys.argv[1:])
+	print(_args)
+	vc_base = _args.vc_base
+	assert vc_base >= 1000
+	assert vc_base < 60000
+
+	if _args.mode == "soapy":
+		dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, f_tune=436e6, max_signal_bw=9600*4*1.2)
+	else:
+		assert _args.mode == "usrp"
 		dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2)
 
-
-	modem = SkyModem(dsp_config=dsp_config_, radio_config=radio_config_, skylink_config=skylink_config_, hmac_key_list=hmac_keys, vc_port_base=7100)
+	modem = SkyModem(dsp_config=dsp_config_, radio_config=radio_config_, skylink_config=skylink_config_, hmac_key_list=hmac_keys, vc_port_base=vc_base)
 	modem.start()
 	modem.dsp_loop.set_doppler_correction(False)
 	try:
 		while True:
 			#print(threading.active_count(), "threads active")
+			DBGPRINT("(avg amplitude ~ {})".format( modem.dsp_loop.rx.avg_amplitude ))
 			time.sleep(1.0)
 			if not modem.is_ok():
 				print("Modem is_ok() failed. Exiting.")
