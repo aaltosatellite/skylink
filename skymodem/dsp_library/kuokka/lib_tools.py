@@ -448,7 +448,7 @@ def choose_fftlen(len_ideal, window_halfwid):
 	best_speed = 0.0
 	best_len = int(len_ideal)
 	for l in candidates:
-		dt = time_fft_n(fftlen=l, nrep=160)
+		dt = time_fft_n(fftlen=l, nrep=80)
 		speed = l/dt
 		if speed > best_speed:
 			best_speed = speed
