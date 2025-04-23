@@ -544,6 +544,9 @@ def analyze_results_plot():
 	#results = [r for r in results if r["rx_config"]["c_center_decay"] > 0.8]
 	#results = [r for r in results if r["rx_config"]["d_halflen"] > 10]
 	results = [r for r in results if r["rx_config"]["mod_index"] > 0.5]
+	results = [r for r in results if r["rx_config"]["mod_index"] < 1.0]
+	results = [r for r in results if r["rx_config"]["lp_cutoff_coeff"] >= 0.55]
+	results = [r for r in results if r["rx_config"]["lp_cutoff_coeff"] <= 0.60]
 
 	#results = [r for r in results if r["rx_config"]["mod_index"] < 0.6]
 
@@ -745,7 +748,7 @@ def analyze_results_plot():
 
 analyze_results_plot()
 
-optimizer_A(t_run_min=20.0)
+#optimizer_A(t_run_min=20.0)
 
 #test_precompilation_success_rate(1000)
 

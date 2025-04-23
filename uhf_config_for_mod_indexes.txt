@@ -1,0 +1,21 @@
+Modulation index      = 0.75
+gaussian filtering BT = ON
+
+	baudrate = 4800:
+		cc112x_write_8(handle, CC112X_MODCFG_DEV_E, 0x09);
+		cc112x_write_8(handle, CC112X_DEVIATION_M, 121);
+
+	baudrate = 9600:
+		cc112x_write_8(handle, CC112X_MODCFG_DEV_E, 0x0a);
+		cc112x_write_8(handle, CC112X_DEVIATION_M, 121);
+
+	baudrate = 19200:
+		cc112x_write_8(handle, CC112X_MODCFG_DEV_E, 0x0b);
+		cc112x_write_8(handle, CC112X_DEVIATION_M, 121);
+
+	baudrate = 38400:
+		cc112x_write_8(handle, CC112X_MODCFG_DEV_E, 0x0c);
+		cc112x_write_8(handle, CC112X_DEVIATION_M, 121);
+
+
+
