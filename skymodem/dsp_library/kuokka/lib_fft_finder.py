@@ -17,7 +17,7 @@ def construct_fft_mask(sps, mod_index, BT_rx_match, fftlen, masklen, nn):
 	n_stacked = 0
 	while n_stacked < nn:
 		bits = np.random.randint(0,2, nbits)*2 - 1
-		samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_mode=1, shaper_BT_prod=BT_rx_match)
+		samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_BT_prod=BT_rx_match)
 		i0 = np.random.randint(1,int(sps*2))
 		n_snippets = int((len(samples)-i0)/fftlen) -1
 		assert n_snippets > 1

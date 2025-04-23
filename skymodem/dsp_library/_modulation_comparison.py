@@ -13,17 +13,16 @@ def compare_generated_to_recording():
 	waterfall_mx(samples=rec_samples, fftlen=2048, fft_jump=1024, srate=1e6, plot_and_show=True, y_is_time=False)
 
 	bitstring = np.random.randint(0,2, 256)*2 - 1
-	bitstring[0:32] = [1,-1]*16
-	bitstring[32:32+32] = DEFAULT_SYNCHWORD_BITS*2 -1
-	bitstring[64:64+8] = [1,1,-1,-1,-1, 1,1,1]
-	bitstring[64+8:64+8+12] = [-1,]*12
+	bitstring[0:64] = [1,-1]*16*2
+	bitstring[64:64+32] = DEFAULT_SYNCHWORD_BITS*2 -1
+	bitstring[64+32:64+32+8] = [1,1,-1,-1,-1, 1,1,1]
+	bitstring[64+32+8:64+32+8+12] = [-1,]*12
 	sr0 = 1e6
 	sps = sr0/9600
-	gen_samples, _ = make_samples2(sps_f=sps, bitstring=bitstring, f_offset=0.0, power=1.0, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.425)  #BT=0.425
+	gen_samples, _ = make_samples2(sps_f=sps, bitstring=bitstring, f_offset=0.0, power=1.0, mod_index=0.5, shaper_BT_prod=0.425)  #BT=0.425
 	gen_samples = np.concatenate( (np.zeros(1000, dtype=np.complex128), gen_samples, np.zeros(1000, dtype=np.complex128) ) )
 
 	lp_taps = firwin(numtaps=201, cutoff=0.9*9600/1e6, pass_zero=True)
-
 
 	rec_lpd = np.convolve(rec_samples, lp_taps)
 	rec_zz = rec_lpd * np.conj( np.roll(rec_lpd, 1) )
@@ -34,25 +33,19 @@ def compare_generated_to_recording():
 	gen_dmd = np.arctan2(gen_zz.imag, gen_zz.real)
 
 
-
-
 	xx_rec = np.arange(len(rec_dmd))
-	xx_gen = np.arange(len(gen_dmd)) + 47000 + 2795
-
+	xx_gen = np.arange(len(gen_dmd)) + 47000 + 2795 - sps*32
 	fig = plt.figure(figsize=(21,12))
 	ax1 = fig.add_subplot(111)
-
 	ax1.plot(xx_rec, rec_dmd)
 	ax1.plot(xx_gen, gen_dmd)
 	ax1.grid()
-
 	fig.set_layout_engine("tight")
 	plt.show()
 
 
 
 compare_generated_to_recording()
-
 
 
 

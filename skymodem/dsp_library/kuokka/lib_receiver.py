@@ -325,7 +325,7 @@ def get_a_precompiling_sampleset(dsp_config:DSPConfig, do_print=False):
 	preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
 	frame_bits = frame_packet(pl=pl, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
 	bitstring = np.concatenate( (preamble_bits, frame_bits) )
-	transmission, _ = make_samples2(sps_f=sr0/dsp_config.baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=dsp_config.mod_index, shaper_mode=1, shaper_BT_prod=dsp_config.BT_rx_match, n_silence_start=0, n_silence_end=0)
+	transmission, _ = make_samples2(sps_f=sr0/dsp_config.baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=dsp_config.mod_index, shaper_BT_prod=dsp_config.BT_rx_match, n_silence_start=0, n_silence_end=0)
 
 	n_fft_calibration = int( (sr0/(dsp_config.baudrate*dsp_config.sps)) * 2*dsp_config.fftlen_mpr*dsp_config.sps )
 	nsamples = int(n_fft_calibration + len(transmission) + 1.0*sr0)

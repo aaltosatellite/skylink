@@ -115,7 +115,7 @@ class RadioLoop:
 		rx_streamer.issue_stream_cmd(stream_cmd)
 		while self.on:
 			if (n_rx_loops % 2000) == 0:
-				DBGPRINT("(rx-#{} (sr~{} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4) ))
+				DBGPRINT("(rx-#{}) (sr~{} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4) ))
 			rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
 			avg_sr = n_rx_total / (time.perf_counter() - t00)
 			n_rx_total += rx_ret

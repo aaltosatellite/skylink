@@ -38,7 +38,7 @@ def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payl
 		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (preamble_bits, bits) )
 		tx_sps = sr0 / baudrate
-		pl_samples, _ = make_samples2(sps_f=tx_sps, bitstring=bits, f_offset=f_ofst_nrm, power=1.0, mod_index=mod_index, shaper_mode=1,
+		pl_samples, _ = make_samples2(sps_f=tx_sps, bitstring=bits, f_offset=f_ofst_nrm, power=1.0, mod_index=mod_index,
 							   shaper_BT_prod=BT, n_silence_start=0, n_silence_end=0)
 		payload_istart_iend_list.append( (pl, len(samples), len(samples)+len(pl_samples)) )
 		samples = np.concatenate((samples, pl_samples))
@@ -174,8 +174,8 @@ def random_receiver_config_from_choises(attrname_array_d:dict, rx_config_basis:D
 	for _ in range(100):
 		try:
 			for attrname in attrname_array_d.keys():
-				val = attrname_array_d[attrname][np.random.randint(len(attrname_array_d[attrname]))]
 				assert hasattr(rx_config, attrname)
+				val = attrname_array_d[attrname][np.random.randint(len(attrname_array_d[attrname]))]
 				setattr(rx_config, attrname, val)
 			rx_config.check_validity()
 			return rx_config
@@ -199,7 +199,7 @@ def surf_integral(x_arr, y_arr):
 
 def save_result(rx_config:DSPConfig, n_payloads, noiseP_array, reception_rate_array, A, avg_delay, dpath):
 	dd = {
-		"version" : 3.0,
+		"version" : 4.0,
 		"ts": dtime.now().isoformat(),
 		"rx_config": rx_config.__dict__,
 		"n_payloads": n_payloads,
@@ -310,10 +310,10 @@ def test_precompilation_success_rate(N):
 def basic_test_A():
 	f_tune 		= 436.0e6
 	f_center 	= 437.125e6
-	sr0 		= 3.6e6
-	baudrate	= 9600
+	sr0 		= 2.8e6
+	baudrate	= 9600 * 1
 	n_payloads	= 12
-	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 8)
 	#rx_config.mod_index = 0.7
 	#rx_config.BT_rx_match = -1
 	noisePpHz = 0.10/baudrate
@@ -349,10 +349,11 @@ def compare_default_optimod_4800():
 	rx_config4 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600 * 4, bufferlen=800000, batch_maxlen=1024 * 8)
 	rx_config5 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	rx_config5.mod_index = 0.7
-	rx_config5.BT_rx_match = -1
+	rx_config5.BT_rx_match = 0.5
 	rx_config6 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
-	rx_config6.mod_index = 0.7
+	rx_config6.mod_index = 0.75
 	rx_config6.BT_rx_match = 0.5
+	rx_config6.lp_cutoff_coeff = 0.575
 
 	rel_noiseP_array = np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34]) # , 0.28
 	noiseP_array1 = rel_noiseP_array / rx_config1.baudrate
@@ -461,13 +462,13 @@ def compare_timings():
 
 
 
-def optimizer_A():
+def optimizer_A(t_run_min):
 	f_tune 				= 437.1e6
 	f_center 			= 437.125e6
 	sr0 				= 1e6
 	n_payloads			= 32
-	mod_index 			= 0.5
-	BT_rx_match 		= 0.425
+	#mod_index 			= 0.5
+	#BT_rx_match 		= 0.425
 	f_center_error 		= 3e3
 	rel_baudrate_error 	= 1.5e-5
 
@@ -475,8 +476,8 @@ def optimizer_A():
 	noiseP_array 		= rel_noiseP_array / 9600
 
 	rx_config_basis = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
-	rx_config_basis.mod_index = mod_index
-	rx_config_basis.BT_rx_match = BT_rx_match
+	#rx_config_basis.mod_index = mod_index
+	#rx_config_basis.BT_rx_match = BT_rx_match
 	attrname_array_d = {
 		"sps": 				    [6,7,8,9,10,12,13,14,15,16,17,18,19,20,22],
 		"fftlen_mpr": 			[int(x)   for x in np.linspace(0.15,2.0, 70)  * 50],
@@ -488,6 +489,12 @@ def optimizer_A():
 		"d_halflen" :           [8,10,12,14,16,18,20,22,24,26],
 		"f_halflen" :           [8,10,12,14,16,18,20,22,24,26],
 	}
+	attrname_array_d = {
+		"lp_cutoff_coeff" :     [float(x) for x in np.linspace(0.50,0.65, 128) * 1.0],
+		"mod_index" :     		[float(x) for x in np.linspace(0.6,0.9, 128) * 1.0],
+	}
+	#rx_config_basis.tx_mod_index = 4
+	#rx_config_basis.mod_index = 0.7
 
 	basisA = 0.0
 	for _ in range(3):
@@ -500,11 +507,10 @@ def optimizer_A():
 	basisA = basisA / 3
 	print("basis-A: {}".format(basisA))
 
-	#cfg_d_list = load_top_configs(dpath="/home/elmore/datasetit/mc_results/", minimum_version=0, fname_contains=["kuokka-curve",".pkl"], mandatory_d_keys=["n_payloads",], top_n=32)
 
 	ii = 0
 	t00 = time.monotonic()
-	while (time.monotonic()-t00) < (60*60*2):
+	while (time.monotonic()-t00) < (t_run_min*60):
 		rx_config = random_receiver_config_from_choises(attrname_array_d=attrname_array_d, rx_config_basis=rx_config_basis)
 		n_payloads_ = n_payloads
 		reception_rate_array, delay_array = measure_curve_mpr(rx_config=rx_config, n_payloads=n_payloads_, f_center_error=f_center_error,
@@ -526,19 +532,22 @@ def analyze_results_plot():
 	results0 = results.copy()
 
 	#results = [r for r in results if r["n_payloads"] > 32]
-	#results = [r for r in results if r["A"] > 1.6e-5]
+	results = [r for r in results if r["A"] > 0]
+	#results = [r for r in results if r["A"] > 2.5e-5]
 
-	results = [r for r in results if 0.57 < r["rx_config"]["lp_cutoff_coeff"] < 0.63]   	# !!!!
-	results = [r for r in results if r["rx_config"]["JPL_n_decay"] > 20]					# !!!!
+	#results = [r for r in results if 0.57 < r["rx_config"]["lp_cutoff_coeff"] < 0.63]   	# !!!!
+	#results = [r for r in results if r["rx_config"]["JPL_n_decay"] > 20]					# !!!!
 
-	results = [r for r in results if r["rx_config"]["fftlen_mpr"] > 30]
-	results = [r for r in results if r["rx_config"]["sps"] > 8]
+	#results = [r for r in results if r["rx_config"]["fftlen_mpr"] > 30]
+	#results = [r for r in results if r["rx_config"]["sps"] > 8]
 
 	#results = [r for r in results if r["rx_config"]["c_center_decay"] > 0.8]
 	#results = [r for r in results if r["rx_config"]["d_halflen"] > 10]
+	results = [r for r in results if r["rx_config"]["mod_index"] > 0.5]
+
+	#results = [r for r in results if r["rx_config"]["mod_index"] < 0.6]
 
 	print("{} remain after filtering.".format(len(results)))
-
 
 	"""print("--- top-5 ----------------------------------------------")
 	for cfg, res_d in load_top_configs(dpath="/home/elmore/datasetit/mc_results/", minimum_version=0, fname_contains=["kuokka-curve",".pkl"], mandatory_d_keys=["n_payloads",], top_n=5):
@@ -548,6 +557,7 @@ def analyze_results_plot():
 	print("--------------------------------------------------------")"""
 
 	parameter_names = ["sps", "fftlen_mpr", "lp_cutoff_coeff", "centering_delay_mpr", "c_center_decay", "synch_delay_mpr", "JPL_n_decay", "d_halflen", "f_halflen"]
+	parameter_names = ["sps", "mod_index", "lp_cutoff_coeff", "centering_delay_mpr", "c_center_decay", "synch_delay_mpr", "JPL_n_decay", "d_halflen", "f_halflen"]
 	for res in results[0:4]:
 		print("A:       {}".format(res["A"]))
 		print("delay:   {}".format(1e3*res["avg_delay"]))
@@ -561,12 +571,13 @@ def analyze_results_plot():
 	delay_array = [d["avg_delay"] for d in results]
 	color_arr = delay_array
 
-
 	parameter_arrays0 = dict()
 	parameter_arrays = dict()
 	for parameter_name in parameter_names:
 		parameter_arrays0[parameter_name] = np.array([d["rx_config"][parameter_name] for d in results0])
 		parameter_arrays[parameter_name] = np.array([d["rx_config"][parameter_name] for d in results])
+
+
 
 	#plot_params = ["lp_cutoff_coeff", "centering_delay_mpr"]
 	fig1 = plt.figure(figsize=(18,14))
@@ -658,9 +669,9 @@ def analyze_results_plot():
 	ax21.set_ylabel(parameter_names[b])
 	ax21.grid()
 
-	a,b = 1,4
+	a,b = 1,2
 	ax22.scatter(parameter_arrays0[parameter_names[a]], parameter_arrays0[parameter_names[b]], color="grey", marker=".", s=3)
-	ax22.scatter(parameter_arrays[parameter_names[a]], parameter_arrays[parameter_names[b]]) #, c=A_array, cmap="jet")
+	ax22.scatter(parameter_arrays[parameter_names[a]], parameter_arrays[parameter_names[b]] , c=A_array, cmap="jet")
 	ax22.set_xlabel(parameter_names[a])
 	ax22.set_ylabel(parameter_names[b])
 	ax22.grid()
@@ -724,15 +735,17 @@ def analyze_results_plot():
 
 
 
-basic_test_A()
-basic_test_A()
+#basic_test_A()
+#basic_test_A()
+
 #compare_default_optimod_4800()
 
 #compare_fftlens()
 #compare_timings()
 
-#analyze_results_plot()
-#optimizer_A()
+analyze_results_plot()
+
+optimizer_A(t_run_min=20.0)
 
 #test_precompilation_success_rate(1000)
 

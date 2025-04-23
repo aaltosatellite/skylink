@@ -16,11 +16,11 @@ def speedbench_raw_modulation(sr, baudrate, BT):
 	sps 		= sr / baudrate
 	f_offset	= 0.05
 	ntaps 		= int(4*sps) + 1
-	_ = make_samples1(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5,  shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=ntaps)
-	_ = make_samples1(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5,  shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=ntaps)
+	_ = make_samples1(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5, shaper_BT_prod=BT, shaper_n_taps=ntaps)
+	_ = make_samples1(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5, shaper_BT_prod=BT, shaper_n_taps=ntaps)
 	t0 = time.perf_counter()
 	for _ in range(20):
-		_ = make_samples1(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5,  shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=ntaps)
+		_ = make_samples1(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5, shaper_BT_prod=BT, shaper_n_taps=ntaps)
 	dt = (time.perf_counter() - t0) / 20
 	mod_baudrate  = nbits / dt
 	speed_ratio   = T_total / dt
@@ -42,11 +42,11 @@ def speedbench_raw_modulation2(sr, baudrate, BT):
 	bitstring 	= np.random.randint(0,2, nbits)*2 -1
 	sps 		= sr / baudrate
 	f_offset	= 0.05
-	_ = make_samples2(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5,  shaper_mode=1, shaper_BT_prod=BT)
-	_ = make_samples2(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5,  shaper_mode=1, shaper_BT_prod=BT)
+	_ = make_samples2(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5, shaper_BT_prod=BT)
+	_ = make_samples2(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5, shaper_BT_prod=BT)
 	t0 = time.perf_counter()
 	for _ in range(20):
-		_ = make_samples2(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5,  shaper_mode=1, shaper_BT_prod=BT)
+		_ = make_samples2(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5, shaper_BT_prod=BT)
 	dt = (time.perf_counter() - t0) / 20
 	mod_baudrate  = nbits / dt
 	speed_ratio   = T_total / dt
@@ -103,8 +103,8 @@ def plot_modulation_comparison(sr, baudrate, BT):
 	sps 		= sr / baudrate
 	f_offset	= 0.1
 	ntaps1 		= int(4*sps) + 1
-	samples1, modulator1     = make_samples1(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5,  shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=ntaps1)
-	samples2, modulator2     = make_samples2(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5,  shaper_mode=1, shaper_BT_prod=BT)
+	samples1, modulator1     = make_samples1(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5, shaper_BT_prod=BT, shaper_n_taps=ntaps1)
+	samples2, modulator2     = make_samples2(sps_f=sps,  bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=0.5, shaper_BT_prod=BT)
 
 	xm1 = np.arange(len(modulator1))
 	xm2 = np.arange(len(modulator2)) * len(samples2)/len(modulator2)

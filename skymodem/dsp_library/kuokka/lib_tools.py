@@ -245,11 +245,11 @@ def gauss_curve_sps(sps_f, BT, n_taps):
 	curve = gauss_curve(std, x)
 	return curve / np.sum(curve)
 
-@njit(cache=True)
-def sinc_curve(BT, sps_f, n_taps):
-	tperT = np.linspace(-1.0, 1.0, n_taps) * (n_taps-1)
-	pulse = np.sinc(tperT * BT / sps_f)
-	return pulse / np.sum(pulse)
+#@njit(cache=True)
+#def sinc_curve(BT, sps_f, n_taps):
+#	tperT = np.linspace(-1.0, 1.0, n_taps) * (n_taps-1)
+#	pulse = np.sinc(tperT * BT / sps_f)
+#	return pulse / np.sum(pulse)
 
 @njit(cache=True)
 def make_squarewave(binary_symbols, sps_f, i_sample_of_sym0_f, nsamples, npad):
@@ -270,14 +270,10 @@ def make_squarewave(binary_symbols, sps_f, i_sample_of_sym0_f, nsamples, npad):
 
 
 @njit(cache=True, parallel=True)
-def make_f_modulating_waveform(binary_symbols, sps_f, shaper_mode, shaper_BT_prod, shaper_n_taps):
-	assert shaper_mode in (0,1)
+def make_f_modulating_waveform(binary_symbols, sps_f, shaper_BT_prod, shaper_n_taps):
 	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
 	if shaper_BT_prod > 0:
-		if shaper_mode == 0:
-			pulse = sinc_curve(BT=shaper_BT_prod, sps_f=sps_f, n_taps=shaper_n_taps)
-		else:
-			pulse = gauss_curve_sps(sps_f=sps_f, BT=shaper_BT_prod, n_taps=shaper_n_taps)
+		pulse = gauss_curve_sps(sps_f=sps_f, BT=shaper_BT_prod, n_taps=shaper_n_taps)
 		assert len(pulse) == shaper_n_taps
 	else:
 		pulse = np.ones(1, dtype=np.float64)
@@ -331,7 +327,7 @@ def fm_mod_expanding(f_signal_offset, peak_deviation, modulator, nsamples):
 
 
 #@njit(cache=True)
-def make_samples1(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0):
+def make_samples1(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0):
 	"""
 	# Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
 	# 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0
@@ -341,7 +337,7 @@ def make_samples1(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_mode=
 	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
 	assert np.all(np.isclose(np.abs(bitstring[0:34]), 1))
 	peak_dev	= mod_index / (sps_f*2.0)
-	modulator 	= make_f_modulating_waveform(bitstring, sps_f, shaper_mode, shaper_BT_prod, shaper_n_taps)
+	modulator 	= make_f_modulating_waveform(bitstring, sps_f, shaper_BT_prod, shaper_n_taps)
 	samples 	= fm_mod(f_offset, peak_dev, modulator)
 	if power != 1:
 		samples 	= samples * (power**0.5)
@@ -350,7 +346,7 @@ def make_samples1(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_mode=
 	return samples, modulator
 
 
-def make_samples2(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, n_silence_start=0, n_silence_end=0):
+def make_samples2(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_BT_prod=0.5, n_silence_start=0, n_silence_end=0):
 	"""
 	# Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
 	# 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0
@@ -363,7 +359,7 @@ def make_samples2(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_mode=
 	i_sample_of_sym0_f = 0.0
 	sps_mod		= 14.0
 	nsamples 	= int(len(bitstring) * sps_f + i_sample_of_sym0_f)
-	modulator 	= make_f_modulating_waveform(bitstring, sps_mod, shaper_mode, shaper_BT_prod, int(sps_mod)*4+1)
+	modulator 	= make_f_modulating_waveform(bitstring, sps_mod, shaper_BT_prod, int(sps_mod)*4+1)
 	samples 	= fm_mod_expanding(f_offset, peak_dev, modulator, nsamples)
 	if power != 1:
 		samples 	= samples * (power**0.5)

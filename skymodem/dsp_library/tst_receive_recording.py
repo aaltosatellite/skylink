@@ -46,7 +46,7 @@ def receive_a_recording():
 	print("RX picked fftlen of {}".format(rx.get_fftlen()))
 
 	t0 = time.perf_counter()
-	rx.switch_baudrate(baudrate=9600*2, sps=rx_config.sps)
+	rx.switch_baudrate(baudrate=9600*4, sps=rx_config.sps)
 	dt = (time.perf_counter() - t0)
 	rx.switch_baudrate(baudrate=9600, sps=rx_config.sps)
 	print("Baudrate switch in: {} ms".format( round(dt*1e3, 1) ))

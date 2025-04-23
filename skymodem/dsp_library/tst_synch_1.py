@@ -136,7 +136,7 @@ def make_fmdemod_samples(sps_f, baudrate, f_offset_in_br, n_symbols, mod_idx, BT
 	bits = np.random.randint(0,2, n_symbols)*2 - 1
 	bits[0:32+6] = np.array( [1,0]*16 + [1,]*6 )*2 - 1
 	f_offset = f_offset_in_br * baudrate / (sps_f*baudrate)
-	samples = make_samples(sps_f=sps_f, bitstring=bits, f_offset=f_offset, power=1.0, mod_index=mod_idx, shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=int(sps_f)*6+1, n_silence_start=i_tx_start, n_silence_end=0)
+	samples = make_samples(sps_f=sps_f, bitstring=bits, f_offset=f_offset, power=1.0, mod_index=mod_idx, shaper_BT_prod=BT, shaper_n_taps=int(sps_f)*6+1, n_silence_start=i_tx_start, n_silence_end=0)
 	samples = np.concatenate( (samples, np.zeros(nsamples-len(samples), dtype=samples.dtype)))
 	samples = np.concatenate( (np.zeros(200, dtype=samples.dtype), samples, np.zeros(200, dtype=samples.dtype)))
 	samples = samples + radionoise(n=len(samples), sr=sps_f*baudrate, W_per_Hz=noise_W_per_Hz)

@@ -128,7 +128,7 @@ class DSPLoop:
 		n_silence_start = int(self.dsp_config.tx_sr0 * 2.0e-3) # TODO: this should be a setting?
 		dt1 = time.perf_counter() - t00
 		t00 = time.perf_counter()
-		samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.dsp_config.tx_mod_index, shaper_mode=1,
+		samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.dsp_config.tx_mod_index,
 							   shaper_BT_prod=self.dsp_config.tx_BT, n_silence_start=n_silence_start, n_silence_end=0)
 		#samples = np.exp(2j*np.pi*np.arange(len(samples)) * 0.005 )
 		dt2 = time.perf_counter() - t00
@@ -183,7 +183,7 @@ class DSPLoop:
 				self.own_recently_sent[payload] = time.monotonic()
 				samplearr, f_use_abs, _ = self._compose_samples(payload, usrp_reshape=True, as_c64=True)
 			DBGPRINT("tx start at {} MHz".format( f_use_abs * 1e-6, 4 ))
-			self.que_tx_samples_out.put(samplearr)
+			self.que_tx_samples_out.put(samplearr, timeout=4.0)
 
 
 
