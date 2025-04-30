@@ -211,6 +211,7 @@ TEST(arq_state_change)
 TEST(check_timeouts)
 {
 	// Create config
+	SkyDiagnostics diag;
 	SkyVCConfig vcConfig;
 	vcConfig.send_ring_len = 10;
 	vcConfig.rcv_ring_len = 10;
@@ -225,19 +226,19 @@ TEST(check_timeouts)
 	ASSERT(vc->arq_state == ARQ_STATE_OFF, "VC arq_state is not ARQ_STATE_OFF, it is: %d", vc->arq_state);
 	// Should do nothing as arq state is off.
 	// Can't really be tested since it is a void function where the only thing that happens is a return or a state change to arq off.
-	sky_vc_check_timeouts(vc, 300, 120);
+	sky_vc_check_timeouts(vc, 300, 120, &diag);
 
 	// Change arq state to init.
 	sky_vc_wipe_to_arq_init_state(vc);
 	ASSERT(vc->arq_state == ARQ_STATE_IN_INIT, "VC arq_state is not ARQ_STATE_IN_INIT, it is: %d", vc->arq_state);
 
 	// Test a situation where there is no timeout.
-	sky_vc_check_timeouts(vc, 120, 300);
+	sky_vc_check_timeouts(vc, 120, 300, &diag);
 	// State should still be in init.
 	ASSERT(vc->arq_state == ARQ_STATE_IN_INIT, "VC arq_state is not ARQ_STATE_IN_INIT, it is: %d", vc->arq_state);
 
 	// Test a situation where there is a timeout.
-	sky_vc_check_timeouts(vc, 300, 120);
+	sky_vc_check_timeouts(vc, 300, 120, &diag);
 	// State should be off.
 	ASSERT(vc->arq_state == ARQ_STATE_OFF, "VC arq_state is not ARQ_STATE_OFF, it is: %d", vc->arq_state);
 
@@ -369,6 +370,7 @@ TEST(vc_content_to_send)
  */
 TEST(fill_frame)
 {
+	SkyDiagnostics diag;
 	// Create new virtual channel instance
 	SkyConfig config = default_config;
 	config.arq.idle_frames_per_window = 4;
@@ -381,7 +383,7 @@ TEST(fill_frame)
 
 	// ARQ OFF:
 	// Nothing in send ring:
-	int ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 0);
+	int ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 0, &diag);
 	ASSERT(ret == 0, "sky_vc_fill_frame() should return 0 when arq is off and nothing to send, %d", ret);
 
 	// Add payload to send ring.
@@ -390,7 +392,7 @@ TEST(fill_frame)
 	ASSERT(sRing >= 0, "VC sendRing_push_packet_to_send error: %d", sRing);
 
 	// sky_vc_fill_frame() should be able to fill a frame.
-	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 0);
+	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 0, &diag);
 	ASSERT(ret == 1, "sky_vc_fill_frame() should return 1 when arq is off and there is something to send, %d", ret);
 
 	// Check that frame raw is the same as the payload in for loop. Init_tx sets identity etc. so there is already some data before payload.
@@ -405,10 +407,10 @@ TEST(fill_frame)
 	// IN INIT:
 	sky_vc_wipe_to_arq_init_state(vc);
 	// No idle frames to be sent, should return 0 and length should not be changed.
-	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 4);
+	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 4, &diag);
 	ASSERT(ret == 0, "There was an idle frame to be sent when there shouldn't be one.");
 	// Idle frame should be sent. ARQ handshake extension
-	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 3);
+	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 3, &diag);
 	ASSERT(ret == 1, "There was no idle frame to be sent when there should be one.");
 	// Check that extension was added properly to the frame by testing that length is increased by sizeof(ExtARQHandshake) + 1.
 	ASSERT(TXframe.frame->length == init_len + sizeof(ExtARQHandshake) + 1, "Frame length should be %d, it was %d", init_len + sizeof(ExtARQHandshake) + 1, TXframe.frame->length);
@@ -419,7 +421,7 @@ TEST(fill_frame)
 	sky_vc_wipe_to_arq_on_state(vc, 10);
 	// To check: handshake, bitmap (missing frames), ARQ control/sync, idle frames needed, something to send, payload too large.
 	// Handshake should be on by default:
-	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 5);
+	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 5, &diag);
 	ASSERT(ret == 1, "There was no handshake to be sent when there should be one.");
 	// Check that extension was added properly to the frame by testing that length is increased by sizeof(ExtARQHandshake) + 1.
 	ASSERT(TXframe.frame->length == init_len + sizeof(ExtARQHandshake) + 1, "Frame length should be %d, it was %d", init_len + sizeof(ExtARQHandshake) + 1, TXframe.frame->length);
@@ -435,7 +437,7 @@ TEST(fill_frame)
 	ASSERT(rcvRing_get_horizon_bitmap(vc->rcvRing) > 0, "Horizon bitmap is 0");
 
 	// Check that arq request is sent. Frames sent this window should also be smaller than idle frames per window.
-	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 3);
+	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 3, &diag);
 	ASSERT(ret == 1, "There was no arq request to be sent when there should be one. %d" , ret);
 
 	// Check that extension was added properly to the frame by testing that length is increased by sizeof(ExtARQRequest) + 1.
@@ -446,7 +448,7 @@ TEST(fill_frame)
 	// Need idle frames: (idle frames per window is 4 Should add ARQCtrl extension.
 	// Wipe RCV ring:
 	sky_rcv_ring_wipe(vc->rcvRing, vc->elementBuffer, 0);
-	ret = sky_vc_fill_frame(vc, &config, &TXframe, 10000, 3);
+	ret = sky_vc_fill_frame(vc, &config, &TXframe, 10000, 3, &diag);
 	ASSERT(ret == 1, "There was no idle frame to be sent when there should be one. %d", ret);
 	// Check that extension was added properly to the frame by testing that length is increased by sizeof(ExtARQCtrl) + 1.
 	ASSERT(TXframe.frame->length == init_len + sizeof(ExtARQCtrl) + 1, "Frame length should be %d, it was %d", init_len + sizeof(ExtARQCtrl) + sizeof(ExtARQSeq) + 2, TXframe.frame->length);
@@ -458,7 +460,7 @@ TEST(fill_frame)
 	sRing = sendRing_push_packet_to_send(vc->sendRing, vc->elementBuffer, (const uint8_t*)payload, 100);
 	ASSERT(sRing >= 0, "VC sendRing_push_packet_to_send error: %d", sRing);
 	// sky_vc_fill_frame() should be able to fill a frame.
-	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 4);
+	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 4, &diag);
 	ASSERT(ret == 1, "sky_vc_fill_frame() should return 1 when arq is off and there is something to send, %d", ret);
 	ASSERT(TXframe.frame->length == init_len + sizeof(ExtARQCtrl) + sizeof(ExtARQSeq) + 2 + 100, "Frame length should be %d, it was %d", init_len + sizeof(ExtARQCtrl) + 1 + 100, TXframe.frame->length);
 	// Check that frame raw is the same as the payload in for loop. Init_tx sets identity etc. so there is already some data before payload.
@@ -475,7 +477,7 @@ TEST(fill_frame)
 	// sky_vc_fill_frame() should be able to fill a frame.
 	// Packets in send ring:
 	ASSERT(sendRing_count_packets_to_send(vc->sendRing, 0) == 1, "There should be 1 packet in the send ring, there is %d", sendRing_count_packets_to_send(vc->sendRing, 0));
-	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 4);
+	ret = sky_vc_fill_frame(vc, &config, &TXframe, 0, 4, &diag);
 	ASSERT(ret == -40, "sky_vc_fill_frame() should return -40 when the payload is too large, %d", ret);
 	// Currently the payload is still in the send ring.
 	// ASSERT(sendRing_count_packets_to_send(vc->sendRing, 0) == 0, "There should be 0 packets in the send ring, there is %d", sendRing_count_packets_to_send(vc->sendRing, 0));

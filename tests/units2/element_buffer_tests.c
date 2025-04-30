@@ -164,7 +164,7 @@ TEST(wipe_element_buffer)
  * The test adds different size packets to the buffer and makes sure they can be read back.
  * After this all packets are removed one-by-one in random order making sure existing packets can still read out and deleted cannot be.
  */
-TEST(element_deleting, ONLY)
+TEST(element_deleting)
 {
 	// Create a buffer with 16 byte elements and 1000 elements.
 	const unsigned int element_size = 16;
