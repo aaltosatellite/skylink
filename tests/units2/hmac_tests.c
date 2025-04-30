@@ -328,11 +328,13 @@ TEST(both_hmac_and_crc)
 
 	// Check CRC
 	ret = sky_check_crc32(&frame, &parsed);
-	ASSERT(ret == SKY_RET_OK, "sky_extend_with_crc32() returned %d", ret);
+	// frame.length -= 4; // These have to be done for test to pass. Not currently done even in sky_rx() because frame is const so both can't be used?
+	// tx_frame.hdr->flag_crced = 0;
+	ASSERT(ret == SKY_RET_OK, "sky_check_crc32() returned %d", ret);
 
 	// Check authentication.
 	ret = sky_hmac_check_authentication(handle, &frame, &parsed);
-	ASSERT(ret == 0, "sky_hmac_check_authentication() returned %d", ret);
+	ASSERT(ret == SKY_RET_OK, "sky_hmac_check_authentication() returned %d", ret);
 
 	//ASSERT(parsed.payload_len == 46, "Returned %d", parsed.payload_len); // Payload length OK?, if HMAC passed, payload length should be original-4.
 

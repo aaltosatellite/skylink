@@ -374,10 +374,10 @@ TEST(wrap_around)
 	{
 		printf("i = %d\n", i);
 
-		ASSERT(rcv_ring->buff[i].idx == 2 * j, "Index is not %d, it is %d. I: %d", 2 * j, rcv_ring->buff[i].idx, i);
+		ASSERT(rcv_ring->buff[i].idx == 4 * j, "Index is not %d, it is %d. I: %d", 2 * j, rcv_ring->buff[i].idx, i);
 		ASSERT(rcv_ring->buff[i].sequence == seq, "Sequence is not %d, it is %d. I: %d", seq, rcv_ring->buff[i].sequence, i);
 
-		ASSERT(send_ring->buff[i].idx == 2 * j + 1, "Index is not %d, it is %d. I: %d", 2 * j + 1, send_ring->buff[i].idx, i);
+		ASSERT(send_ring->buff[i].idx == 4 * j + 2, "Index is not %d, it is %d. I: %d", 2 * j + 1, send_ring->buff[i].idx, i);
 		ASSERT(send_ring->buff[i].sequence == seq, "Sequence is not %d, it is %d. I: %d", seq, send_ring->buff[i].sequence, i);
 
 		seq++;
@@ -385,8 +385,8 @@ TEST(wrap_around)
 			i = 255; // Wraps around after i++
 	}
 
-	// Check that the element buffer is filled correctly. (200 - 2*7)
-	ASSERT(eb->free_elements == 186, "Element buffer free elements is not 4, it is %d.", eb->free_elements);
+	// Check that the element buffer is filled correctly. (200 - 2*2*7)
+	ASSERT(eb->free_elements == 172, "Element buffer free elements is not 4, it is %d.", eb->free_elements);
 
 	// Check the data length in the element buffer for all indices.
 	for (int i = 0; i < 8; i++)
@@ -395,10 +395,10 @@ TEST(wrap_around)
 		{
 			// Empty index
 			int rcv_len = sky_element_buffer_get_data_length(eb, rcv_ring->buff[i].idx);
-			ASSERT(rcv_len == 12, "Data length is not 12, it is %d.", rcv_len);
+			ASSERT(rcv_len == 20, "Data length is not 20, it is %d.", rcv_len);
 
 			int send_len = sky_element_buffer_get_data_length(eb, send_ring->buff[i].idx);
-			ASSERT(send_len == 12, "Data length is not 12, it is %d.", send_len);
+			ASSERT(send_len == 20, "Data length is not 20, it is %d.", send_len);
 		}
 	}
 
@@ -407,14 +407,14 @@ TEST(wrap_around)
 	for (int i = 0; i < 7; i++)
 	{
 		uint8_t readout[120];
-		int read = rcvRing_read_next_received(rcv_ring, eb, readout, sizeof(120));
+		int read = rcvRing_read_next_received(rcv_ring, eb, readout, sizeof(readout));
 		ASSERT(read == block_len, "Packet %d was not read from receive ring. Error code: %d", i, read);
 		ASSERT_MEMORY(readout, &payload[block_len * i], block_len);
 	}
 
 
-	// Assert that the read elements were removed from the element buffer.
-	ASSERT(eb->free_elements == 193, "Element buffer free elements is not 200, it is %d.", eb->free_elements);
+	// Assert that the read rcvRing elements were removed from the element buffer.
+	ASSERT(eb->free_elements == 186, "Element buffer free elements is not 186, it is %d.", eb->free_elements);
 
 	// Make sure that the sequence number, head and tail were updated correctly.
 	ASSERT(rcv_ring->head_sequence == 1, "Head sequence is not 1, it is %d.", rcv_ring->head_sequence);
@@ -431,7 +431,7 @@ TEST(wrap_around)
 		uint8_t readout[120];
 		int read = sendRing_read_to_tx(send_ring, eb, readout, &send_ring->buff[i].sequence, 0, &diag);
 		ASSERT(read >= block_len, "Packet %d was not read from send ring. Error code: %d", i, read);
-		ASSERT_MEMORY(readout, &payload[12 * i], block_len);
+		ASSERT_MEMORY(readout, &payload[block_len * i], block_len);
 	}
 
 	ASSERT(send_ring->tx_sequence == 1, "Tx sequence is not 1, it is %d.", send_ring->tx_sequence);

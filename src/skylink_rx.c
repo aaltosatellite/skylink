@@ -141,6 +141,9 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 	parsed.payload_len = frame->length - payload_start;
 
 	// Validate CRC32 if present
+	// TODO: Currently CRC32 can not be used together with HMAC.
+	// This is because the HMAC extension is added before CRC32 and CRC32 raises length of frame and flag.
+	// The incorrect length and raised flag will cause the HMAC check to fail.
 	if (parsed.hdr.flag_crced) {
 		if ((ret = sky_check_crc32(frame, &parsed)) < 0)
 			return ret;
