@@ -80,9 +80,8 @@ TEST(fec_wrong_length)
 	frame.length = 31;
 	ret = sky_fec_decode(&frame, &diag);
 	ASSERT(ret == SKY_RET_RS_INVALID_LENGTH, "ret: %d", ret);
-	//NOTE: FEC Error counter is not incremented for too short or long frames
+	//NOTE: FEC Error/Fail counter is not incremented for too short or long frames
 	ASSERT(diag.rx_fec_ok == 0);
-	ASSERT(diag.rx_fec_fail == 1);
 
 	// Too long of a frame
 	frame.rx_time_ticks = 0;
@@ -90,7 +89,6 @@ TEST(fec_wrong_length)
 	ret = sky_fec_decode(&frame, &diag);
 	ASSERT(ret == SKY_RET_RS_INVALID_LENGTH, "ret: %d", ret);
 	ASSERT(diag.rx_fec_ok == 0);
-	ASSERT(diag.rx_fec_fail == 2);
 
 	// Too long frame to be encoded
 	frame.length = 255;
@@ -108,7 +106,7 @@ TEST(fec_wrong_length)
 	ASSERT(ret == SKY_RET_OK, "ret: %d", ret);
 	ASSERT(frame.length == RS_MSGLEN);
 	ASSERT(diag.rx_fec_ok == 1);
-	ASSERT(diag.rx_fec_fail == 2);
+	ASSERT(diag.rx_fec_fail == 0);
 	ASSERT(diag.rx_fec_octs == RS_MSGLEN + RS_PARITYS);
 
 	// Encode a shorter frame
@@ -125,7 +123,7 @@ TEST(fec_wrong_length)
 		ret = sky_fec_decode(&copy_frame, &diag);
 		ASSERT(ret == SKY_RET_RS_FAILED, "ret: %d", ret);
 		ASSERT(diag.rx_fec_ok == 1);
-		ASSERT(diag.rx_fec_fail == 3);
+		ASSERT(diag.rx_fec_fail == 1);
 	}
 
 	// Try to decode frame with extra trailing byte
@@ -136,6 +134,6 @@ TEST(fec_wrong_length)
 		ASSERT(ret == SKY_RET_RS_FAILED, "ret: %d", ret);
 		ASSERT(diag.rx_fec_errs == 0, "Incorrect number of errors corrected: %d", diag.rx_fec_errs);
 		ASSERT(diag.rx_fec_ok == 1);
-		ASSERT(diag.rx_fec_fail == 4);
+		ASSERT(diag.rx_fec_fail == 2);
 	}
 }
