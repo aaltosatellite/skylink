@@ -244,21 +244,18 @@ void mac_reset(SkyMAC* mac, sky_tick_t now)
  * BE CAREFUL: mac_update_belief is generally invoked only by authenticated messages to prevent 'shut-up-attack'.
  * This function in principle gets invoked before any authentication can take place. Therefore use sparingly.
  */
-// void sky_mac_carrier_sensed(SkyMAC* mac, sky_tick_t now)
-// {
-// 	// TODO: See if this can or should be re-implemented
-// 	/*
-// 	// Get ticks to own window opening.
-// 	int32_t ticks_to_own_window_priori = mac_time_to_own_window(mac, now);
+void sky_mac_carrier_sensed(SkyMAC* mac, sky_tick_t now)
+{
+	// Get ticks to own window opening.
+	int32_t ticks_to_own_window_priori = mac_time_to_own_window(mac, now);
 
-// 	// Is the time to window opening less then the fallback of carrier sense ticks?
-// 	if(ticks_to_own_window_priori <= mac->config->carrier_sense_ticks) {
-// 		// Update cycle and its startpoint.
-// 		int32_t cycle = get_mac_cycle(mac);
-// 		mac->T0 = wrap_time_ticks((now - cycle) + mac->config->carrier_sense_ticks);
-// 	}
-// 	*/
-// }
+	// Is the time to window opening less then the fallback of carrier sense ticks?
+	if(ticks_to_own_window_priori <= mac->config->carrier_sense_ticks) {
+		// Update cycle and its startpoint.
+		int32_t cycle = get_mac_cycle(mac);
+		mac->T0 = wrap_time_ticks((now - cycle) + mac->config->carrier_sense_ticks);
+	}
+}
 
 // Returns boolean 1/0 whether an idle frame should be sent to sync the peer side.
 bool mac_idle_frame_needed(SkyMAC* mac, sky_tick_t now)
