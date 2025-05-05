@@ -3,8 +3,9 @@ import numpy as np
 from kuokka.lib_symsynching import create_classic_JPL_statemx, classic_JPL_synch_run, classic_JPL_synch_step, classic_JPL_synch_strm
 from kuokka.lib_symsynching import general_JPL_synch_run_2, create_general_JPL_statemx_2, general_JPL_synch_step_2
 from kuokka.lib_symsynching import general_JPL_synch_run_1, general_JPL_synch_step_1, create_general_JPL_statemx_1
-from kuokka.lib_tools import radionoise, make_samples, make_squarewave
-from kuokka.lib_decider import symbol_decision
+from kuokka.lib_symsynching import create_traveling_phase_JPL_statemx, traveling_phase_JPL_synch_strm, traveling_phase_JPL_synch_run
+from kuokka.lib_tools import radionoise, make_samples2, make_squarewave
+from kuokka.lib_decider import symbol_decision, symbol_decision_f
 from scipy.signal import firwin
 from matplotlib import pyplot as plt
 
@@ -136,7 +137,7 @@ def make_fmdemod_samples(sps_f, baudrate, f_offset_in_br, n_symbols, mod_idx, BT
 	bits = np.random.randint(0,2, n_symbols)*2 - 1
 	bits[0:32+6] = np.array( [1,0]*16 + [1,]*6 )*2 - 1
 	f_offset = f_offset_in_br * baudrate / (sps_f*baudrate)
-	samples = make_samples(sps_f=sps_f, bitstring=bits, f_offset=f_offset, power=1.0, mod_index=mod_idx, shaper_BT_prod=BT, shaper_n_taps=int(sps_f)*6+1, n_silence_start=i_tx_start, n_silence_end=0)
+	samples, _ = make_samples2(sps_f=sps_f, bitstring=bits, f_offset=f_offset, power=1.0, mod_index=mod_idx, shaper_BT_prod=BT, n_silence_start=i_tx_start, n_silence_end=0)
 	samples = np.concatenate( (samples, np.zeros(nsamples-len(samples), dtype=samples.dtype)))
 	samples = np.concatenate( (np.zeros(200, dtype=samples.dtype), samples, np.zeros(200, dtype=samples.dtype)))
 	samples = samples + radionoise(n=len(samples), sr=sps_f*baudrate, W_per_Hz=noise_W_per_Hz)
@@ -190,12 +191,14 @@ def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, n
 	# Do symbol synch
 	t0 = time.perf_counter()
 	JPLstatemx = create_classic_JPL_statemx(N_eps=claimed_sps, n_decay=n_decay)
-	#_ = classic_JPL_synch_run(samples=samples2, statemx=JPLstatemx)
-	#_ = classic_JPL_synch_run(samples=samples2, statemx=JPLstatemx)
+	_ = classic_JPL_synch_run(samples=samples2, statemx=JPLstatemx)
+	_ = classic_JPL_synch_run(samples=samples2, statemx=JPLstatemx)
+	JPLstatemx = create_classic_JPL_statemx(N_eps=claimed_sps, n_decay=n_decay)
 	t00 = time.perf_counter()
 	synchphase_arr = classic_JPL_synch_run(samples=samples2, statemx=JPLstatemx)
 	dt_3_1 = time.perf_counter() - t00
 	dt_3 = time.perf_counter() - t0
+	print("Classic synch in     {} ms".format(1000*dt_3_1))
 
 	# Symbol decision
 	t0 = time.perf_counter()
@@ -225,6 +228,51 @@ def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, n
 	avg_timing_error     = np.average(np.abs(sample_timing_errors))
 	dt_5 = time.perf_counter() - t0
 
+
+
+	# Traveling synch
+	N_eps = int(claimed_sps + 4)
+	JPLstatemx_trv = create_traveling_phase_JPL_statemx(sps_f=sps, N_eps=N_eps, n_decay=n_decay)
+	_ = traveling_phase_JPL_synch_run(sample_arr=samples2, statemx=JPLstatemx_trv)
+	_ = traveling_phase_JPL_synch_run(sample_arr=samples2, statemx=JPLstatemx_trv)
+	JPLstatemx_trv = create_traveling_phase_JPL_statemx(sps_f=sps, N_eps=N_eps, n_decay=n_decay)
+	t00 = time.perf_counter()
+	synchphase_arr_trv = traveling_phase_JPL_synch_run(sample_arr=samples2, statemx=JPLstatemx_trv)
+	dt_4 = time.perf_counter() - t00
+	print("Traveling synch in  {} ms".format(dt_4*1000))
+	print("({} samples)".format(len(samples2)))
+
+	# Symbol decision trv
+	t0 = time.perf_counter()
+	n_decoded_bits_trv = 0
+	optimal_dmd_idx_f_trv = 0.0
+	i_msr_arr_trv = list()	# measurement indexes
+	v_msr_arr_trv = list()	# measurement values
+	while True:
+		v_trv, optimal_dmd_idx_f_trv = symbol_decision_f(dmd_arr=samples2, synch_arr=synchphase_arr_trv, dmd_synch_head_i=len(samples2), prev_dmd_idx_f=optimal_dmd_idx_f_trv,
+													   sps_f=claimed_sps, synch_delay_i=synch_delay)
+		if optimal_dmd_idx_f_trv < 0:
+			break
+		n_decoded_bits_trv += 1
+		i_msr_arr_trv.append(optimal_dmd_idx_f_trv + claimed_sps*0.5)
+		v_msr_arr_trv.append( np.sign(v_trv) )
+	i_msr_arr_trv = np.array(i_msr_arr_trv)
+	v_msr_arr_trv = np.array(v_msr_arr_trv)
+	dt_4 = time.perf_counter() - t0
+
+	# Compute performance metrics trv
+	t0 = time.perf_counter()
+	bitcorr_trv = np.correlate(v_msr_arr_trv, bits)
+	i_maxcorr_trv = np.argmax(bitcorr_trv)
+	corrmax_trv = bitcorr_trv[i_maxcorr_trv]
+	sample_timing_errors_trv = i_msr_arr_trv[i_maxcorr_trv:i_maxcorr_trv+n_symbols] - real_centers[0:n_symbols]
+	sample_timing_errors_trv = sample_timing_errors_trv / real_sps
+	avg_timing_error_trv     = np.average(np.abs(sample_timing_errors_trv))
+	dt_5 = time.perf_counter() - t0
+
+
+
+
 	# Print and plot analytics
 	if do_prints:
 		report_strings = ["#dt-{}: {} ms".format(i+1, round(1e3*dt, 2)) for i,dt in enumerate( [dt_1,dt_2,dt_3,dt_4,dt_5] )]
@@ -236,7 +284,8 @@ def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, n
 		print("{} decoded bits".format(n_decoded_bits))
 		print("Correlation max:  {}".format( corrmax ))
 		print("                  {} %".format( round(100*corrmax/n_symbols,1) ))
-		print("avg timing error: {}".format( round(avg_timing_error,3) ))
+		print("avg timing error 1: {}".format( round(avg_timing_error,3) ))
+		print("avg timing error 2: {}".format( round(avg_timing_error_trv,3) ))
 
 	if do_plots:
 		fig= plt.figure(figsize=(20,14))
@@ -253,6 +302,7 @@ def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, n
 		ax1.grid()
 
 		ax2.plot( np.arange(len(synchphase_arr))/real_sps, synchphase_arr[:,0] )
+		ax2.plot( np.arange(len(synchphase_arr_trv))/real_sps, synchphase_arr_trv[:,0] )
 		ax2.grid()
 
 		ax3.plot((0,n_symbols),  (0.5,0.5), color="black", linestyle="--")
@@ -260,6 +310,7 @@ def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, n
 		ax3.plot((0,n_symbols),  (1,1), color="black", linestyle="-")
 		ax3.plot((0,n_symbols),  (-1,-1), color="black", linestyle="-")
 		ax3.plot(np.arange(n_symbols), sample_timing_errors )
+		ax3.plot(np.arange(n_symbols), sample_timing_errors_trv )
 		ax3.grid()
 
 		fig.set_layout_engine("tight")
@@ -283,9 +334,10 @@ def simple_synch_and_demod_test(sps, baudrate, relative_rate_error, noisePpHz, d
 
 
 if __name__ == '__main__':
-	compare_all_JPL_synchronizers_against_eachother()
-	speedbench_classic_JPL()
-
+	#compare_all_JPL_synchronizers_against_eachother()
+	#speedbench_classic_JPL()
+	synch_and_decode_experiment(sps=12, baudrate=9600, n_symbols=1255, relative_rate_error=1.0e-5, noisePpHz=0.0000023/9600, f_offset_in_br=0.01, mod_idx=0.5, BT=0.5, lp_coeff=0.570,
+								n_decay=40, synch_delay_mpr=8, do_plots=True, do_prints=True)
 
 
 

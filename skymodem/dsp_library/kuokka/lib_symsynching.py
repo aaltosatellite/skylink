@@ -98,6 +98,71 @@ def classic_JPL_synch_step(sample, statemx):
 
 
 
+# === CLASSIC traveling phase ==============================================================================================================================================
+# ===========================================================================================================================================================================
+@njit(cache=True)
+def create_traveling_phase_JPL_statemx(sps_f, N_eps, n_decay):
+	assert sps_f >= 3.0
+	assert n_decay >= 1.0
+	statemx = np.zeros((5, N_eps), dtype=np.float64)
+	statemx[0,0] = sps_f
+	statemx[0,1] = 1 - 1/n_decay
+	statemx[0,2] = 0.0	# phase0
+	statemx[1,:] = np.arange(N_eps, dtype=np.float64) * 1.0 / N_eps  # relative phases
+	statemx[2,:] = (0.0 - statemx[1,:]) % 1  # relative phases
+	statemx[3,:] *= 0.0 # wave accumulator
+	statemx[4,:] *= 0.0 # long accumulator
+	return statemx
+
+
+@njit(cache=True)
+def traveling_phase_JPL_synch_run(sample_arr, statemx):
+	nn = len(sample_arr)
+	synch_arr = np.zeros((nn, 3), dtype=np.float64)
+	traveling_phase_JPL_synch_strm(sample_arr=sample_arr, i_sample0=0, nsamples=nn, synch_arr=synch_arr, synch_head0=0, statemx=statemx)
+	return synch_arr
+
+
+@njit(cache=True)
+def traveling_phase_JPL_synch_strm(sample_arr, i_sample0, nsamples, synch_arr, synch_head0, statemx):
+	assert type(synch_arr[0,0]) is np.float64
+	assert synch_arr.shape[1] == 3
+	N_eps   = statemx.shape[1]
+	sps_f   = statemx[0,0]
+	c_decay = statemx[0,1]
+	phase0  = statemx[0,2]
+	eps_fracs_arr = statemx[1,:]
+	eps_phase_arr = statemx[2,:]
+	wave_acc_arr  = statemx[3,:]
+	long_acc_arr  = statemx[4,:]
+	synch_head = synch_head0
+	sps_inv = 1/sps_f
+	for i_sample in range(i_sample0, i_sample0 + nsamples):
+		wave_acc_arr += sample_arr[i_sample]
+		i00 = np.ceil((phase0) * N_eps)
+		phase0 = (phase0 + sps_inv) % 1
+		eps_phase_arr_new = (phase0 - eps_fracs_arr) % 1
+		for i_eps in range(N_eps):
+			if eps_phase_arr_new[i_eps] < eps_phase_arr[i_eps]:
+				#assert i_eps >= i00
+				k = sample_arr[i_sample] * eps_phase_arr_new[i_eps] * sps_f   # " * N_eps"  ==  " / (1/N_eps)"
+				#assert abs(k) <= abs(sample_arr[i_sample])
+
+				long_acc_arr[i_eps] = (long_acc_arr[i_eps] + abs(wave_acc_arr[i_eps] - k)) * c_decay
+				wave_acc_arr[i_eps] = k
+		eps_phase_arr = eps_phase_arr_new
+		#synch_arr[synch_head][0] = np.argmax(long_acc_arr)
+		synch_arr[synch_head][0] = np.argmax(long_acc_arr) / N_eps
+		#synch_arr[synch_head][1] = int(round(phase0 * (N_eps))) % N_eps
+		synch_arr[synch_head][1] = phase0
+		synch_head += 1
+	statemx[0,2] = phase0
+	statemx[2,:] = eps_phase_arr
+	statemx[3,:] = wave_acc_arr
+	statemx[4,:] = long_acc_arr
+	return synch_head
+# === CLASSIC travelling phase ==============================================================================================================================================
+# ===========================================================================================================================================================================
 
 
 

@@ -68,7 +68,7 @@ def feed_samples_to_a_receiver(dsp_config:DSPConfig, samples, payload_istart_ien
 		batchlen = min(default_batchlen, nsamples - c)
 		batch = samples[c:c+batchlen]
 		t0 = time.perf_counter()
-		ret_list = rx.process_samples(batch, give_bits=False)
+		ret_list, carrier_sensed = rx.process_samples(batch, give_bits=False)
 		dt_ = time.perf_counter() - t0
 		batch_contains_signal = any([(not ((c>i1) or ((c+batchlen)<i0))) for (_,i0,i1) in payload_istart_iend_list])
 		if batch_contains_signal:
@@ -115,6 +115,8 @@ def measure_curve_mpr(rx_config:DSPConfig, n_payloads, f_center_error, rel_baudr
 	for i_noise, r_rate, avg_delay_t in ret_list:
 		reception_rate_array[i_noise] = r_rate
 		delay_array[i_noise] = avg_delay_t
+	A = surf_integral(x_arr=noiseP_array, y_arr=reception_rate_array)
+	avg_delay = np.average( [x for x in delay_array if x > 0] ) if any(delay_array > 0) else -1
 	assert np.all(reception_rate_array >= 0)
 	assert np.all(delay_array > -2)
 	return reception_rate_array, delay_array
@@ -131,7 +133,7 @@ def measure_execution_speed(rx_config:DSPConfig):
 	T_interval = 5e-3
 	samples, payload_istart_iend_list = generate_test_samples(f_tune=rx_config.rx_f_tune, f_center=rx_config.rx_f_center + 1e3, sr0=rx_config.rx_sr0,
 															  baudrate=rx_config.baudrate*(1+1.5e-5), mod_index=rx_config.mod_index,
-															  BT=rx_config.BT_rx_match, n_payloads=8, noisePpHz=0.02/rx_config.baudrate, T_init_silence=T_init_silence,
+															  BT=rx_config.BT_rx_match, n_payloads=12, noisePpHz=0.02/rx_config.baudrate, T_init_silence=T_init_silence,
 															  T_interval_array=(T_interval,)*(8-1), T_end_silence=T_end_silence)
 	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=int(0.001 * rx_config.rx_sr0), do_precompile=False)
 	n_samples = len(samples)
@@ -199,7 +201,7 @@ def surf_integral(x_arr, y_arr):
 
 def save_result(rx_config:DSPConfig, n_payloads, noiseP_array, reception_rate_array, A, avg_delay, dpath):
 	dd = {
-		"version" : 4.0,
+		"version" : 5.0,
 		"ts": dtime.now().isoformat(),
 		"rx_config": rx_config.__dict__,
 		"n_payloads": n_payloads,
@@ -441,7 +443,6 @@ def compare_timings():
 	f_tune 		= 437.1e6
 	f_center 	= 437.125e6
 	sr0 		= 1e6
-	n_payloads	= 32
 	rx_config_default = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	config_optim_1 = deepcopy(rx_config_default)
 	config_optim_1.sps = 19
@@ -450,7 +451,7 @@ def compare_timings():
 	config_optim_1.synch_delay_mpr = 16
 	config_optim_1.JPL_n_decay = 44
 
-	dt_array, t_signal, t_silence, n_samples, n_signal_samples = measure_execution_speed(rx_config=rx_config_default)
+	_ = measure_execution_speed(rx_config=rx_config_default)
 	dt_array, t_signal, t_silence, n_samples, n_signal_samples = measure_execution_speed(rx_config=rx_config_default)
 	print("Default:  t_total: {} ms,   t_signal: {} ms".format(round( 1e3*(t_silence+t_signal), 2),  round(1e3*t_signal, 2) ))
 
@@ -476,22 +477,37 @@ def optimizer_A(t_run_min):
 	noiseP_array 		= rel_noiseP_array / 9600
 
 	rx_config_basis = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
-	#rx_config_basis.mod_index = mod_index
+	rx_config_basis.mod_index = 0.75
 	#rx_config_basis.BT_rx_match = BT_rx_match
-	attrname_array_d = {
-		"sps": 				    [6,7,8,9,10,12,13,14,15,16,17,18,19,20,22],
-		"fftlen_mpr": 			[int(x)   for x in np.linspace(0.15,2.0, 70)  * 50],
-		"lp_cutoff_coeff" :     [float(x) for x in np.linspace(0.50,2.0, 128) * 0.600],
-		"centering_delay_mpr" : [float(x) for x in np.linspace(0.15,2.0, 128) * 2.5],
-		"c_center_decay" :      [1-1/float(x) for x in np.geomspace(3,500, 256)],
-		"synch_delay_mpr" :     [float(x) for x in np.linspace(0.25,2.0, 128) * 15.0],
-		"JPL_n_decay" :         [int(x)   for x in np.linspace(0.25,2.0, 128) * 30.0],
-		"d_halflen" :           [8,10,12,14,16,18,20,22,24,26],
-		"f_halflen" :           [8,10,12,14,16,18,20,22,24,26],
+	#rx_config_basis.BT_rx_match = -1
+
+	"""
+	self.sps 				= 12 			# ! sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
+	self.fftlen_mpr 		= 50			# ! Length of the fft window in multiples of sps in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
+		self.mod_index 			= 0.5			# S Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
+		self.BT_rx_match 		= 0.425			# S Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering. TODO: best match for 0.5 at UHF-firmware is 0.425 here
+	self.centering_delay_mpr= 2.15 			# ! Center frequency estimate is collected for (centering_delay_mpr*fftlen) samples ahead of demodulation. TODO should be in symbols?
+	self.c_center_decay		= 0.94 			# ! Exponential decay factor of the center frequency correlation sum.
+	self.JPL_n_decay 		= 55 			# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
+	self.lp_ntaps			= 161			# ! number of taps in the low-pass filter in demodulation
+	self.lp_cutoff_coeff	= 0.600			# ! cutoff frequency of the low-pass filter, as multiples of baudrate
+	self.synch_delay_mpr	= 30 			# ! demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
+	"""
+
+	attrname_array_d1 = {
+		"mod_index" :     		[0.5, 0.75],
+		"sps": 				    [8,10,12,16,22],
+		"fftlen_mpr": 			[int(x)   for x in np.linspace(0.20,2.0, 128)  * 50],
+		"centering_delay_mpr" : [float(x) for x in np.linspace(0.15,2.0, 128) * 2.15],
+		"c_center_decay" :      [1-1/float(x) for x in np.geomspace(3,500, 512)],
+		"JPL_n_decay" :         [int(x)   for x in np.linspace(0.25,2.0, 128) * 55],
+		"lp_ntaps" :            [int(x)*2+1 for x in np.linspace(0.1,2.0, 128) * 161/2.0],
+		#"lp_cutoff_coeff" :     [float(x) for x in np.linspace(0.50,2.0, 128) * 0.570],
+		"synch_delay_mpr" :     [float(x) for x in np.linspace(0.25,2.0, 128) * 30.0],
 	}
-	attrname_array_d = {
+	attrname_array_d2 = {
 		"lp_cutoff_coeff" :     [float(x) for x in np.linspace(0.50,0.65, 128) * 1.0],
-		"mod_index" :     		[float(x) for x in np.linspace(0.6,0.9, 128) * 1.0],
+		"mod_index" :     		[float(x) for x in np.linspace(0.65,0.85, 128) * 1.0],
 	}
 	#rx_config_basis.tx_mod_index = 4
 	#rx_config_basis.mod_index = 0.7
@@ -511,7 +527,7 @@ def optimizer_A(t_run_min):
 	ii = 0
 	t00 = time.monotonic()
 	while (time.monotonic()-t00) < (t_run_min*60):
-		rx_config = random_receiver_config_from_choises(attrname_array_d=attrname_array_d, rx_config_basis=rx_config_basis)
+		rx_config = random_receiver_config_from_choises(attrname_array_d=attrname_array_d1, rx_config_basis=rx_config_basis)
 		n_payloads_ = n_payloads
 		reception_rate_array, delay_array = measure_curve_mpr(rx_config=rx_config, n_payloads=n_payloads_, f_center_error=f_center_error,
 											 rel_baudrate_error=rel_baudrate_error, noiseP_array=noiseP_array)
@@ -533,7 +549,7 @@ def analyze_results_plot():
 
 	#results = [r for r in results if r["n_payloads"] > 32]
 	results = [r for r in results if r["A"] > 0]
-	#results = [r for r in results if r["A"] > 2.5e-5]
+	#results = [r for r in results if r["A"] > 2.55e-5]
 
 	#results = [r for r in results if 0.57 < r["rx_config"]["lp_cutoff_coeff"] < 0.63]   	# !!!!
 	#results = [r for r in results if r["rx_config"]["JPL_n_decay"] > 20]					# !!!!
@@ -542,25 +558,19 @@ def analyze_results_plot():
 	#results = [r for r in results if r["rx_config"]["sps"] > 8]
 
 	#results = [r for r in results if r["rx_config"]["c_center_decay"] > 0.8]
-	#results = [r for r in results if r["rx_config"]["d_halflen"] > 10]
-	results = [r for r in results if r["rx_config"]["mod_index"] > 0.5]
-	results = [r for r in results if r["rx_config"]["mod_index"] < 1.0]
-	results = [r for r in results if r["rx_config"]["lp_cutoff_coeff"] >= 0.55]
-	results = [r for r in results if r["rx_config"]["lp_cutoff_coeff"] <= 0.60]
+
+	results = [r for r in results if r["rx_config"]["BT_rx_match"] > 0.0]
+	#results = [r for r in results if r["rx_config"]["mod_index"] == 0.5]
+	#results = [r for r in results if r["rx_config"]["mod_index"] < 1.0]
+	#results = [r for r in results if r["rx_config"]["lp_cutoff_coeff"] >= 0.55]
+	#results = [r for r in results if r["rx_config"]["lp_cutoff_coeff"] <= 0.60]
 
 	#results = [r for r in results if r["rx_config"]["mod_index"] < 0.6]
 
 	print("{} remain after filtering.".format(len(results)))
 
-	"""print("--- top-5 ----------------------------------------------")
-	for cfg, res_d in load_top_configs(dpath="/home/elmore/datasetit/mc_results/", minimum_version=0, fname_contains=["kuokka-curve",".pkl"], mandatory_d_keys=["n_payloads",], top_n=5):
-		print("A:{},  has delay:{}".format( res_d["A"], ("avg_delay" in res_d) ))
-		print(cfg.__dict__)
-		print("")
-	print("--------------------------------------------------------")"""
 
-	parameter_names = ["sps", "fftlen_mpr", "lp_cutoff_coeff", "centering_delay_mpr", "c_center_decay", "synch_delay_mpr", "JPL_n_decay", "d_halflen", "f_halflen"]
-	parameter_names = ["sps", "mod_index", "lp_cutoff_coeff", "centering_delay_mpr", "c_center_decay", "synch_delay_mpr", "JPL_n_decay", "d_halflen", "f_halflen"]
+	parameter_names = ["mod_index", "lp_cutoff_coeff", "sps", "fftlen_mpr",  "centering_delay_mpr", "c_center_decay", "JPL_n_decay", "lp_ntaps", "synch_delay_mpr"]
 	for res in results[0:4]:
 		print("A:       {}".format(res["A"]))
 		print("delay:   {}".format(1e3*res["avg_delay"]))
@@ -568,11 +578,18 @@ def analyze_results_plot():
 			print("    {}:{} {}".format(kname, " "*(20-len(kname)) ,  res["rx_config"][kname]))
 		print("\n")
 
+
 	A_array0 = [d["A"] for d in results0]
 	A_array = [d["A"] for d in results]
-	#color_arr = [d["rx_config"]["m_halflen"] for d in results]
+	mod_idx_array = np.array([d["rx_config"]["mod_index"] for d in results])
+	version_array = np.array([d["version"] for d in results])
+	BT_array = [d["rx_config"]["BT_rx_match"] for d in results]
+	delay_array0 = [d["avg_delay"] for d in results0]
 	delay_array = [d["avg_delay"] for d in results]
-	color_arr = delay_array
+	ts_bool_array = [1.0 * (dtime.fromisoformat(r["ts"]) > dtime(year=2025, month=4, day=24, hour=0, minute=0)) for r in results]
+	print("sum ts_bool_array:", sum(ts_bool_array))
+	color_arr = version_array # == 5.0
+
 
 	parameter_arrays0 = dict()
 	parameter_arrays = dict()
@@ -593,144 +610,67 @@ def analyze_results_plot():
 	ax7 = fig1.add_subplot(337)
 	ax8 = fig1.add_subplot(338)
 	ax9 = fig1.add_subplot(339)
-
-	ax1.scatter(parameter_arrays0[parameter_names[0]], A_array0, color="grey", marker=".", s=3)
-	ax1.scatter(parameter_arrays[parameter_names[0]], A_array, c=color_arr)
-	ax1.set_xlabel(parameter_names[0])
-	ax1.set_ylabel("A")
-	ax1.grid()
-
-	ax2.scatter(parameter_arrays0[parameter_names[1]], A_array0, color="grey", marker=".", s=3)
-	ax2.scatter(parameter_arrays[parameter_names[1]], A_array, c=color_arr)
-	ax2.set_xlabel(parameter_names[1])
-	ax2.set_ylabel("A")
-	ax2.grid()
-
-	ax3.scatter(parameter_arrays0[parameter_names[2]], A_array0, color="grey", marker=".", s=3)
-	ax3.scatter(parameter_arrays[parameter_names[2]], A_array, c=color_arr)
-	ax3.set_xlabel(parameter_names[2])
-	ax3.set_ylabel("A")
-	ax3.grid()
-
-	ax4.scatter(parameter_arrays0[parameter_names[3]], A_array0, color="grey", marker=".", s=3)
-	ax4.scatter(parameter_arrays[parameter_names[3]], A_array, c=color_arr)
-	ax4.set_xlabel(parameter_names[3])
-	ax4.set_ylabel("A")
-	ax4.grid()
-
-	#ax5.scatter( 1/(1-parameter_arrays[parameter_names[4]]), A_array, c=color_arr)
-	ax5.scatter(parameter_arrays0[parameter_names[4]], A_array0, color="grey", marker=".", s=3)
-	ax5.scatter( parameter_arrays[parameter_names[4]], A_array, c=color_arr)
-	#ax5.semilogx()
-	ax5.set_xlabel(parameter_names[4])
-	ax5.set_ylabel("A")
-	ax5.grid()
-
-	ax6.scatter(parameter_arrays0[parameter_names[5]], A_array0, color="grey", marker=".", s=3)
-	ax6.scatter(parameter_arrays[parameter_names[5]], A_array, c=color_arr)
-	ax6.set_xlabel(parameter_names[5])
-	ax6.set_ylabel("A")
-	ax6.grid()
-
-	ax7.scatter(parameter_arrays0[parameter_names[6]], A_array0, color="grey", marker=".", s=3)
-	ax7.scatter(parameter_arrays[parameter_names[6]], A_array, c=color_arr)
-	ax7.set_xlabel(parameter_names[6])
-	ax7.set_ylabel("A")
-	ax7.grid()
-
-	ax8.scatter(parameter_arrays0[parameter_names[7]], A_array0, color="grey", marker=".", s=3)
-	ax8.scatter(parameter_arrays[parameter_names[7]], A_array, c=color_arr)
-	ax8.set_xlabel(parameter_names[7])
-	ax8.set_ylabel("A")
-	ax8.grid()
-
-	ax9.scatter(parameter_arrays0[parameter_names[8]], A_array0, color="grey", marker=".", s=3)
-	ax9.scatter(parameter_arrays[parameter_names[8]], A_array, c=color_arr)
-	ax9.set_xlabel(parameter_names[8])
-	ax9.set_ylabel("A")
-	ax9.grid()
-
+	for i,ax in enumerate([ax1,ax2,ax3,ax4,ax5,ax6,ax7,ax8,ax9]):
+		ax.scatter(parameter_arrays0[parameter_names[i]], A_array0, color="grey", marker=".", s=3)
+		ax.scatter(parameter_arrays[parameter_names[i]], A_array, c=color_arr)
+		ax.set_xlabel(parameter_names[i])
+		ax.set_ylabel("A")
+		ax.grid()
 	fig1.set_layout_engine("tight")
 
 
 
+	fig3 = plt.figure(figsize=(12,10))
+	ax31 = fig3.add_subplot(331)
+	ax32 = fig3.add_subplot(332)
+	ax33 = fig3.add_subplot(333)
+	ax34 = fig3.add_subplot(334)
+	ax35 = fig3.add_subplot(335)
+	ax36 = fig3.add_subplot(336)
+	ax37 = fig3.add_subplot(337)
+	ax38 = fig3.add_subplot(338)
+	ax39 = fig3.add_subplot(339)
+	for i,ax in enumerate([ax31,ax32,ax33,ax34,ax35,ax36,ax37,ax38,ax39]):
+		#ax.scatter(parameter_arrays0[parameter_names[i]], delay_array0, color="grey", marker=".", s=3)
+		ax.scatter(parameter_arrays[parameter_names[i]], delay_array, c=color_arr)
+		ax.set_xlabel(parameter_names[i])
+		ax.set_ylabel("delay")
+		ax.grid()
+	fig3.set_layout_engine("tight")
 
 
 
 
-
-	fig2 = plt.figure(figsize=(15,15))
-	ax21 = fig2.add_subplot(221)
-	ax22 = fig2.add_subplot(222)
-	ax23 = fig2.add_subplot(223)
-	ax24 = fig2.add_subplot(224)
-
-	a,b = 0,1
-	ax21.scatter(parameter_arrays0[parameter_names[a]], parameter_arrays0[parameter_names[b]], color="grey", marker=".", s=3)
-	ax21.scatter(parameter_arrays[parameter_names[a]], parameter_arrays[parameter_names[b]]) #, c=A_array, cmap="jet")
-	ax21.set_xlabel(parameter_names[a])
-	ax21.set_ylabel(parameter_names[b])
-	ax21.grid()
-
-	a,b = 1,2
-	ax22.scatter(parameter_arrays0[parameter_names[a]], parameter_arrays0[parameter_names[b]], color="grey", marker=".", s=3)
-	ax22.scatter(parameter_arrays[parameter_names[a]], parameter_arrays[parameter_names[b]] , c=A_array, cmap="jet")
-	ax22.set_xlabel(parameter_names[a])
-	ax22.set_ylabel(parameter_names[b])
-	ax22.grid()
-
-	a,b = 5,6
-	ax23.scatter(parameter_arrays0[parameter_names[a]], parameter_arrays0[parameter_names[b]], color="grey", marker=".", s=3)
-	ax23.scatter(parameter_arrays[parameter_names[a]], parameter_arrays[parameter_names[b]]) #, c=A_array, cmap="jet")
-	ax23.set_xlabel(parameter_names[a])
-	ax23.set_ylabel(parameter_names[b])
-	ax23.grid()
-
-	a,b, = 7,8
-	ax24.scatter(parameter_arrays0[parameter_names[a]], parameter_arrays0[parameter_names[b]], color="grey", marker=".", s=3)
-	ax24.scatter(parameter_arrays[parameter_names[a]], parameter_arrays[parameter_names[b]]) #, c=A_array, cmap="jet")
-	ax24.set_xlabel(parameter_names[a])
-	ax24.set_ylabel(parameter_names[b])
-	ax24.grid()
-
+	fig2 = plt.figure(figsize=(12,10))
+	ax21 = fig2.add_subplot(321)
+	ax22 = fig2.add_subplot(322)
+	ax23 = fig2.add_subplot(323)
+	ax24 = fig2.add_subplot(324)
+	ax25 = fig2.add_subplot(325)
+	ax26 = fig2.add_subplot(326)
+	pairs = set()
+	for i, ax in enumerate([ax21,ax22,ax23,ax24,ax25,ax26]):
+		a,b = np.random.randint(0,9,2)
+		a,b = tuple(sorted( (a,b) ))
+		while (a==b) or ((a,b) in pairs):
+			a,b = np.random.randint(0,9,2)
+			a,b = tuple(sorted( (a,b) ))
+		pairs.add( (a,b) )
+		ax.scatter(parameter_arrays0[parameter_names[a]], parameter_arrays0[parameter_names[b]], color="grey", marker=".", s=3)
+		ax.scatter(parameter_arrays[parameter_names[a]], parameter_arrays[parameter_names[b]] , c=A_array, cmap="jet")
+		ax.set_xlabel(parameter_names[a])
+		ax.set_ylabel(parameter_names[b])
+		ax.grid()
 	fig2.set_layout_engine("tight")
 
 
 
-
-
-
-
-
-	fig3 = plt.figure(figsize=(15,11))
-	ax31 = fig3.add_subplot(221)
-	ax32 = fig3.add_subplot(222)
-	ax33 = fig3.add_subplot(223)
-	ax34 = fig3.add_subplot(224)
-
-	ax31.scatter(A_array, delay_array, c=color_arr)
-	ax31.set_xlabel("A")
-	ax31.set_ylabel("delay")
-	ax31.grid()
-
-	ax32.scatter(parameter_arrays["centering_delay_mpr"], delay_array, c=A_array)
-	ax32.set_xlabel("centering_delay_mpr")
-	ax32.set_ylabel("delay")
-	ax32.grid()
-
-	ax33.scatter(parameter_arrays["synch_delay_mpr"], delay_array, c=A_array)
-	ax33.set_xlabel("synch_delay_mpr")
-	ax33.set_ylabel("delay")
-	ax33.grid()
-
-	ax34.scatter(parameter_arrays["sps"], delay_array, c=A_array)
-	ax34.set_xlabel("sps")
-	ax34.set_ylabel("delay")
-	ax34.grid()
-
-	fig3.set_layout_engine("tight")
-
 	plt.show()
+
+
+
+
+
 
 
 
@@ -748,7 +688,7 @@ def analyze_results_plot():
 
 analyze_results_plot()
 
-#optimizer_A(t_run_min=20.0)
+optimizer_A(t_run_min=20.0)
 
 #test_precompilation_success_rate(1000)
 

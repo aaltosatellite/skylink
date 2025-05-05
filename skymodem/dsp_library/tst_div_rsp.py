@@ -1,7 +1,6 @@
 import time
 import numpy as np
-from kuokka.lib_div_resampler import create_div_resampler, div_resampler_execute_stream, create_staged_resampler, staged_resampler_execute_stream
-from kuokka.lib_resampler import create_resampler, resampler_execute_stream
+from kuokka.lib_resampler import create_resampler, resampler_execute_stream, create_div_resampler, div_resampler_execute_stream, create_staged_resampler, staged_resampler_execute_stream
 from kuokka.lib_tools import radionoise, make_samples
 from mtools.tools_dsp import waterfall_mx, fft_usual
 from mtools.tools_math import rollsmooth

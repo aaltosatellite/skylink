@@ -2,11 +2,12 @@ import time
 import numpy as np
 from .lib_demodulation import demodulation_sequence, create_DSD_statemx, DSD_buffer_roll
 from .lib_symsynching import create_classic_JPL_statemx
-from .lib_fft_finder import create_cont_center_statemx, fft_continuous_f_center, set_f_center_search_map
+from .lib_fft_finder import create_fft_f_centerer_statemx, fft_f_centerer, set_f_center_search_map
+from .lib_fft_finder import create_fft_f_centerer_csense_statemx, fft_f_centerer_csense
 from .lib_framing import create_deframer, deframe, RS_MAX_ENCODED_LEN, frame_packet, RS_MAX_PL_LEN
 from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples2, ints_to_bits, freq_shift_phased, choose_fftlen
 from .lib_reedsolomon import get_default_rs
-from .lib_div_resampler import staged_resampler_execute_stream, create_staged_resampler
+from .lib_resampler import staged_resampler_execute_stream, create_staged_resampler, minimal_disc_halflen_for_staged_resampler, minimal_frac_halflen_for_staged_resampler
 from .lib_tools import get_frequency_search_map
 
 
@@ -29,26 +30,27 @@ class DSPConfig:
 		# --------------------------------------------------
 		# resampling ---------------------------------------
 		self.sps 				= 12 			# ! sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
-		self.d_halflen 			= 32			# ! Integer resampling lowpass filter halflen. Larger number increases both accuracy and computation cost. Has a minor effect on performance.
-		self.f_halflen 			= 12			# ! Fractional resampling lowpass filter halflen. Larger number increases both accuracy and computation cost. Has a *major* effect on performance.
 		self.n_banks 			= 64			# - Number of resampling banks. Almost no effect on performance, and 64 seems good for all purposes.
 		self.rs_f_cutoff_coeff 	= 0.499			# - Lowpass associated with the resampling. In interval (0:0.5). 0.499 still enables some aliasing at edges.
 		# --------------------------------------------------
 		# fft detection ------------------------------------
-		self.fftlen_mpr 		= 50			# ! Length of the fft window in multiples of sps in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
+		self.fftlen_mpr 		= 48			# ! Length of the fft window in multiples of sps in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
 		self.mod_index 			= 0.5			# S Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
 		self.BT_rx_match 		= 0.425			# S Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering. TODO: best match for 0.5 at UHF-firmware is 0.425 here
-		self.centering_delay_mpr= 2.15 			# ! Center frequency estimate is collected for (centering_delay_mpr*fftlen) samples ahead of demodulation. TODO should be in symbols?
+		self.centering_delay_mpr= 2.0 			# ! Center frequency estimate is collected for (centering_delay_mpr*fftlen) samples ahead of demodulation. TODO should be in symbols?
 		self.c_center_decay		= 0.94 			# ! Exponential decay factor of the center frequency correlation sum.
 		self.search_halfband	= 20.0e3 		# - Determines the frequency band above and below the center frequency where the demodulator looks for signals. (For 437MHz at orbital speeds, maximum doppler ~11kHz)
 		# --------------------------------------------------
 		# JPL synchronizer ---------------------------------
-		self.JPL_n_decay 		= 55 			# ~ How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
+		self.JPL_n_decay 		= 55 			# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
 		# --------------------------------------------------
 		# demodulation -------------------------------------
-		self.lp_ntaps			= 161			# - number of taps in the low-pass filter in demodulation
-		self.lp_cutoff_coeff	= 0.600			# - cutoff frequency of the low-pass filter, as multiples of baudrate
-		self.synch_delay_mpr	= 30 			# ~ demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
+		self.lp_ntaps			= 161			# ! number of taps in the low-pass filter in demodulation
+		self.lp_cutoff_coeff	= 0.570			# ! cutoff frequency of the low-pass filter, as multiples of baudrate (0.570 seems best both for mod_idx=0.5 and mod_idx=0.75)
+		self.synch_delay_mpr	= 30 			# ! demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
+		# --------------------------------------------------
+		# carrier sense ------------------------------------
+		self.carrier_sense		= True
 		# --------------------------------------------------
 		# framing ------------------------------------------
 		self.use_scrambler 		= True
@@ -69,22 +71,24 @@ class DSPConfig:
 
 		for (sr0,f_tune,f_center) in [(self.rx_sr0, self.rx_f_tune, self.rx_f_center), (self.tx_sr0, self.tx_f_tune, self.tx_f_center)]:
 			assert 1e3 < sr0 < 32e6
-			assert f_tune >= 1.0
-			assert f_center >= 1.0
+			assert f_tune > 1.0
+			assert f_center > 1.0
 			assert 0 < self.baudrate < (sr0/2)
 		assert (abs(self.rx_f_tune - self.rx_f_center) + self.search_halfband + self.baudrate * 0.6) < (0.5 * self.rx_sr0), "Radio tuned to this frequency with this samplerate cannot see the entire band."
 		assert ((self.search_halfband + self.baudrate*0.6) / (self.baudrate * self.sps)) < 0.5, "Resampling down to this sps at this baudrate cannot see the entire search band."
+		#sign1 = np.sign(self.rx_f_center+(self.search_halfband+self.baudrate*0.6) - self.rx_f_tune )
+		#sign2 = np.sign(self.rx_f_center-(self.search_halfband+self.baudrate*0.6) - self.rx_f_tune )
+		#assert sign1 == sign2, "The search band stretches across tuning frequency. DC-spike will potentially interfere with reception."
 
 		assert 2 < self.sps <= 100
 		assert type(self.sps) == int
-		assert 4 < self.d_halflen < 42
-		assert (self.d_halflen*2) > int(self.rx_sr0 / (self.baudrate * self.sps)),  (self.d_halflen*2, int(self.rx_sr0 / (self.baudrate * self.sps)))
-		assert type(self.d_halflen) == int
-		assert 4 < self.f_halflen < 42
-		assert type(self.f_halflen) == int
+		#assert 4 < self.d_halflen < 42
+		#assert (self.d_halflen*2) > int(self.rx_sr0 / (self.baudrate * self.sps)),  (self.d_halflen*2, int(self.rx_sr0 / (self.baudrate * self.sps)))
+		#assert type(self.d_halflen) == int
 		assert 24 < self.n_banks < 240
 		assert type(self.n_banks) == int
 		assert 0 < self.rs_f_cutoff_coeff < 0.5
+		assert (self.rs_f_cutoff_coeff * (self.sps * self.baudrate / self.rx_sr0)) > ((self.search_halfband + self.baudrate*0.6) / self.rx_sr0)
 		assert type(self.fftlen_mpr) == int
 		assert 3 < self.fftlen_mpr < 150
 		assert 0.5 <= self.mod_index < 10.0
@@ -100,7 +104,7 @@ class DSPConfig:
 		assert type(self.use_scrambler) == bool
 		assert type(self.use_rs) == bool
 		assert type(self.synch_threshold) == int
-		assert 0 <= self.synch_threshold < 5
+		assert 0 <= self.synch_threshold <= 4
 		assert type(self.data_maxlen) == int
 		assert self.data_maxlen > 10
 		if self.use_rs:
@@ -140,7 +144,7 @@ class Receiver:
 		self.synch_array 		= np.zeros((self.bufferlen, 3), dtype=np.int64)
 		self.bit_array 			= np.zeros(self.bufferlen // 10, dtype=np.int64)
 		self.bit_f_array 		= np.zeros(self.bufferlen // 10, dtype=np.float64)
-		self.fft_instr_array 	= np.zeros((self.bufferlen, 3), dtype=np.float64)
+		self.fft_instr_array 	= np.zeros((self.bufferlen, 4), dtype=np.float64)
 		self.bufferhalf			= int(self.bufferlen / 2)
 		self.buffer_roll_limit 	= int(self.bufferlen*3/4)
 		self.rs_head 			= 0
@@ -177,12 +181,25 @@ class Receiver:
 		fftlen, _ = choose_fftlen(config.fftlen_mpr*config.sps, window_halfwid=int(0.06*config.fftlen_mpr*config.sps))
 		f_cutoff = config.get_r_rate() * config.rs_f_cutoff_coeff
 		f_center_search_map = config.get_f_center_search_map(fftlen=fftlen, is_precentered=True)
+		min_f_undisturbed = (config.search_halfband + config.baudrate*0.6) / config.rx_sr0
+		min_f_undisturbed = min_f_undisturbed + 0.2*(f_cutoff - min_f_undisturbed)
+		#print("f_cutoff: ",f_cutoff)
+		#print("min_f_undisturbed: ",min_f_undisturbed)
+		halflen_disc = minimal_disc_halflen_for_staged_resampler(r_rate=config.get_r_rate(), f_cutoff=f_cutoff, min_f_undisturbed=min_f_undisturbed, minimum_value=16, require_total_sampling=True)
+		halflen_frac = minimal_frac_halflen_for_staged_resampler(halflen_div=halflen_disc, r_rate=config.get_r_rate(), f_cutoff=f_cutoff, minimum_value=8)
+		#print("[derived discrete halflen of   {}]".format(halflen_disc))
+		#print("[derived fractional halflen of {}]".format(halflen_frac))
 		self.centering_fdelta_nrm = -(config.rx_f_center - config.rx_f_tune) / config.rx_sr0
-		rsmpl_mx1, rsmpl_mx2 = create_staged_resampler(halflen_div=config.d_halflen, halflen_f=config.f_halflen, r_rate=config.get_r_rate(), n_banks=config.n_banks, f_cutoff=f_cutoff, allow_aliasing=False)
+		rsmpl_mx1, rsmpl_mx2 = create_staged_resampler(halflen_div=halflen_disc, halflen_f=halflen_frac, r_rate=config.get_r_rate(), n_banks=config.n_banks, f_cutoff=f_cutoff, allow_aliasing=False)
 		self.rsmpl_mx1 = rsmpl_mx1
 		self.rsmpl_mx2 = rsmpl_mx2
-		self.FFTstatemx = create_cont_center_statemx(fftlen=fftlen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index,
+		if config.carrier_sense:
+			self.FFTstatemx = create_fft_f_centerer_csense_statemx(fftlen=fftlen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index,
+														BT_rx_match=config.BT_rx_match, centering_delay_mpr=config.centering_delay_mpr, c_center_decay=config.c_center_decay, c_stat_update=1-0.995, carrier_sense_threshold=6.0)
+		else:
+			self.FFTstatemx = create_fft_f_centerer_statemx(fftlen=fftlen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index,
 														BT_rx_match=config.BT_rx_match, centering_delay_mpr=config.centering_delay_mpr, c_center_decay=config.c_center_decay)
+
 		self.JPLstatemx = create_classic_JPL_statemx(N_eps=config.sps, n_decay=config.JPL_n_decay)
 		self.DSDstatemx = create_DSD_statemx(lp_ntaps=config.lp_ntaps, lp_cutoff_coeff=config.lp_cutoff_coeff, synch_delay_mpr_f=config.synch_delay_mpr, sps_f=config.sps)
 		self.deframermx = create_deframer(use_scrambler=config.use_scrambler, use_rs=config.use_rs, data_maxlen=config.data_maxlen,
@@ -244,9 +261,15 @@ class Receiver:
 		self.dt_array[1] += (time.perf_counter() - t0)
 
 		t0 = time.perf_counter()
-		center_f_head_new, demodulation_head_new = fft_continuous_f_center(sample_arr=self.rs_array, isample0=self.rs_head, nsamples=rs_head_new - self.rs_head,
+		if self.config.carrier_sense:
+			center_f_head_new, demodulation_head_new, carrier_sensed = fft_f_centerer_csense(sample_arr=self.rs_array, isample0=self.rs_head, nsamples=rs_head_new - self.rs_head,
 																				center_f_arr=self.center_f_array, center_f_head0=self.center_f_head,
 																				statemx=self.FFTstatemx, instr_arr=self.fft_instr_array)
+		else:
+			center_f_head_new, demodulation_head_new = fft_f_centerer(sample_arr=self.rs_array, isample0=self.rs_head, nsamples=rs_head_new - self.rs_head,
+																				center_f_arr=self.center_f_array, center_f_head0=self.center_f_head,
+																				statemx=self.FFTstatemx, instr_arr=self.fft_instr_array)
+			carrier_sensed = 0
 		#self.center_f_array[self.demodulation_head:demodulation_head_new] = 0.152
 		self.dt_array[2] += (time.perf_counter() - t0)
 
@@ -263,7 +286,7 @@ class Receiver:
 			bit_freqs = self.bit_f_array[:bit_head_new]
 			if not give_bits:
 				bits = np.clip(bits, 0, 1)
-				payloads, payload_delimits, payload_frequencies = deframe(bits=bits, bit_frequencies=bit_freqs, deframer_mx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
+				payloads, payload_delimits, payload_frequencies, fault_counts = deframe(bits=bits, bit_frequencies=bit_freqs, deframer_mx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
 				if len(payload_delimits) > 0:
 					ret = self._split_payloads(payloads=payloads, delimits=payload_delimits, nrm_offset_frequencies=payload_frequencies)
 		self.dt_array[4] += (time.perf_counter() - t0)
@@ -281,8 +304,8 @@ class Receiver:
 		self.dt_array[5] += (time.perf_counter() - t0)
 
 		if give_bits:
-			return bits
-		return ret
+			return bits, carrier_sensed
+		return ret, carrier_sensed
 
 
 	def _split_payloads(self, payloads, delimits, nrm_offset_frequencies):
@@ -362,8 +385,8 @@ def precompile_receiver(dsp_config:DSPConfig, do_print=False):
 	while c < nsamples:
 		c2 = min(c + dsp_config.batch_maxlen // 2, nsamples)
 		batch = samples[c:c2]
-		ret1 = rx1.process_samples(batch=batch, give_bits=False)
-		ret2 = rx2.process_samples(batch=np.complex64(batch), give_bits=False)
+		ret1, carrier_sensed1 = rx1.process_samples(batch=batch, give_bits=False)
+		ret2, carrier_sensed2 = rx2.process_samples(batch=np.complex64(batch), give_bits=False)
 		ret_pls1.extend(ret1)
 		ret_pls2.extend(ret2)
 		c = c2

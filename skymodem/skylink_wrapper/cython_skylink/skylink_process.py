@@ -28,8 +28,8 @@ class SkyLinkLoop(threading.Thread):
 		self.skylink = SkyLink(config)
 		self.skylink.set_hmac_keys(key_list)
 		self.on = True
-		self.que_payloads_from_radio = que_payloads_in
-		self.que_payloads_to_radio = que_payloads_out
+		self.que_payloads_from_dsp = que_payloads_in
+		self.que_payloads_to_dsp = que_payloads_out
 		self.que_received_messages = Queue(1000)
 		self.session_id_list = [(0,arq_state_off),] * num_virtual_channels
 		self.lock = thrd.RLock()
@@ -80,21 +80,25 @@ class SkyLinkLoop(threading.Thread):
 			sleeptime += 0.1e-3
 			with self.lock:
 				self.skylink.sky_tick( (int(time.time() * 1000) % mod_time_ticks) )
-				while not self.que_payloads_from_radio.empty():
-					pl = self.que_payloads_from_radio.get_nowait()
-					sky_rx_ret = self.skylink.sky_rx(pl)
-					color_code = "\033[92m"  # Green (default when no errors)
-					if sky_rx_ret == -7:
-						color_code = "\033[93m"  # Yellow
-					elif sky_rx_ret < 0:
-						color_code = "\033[91m"  # Red
-					DBGPRINT(f"Was given a downlink frame of {len(pl)} bytes. sky_rx returned {color_code}{sky_rx_ret}\033[0m]")
-					sleeptime = 0.0
+				while not self.que_payloads_from_dsp.empty():
+					code, data = self.que_payloads_from_dsp.get_nowait()
+					if code == "cs":
+						self.skylink.carrier_sensed()
+					if code == "pl":
+						pl = data
+						sky_rx_ret = self.skylink.sky_rx(pl)
+						color_code = "\033[92m"  # Green (default when no errors)
+						if sky_rx_ret == -7:
+							color_code = "\033[93m"  # Yellow
+						elif sky_rx_ret < 0:
+							color_code = "\033[91m"  # Red
+						DBGPRINT(f"Was given a downlink frame of {len(pl)} bytes. sky_rx returned {color_code}{sky_rx_ret}\033[0m]")
+						sleeptime = 0.0
 
 				state_d_l = self.skylink.sky_get_state()
 				sessid_state_list = [ (state_d_l[ichannel]["session_identifier"], state_d_l[ichannel]["state"]) for ichannel in range(num_virtual_channels)]
 				for ichannel, (sessid, state) in enumerate(sessid_state_list):
-					if ((sessid,state) != self.session_id_list[ichannel]):
+					if (sessid,state) != self.session_id_list[ichannel]:
 						self.session_id_list[ichannel] = (sessid,state)
 						DBGPRINT("VC {} ARQ moved to state [{}].".format(ichannel, {arq_state_on:"ON", arq_state_in_init:"INIT", arq_state_off:"OFF"}[state]))
 						if state == arq_state_in_init:
@@ -104,13 +108,13 @@ class SkyLinkLoop(threading.Thread):
 						sleeptime = 0.0
 
 				while True:
-					if not self.que_payloads_to_radio.empty():  # We want to feed the radio only as fast as it transmits. Maybe [.full()] instead of [not .empty()] ?
+					if not self.que_payloads_to_dsp.empty():  # We want to feed the radio only as fast as it transmits. Maybe [.full()] instead of [not .empty()] ?
 						break
 					tx_i, frame_bytes = self.skylink.sky_tx()
 					if tx_i == 0:
 						break
 					DBGPRINT("Transmitting a frame of {} bytes uplink.".format(len(frame_bytes)))
-					self.que_payloads_to_radio.put_nowait(frame_bytes)
+					self.que_payloads_to_dsp.put_nowait(frame_bytes)
 					sleeptime = 0.0
 
 				for ichannel in range(num_virtual_channels):

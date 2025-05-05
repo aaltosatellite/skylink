@@ -358,8 +358,7 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_t
 			return 1;
 
 		// Yes, if and we have need to retransmit something and not all idle frame are used.
-		if (frames_sent_in_this_vc_window < config->arq.idle_frames_per_window && \
-		    (rcvRing_get_horizon_bitmap(vchannel->rcvRing) || vchannel->need_recall))
+		if ((frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) && (rcvRing_get_horizon_bitmap(vchannel->rcvRing) || vchannel->need_recall))
 			return 1;
 
 		// Yes, if we need to response a ARQ handshake

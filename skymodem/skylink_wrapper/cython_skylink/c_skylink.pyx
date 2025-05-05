@@ -29,8 +29,8 @@ class HMACConfig:
 	maximum_jump 			= 24
 
 class MACConfig:
-	gap_constant_ticks              = 600
-	tail_constant_ticks             = 80
+	gap_constant_ticks              = 260
+	tail_constant_ticks             = 260
 	minimum_window_length_ticks     = 250
 	maximum_window_length_ticks     = 1000
 	window_adjust_increment_ticks   = 250
@@ -38,7 +38,7 @@ class MACConfig:
 	unauthenticated_mac_updates     = 0
 	idle_frames_per_window          = 0
 	idle_timeout_ticks              = 30000
-	carrier_sense_ticks             = 200
+	carrier_sense_ticks             = 20
 
 class VCConfig:
 	require_authentication      = auth_flag_auth_tx | auth_flag_require_auth
@@ -50,7 +50,9 @@ class VCConfig:
 	rx_key                      = 0
 
 class SkyConfiguration:
-	def __init__(self):
+	def __init__(self, identity):
+		assert type(identity) == bytes
+		assert 3 <= len(identity) <= c_skylink.SKY_MAX_IDENTITY_LEN
 		self.vc = [VCConfig(), VCConfig(), VCConfig(), VCConfig()]
 		self.mac = MACConfig()
 		self.hmac = HMACConfig()
@@ -179,7 +181,6 @@ cdef class SkyLink:
 
 
 
-
 	# === SEND =============================================================================================================================
 	cdef _sky_vc_push_packet_to_send(self, int ichannel, uint8_t* data, int datalen):
 		cdef int ret = 0;
@@ -210,8 +211,6 @@ cdef class SkyLink:
 
 
 
-
-
 	# === RECEIVE ==========================================================================================================================
 	cdef _sky_vc_count_readable_rcv_packets(self, int ichannel):
 		cdef int ret = 0;
@@ -239,7 +238,6 @@ cdef class SkyLink:
 		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
 		return self._sky_vc_read_next_received(<int> ichannel)
 	# === RECEIVE ==========================================================================================================================
-
 
 
 

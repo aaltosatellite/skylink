@@ -12,8 +12,8 @@
  * ("encoded" protocol + version identifier)
  */
 #define SKYLINK_FRAME_VERSION_BYTE      (0b01100 << 3)
-#define SKYLINK_FRAME_VERSION_MASK      (0xF8)
-#define SKYLINK_FRAME_IDENTITY_MASK     (0x07)
+#define SKYLINK_FRAME_VERSION_MASK      (0b11111000)
+#define SKYLINK_FRAME_IDENTITY_MASK     (0b00000111)
 
 /*
  * Frame header flags

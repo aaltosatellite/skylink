@@ -6,6 +6,7 @@ from radio_loop import RadioLoop, RadioConfig
 from dsp_library.kuokka.dsp_loop import DSPLoop
 from dsp_library.kuokka.lib_receiver import DSPConfig
 from dsp_library.kuokka.lib_tools import get_doppler_low_high
+from dsp_library.kuokka.lib_tools import fractional_resampler_f_max_undisturbed
 from skylink_wrapper.cython_skylink import SkyLinkLoop, SkyConfiguration, EKEY_SKY_ARQ_DISCONNECTED, EKEY_SKY_PAYLOAD, EKEY_SKY_ARQ_CONNECTED
 from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_off
 import zmq
@@ -86,10 +87,10 @@ class SkyModem:
 		self.que_payloads_sky_to_dsp = Queue(1)
 		self.que_samples_dsp_to_radio = Queue(1)
 
-		self.radio_loop = RadioLoop(radio_config=radio_config, que_tx_samples_in=self.que_samples_dsp_to_radio, que_rx_samples_out=self.que_samples_radio_to_dsp)
-		self.dsp_loop = DSPLoop(dsp_config=dsp_config, que_rx_samples_in=self.que_samples_radio_to_dsp, que_rx_payloads_out=self.que_payloads_dsp_to_sky,
+		self.radio_loop 	= RadioLoop(radio_config=radio_config, que_tx_samples_in=self.que_samples_dsp_to_radio, que_rx_samples_out=self.que_samples_radio_to_dsp)
+		self.dsp_loop 		= DSPLoop(dsp_config=dsp_config, que_rx_samples_in=self.que_samples_radio_to_dsp, que_rx_payloads_out=self.que_payloads_dsp_to_sky,
 								que_tx_payloads_in=self.que_payloads_sky_to_dsp, que_tx_samples_out=self.que_samples_dsp_to_radio)
-		self.skylink_loop = SkyLinkLoop(config=skylink_config, key_list=hmac_key_list, que_payloads_in=self.que_payloads_dsp_to_sky, que_payloads_out=self.que_payloads_sky_to_dsp)
+		self.skylink_loop 	= SkyLinkLoop(config=skylink_config, key_list=hmac_key_list, que_payloads_in=self.que_payloads_dsp_to_sky, que_payloads_out=self.que_payloads_sky_to_dsp)
 		self.sub_que_process_thread 	= threading.Thread(target=None, args=tuple())
 		self.skylink_reception_thread 	= threading.Thread(target=None, args=tuple())
 		pub_sockets, sub_sockets, context = bind_vc_sockets(vc_port_base=vc_port_base, num_channels=num_virtual_channels)
@@ -320,19 +321,27 @@ def get_usrp_receiver_config(f_center, baudrate, max_signal_bw):
 	return dsp_config, radio_config
 
 
-def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, max_signal_bw):
+def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, max_signal_bw):
 	f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
-	f_center_min = f_center_min - max_signal_bw/2
-	f_center_max = f_center_max + max_signal_bw/2
-	minimum_samplerate = max( abs(f_center_min - f_tune), abs(f_center_max - f_tune) ) * 3.0
+	f_center_min = f_center_min - max_signal_bw * 0.6
+	f_center_max = f_center_max + max_signal_bw * 0.6
+	plateu_minimum_halfwidth = max( abs(f_tune - f_center_min), abs(f_tune - f_center_max) )
+
+	minimum_samplerate = int(2 * plateu_minimum_halfwidth)
+	sr_leecher = max(1e6, 1e6*int(minimum_samplerate/1e6))
+	while True:
+		bw_leecher = 0.45 * (sr_leecher / sr_hardware)  	# This is the way SoapyShared computes the resampler filter length. (see SoapyLeecher.cpp:150)
+		semilen_leecher = int(round(3.5 / bw_leecher))		# This is the way SoapyShared computes the resampler filter length. (see SoapyLeecher.cpp:150)
+		f_max_undisturbed = fractional_resampler_f_max_undisturbed(sr0=sr_hardware, sr1=sr_leecher, halflen=semilen_leecher, f_cutoff_coeff=0.45)
+		if f_max_undisturbed >= plateu_minimum_halfwidth:
+			break
+		sr_leecher += int(100e3)
+
 	print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
-	sr0 = 1e6
-	while sr0 < minimum_samplerate:
-		sr0 += 200e3
-	assert sr0 < 5e6
-	print("Using soapy-leecher radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr0*1e-6, 3) ))
-	radio_config 	= RadioConfig(mode="soapy", rx_sr=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr=sr0, tx_f_tune=f_tune, tx_f_center=f_center)
-	dsp_config 		= DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
+	print("Calculated necessary samplerate at {} ks/s".format( round(1.0e-3 * sr_leecher, 1) ))
+	print("Using soapy-leecher radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr_leecher*1e-6, 3) ))
+	radio_config 	= RadioConfig(mode="soapy", rx_sr=sr_leecher, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr=sr_leecher, tx_f_tune=f_tune, tx_f_center=f_center)
+	dsp_config 		= DSPConfig(rx_sr0=sr_leecher, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr_leecher, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
 	return dsp_config, radio_config
 
 
@@ -354,13 +363,12 @@ if __name__ == '__main__':
 	parser.add_argument("--mode",    type=str, default="usrp", choices=("usrp", "soapy"), required=False)
 	parser.add_argument("--vc_base", type=int, default=7100,   required=False)
 	_args = parser.parse_args(sys.argv[1:])
-	print(_args)
 	vc_base = _args.vc_base
 	assert vc_base >= 1000
 	assert vc_base < 60000
 
 	if _args.mode == "soapy":
-		dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, f_tune=436e6, max_signal_bw=9600*4*1.2)
+		dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, f_tune=436e6, sr_hardware=8e6, max_signal_bw=9600*4*1.2)
 	else:
 		assert _args.mode == "usrp"
 		dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2)

@@ -448,7 +448,7 @@ def time_fft_n(fftlen, nrep):
 	njit_objmode_fft(s)
 	t0 = time.perf_counter()
 	for _ in range(nrep):
-		x = njit_objmode_fft(s)
+		_ = njit_objmode_fft(s)
 	dt = (time.perf_counter() - t0) / nrep
 	return dt
 
@@ -528,6 +528,11 @@ def get_frequency_search_map(fftlen, f_min_nrm, f_max_nrm, assert_in_window=True
 			mapping[i] = 1
 	assert np.sum(mapping) > 0, mapping
 	return mapping
+
+def fractional_resampler_f_max_undisturbed(sr0, sr1, halflen, f_cutoff_coeff):
+	f_slope_center = f_cutoff_coeff * (sr1/sr0) * sr0
+	halfwidth      = 0.94 * sr0 / halflen
+	return f_slope_center - halfwidth
 # FREQUENCY MANAGEMENT ==========================================================================================================================================================================
 # FREQUENCY MANAGEMENT ==========================================================================================================================================================================
 

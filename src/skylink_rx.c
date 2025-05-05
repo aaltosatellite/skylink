@@ -70,7 +70,7 @@ int sky_rx_with_fec(SkyHandle self, SkyRadioFrame* frame)
 static int filter_by_identity(SkyHandle self, const uint8_t *identity, unsigned int identity_len)
 {
 	// Same identity as in configuration and same identity length as in configuration.
-	if (memcmp(identity, self->conf->identity, identity_len) == 0 && self->conf->identity_len == identity_len)
+	if ((memcmp(identity, self->conf->identity, identity_len) == 0) && (self->conf->identity_len == identity_len))
 		return 1;
 
 	return SKY_RET_OK;
@@ -104,14 +104,14 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 	memset(&parsed, 0, sizeof(SkyParsedFrame));
 
 	// Validate protocol version
-	const uint8_t version = frame->raw[0] & SKYLINK_FRAME_VERSION_BYTE;
+	const uint8_t version = frame->raw[0] & SKYLINK_FRAME_VERSION_MASK;
 	if (version != SKYLINK_FRAME_VERSION_BYTE)
 		return SKY_RET_INVALID_VERSION;
 
 	// Validate identity field
 	parsed.identity = &frame->raw[1];
 	parsed.identity_len = (frame->raw[0] & SKYLINK_FRAME_IDENTITY_MASK);
-	if (parsed.identity_len == 0 || parsed.identity_len > SKY_MAX_IDENTITY_LEN)
+	if ((parsed.identity_len == 0) || (parsed.identity_len > SKY_MAX_IDENTITY_LEN))
 		return SKY_RET_INVALID_VERSION;
 
 	// Identity filtering

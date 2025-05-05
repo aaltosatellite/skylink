@@ -143,7 +143,7 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyTransmitFrame* tx_fra
 }
 
 /* Process HMAC Sequence Reset extension header */
-static void sky_rx_process_ext_hmac_sequence_reset(SkyHMAC *hmac, const SkyHeaderExtension* ext, int vc)
+static void sky_rx_process_ext_hmac_sequence_reset(SkyHMAC *hmac, const SkyHeaderExtension* ext, unsigned int vc)
 {
 	// Make sure the extension has the correct length.
 	if (ext->length != sizeof(ExtHMACSequenceReset))

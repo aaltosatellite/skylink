@@ -42,6 +42,7 @@ class DSPLoop:
 		self.tx_process_thread 	= threading.Thread(target=None, args=tuple())
 		self.last_verified_freq = (0, 0.0)  # (absolute_frequency, monotonic_timestamp)
 		self.own_recently_sent 	= dict()
+		self.t_projected_tx_end	= time.monotonic()
 		self.on 				= True
 
 
@@ -146,6 +147,7 @@ class DSPLoop:
 		while self.on:
 			try:
 				samples = self.que_rx_samples_in.get(timeout=0.20)
+				t_rx0 = time.monotonic() - len(samples) / self.dsp_config.rx_sr0
 			except Empty:
 				continue
 			except Exception as e:
@@ -156,19 +158,24 @@ class DSPLoop:
 				c = 0
 				while c < len(samples):
 					batch = samples[c:c+default_batchlen]
-					rx_pls = self.rx.process_samples(batch=batch, give_bits=False)
+					rx_pls, carrier_sensed = self.rx.process_samples(batch=batch, give_bits=False)
+					if carrier_sensed and ((t_rx0 + c / self.dsp_config.rx_sr0) > self.t_projected_tx_end):
+						self.que_rcv_payloads_out.put( ("cs", None) )
 					for rx_pl, rx_f_absolute in rx_pls:
 						if rx_pl in self.own_recently_sent:
 							del self.own_recently_sent[rx_pl]
 							DBGPRINT("Discarded self reception.")
 							continue
 						self.last_verified_freq = (rx_f_absolute, time.monotonic())
-						self.que_rcv_payloads_out.put( rx_pl )
+						self.que_rcv_payloads_out.put( ("pl", rx_pl) )
 					c += default_batchlen
 
 
 	def _tx_loop(self):
 		while self.on:
+			if not self.que_tx_samples_out.empty():
+				time.sleep(0.002)
+				continue
 			try:
 				payload = self.que_tx_payloads_in.get(timeout=0.20)
 			except Empty:
@@ -184,6 +191,7 @@ class DSPLoop:
 				samplearr, f_use_abs, _ = self._compose_samples(payload, usrp_reshape=True, as_c64=True)
 			DBGPRINT("tx start at {} MHz".format( f_use_abs * 1e-6, 4 ))
 			self.que_tx_samples_out.put(samplearr, timeout=4.0)
+			self.t_projected_tx_end = time.monotonic() + 5e-3 + samplearr.shape[1] / self.dsp_config.tx_sr0
 
 
 

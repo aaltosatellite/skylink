@@ -36,6 +36,12 @@ def firdes_kaiser(n, f_cutoff, stopband_att, frac_samp_offset):
 		h[i] = h1 * h2
 	return h
 
+
+
+
+
+## === fractional resampler ==================================================================================================================================================================
+## ===========================================================================================================================================================================================
 def create_resampler(m_halflen, n_banks, r_rate, f_cutoff, allow_aliasing=False): # TODO name the f_cutoff to c_cutoff? It is renormalized
 	assert m_halflen > 1
 	assert type(m_halflen) == int
@@ -75,9 +81,11 @@ def create_resampler(m_halflen, n_banks, r_rate, f_cutoff, allow_aliasing=False)
 	statemx[n_banks+2,0:2] = y0_y1
 	return statemx
 
+
 @njit(cache=True)
 def set_rate(statemx, r_rate):
 	statemx[-2][1] = 1.0 / r_rate
+
 
 @njit(cache=True)
 def adjust_rate(statemx, gamma):
@@ -91,6 +99,7 @@ def _timing_update(tau, dtau, n_banks):  #tau_dtau_bf_b_mu_state
 	b = int(np.floor(bf))
 	mu = bf - b
 	return tau,dtau,bf,b,mu
+
 
 @njit(cache=True)
 def resampler_execute(samples, statemx):   #old resampler code in old_sources.txt
@@ -131,7 +140,6 @@ def resampler_execute(samples, statemx):   #old resampler code in old_sources.tx
 	statemx[n_banks + 1][0:6] = tau,dtau,bf,float(b),mu,state
 	statemx[n_banks + 2][0:2] = y0,y1
 	return y[:iy]
-
 
 
 @njit(cache=True)
@@ -175,4 +183,194 @@ def resampler_execute_stream(in_arr, ii0, nsamples, out_arr, io0, statemx): # no
 	#statemx[n_banks + 1][6] = fshift_phase.imag
 	statemx[n_banks + 2][0:2] = y0,y1
 	return rs_head
+## === fractional resampler ==================================================================================================================================================================
+## ===========================================================================================================================================================================================
+
+
+
+
+
+
+
+## === discrete resampler ====================================================================================================================================================================
+## ===========================================================================================================================================================================================
+def create_div_resampler(m_halflen, div, f_cutoff, allow_aliasing=False): # TODO name the f_cutoff to c_cutoff? It is renormalized
+	assert m_halflen > 3
+	assert type(m_halflen) == int
+	assert type(div) in (int, np.int64)
+	assert div >= 2
+	r_rate = 1 / div
+	if not allow_aliasing:
+		if not (f_cutoff < (r_rate*0.5)):
+			print("[cutoff should be less than {}]".format(r_rate*0.5))
+			raise ValueError("rate & cutoff would lead to aliasing. You can allow aliasing with 'allow_aliasing' argument.")
+	ntaps = 2 * m_halflen + 1
+	lp_taps = firdes_kaiser(n=ntaps, f_cutoff=f_cutoff, stopband_att=60, frac_samp_offset=0.0)  #f_cutoff=f_cutoff/n_banks
+	lp_taps = np.array(lp_taps)
+	gain = 0.0
+	for i in range(ntaps):
+		gain += lp_taps[i]
+	gain = 1.0 / gain  #1.0 was n_banks
+	lp_taps = lp_taps * gain
+	statemx = np.zeros( (ntaps+3, ntaps), dtype=np.complex128 )
+	for i in range(ntaps):
+		statemx[2+i,:] = np.roll(lp_taps, -ntaps+1+i)
+	statemx[0,0] = div
+	statemx[0,1] = 0
+	statemx[0,2] = 0
+	return statemx
+
+
+@njit(cache=True)
+def div_resampler_execute(in_arr, statemx): # not sensitive to the given indexing (ii0, io0). That is to say, rolling these arrays in between calls is ok.
+	assert np.iscomplexobj(in_arr)
+	assert np.iscomplexobj(statemx)
+	div = int(statemx[0,0].real)
+	win_idx = int(statemx[0,1].real)
+	div_idx = int(statemx[0,2].real)
+	winlen = statemx.shape[1]
+	window = statemx[1,:]
+	n_out = int(2+len(in_arr)/div)
+	out_arr = np.zeros(n_out, dtype=np.complex128)
+	io = 0
+	for ii in range(len(in_arr)):
+		window[win_idx] = in_arr[ii]
+		if div_idx == 0:
+			out_arr[io] = np.dot(window, statemx[win_idx+2,:])
+			io += 1
+		div_idx = (div_idx+1) % div
+		win_idx = (win_idx+1) % winlen
+	statemx[0,1] = win_idx
+	statemx[0,2] = div_idx
+	return out_arr[0:io]
+
+
+@njit(cache=True)
+def div_resampler_execute_stream(in_arr, ii0, nsamples, out_arr, io0, statemx): # not sensitive to the given indexing (ii0, io0). That is to say, rolling these arrays in between calls is ok.
+	assert np.iscomplexobj(in_arr)
+	assert np.iscomplexobj(out_arr)
+	assert np.iscomplexobj(statemx)
+	div = int(statemx[0,0].real)
+	win_idx = int(statemx[0,1].real)
+	div_idx = int(statemx[0,2].real)
+	winlen = statemx.shape[1]
+	window = statemx[1,:]
+	io = io0
+	for ii in range(ii0, ii0+nsamples):
+		window[win_idx] = in_arr[ii]
+		if div_idx == 0:
+			out_arr[io] = np.dot(window, statemx[win_idx+2,:])
+			io += 1
+		div_idx = (div_idx+1) % div
+		win_idx = (win_idx+1) % winlen
+	statemx[0,1] = win_idx
+	statemx[0,2] = div_idx
+	return io
+## === discrete resampler ====================================================================================================================================================================
+## ===========================================================================================================================================================================================
+
+
+
+
+
+
+
+## === staged resampler ======================================================================================================================================================================
+## ===========================================================================================================================================================================================
+def minimal_disc_halflen_for_staged_resampler(r_rate, f_cutoff, min_f_undisturbed, minimum_value=8, require_total_sampling=True):
+	"""
+	Computes the lowest value of halflen_div for 'create_div_resampler()' 'create_staged_resampler()' such that the maximum undisturbed frequency of the
+	fractional resampler stage is higher than 'min_f_undisturbed'.
+	"""
+	assert 0.0 < f_cutoff < (0.5*r_rate)
+	assert 0.0 < r_rate <= 0.5
+	assert min_f_undisturbed < f_cutoff
+	assert min_f_undisturbed > 0.0
+	assert type(minimum_value) == int
+	assert minimum_value > 0
+	f_mid_d = f_cutoff
+	halflen_div = minimum_value
+	minimal_total_sampling_length = 2 + (int(1/r_rate) - 1) / 2
+	while True:
+		halfwidth_d = 0.94 / halflen_div
+		limit = f_mid_d - halfwidth_d  # f_cutoff * sr1  -  0.94 * sr0 / m_div                 ==   f_cutoff_coeff * r_rate  - 0.94 / m_disc
+		a = limit >= min_f_undisturbed
+		b = (not require_total_sampling) or (halflen_div >= minimal_total_sampling_length)
+		if a and b:
+			return halflen_div
+		halflen_div += 1
+
+
+def minimal_frac_halflen_for_staged_resampler(halflen_div, r_rate, f_cutoff, minimum_value=8):
+	"""
+	Computes the lowest value of 'halflen_f' for 'create_staged_resampler()' such that the maximum undisturbed frequency of the
+	fractional resampler stage is higher than that of the discrete resampler stage.
+	"""
+	assert 0.0 < f_cutoff < (0.5*r_rate)
+	assert 0.0 < r_rate <= 0.5
+	assert type(halflen_div) == int
+	assert halflen_div > 0
+	assert type(minimum_value) == int
+	assert minimum_value > 0
+	f_mid_d = f_cutoff
+	halfwidth_d = 0.94 / halflen_div
+	lim_d = f_mid_d - halfwidth_d  # f_cutoff * sr1  -  0.94 * sr0 / m_div                 ==   f_cutoff_coeff * r_rate  - 0.94 / m_disc
+	f_mid_frac = 0.499 * r_rate
+	halflen_frac = minimum_value
+	while True:
+		halfwidth_frac = 0.94 * (1/int(1/r_rate)) / halflen_frac
+		lim_frac = f_mid_frac - halfwidth_frac	# 0.499 * sr1  -  0.94 * (sr0/int(sr0/sr1)) / m_f    ==   0.499 * r_rate  -  0.94 * 1/int(1/r_rate) / m_frac
+		if lim_frac > (lim_d - 0.01):
+			return halflen_frac
+		halflen_frac += 1
+
+
+def create_staged_resampler(halflen_div, halflen_f, r_rate, n_banks, f_cutoff, allow_aliasing=False): # TODO name the f_cutoff to c_cutoff? It is renormalized
+	assert type(halflen_div) in (int, np.int64)
+	assert type(halflen_f) in (int, np.int64)
+	assert type(n_banks) in (int, np.int64)
+	for x in (halflen_div, halflen_f, n_banks):
+		assert x > 2
+	assert r_rate < 1.0
+	if not allow_aliasing:
+		if not (f_cutoff < (r_rate*0.5)):
+			print("[cutoff should be less than {}]".format(r_rate*0.5))
+			raise ValueError("rate & cutoff would lead to aliasing. You can allow aliasing with 'allow_aliasing' argument.")
+	div = int(1/r_rate)
+	r_rate_frac = r_rate*div
+	mx1 = create_div_resampler(m_halflen=halflen_div, div=div, f_cutoff=f_cutoff, allow_aliasing=allow_aliasing)
+	mx2 = create_resampler(m_halflen=halflen_f, n_banks=n_banks, r_rate=r_rate_frac, f_cutoff=0.499*r_rate_frac, allow_aliasing=allow_aliasing)
+	if np.isclose(r_rate_frac, 1.0):
+		mx1[0,4] = 1
+	return mx1, mx2
+
+
+@njit(cache=True)
+def staged_resampler_execute_stream(in_arr, ii0, nsamples, out_arr, io0, mx1, mx2):
+	assert np.iscomplexobj(in_arr)
+	assert np.iscomplexobj(out_arr)
+	assert np.iscomplexobj(mx1)
+	assert np.iscomplexobj(mx2)
+	only_div_stage = int(mx1[0,4].real)
+	if only_div_stage:
+		return div_resampler_execute_stream(in_arr=in_arr, ii0=ii0, nsamples=nsamples, out_arr=out_arr, io0=io0, statemx=mx1)
+	io1 = div_resampler_execute_stream(in_arr=in_arr, ii0=ii0, nsamples=nsamples, out_arr=out_arr, io0=io0, statemx=mx1)
+	io2 = resampler_execute_stream(in_arr=out_arr, ii0=io0, nsamples=io1-io0, out_arr=out_arr, io0=io0, statemx=mx2)
+	return io2
+## === staged resampler ======================================================================================================================================================================
+## ===========================================================================================================================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

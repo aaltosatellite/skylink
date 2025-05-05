@@ -18,14 +18,14 @@
 
 
 /* This zeroes the tracking of how many frames have been sent in current window. */
-static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_send, sky_tick_t now)
+static void sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_send, sky_tick_t now)
 {
 	// We can send, but there is nothing to send.
-	if (can_send && !content_to_send)
+	if (can_send && (!content_to_send))
 		self->mac->unused_window_time = true;
 
 	// Window is closing.
-	if (!can_send && self->mac->window_on) {
+	if ((!can_send) && self->mac->window_on) {
 
 		 // Indicate need to shrink window.
 		if(self->mac->unused_window_time)
@@ -38,7 +38,7 @@ static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to
 	}
 
 	// Window is opening.
-	if (can_send && !self->mac->window_on) {
+	if (can_send && (!self->mac->window_on)) {
 
 		// Indicate need to shrink window.
 		if(self->mac->window_adjust_counter <= -self->conf->mac.window_adjustment_threshold){
@@ -71,7 +71,7 @@ static void _sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to
 }
 
 
-static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyTransmitFrame *tx_frame, uint8_t vc)
+static int sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyTransmitFrame *tx_frame, uint8_t vc)
 {
 	SkyHMACVChannel *vc_hmac = &self->hmac->vc[vc];
 
@@ -88,7 +88,7 @@ static int _sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyTransmitFrame *t
 
 
 // Advance round robin index for virtual channels. Loops around using modulo with number of channels.
-static void _sky_tx_advance_vc_round_robin(SkyHandle self)
+static void sky_tx_advance_vc_round_robin(SkyHandle self)
 {
 	self->mac->vc_round_robin_start = (self->mac->vc_round_robin_start + 1) % SKY_NUM_VIRTUAL_CHANNELS;
 }
@@ -99,7 +99,7 @@ static void _sky_tx_advance_vc_round_robin(SkyHandle self)
  * Returns channel index which will transmit next.
  * Negative index is returned if there's no need to transmit.
  */
-static int _sky_tx_pick_vc(SkyHandle self, sky_tick_t now)
+static int sky_tx_pick_vc(SkyHandle self, sky_tick_t now)
 {
 	// Loop through all virtual channels.
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i)
@@ -142,16 +142,16 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 
 
 	// Pick a virtual channel to transmit on.
-	int vc = _sky_tx_pick_vc(self, now);
+	int vc = sky_tx_pick_vc(self, now);
 	int content_to_send = (vc >= 0);
-	_sky_tx_track_tdd_state(self, can_send, content_to_send, now);
+	sky_tx_track_tdd_state(self, can_send, content_to_send, now);
 
 	// No need to transmit.
-	if (!can_send || vc < 0)
+	if ((!can_send) || (vc < 0))
 		return 0;
 
 	// Advance round robin index for virtual channels.
-	_sky_tx_advance_vc_round_robin(self);
+	sky_tx_advance_vc_round_robin(self);
 	const SkyVCConfig* vc_conf = &self->conf->vc[vc];
 
 
@@ -187,7 +187,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 #endif
 
 	/* Add HMAC reset extension if required. */
-	_sky_tx_extension_eval_hmac_reset(self, &tx_frame, vc);
+	sky_tx_extension_eval_hmac_reset(self, &tx_frame, vc);
 
 	/* Fill rest of the frame with payload data and necessary ARQ extensions. */
 	int ret = sky_vc_fill_frame(self->virtual_channels[vc], self->conf, &tx_frame, now, self->mac->frames_sent_in_current_window_per_vc[vc], self->diag);

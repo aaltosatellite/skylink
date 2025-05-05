@@ -239,7 +239,7 @@ def create_deframer(use_scrambler, use_rs, data_maxlen, synchword, synchword_len
 	mx[0,0] = int(bool(use_scrambler))
 	mx[0,1] = int(bool(use_rs))
 	mx[0,2] = synchword
-	mx[0,3] = (2**64 -1) >> (64 - synchword_len)
+	mx[0,3] = (2**synchword_len) - 1
 	mx[0,4] = synchword_len
 	mx[0,5] = synch_threshold
 	mx[0,6] = data_maxlen
@@ -278,6 +278,7 @@ def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequenc
 	payload_delimits = np.zeros( (0, 2), dtype=np.int64)
 	payload_frequencies = np.zeros( 0, dtype=np.float64)
 	pl_head = 0
+	fault_counts = np.zeros(2, dtype=np.int64)
 
 	ib = -1
 	for bit in bits:
@@ -296,6 +297,7 @@ def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequenc
 			frequency_sum_count += 1
 			if ok < 0:
 				#print("\t(Deframer << 0! (Header deframe failed.))", ok)
+				fault_counts[0] += 1
 				state = 0
 			if ok == 1:
 				#print("\t(Deframer 1 > 2)")
@@ -308,6 +310,7 @@ def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequenc
 			frequency_sum_count += 1
 			if ok < 0:
 				#print("\t(Deframer << 0! (Decode failed.))")
+				fault_counts[1] += 1
 				state = 0
 			if ok == 1:
 				#print("\t(Deframer finished successfully!)")
@@ -337,7 +340,7 @@ def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequenc
 	deframer_mx[1,5] = frequency_sum
 	deframer_mx[1,6] = frequency_sum_count
 	deframer_mx[2]   = chars
-	return payloads, payload_delimits, payload_frequencies
+	return payloads, payload_delimits, payload_frequencies, fault_counts
 ## FRAMING ===================================================================================================================================================================================
 ## FRAMING ===================================================================================================================================================================================
 
