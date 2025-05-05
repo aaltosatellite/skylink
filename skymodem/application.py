@@ -353,7 +353,7 @@ if __name__ == '__main__':
 		print("Check HMAC Key!")
 		exit()
 	hmac_keys = [key0, key0, key0, key0]
-	skylink_config_ = SkyConfiguration()
+	skylink_config_ = SkyConfiguration(identity=b"PyGS")
 
 
 	dsp_config_, radio_config_ = None, None
