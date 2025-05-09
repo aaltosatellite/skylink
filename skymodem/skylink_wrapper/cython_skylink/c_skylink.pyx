@@ -186,45 +186,143 @@ cdef class SkyLink:
 
 	def set_config_value(self, idx, value):
 		attrname = SkyConfigEnum(idx).name
+		if attrname == "MAC_MAXIMUM_WINDOW_LENGTH_TICKS":
+			self.conf.mac.maximum_window_length_ticks = value
+		if attrname == "MAC_MINIMUM_WINDOW_LENGTH_TICKS":
+			self.conf.mac.minimum_window_length_ticks = value
+		if attrname == "MAC_GAP_CONSTANT_TICKS":
+			self.conf.mac.gap_constant_ticks = value
+		if attrname == "MAC_TAIL_CONSTANT_TICKS":
+			self.conf.mac.tail_constant_ticks = value
+		if attrname == "MAC_IDLE_TIMEOUT_TICKS":
+			self.conf.mac.idle_timeout_ticks = value
+		if attrname == "MAC_WINDOW_ADJUST_INCREMENT_TICKS":
+			self.conf.mac.window_adjust_increment_ticks = value
+		if attrname == "MAC_CARRIER_SENSE_TICKS":
+			self.conf.mac.carrier_sense_ticks = value
+		if attrname == "MAC_UNAUTHENTICATED_MAC_UPDATES":
+			self.conf.mac.unauthenticated_mac_updates = value
+		if attrname == "MAC_WINDOW_ADJUSTMENT_THRESHOLD":
+			self.conf.mac.window_adjustment_threshold = value
+		if attrname == "MAC_IDLE_FRAMES_PER_WINDOW":
+			self.conf.mac.idle_frames_per_window = value
+		if attrname == "HMAC_MAXIMUM_JUMP":
+			self.conf.hmac.maximum_jump = value
+		if attrname == "VC0_USABLE_ELEMENT_SIZE":
+			self.conf.vc[0].usable_element_size = value
+		if attrname == "VC0_RCV_RING_LEN":
+			self.conf.vc[0].rcv_ring_len = value
+		if attrname == "VC0_HORIZON_WIDTH":
+			self.conf.vc[0].horizon_width = value
+		if attrname == "VC0_SEND_RING_LEN":
+			self.conf.vc[0].send_ring_len = value
+		if attrname == "VC0_REQUIRE_AUTHENTICATION":
+			self.conf.vc[0].require_authentication = value
+		if attrname == "VC0_TX_KEY":
+			self.conf.vc[0].tx_key = value
+		if attrname == "VC0_RX_KEY":
+			self.conf.vc[0].rx_key = value
+		if attrname == "VC1_USABLE_ELEMENT_SIZE":
+			self.conf.vc[1].usable_element_size = value
+		if attrname == "VC1_RCV_RING_LEN":
+			self.conf.vc[1].rcv_ring_len = value
+		if attrname == "VC1_HORIZON_WIDTH":
+			self.conf.vc[1].horizon_width = value
+		if attrname == "VC1_SEND_RING_LEN":
+			self.conf.vc[1].send_ring_len = value
+		if attrname == "VC1_REQUIRE_AUTHENTICATION":
+			self.conf.vc[1].require_authentication = value
+		if attrname == "VC1_TX_KEY":
+			self.conf.vc[1].tx_key = value
+		if attrname == "VC1_RX_KEY":
+			self.conf.vc[1].rx_key = value
+		if attrname == "VC2_USABLE_ELEMENT_SIZE":
+			self.conf.vc[2].usable_element_size = value
+		if attrname == "VC2_RCV_RING_LEN":
+			self.conf.vc[2].rcv_ring_len = value
+		if attrname == "VC2_HORIZON_WIDTH":
+			self.conf.vc[2].horizon_width = value
+		if attrname == "VC2_SEND_RING_LEN":
+			self.conf.vc[2].send_ring_len = value
+		if attrname == "VC2_REQUIRE_AUTHENTICATION":
+			self.conf.vc[2].require_authentication = value
+		if attrname == "VC2_TX_KEY":
+			self.conf.vc[2].tx_key = value
+		if attrname == "VC2_RX_KEY":
+			self.conf.vc[2].rx_key = value
+		if attrname == "VC3_USABLE_ELEMENT_SIZE":
+			self.conf.vc[3].usable_element_size = value
+		if attrname == "VC3_RCV_RING_LEN":
+			self.conf.vc[3].rcv_ring_len = value
+		if attrname == "VC3_HORIZON_WIDTH":
+			self.conf.vc[3].horizon_width = value
+		if attrname == "VC3_SEND_RING_LEN":
+			self.conf.vc[3].send_ring_len = value
+		if attrname == "VC3_REQUIRE_AUTHENTICATION":
+			self.conf.vc[3].require_authentication = value
+		if attrname == "VC3_TX_KEY":
+			self.conf.vc[3].tx_key = value
+		if attrname == "VC3_RX_KEY":
+			self.conf.vc[3].rx_key = value
+		if attrname == "ARQ_TIMEOUT_TICKS":
+			self.conf.arq.timeout_ticks = value
+		if attrname == "ARQ_IDLE_FRAME_THRESHOLD":
+			self.conf.arq.idle_frame_threshold = value
+		if attrname == "ARQ_IDLE_FRAMES_PER_WINDOW":
+			self.conf.arq.idle_frames_per_window = value
 		if attrname == "IDENTITY":
 			id_len = min(len(value), c_skylink.SKY_MAX_IDENTITY_LEN)
 			memcpy(self.conf.identity, <uint8_t*> value, id_len)
-			#setattr(self.conf.identity, attrname.lower(), value)
-		if attrname.startswith("MAC_"):
-			setattr(self.conf.mac, attrname[4:].lower(), value)
-		if attrname.startswith("ARQ_"):
-			setattr(self.conf.arq, attrname[4:].lower(), value)
-		if attrname.startswith("HMAC_"):
-			setattr(self.conf.hmac, attrname[5:].lower(), value)
-		if attrname.startswith("VC0_"):
-			setattr(self.conf.vc[0], attrname[4:].lower(), value)
-		if attrname.startswith("VC1_"):
-			setattr(self.conf.vc[1], attrname[4:].lower(), value)
-		if attrname.startswith("VC2_"):
-			setattr(self.conf.vc[2], attrname[4:].lower(), value)
-		if attrname.startswith("VC3_"):
-			setattr(self.conf.vc[3], attrname[4:].lower(), value)
+		if attrname == "IDENTITY_LENGTH":
+			self.conf.identity_len = min(value, c_skylink.SKY_MAX_IDENTITY_LEN)
 
 	def get_config_values(self):
-		names = [k for k in list(SkyConfigEnum.__dict__.keys()) if not k.startswith("_")]
 		ret = dict()
-		for attrname in names:
-			if attrname == "IDENTITY":
-				ret[attrname] = getattr(self.conf.identity, attrname.lower())
-			if attrname.startswith("MAC_"):
-				ret[attrname] = getattr(self.conf.mac, attrname[4:].lower())
-			if attrname.startswith("ARQ_"):
-				ret[attrname] = getattr(self.conf.arq, attrname[4:].lower())
-			if attrname.startswith("HMAC_"):
-				ret[attrname] = getattr(self.conf.hmac, attrname[5:].lower())
-			if attrname.startswith("VC0_"):
-				ret[attrname] = getattr(self.conf.vc[0], attrname[4:].lower())
-			if attrname.startswith("VC1_"):
-				ret[attrname] = getattr(self.conf.vc[1], attrname[4:].lower())
-			if attrname.startswith("VC2_"):
-				ret[attrname] = getattr(self.conf.vc[2], attrname[4:].lower())
-			if attrname.startswith("VC3_"):
-				ret[attrname] = getattr(self.conf.vc[3], attrname[4:].lower())
+		ret["MAC_MAXIMUM_WINDOW_LENGTH_TICKS"] = self.conf.mac.maximum_window_length_ticks
+		ret["MAC_MINIMUM_WINDOW_LENGTH_TICKS"] = self.conf.mac.minimum_window_length_ticks
+		ret["MAC_GAP_CONSTANT_TICKS"] = self.conf.mac.gap_constant_ticks
+		ret["MAC_TAIL_CONSTANT_TICKS"] = self.conf.mac.tail_constant_ticks
+		ret["MAC_IDLE_TIMEOUT_TICKS"] = self.conf.mac.idle_timeout_ticks
+		ret["MAC_WINDOW_ADJUST_INCREMENT_TICKS"] = self.conf.mac.window_adjust_increment_ticks
+		ret["MAC_CARRIER_SENSE_TICKS"] = self.conf.mac.carrier_sense_ticks
+		ret["MAC_UNAUTHENTICATED_MAC_UPDATES"] = self.conf.mac.unauthenticated_mac_updates
+		ret["MAC_WINDOW_ADJUSTMENT_THRESHOLD"] = self.conf.mac.window_adjustment_threshold
+		ret["MAC_IDLE_FRAMES_PER_WINDOW"] = self.conf.mac.idle_frames_per_window
+		ret["HMAC_MAXIMUM_JUMP"] = self.conf.hmac.maximum_jump
+		ret["VC0_USABLE_ELEMENT_SIZE"] = self.conf.vc[0].usable_element_size
+		ret["VC0_RCV_RING_LEN"] = self.conf.vc[0].rcv_ring_len
+		ret["VC0_HORIZON_WIDTH"] = self.conf.vc[0].horizon_width
+		ret["VC0_SEND_RING_LEN"] = self.conf.vc[0].send_ring_len
+		ret["VC0_REQUIRE_AUTHENTICATION"] = self.conf.vc[0].require_authentication
+		ret["VC0_TX_KEY"] = self.conf.vc[0].tx_key
+		ret["VC0_RX_KEY"] = self.conf.vc[0].rx_key
+		ret["VC1_USABLE_ELEMENT_SIZE"] = self.conf.vc[1].usable_element_size
+		ret["VC1_RCV_RING_LEN"] = self.conf.vc[1].rcv_ring_len
+		ret["VC1_HORIZON_WIDTH"] = self.conf.vc[1].horizon_width
+		ret["VC1_SEND_RING_LEN"] = self.conf.vc[1].send_ring_len
+		ret["VC1_REQUIRE_AUTHENTICATION"] = self.conf.vc[1].require_authentication
+		ret["VC1_TX_KEY"] = self.conf.vc[1].tx_key
+		ret["VC1_RX_KEY"] = self.conf.vc[1].rx_key
+		ret["VC2_USABLE_ELEMENT_SIZE"] = self.conf.vc[2].usable_element_size
+		ret["VC2_RCV_RING_LEN"] = self.conf.vc[2].rcv_ring_len
+		ret["VC2_HORIZON_WIDTH"] = self.conf.vc[2].horizon_width
+		ret["VC2_SEND_RING_LEN"] = self.conf.vc[2].send_ring_len
+		ret["VC2_REQUIRE_AUTHENTICATION"] = self.conf.vc[2].require_authentication
+		ret["VC2_TX_KEY"] = self.conf.vc[2].tx_key
+		ret["VC2_RX_KEY"] = self.conf.vc[2].rx_key
+		ret["VC3_USABLE_ELEMENT_SIZE"] = self.conf.vc[3].usable_element_size
+		ret["VC3_RCV_RING_LEN"] = self.conf.vc[3].rcv_ring_len
+		ret["VC3_HORIZON_WIDTH"] = self.conf.vc[3].horizon_width
+		ret["VC3_SEND_RING_LEN"] = self.conf.vc[3].send_ring_len
+		ret["VC3_REQUIRE_AUTHENTICATION"] = self.conf.vc[3].require_authentication
+		ret["VC3_TX_KEY"] = self.conf.vc[3].tx_key
+		ret["VC3_RX_KEY"] = self.conf.vc[3].rx_key
+		ret["ARQ_TIMEOUT_TICKS"] = self.conf.arq.timeout_ticks
+		ret["ARQ_IDLE_FRAME_THRESHOLD"] = self.conf.arq.idle_frame_threshold
+		ret["ARQ_IDLE_FRAMES_PER_WINDOW"] = self.conf.arq.idle_frames_per_window
+		ret["IDENTITY"] = self.conf.identity.decode("utf-8")
+		ret["IDENTITY_LENGTH"] = self.conf.identity_len
+		print(ret)
 		return ret
 
 
