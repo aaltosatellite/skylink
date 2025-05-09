@@ -272,9 +272,9 @@ cdef class SkyLink:
 			self.conf.arq.idle_frames_per_window = value
 		if attrname == "IDENTITY":
 			id_len = min(len(value), c_skylink.SKY_MAX_IDENTITY_LEN)
+			value = value.encode('utf-8')
 			memcpy(self.conf.identity, <uint8_t*> value, id_len)
-		if attrname == "IDENTITY_LENGTH":
-			self.conf.identity_len = min(value, c_skylink.SKY_MAX_IDENTITY_LEN)
+			self.conf.identity_len = id_len
 
 	def get_config_values(self):
 		ret = dict()
@@ -320,9 +320,8 @@ cdef class SkyLink:
 		ret["ARQ_TIMEOUT_TICKS"] = self.conf.arq.timeout_ticks
 		ret["ARQ_IDLE_FRAME_THRESHOLD"] = self.conf.arq.idle_frame_threshold
 		ret["ARQ_IDLE_FRAMES_PER_WINDOW"] = self.conf.arq.idle_frames_per_window
-		ret["IDENTITY"] = self.conf.identity.decode("utf-8")
+		ret["IDENTITY"] = self.conf.identity[:self.conf.identity_len].decode("utf-8")
 		ret["IDENTITY_LENGTH"] = self.conf.identity_len
-		print(ret)
 		return ret
 
 
