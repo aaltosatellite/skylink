@@ -199,6 +199,8 @@ def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, n
 	dt_3_1 = time.perf_counter() - t00
 	dt_3 = time.perf_counter() - t0
 	print("Classic synch in     {} ms".format(1000*dt_3_1))
+	ratio = (sps*9600*4) / (len(samples2) / dt_3_1)
+	print("Core use: ", 100*ratio)
 
 	# Symbol decision
 	t0 = time.perf_counter()
@@ -241,6 +243,8 @@ def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, n
 	dt_4 = time.perf_counter() - t00
 	print("Traveling synch in  {} ms".format(dt_4*1000))
 	print("({} samples)".format(len(samples2)))
+	ratio = (sps*9600*4) / (len(samples2) / dt_4)
+	print("Core use: ", 100*ratio)
 
 	# Symbol decision trv
 	t0 = time.perf_counter()

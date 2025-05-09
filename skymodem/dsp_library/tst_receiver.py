@@ -312,8 +312,8 @@ def test_precompilation_success_rate(N):
 def basic_test_A():
 	f_tune 		= 436.0e6
 	f_center 	= 437.125e6
-	sr0 		= 2.8e6
-	baudrate	= 9600 * 1
+	sr0 		= 3.6e6
+	baudrate	= 9600 * 4
 	n_payloads	= 12
 	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 8)
 	#rx_config.mod_index = 0.7
@@ -491,6 +491,19 @@ def optimizer_A(t_run_min):
 	self.JPL_n_decay 		= 55 			# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
 	self.lp_ntaps			= 161			# ! number of taps in the low-pass filter in demodulation
 	self.lp_cutoff_coeff	= 0.600			# ! cutoff frequency of the low-pass filter, as multiples of baudrate
+	self.synch_delay_mpr	= 30 			# ! demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
+	"""
+
+	"""
+	self.sps 				= 12 			# ! sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
+	self.fftlen_mpr 		= 48			# ! Length of the fft window in multiples of sps in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
+		self.mod_index 			= 0.5			# S Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
+		self.BT_rx_match 		= 0.425			# S Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering. TODO: best match for 0.5 at UHF-firmware is 0.425 here
+	self.centering_delay_mpr= 2.0 			# ! Center frequency estimate is collected for (centering_delay_mpr*fftlen) samples ahead of demodulation. TODO should be in symbols?
+	self.c_center_decay		= 0.94 			# ! Exponential decay factor of the center frequency correlation sum.
+	self.JPL_n_decay 		= 55 			# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
+	self.lp_ntaps			= 161			# ! number of taps in the low-pass filter in demodulation
+	self.lp_cutoff_coeff	= 0.570			# ! cutoff frequency of the low-pass filter, as multiples of baudrate (0.570 seems best both for mod_idx=0.5 and mod_idx=0.75)
 	self.synch_delay_mpr	= 30 			# ! demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
 	"""
 
@@ -678,7 +691,8 @@ def analyze_results_plot():
 
 
 
-#basic_test_A()
+basic_test_A()
+basic_test_A()
 #basic_test_A()
 
 #compare_default_optimod_4800()
@@ -686,9 +700,9 @@ def analyze_results_plot():
 #compare_fftlens()
 #compare_timings()
 
-analyze_results_plot()
+#analyze_results_plot()
 
-optimizer_A(t_run_min=20.0)
+#optimizer_A(t_run_min=20.0)
 
 #test_precompilation_success_rate(1000)
 

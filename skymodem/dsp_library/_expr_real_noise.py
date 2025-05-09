@@ -150,7 +150,7 @@ def d_timing(n):
 
 
 
-#investigate_noise_shape()
+investigate_noise_shape()
 
 d_timing(1)
 d_timing(2)

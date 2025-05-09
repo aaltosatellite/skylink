@@ -3,7 +3,6 @@ from libc.stdlib cimport malloc, free
 from libc.string cimport memcpy
 #from libc cimport stdint
 
-
 _STUFF = "Hi"
 num_virtual_channels 	= c_skylink.SKY_NUM_VIRTUAL_CHANNELS
 max_identity_len 		= c_skylink.SKY_MAX_IDENTITY_LEN
@@ -18,6 +17,74 @@ auth_flag_use_crc32 	= c_skylink.SKY_CONFIG_FLAG_USE_CRC32
 arq_state_off			= c_skylink.ARQ_STATE_OFF
 arq_state_in_init		= c_skylink.ARQ_STATE_IN_INIT
 arq_state_on			= c_skylink.ARQ_STATE_ON
+
+
+
+
+## ====================0
+from enum import Enum
+
+class SkyConfigEnum(Enum):
+    """
+    Skylink configuration parameters
+    """
+    # MAC / TDD
+    MAC_MAXIMUM_WINDOW_LENGTH_TICKS = 0
+    MAC_MINIMUM_WINDOW_LENGTH_TICKS = 1
+    MAC_GAP_CONSTANT_TICKS = 2
+    MAC_TAIL_CONSTANT_TICKS = 3
+    MAC_IDLE_TIMEOUT_TICKS = 4
+    MAC_WINDOW_ADJUST_INCREMENT_TICKS = 5
+    MAC_CARRIER_SENSE_TICKS = 6
+    MAC_UNAUTHENTICATED_MAC_UPDATES = 7
+    MAC_WINDOW_ADJUSTMENT_THRESHOLD = 8
+    MAC_IDLE_FRAMES_PER_WINDOW = 9
+
+    # HMAC
+    HMAC_MAXIMUM_JUMP = 10
+
+    # VC 0 - 3
+    VC0_USABLE_ELEMENT_SIZE = 11
+    VC0_RCV_RING_LEN = 12
+    VC0_HORIZON_WIDTH = 13
+    VC0_SEND_RING_LEN = 14
+    VC0_REQUIRE_AUTHENTICATION = 15
+    VC0_TX_KEY = 16
+    VC0_RX_KEY = 17
+
+    VC1_USABLE_ELEMENT_SIZE = 18
+    VC1_RCV_RING_LEN = 19
+    VC1_HORIZON_WIDTH = 20
+    VC1_SEND_RING_LEN = 21
+    VC1_REQUIRE_AUTHENTICATION = 22
+    VC1_TX_KEY = 23
+    VC1_RX_KEY = 24
+
+    VC2_USABLE_ELEMENT_SIZE = 25
+    VC2_RCV_RING_LEN = 26
+    VC2_HORIZON_WIDTH = 27
+    VC2_SEND_RING_LEN = 28
+    VC2_REQUIRE_AUTHENTICATION = 29
+    VC2_TX_KEY = 30
+    VC2_RX_KEY = 31
+
+    VC3_USABLE_ELEMENT_SIZE = 32
+    VC3_RCV_RING_LEN = 33
+    VC3_HORIZON_WIDTH = 34
+    VC3_SEND_RING_LEN = 35
+    VC3_REQUIRE_AUTHENTICATION = 36
+    VC3_TX_KEY = 37
+    VC3_RX_KEY = 38
+
+    # ARQ
+    ARQ_TIMEOUT_TICKS = 39
+    ARQ_IDLE_FRAME_THRESHOLD = 40
+    ARQ_IDLE_FRAMES_PER_WINDOW = 41
+
+    # Identity and its length
+    IDENTITY = 42
+    IDENTITY_LENGTH = 43
+## ====================0
 
 
 class ArqConfig:
@@ -117,6 +184,48 @@ cdef class SkyLink:
 	cdef _destruct(self):
 		c_skylink.sky_destroy(self.handle)
 
+	def set_config_value(self, idx, value):
+		attrname = SkyConfigEnum(idx).name
+		if attrname == "IDENTITY":
+			id_len = min(len(value), c_skylink.SKY_MAX_IDENTITY_LEN)
+			memcpy(self.conf.identity, <uint8_t*> value, id_len)
+			#setattr(self.conf.identity, attrname.lower(), value)
+		if attrname.startswith("MAC_"):
+			setattr(self.conf.mac, attrname[4:].lower(), value)
+		if attrname.startswith("ARQ_"):
+			setattr(self.conf.arq, attrname[4:].lower(), value)
+		if attrname.startswith("HMAC_"):
+			setattr(self.conf.hmac, attrname[5:].lower(), value)
+		if attrname.startswith("VC0_"):
+			setattr(self.conf.vc[0], attrname[4:].lower(), value)
+		if attrname.startswith("VC1_"):
+			setattr(self.conf.vc[1], attrname[4:].lower(), value)
+		if attrname.startswith("VC2_"):
+			setattr(self.conf.vc[2], attrname[4:].lower(), value)
+		if attrname.startswith("VC3_"):
+			setattr(self.conf.vc[3], attrname[4:].lower(), value)
+
+	def get_config_values(self):
+		names = [k for k in list(SkyConfigEnum.__dict__.keys()) if not k.startswith("_")]
+		ret = dict()
+		for attrname in names:
+			if attrname == "IDENTITY":
+				ret[attrname] = getattr(self.conf.identity, attrname.lower())
+			if attrname.startswith("MAC_"):
+				ret[attrname] = getattr(self.conf.mac, attrname[4:].lower())
+			if attrname.startswith("ARQ_"):
+				ret[attrname] = getattr(self.conf.arq, attrname[4:].lower())
+			if attrname.startswith("HMAC_"):
+				ret[attrname] = getattr(self.conf.hmac, attrname[5:].lower())
+			if attrname.startswith("VC0_"):
+				ret[attrname] = getattr(self.conf.vc[0], attrname[4:].lower())
+			if attrname.startswith("VC1_"):
+				ret[attrname] = getattr(self.conf.vc[1], attrname[4:].lower())
+			if attrname.startswith("VC2_"):
+				ret[attrname] = getattr(self.conf.vc[2], attrname[4:].lower())
+			if attrname.startswith("VC3_"):
+				ret[attrname] = getattr(self.conf.vc[3], attrname[4:].lower())
+		return ret
 
 
 	# === HMAC-KEYS ========================================================================================================================

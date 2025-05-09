@@ -12,6 +12,7 @@ from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_off
 import zmq
 import time
 import json
+from copy import deepcopy
 from datetime import datetime as dtime
 from queue import Queue, Empty
 import os, struct
@@ -141,11 +142,6 @@ class SkyModem:
 				thrd.join(timeout=1.0)
 			except:
 				pass
-
-
-	def get_modem_state(self):
-		with self.action_lock:
-			return self.dsp_loop.get_state()
 
 
 	def start(self):
@@ -292,6 +288,17 @@ class SkyModem:
 				assert control_dict["baudrate"] in (9600, 9600*2, 9600*4), "invalid baudrate field in control_dict"
 				self.dsp_loop.set_baudrate(control_dict["baudrate"])
 				response_dict["rsp"] = "ack"
+			elif ctrl_command == "set_skylink_config":
+				r = self._set_skylink_config(control_dict["conf_idx"], control_dict["conf_value"])
+				if r == 0:
+					response_dict["rsp"] = "ack"
+			elif ctrl_command == "reset_skylink_config":
+				r = self._reset_skylink_config()
+				if r == 0:
+					response_dict["rsp"] = "ack"
+			elif ctrl_command == "get_skylink_config":
+				response_dict["skylink_config"] = self._get_skylink_config()
+				response_dict["rsp"] = "skylink_config"
 			else:
 				DBGPRINT("Unknown control command: {}".format(ctrl_command))
 				return
@@ -303,7 +310,22 @@ class SkyModem:
 			self.pub_sockets[ichannel].send(json.dumps(rsp_frame_dict).encode("utf8"))
 
 
+	def _get_skylink_config(self):
+		return self.skylink_loop.skylink.get_config_values()
 
+
+	def _reset_skylink_config(self):
+		new_config = SkyConfiguration(b"PyGS")
+		new_skylink_loop  = SkyLinkLoop(config=new_config, key_list=self.hmac_key_list, que_payloads_in=self.que_payloads_dsp_to_sky, que_payloads_out=self.que_payloads_sky_to_dsp)
+		self.skylink_loop.close()
+		self.skylink_loop = new_skylink_loop
+		self.skylink_loop.start()
+		return 0
+
+
+	def _set_skylink_config(self, conf_idx:int, conf_value):
+		self.skylink_loop.skylink.set_config_value(idx=conf_idx, value=conf_value)
+		return 0
 
 def get_usrp_receiver_config(f_center, baudrate, max_signal_bw):
 	from dsp_library.kuokka.lib_tools import determine_ftune_and_min_sr
@@ -379,7 +401,7 @@ if __name__ == '__main__':
 	try:
 		while True:
 			#print(threading.active_count(), "threads active")
-			time.sleep(1.0)
+			time.sleep(2.0)
 			if not modem.is_ok():
 				print("Modem is_ok() failed. Exiting.")
 				break
