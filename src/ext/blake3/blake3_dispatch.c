@@ -73,6 +73,7 @@ enum cpu_feature {
   UNDEFINED = 1 << 30
 };
 
+#if defined(IS_X86)
 #if !defined(BLAKE3_TESTING)
 static /* Allow the variable to be controlled manually for testing */
 #endif
@@ -132,6 +133,7 @@ static
 #endif
   }
 }
+#endif
 
 void blake3_compress_in_place(uint32_t cv[8],
                               const uint8_t block[BLAKE3_BLOCK_LEN],
