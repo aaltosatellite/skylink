@@ -73,65 +73,6 @@ enum cpu_feature {
   UNDEFINED = 1 << 30
 };
 
-#if !defined(BLAKE3_TESTING)
-static /* Allow the variable to be controlled manually for testing */
-#endif
-    enum cpu_feature g_cpu_features = UNDEFINED;
-
-#if !defined(BLAKE3_TESTING)
-static
-#endif
-    enum cpu_feature
-    get_cpu_features(void) {
-
-  if (g_cpu_features != UNDEFINED) {
-    return g_cpu_features;
-  } else {
-#if defined(IS_X86)
-    uint32_t regs[4] = {0};
-    uint32_t *eax = &regs[0], *ebx = &regs[1], *ecx = &regs[2], *edx = &regs[3];
-    (void)edx;
-    enum cpu_feature features = 0;
-    cpuid(regs, 0);
-    const int max_id = *eax;
-    cpuid(regs, 1);
-#if defined(__amd64__) || defined(_M_X64)
-    features |= SSE2;
-#else
-    if (*edx & (1UL << 26))
-      features |= SSE2;
-#endif
-    if (*ecx & (1UL << 0))
-      features |= SSSE3;
-    if (*ecx & (1UL << 19))
-      features |= SSE41;
-
-    if (*ecx & (1UL << 27)) { // OSXSAVE
-      const uint64_t mask = xgetbv();
-      if ((mask & 6) == 6) { // SSE and AVX states
-        if (*ecx & (1UL << 28))
-          features |= AVX;
-        if (max_id >= 7) {
-          cpuidex(regs, 7, 0);
-          if (*ebx & (1UL << 5))
-            features |= AVX2;
-          if ((mask & 224) == 224) { // Opmask, ZMM_Hi256, Hi16_Zmm
-            if (*ebx & (1UL << 31))
-              features |= AVX512VL;
-            if (*ebx & (1UL << 16))
-              features |= AVX512F;
-          }
-        }
-      }
-    }
-    g_cpu_features = features;
-    return features;
-#else
-    /* How to detect NEON? */
-    return 0;
-#endif
-  }
-}
 
 void blake3_compress_in_place(uint32_t cv[8],
                               const uint8_t block[BLAKE3_BLOCK_LEN],
