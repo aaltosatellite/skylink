@@ -367,13 +367,46 @@ def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, m
 	return dsp_config, radio_config
 
 
+def read_key_from_header(file_path):
+	"""
+	Function for reading the HMAC key from a header file.
+	Uses regular expressions to extract the key from a C-style array definition.
+
+	Args:
+		file_path: str
+
+	Returns:
+		byte_array: The HMAC key as a bytearray.
+	"""
+	with open(file_path, 'r') as file:
+		content = file.read()
+		# Regex to match the byte array in the .h file, allowing for line breaks and spaces
+		import re
+		match = re.search(r'hmac_key\s*\[\d+\]\s*=\s*\{([^}]+)\};', content, re.DOTALL)
+		if not match:
+			raise ValueError(f"Key not found in the header file{file_path}")
+		# Extract the bytes and convert them to a byte array
+		byte_values = match.group(1).replace('\n', '').split(',')
+		byte_array = bytes(int(b.strip(), 16) for b in byte_values if b.strip())
+		if len(byte_array) != 32:
+			raise ValueError("Key is not 32 bytes long.")
+		###print(byte_array.hex())  # only for debugging!
+		return byte_array
+
+
 
 
 if __name__ == '__main__':
-	key0 = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
+	if os.path.isfile("secret.h"):
+		key0 = read_key_from_header("secret.h")
+	else:
+		print("No external secret available, using development key.")
+		key0 = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
+
 	if key0 == b"":
 		print("Check HMAC Key!")
 		exit()
+	# Same key is used for all virtual channels.
 	hmac_keys = [key0, key0, key0, key0]
 	skylink_config_ = SkyConfiguration(identity=b"PyGS")
 

@@ -15,6 +15,7 @@ __pycache__/
 */.idea/
 .vscode/
 
+skymodem/secret.h
 
 skymodem/sky_cython/build/
 skymodem/sky_cython/build/*
