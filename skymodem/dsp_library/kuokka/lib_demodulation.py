@@ -7,7 +7,7 @@ from scipy.signal import firwin
 
 
 @njit(cache=True)
-def demodulation_sequence(rs_arr, centerf_arr, i_rs0, nsamples, dmd_arr, synch_arr, dmdsynch_head0, JPLstatemx, demodmx, bitarr, bitfarr, bit_head0):
+def demodulation_sequence(rs_arr, centerf_arr, power_arr, i_rs0, nsamples, dmd_arr, synch_arr, dmdsynch_head0, JPLstatemx, demodmx, bitarr, bitfarr, bitparr, bit_head0):
 	bit_head = bit_head0
 	i_start = -1
 	dmdsynch_head = dmdsynch_head0
@@ -18,9 +18,10 @@ def demodulation_sequence(rs_arr, centerf_arr, i_rs0, nsamples, dmd_arr, synch_a
 
 		# an ongoing transmission ends.
 		if (i_start >= 0) and (centerf_arr[i_rs] < -0.5):
-			dmdsynch_head, bits, bit_frequencies = demod_synch_decide(rs_arr=rs_arr, center_f_arr=centerf_arr, i_rs0=i_start, nsamples=i_rs - i_start, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=dmdsynch_head, JPLstatemx=JPLstatemx, demodmx=demodmx)
+			dmdsynch_head, bits, bit_frequencies, bit_powers = demod_synch_decide(rs_arr=rs_arr, center_f_arr=centerf_arr, power_arr=power_arr, i_rs0=i_start, nsamples=i_rs - i_start, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=dmdsynch_head, JPLstatemx=JPLstatemx, demodmx=demodmx)
 			bitarr[bit_head:bit_head+len(bits)] = bits
 			bitfarr[bit_head:bit_head+len(bits)] = bit_frequencies
+			bitparr[bit_head:bit_head+len(bits)] = bit_powers
 			bit_head += len(bits)
 			classic_JPL_synch_reset(JPLstatemx)
 			DSD_reset(demodmx=demodmx)  # unnecessary, since demodmx has to be reset in the beginning with the correct frequency anyway. But this ties up loose ends.
@@ -33,9 +34,10 @@ def demodulation_sequence(rs_arr, centerf_arr, i_rs0, nsamples, dmd_arr, synch_a
 
 	# chunk ends with demodulation on. Demodulate to the end.
 	if i_start >= 0:
-		dmdsynch_head, bits, bit_frequencies = demod_synch_decide(rs_arr=rs_arr, center_f_arr=centerf_arr, i_rs0=i_start, nsamples=i_rs0 + nsamples - i_start, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=dmdsynch_head, JPLstatemx=JPLstatemx, demodmx=demodmx)
+		dmdsynch_head, bits, bit_frequencies, bit_powers = demod_synch_decide(rs_arr=rs_arr, center_f_arr=centerf_arr, power_arr=power_arr, i_rs0=i_start, nsamples=i_rs0 + nsamples - i_start, dmd_arr=dmd_arr, synch_arr=synch_arr, dmdsynch_head0=dmdsynch_head, JPLstatemx=JPLstatemx, demodmx=demodmx)
 		bitarr[bit_head:bit_head+len(bits)] = bits
 		bitfarr[bit_head:bit_head+len(bits)] = bit_frequencies
+		bitparr[bit_head:bit_head+len(bits)] = bit_powers
 		bit_head += len(bits)
 
 	return dmdsynch_head, bit_head
@@ -85,12 +87,12 @@ def create_DSD_statemx(lp_ntaps, lp_cutoff_coeff, synch_delay_mpr_f, sps_f):
 
 
 @njit(cache=True, parallel=False)
-def demod_synch_decide(rs_arr, center_f_arr, i_rs0, nsamples, dmd_arr, synch_arr, dmdsynch_head0, JPLstatemx, demodmx):
+def demod_synch_decide(rs_arr, center_f_arr, power_arr, i_rs0, nsamples, dmd_arr, synch_arr, dmdsynch_head0, JPLstatemx, demodmx):
 	assert np.iscomplexobj(demodmx)
 	#assert type(synch_arr[0,0]) is int64
 	#assert len(dmd_arr.shape) == 1
 	assert demodmx.shape[0] == demodmx.shape[1]+2
-	shift_phase 	= 1.0j * demodmx[0,0].imag
+	shift_phase 	= 1.0j * demodmx[0,0]
 	s_lpd_prev 		= demodmx[0,1]
 	lp_tap_phase 	= int(demodmx[0,2].real)
 	lp_taps 		= demodmx[2:,:]
@@ -108,7 +110,7 @@ def demod_synch_decide(rs_arr, center_f_arr, i_rs0, nsamples, dmd_arr, synch_arr
 		dmd_arr[dmd_head] = np.arctan2(zz.imag, zz.real)
 		dmd_head += 1
 		lp_tap_phase = (lp_tap_phase+1) % ntaps
-	demodmx[0,0] = shift_phase
+	demodmx[0,0] = shift_phase.imag % (2*np.pi)
 	demodmx[0,1] = s_lpd_prev
 	demodmx[0,2] = lp_tap_phase
 
@@ -125,8 +127,9 @@ def demod_synch_decide(rs_arr, center_f_arr, i_rs0, nsamples, dmd_arr, synch_arr
 		dmd_opt_idx_f = dmdsynch_head0
 	else:
 		assert dmd_opt_idx_f <= max(0, dmdsynch_head0 - 1)
-	bitarr = np.zeros(int(1.5*nsamples/sps_f)+3, dtype=np.int64)
+	bitarr    = np.zeros(int(1.5*nsamples/sps_f)+3, dtype=np.int64)
 	bit_f_arr = np.zeros(int(1.5*nsamples/sps_f)+3, dtype=np.float64)
+	bit_p_arr = np.zeros((int(1.5*nsamples/sps_f)+3, 3), dtype=np.float64) 		# for power sense
 	ibit = 0
 	while True:
 		vsym, i_tap = symbol_decision(dmd_arr=dmd_arr, synch_arr=synch_arr, dmd_synch_head_i=dmd_head, prev_dmd_idx_f=dmd_opt_idx_f, sps_f=sps_f, synch_delay_i=synch_delay_i, N_eps_i=Neps)
@@ -134,12 +137,13 @@ def demod_synch_decide(rs_arr, center_f_arr, i_rs0, nsamples, dmd_arr, synch_arr
 			break
 		dmd_opt_idx_f = i_tap
 		bitarr[ibit] = np.sign(vsym)
-		bit_f_arr[ibit] = center_f_arr[i_rs0 + (int(round(i_tap))-dmdsynch_head0)] #int(round(i_tap))
+		bit_f_arr[ibit] = center_f_arr[i_rs0 + (int(round(i_tap))-dmdsynch_head0)] 		# int(round(i_tap))
+		bit_p_arr[ibit] = power_arr[i_rs0 + (int(round(i_tap))-dmdsynch_head0)]			# for power sense
 		assert bit_f_arr[ibit] > -0.5
 		ibit += 1
 	demodmx[0,4] = dmd_opt_idx_f
 	#dmd_arr[0:len(dmd_arr)-nsamples] = dmd_arr[nsamples:len(dmd_arr)]
 	#synch_arr[0:len(synch_arr)-nsamples] = synch_arr[nsamples:len(synch_arr)]
-	return dmd_head, bitarr[0:ibit], bit_f_arr[0:ibit]
+	return dmd_head, bitarr[0:ibit], bit_f_arr[0:ibit], bit_p_arr[0:ibit] # for power sense
 
 

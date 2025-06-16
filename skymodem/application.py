@@ -12,7 +12,6 @@ from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_off
 import zmq
 import time
 import json
-from copy import deepcopy
 from datetime import datetime as dtime
 from queue import Queue, Empty
 import os, struct
@@ -73,7 +72,12 @@ def bind_vc_sockets(vc_port_base, num_channels):
 		sub_sock.set(zmq.RCVTIMEO, 1000)
 		sub_sockets.append(sub_sock)
 
-	return pub_sockets, sub_sockets, context
+	signaldata_pub_sock = context.socket(zmq.PUB)
+	signaldata_pub_sock.bind("tcp://*:{}".format( str(vc_port_base + 2) ))
+	signaldata_pub_sock.set(zmq.RCVTIMEO, 1000)
+	#signaldata_pub_sock.append(pub_sock)
+
+	return pub_sockets, sub_sockets, signaldata_pub_sock, context
 
 
 
@@ -83,20 +87,22 @@ class SkyModem:
 	def __init__(self, dsp_config:DSPConfig, radio_config:RadioConfig, skylink_config:SkyConfiguration, hmac_key_list, vc_port_base):
 		self.on = True
 		self.hmac_key_list = hmac_key_list
-		self.que_samples_radio_to_dsp = Queue(500)
-		self.que_payloads_dsp_to_sky = Queue(100)
-		self.que_payloads_sky_to_dsp = Queue(1)
-		self.que_samples_dsp_to_radio = Queue(1)
+		self.que_samples_radio_to_dsp 	= Queue(500)
+		self.que_payloads_dsp_to_sky 	= Queue(100)
+		self.que_payloads_sky_to_dsp 	= Queue(1)
+		self.que_samples_dsp_to_radio 	= Queue(1)
+		self.que_signaldata_out 		= Queue(100)
 
 		self.radio_loop 	= RadioLoop(radio_config=radio_config, que_tx_samples_in=self.que_samples_dsp_to_radio, que_rx_samples_out=self.que_samples_radio_to_dsp)
 		self.dsp_loop 		= DSPLoop(dsp_config=dsp_config, que_rx_samples_in=self.que_samples_radio_to_dsp, que_rx_payloads_out=self.que_payloads_dsp_to_sky,
-								que_tx_payloads_in=self.que_payloads_sky_to_dsp, que_tx_samples_out=self.que_samples_dsp_to_radio)
+									   que_tx_payloads_in=self.que_payloads_sky_to_dsp, que_tx_samples_out=self.que_samples_dsp_to_radio, que_signaldata_out=self.que_signaldata_out)
 		self.skylink_loop 	= SkyLinkLoop(config=skylink_config, key_list=hmac_key_list, que_payloads_in=self.que_payloads_dsp_to_sky, que_payloads_out=self.que_payloads_sky_to_dsp)
 		self.sub_que_process_thread 	= threading.Thread(target=None, args=tuple())
 		self.skylink_reception_thread 	= threading.Thread(target=None, args=tuple())
-		pub_sockets, sub_sockets, context = bind_vc_sockets(vc_port_base=vc_port_base, num_channels=num_virtual_channels)
+		pub_sockets, sub_sockets, signaldata_pub_sock, context = bind_vc_sockets(vc_port_base=vc_port_base, num_channels=num_virtual_channels)
 		self.pub_sockets = pub_sockets
 		self.sub_sockets = sub_sockets
+		self.signaldata_pub_sock = signaldata_pub_sock
 		self.zmq_ctx = context
 		self.sub_threads = list()
 		self.session_id_list = [arq_state_off,] * num_virtual_channels
@@ -163,6 +169,18 @@ class SkyModem:
 	## =======================================================================================================================================================================================
 	def _modem_to_zmq_loop(self): # downlink
 		while self.on:
+			while not self.que_signaldata_out.empty():
+				signaldata_tuple = self.que_signaldata_out.get_nowait()  # (t_unix, rx_f_absolute, power_tuple, self.dsp_config.baudrate, rx_pl)   |   power_tuple = (pl_power, noise_power, power_bw)
+				signaldata_d = {
+					"t_unix": 			signaldata_tuple[0],
+					"rx_f_absolute": 	signaldata_tuple[1],
+					"pl_power": 		signaldata_tuple[2][0],
+					"noise_power": 		signaldata_tuple[2][1],
+					"power_bw": 		signaldata_tuple[2][2],
+					"baudrate": 		signaldata_tuple[3],
+					"pl": 				signaldata_tuple[4],
+				}
+				self.signaldata_pub_sock.send(json.dumps(signaldata_d).encode("utf8"))
 			try:
 				ekey, ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.20)
 			except Empty:
@@ -203,8 +221,8 @@ class SkyModem:
 			frame_d["vc"] 			= ichannel
 			frame_d["data"] 		= "".join( [("00"+hex(x)[2:])[-2:] for x in data] )
 			meta_d = dict()
-			meta_d["vc"] 		= ichannel
-			frame_d["metadata"] = meta_d
+			meta_d["vc"] 			= ichannel
+			frame_d["metadata"] 	= meta_d
 			self.pub_sockets[ichannel].send(json.dumps(frame_d).encode("utf8"))
 
 

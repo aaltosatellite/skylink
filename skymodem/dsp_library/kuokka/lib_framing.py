@@ -251,12 +251,15 @@ def create_deframer(use_scrambler, use_rs, data_maxlen, synchword, synchword_len
 	mx[1,4] = 0		# encoded data length
 	mx[1,5] = 0		# frequency sum
 	mx[1,6] = 0		# frequency sum count
+	mx[1,7] = 0		# power sum						# for power sense
+	mx[1,8] = 0		# noise power avg sum			# for power sense
+	mx[1,9] = 0		# power sum count				# for power sense
 	mx[2,:] = 0		# chars
 	return mx
 
 
 @njit(cache=True)
-def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequencies" can be just an array of zeros. Has to be as long as "bits"
+def deframe(bits, bit_frequencies, bit_powers, deframer_mx, rs_mx, rs_cfg):  # "bit_frequencies" can be just an array of zeros. Has to be as long as "bits"
 	use_scrambler 		= deframer_mx[0,0]
 	use_rs 				= deframer_mx[0,1]
 	synchword 			= deframer_mx[0,2]
@@ -272,11 +275,15 @@ def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequenc
 	data_len 			= deframer_mx[1,4]
 	frequency_sum 		= deframer_mx[1,5]
 	frequency_sum_count = deframer_mx[1,6]
+	power_sum 			= deframer_mx[1,7]		# for power sense
+	noise_avg_sum 		= deframer_mx[1,8]		# for power sense
+	power_sum_count 	= deframer_mx[1,9]		# for power sense
 	chars 				= deframer_mx[2]
 
 	payloads = np.zeros( 0, dtype=np.uint8)
 	payload_delimits = np.zeros( (0, 2), dtype=np.int64)
 	payload_frequencies = np.zeros( 0, dtype=np.float64)
+	payload_powertuples = np.zeros( (0,3), dtype=np.float64)			# for power sense
 	pl_head = 0
 	fault_counts = np.zeros(2, dtype=np.int64)
 
@@ -290,11 +297,17 @@ def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequenc
 				state = 1
 				frequency_sum = int(1e9 * bit_frequencies[ib])
 				frequency_sum_count = 1
+				power_sum = int(1e9 * bit_powers[ib,0])		# for power sense
+				noise_avg_sum = int(1e9 * bit_powers[ib,1])	# for power sense
+				power_sum_count = 1							# for power sense
 			continue
 		elif state == 1:
 			ok, latest_bits, bit_idx, data_len = deframe_header(bit=bit, latest_bits=latest_bits, bit_idx=bit_idx, use_rs=use_rs, data_maxlen=data_maxlen)
 			frequency_sum += int(1e9 * bit_frequencies[ib])
 			frequency_sum_count += 1
+			power_sum += int(1e9 * bit_powers[ib,0])		# for power sense
+			noise_avg_sum += int(1e9 * bit_powers[ib,1])	# for power sense
+			power_sum_count += 1							# for power sense
 			if ok < 0:
 				#print("\t(Deframer << 0! (Header deframe failed.))", ok)
 				fault_counts[0] += 1
@@ -308,6 +321,9 @@ def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequenc
 			ok, latest_bits, bit_idx, char_idx, pl_leng = deframe_payload(bit=bit, latest_bits=latest_bits, bit_idx=bit_idx, chars=chars, char_idx=char_idx, use_scrambler=use_scrambler, data_len=data_len, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg)
 			frequency_sum += int(1e9 * bit_frequencies[ib])
 			frequency_sum_count += 1
+			power_sum += int(1e9 * bit_powers[ib,0])		# for power sense
+			noise_avg_sum += int(1e9 * bit_powers[ib,1])	# for power sense
+			power_sum_count += 1							# for power sense
 			if ok < 0:
 				#print("\t(Deframer << 0! (Decode failed.))")
 				fault_counts[1] += 1
@@ -331,6 +347,12 @@ def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequenc
 				payload_frequencies = payload_frequencies0
 				#payload_frequencies = np.resize(payload_frequencies, len(payload_frequencies)+1)
 				payload_frequencies[-1] = freq
+				power = (1.0e-9*power_sum) / (1.0*power_sum_count)											# for power sense
+				noise_avg = (1.0e-9*noise_avg_sum) / (1.0*power_sum_count)									# for power sense
+				payload_powertuples0 = np.zeros((len(payload_powertuples)+1, 3), dtype=np.float64)	# for power sense
+				payload_powertuples0[:len(payload_powertuples)] = payload_powertuples						# for power sense
+				payload_powertuples = payload_powertuples0													# for power sense
+				payload_powertuples[-1] = power, noise_avg, abs(bit_powers[ib,2])							# for power sense
 			continue
 	deframer_mx[1,0] = state
 	deframer_mx[1,1] = latest_bits
@@ -339,8 +361,11 @@ def deframe(bits, bit_frequencies, deframer_mx, rs_mx, rs_cfg):  # "bit_frequenc
 	deframer_mx[1,4] = data_len
 	deframer_mx[1,5] = frequency_sum
 	deframer_mx[1,6] = frequency_sum_count
+	deframer_mx[1,7] = power_sum			# for power sense
+	deframer_mx[1,8] = noise_avg_sum			# for power sense
+	deframer_mx[1,9] = power_sum_count		# for power sense
 	deframer_mx[2]   = chars
-	return payloads, payload_delimits, payload_frequencies, fault_counts
+	return payloads, payload_delimits, payload_frequencies, payload_powertuples, fault_counts
 ## FRAMING ===================================================================================================================================================================================
 ## FRAMING ===================================================================================================================================================================================
 

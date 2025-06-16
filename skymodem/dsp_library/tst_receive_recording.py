@@ -19,7 +19,7 @@ def receive_a_recording():
 	#prepend = np.concatenate( (samples[0:8000],)*int(0.5*1e6/8000.0) )
 	#samples = np.concatenate( (prepend, samples) )
 	sr0 = 1e6
-	samples = samples + radionoise(n=len(samples), sr=sr0, W_per_Hz=0.1/9600)
+	samples = samples + radionoise(n=len(samples), sr=sr0, W_per_Hz=0.0001/9600)
 	nsamples = len(samples)
 
 	#samples = np.concatenate( (samples[0:300000], samples) )
@@ -53,14 +53,14 @@ def receive_a_recording():
 	rx.switch_baudrate(baudrate=9600, sps=rx_config.sps)
 	print("Baudrate switch in: {} ms".format( round(dt*1e3, 1) ))
 
-	if True:
+	if False:
 		fftlen = rx.get_fftlen()
-		waterfall_mx(samples=samples, fftlen=2048, fft_jump=2048//2, srate=sr0, plot_and_show=True, y_is_time=True)
+		waterfall_mx(samples=samples, fftlen=2048, fft_jump=2048//2, fft_stack=1, srate=sr0, plot_and_show=True, y_is_time=True)
 		fftstate = rx.FFTstatemx
 		mask0 = fftstate[6,:]
 		resampler = create_resampler(m_halflen=21, n_banks=64, r_rate=sps*baudrate/sr0, f_cutoff=0.499*sps*baudrate/sr0, allow_aliasing=False)
 		samples_rs = resampler_execute(samples=samples, statemx=resampler)
-		mx, extent, aspect = waterfall_mx(samples=samples_rs, fftlen=fftlen, fft_jump=fftlen//2, srate=sps*baudrate, plot_and_show=False, y_is_time=True)
+		mx, extent, aspect = waterfall_mx(samples=samples_rs, fftlen=fftlen, fft_jump=fftlen//2, fft_stack=1, srate=sps*baudrate, plot_and_show=False, y_is_time=True)
 		mx[10] = mask0
 		mx[11] = mask0
 		mx[12] = mask0
@@ -116,8 +116,9 @@ def receive_a_recording():
 	print("(from {} to {})".format( np.min([len(x[0]) for x in pl_list]), np.max([len(x[0]) for x in pl_list]) ))
 	print("Relative freq should be ~{}".format( round(expected_relative_f, 4) ))
 
-	for pl_bytes, pl_f in pl_list:
-		print(round(1e-6*pl_f, 4), ":", len(pl_bytes), pl_bytes)
+	for pl_bytes, pl_f, pl_pt in pl_list:
+		p_pl, p_noise, bw_p = pl_pt
+		print(round(1e-6*pl_f, 4), ":", round((p_pl-p_noise)/p_noise), bw_p, ":", len(pl_bytes), pl_bytes)
 	xx = np.arange(len(rx.center_f_array)) * 1000.0/(rx.config.sps*rx.config.baudrate)
 	x_t_s0_r10 = np.arange(len(samples[::20])) * 20 * 1000.0/sr0
 	x_sense_ms = carrier_sense_array[:,0] * 1000.0/(sr0)
@@ -127,9 +128,11 @@ def receive_a_recording():
 
 	fig = plt.figure(figsize=(17,13))
 	fig2 = plt.figure(figsize=(17,9))
+
 	ax1 = fig.add_subplot(211)
 	ax2 = fig.add_subplot(212)
 	ax3 = fig2.add_subplot(111)
+
 
 	ax1.plot(xx, rx.center_f_array)
 	ax1.plot(xx, np.abs(rx.rs_array) / np.max(np.abs(rx.rs_array)))
@@ -153,12 +156,29 @@ def receive_a_recording():
 			crit_filt_x.append(xx[i])
 	crit_filt_x = np.array(crit_filt_x)
 	crit_filt_y = np.array(crit_filt_y)
+
+
 	ax3.plot(xx[::10], rx.fft_instr_array[::10,2], label="avg")
 	ax3.plot(xx[::10], rx.fft_instr_array[::10,3], label="std")
 	ax3.plot(crit_filt_x, crit_filt_y, label="criterion")
 	ax3.plot(crit_filt_x, rollsmooth(crit_filt_y, 1), label="criterion-smooth-1")
 	ax3.legend()
 	ax3.grid()
+
+
+	fig3 = plt.figure(figsize=(17,9))
+	ax5 = fig3.add_subplot(211)
+	ax6 = fig3.add_subplot(212)
+
+	ax5.plot(xx[::10], rx.power_array[::10,0], label="power")
+	ax5.plot(xx[::10], rx.power_array[::10,1], label="power avg")
+	ax5.plot(xx[::10], rx.power_array[::10,2], label="power std")
+	ax5.legend()
+	ax5.grid()
+
+	ax6.plot(xx[::10], (rx.power_array[::10,0] - rx.power_array[::10,1]) / rx.power_array[::10,1], label="snr")
+	ax6.legend()
+	ax6.grid()
 
 	fig.set_layout_engine("tight")
 	fig2.set_layout_engine("tight")

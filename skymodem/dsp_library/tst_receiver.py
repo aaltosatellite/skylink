@@ -59,7 +59,7 @@ def feed_samples_to_a_receiver(dsp_config:DSPConfig, samples, payload_istart_ien
 	rx = Receiver(config=dsp_config)
 	nsamples = len(samples)
 	c = 0
-	pl_f_cursor_list = list()
+	pl_f_p_cursor_list = list()
 	t_signal = 0.0
 	t_silence = 0.0
 	if add_noise_amp > 0:
@@ -76,13 +76,17 @@ def feed_samples_to_a_receiver(dsp_config:DSPConfig, samples, payload_istart_ien
 		else:
 			t_silence += dt_
 		c += batchlen
-		for (pl, f_nrm) in ret_list:
-			pl_f_cursor_list.append( (pl, float(f_nrm), c) )
-	return pl_f_cursor_list, rx.dt_array, t_signal, t_silence
+		for (pl, f_abs, power_tuple) in ret_list:
+			pl_f_p_cursor_list.append( (pl, float(f_abs), float(power_tuple[0]), c) )
+	return pl_f_p_cursor_list, rx.dt_array, t_signal, t_silence
 
 
 
-def tgt_loop(ii, noisePpHz, dsp_config:DSPConfig, n_payloads, f_center_error, rel_baudrate_error):
+def tgt_loop(ii, noisePpHz, dsp_config:DSPConfig, n_payloads, f_center_error, rel_baudrate_error, tx_mod_index_override=None):
+	if tx_mod_index_override is None:
+		tx_mod_index = dsp_config.mod_index
+	else:
+		tx_mod_index = tx_mod_index_override
 	assert abs(rel_baudrate_error) < 1e-4
 	T_init_silence  = 2.00 * dsp_config.fftlen_mpr * dsp_config.sps / (dsp_config.sps * dsp_config.baudrate)
 	T_end_silence 	= 2.00 * dsp_config.centering_delay_mpr * dsp_config.fftlen_mpr * dsp_config.sps / (dsp_config.sps * dsp_config.baudrate)
@@ -92,12 +96,12 @@ def tgt_loop(ii, noisePpHz, dsp_config:DSPConfig, n_payloads, f_center_error, re
 	avg_delay_t = -1
 	for n_pl_run in nn:
 		samples, payload_istart_iend_list = generate_test_samples(f_tune=dsp_config.rx_f_tune, f_center=dsp_config.rx_f_center + f_center_error, sr0=dsp_config.rx_sr0,
-																  baudrate=dsp_config.baudrate * (1 + rel_baudrate_error), mod_index=dsp_config.mod_index,
+																  baudrate=dsp_config.baudrate * (1 + rel_baudrate_error), mod_index=tx_mod_index,
 																  BT=dsp_config.BT_rx_match, n_payloads=n_pl_run, noisePpHz=noisePpHz, T_init_silence=T_init_silence,
 																  T_interval_array=(T_interval,)*(n_pl_run-1), T_end_silence=T_end_silence)
-		pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=dsp_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=int(0.001 * dsp_config.rx_sr0), do_precompile=False)
-		n_rcvd += len(pl_f_cursor_list)
-		delays_s, delays_t = get_dealys(payload_istart_iend_list=payload_istart_iend_list, pl_f_cursor_list=pl_f_cursor_list, sr0=dsp_config.rx_sr0)
+		pl_f_p_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=dsp_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=int(0.001 * dsp_config.rx_sr0), do_precompile=False)
+		n_rcvd += len(pl_f_p_cursor_list)
+		delays_s, delays_t = get_dealys(payload_istart_iend_list=payload_istart_iend_list, pl_f_p_cursor_list=pl_f_p_cursor_list, sr0=dsp_config.rx_sr0)
 		if any(delays_t > 0):
 			avg_delay_t = np.average([x for x in delays_t if x > 0])
 	reception_rate = n_rcvd / n_payloads
@@ -105,12 +109,12 @@ def tgt_loop(ii, noisePpHz, dsp_config:DSPConfig, n_payloads, f_center_error, re
 
 
 
-def measure_curve_mpr(rx_config:DSPConfig, n_payloads, f_center_error, rel_baudrate_error, noiseP_array):
+def measure_curve_mpr(rx_config:DSPConfig, n_payloads, f_center_error, rel_baudrate_error, noiseP_array, tx_mod_index_override=None):
 	reception_rate_array = np.zeros(len(noiseP_array), dtype=np.float64) -1
 	delay_array = np.zeros(len(noiseP_array), dtype=np.float64) -2
 	argtuples = list()
 	for i_noise, noisePpHz in enumerate(noiseP_array):
-		argtuples.append( (i_noise, noisePpHz, rx_config, n_payloads, f_center_error, rel_baudrate_error) )
+		argtuples.append( (i_noise, noisePpHz, rx_config, n_payloads, f_center_error, rel_baudrate_error, tx_mod_index_override) )
 	ret_list, _ = mpr_set(f=tgt_loop, argtuple_list=argtuples, ncores=7, Q_or_NS="NS", picklepack=True, verbose=False)
 	for i_noise, r_rate, avg_delay_t in ret_list:
 		reception_rate_array[i_noise] = r_rate
@@ -135,22 +139,22 @@ def measure_execution_speed(rx_config:DSPConfig):
 															  baudrate=rx_config.baudrate*(1+1.5e-5), mod_index=rx_config.mod_index,
 															  BT=rx_config.BT_rx_match, n_payloads=12, noisePpHz=0.02/rx_config.baudrate, T_init_silence=T_init_silence,
 															  T_interval_array=(T_interval,)*(8-1), T_end_silence=T_end_silence)
-	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=int(0.001 * rx_config.rx_sr0), do_precompile=False)
+	pl_f_p_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=int(0.001 * rx_config.rx_sr0), do_precompile=False)
 	n_samples = len(samples)
 	n_signal_samples = sum([i1-i0 for (f,i0,i1) in payload_istart_iend_list])
 	return dt_array, t_signal, t_silence, n_samples, n_signal_samples
 
 
 
-def get_dealys(payload_istart_iend_list, pl_f_cursor_list, sr0):
-	pl_f_cursor_d = dict( [(x[0],x[1:3]) for x in pl_f_cursor_list] )
+def get_dealys(payload_istart_iend_list, pl_f_p_cursor_list, sr0):
+	pl_f_p_cursor_d = dict( [(x[0],x[1:4]) for x in pl_f_p_cursor_list] )
 	delays = np.zeros(len(payload_istart_iend_list))
 	for i_pl,(pl,i0,i1) in enumerate(payload_istart_iend_list):
-		if pl in pl_f_cursor_d:
-			lag_samples = pl_f_cursor_d[pl][1] - i1
+		if pl in pl_f_p_cursor_d:
+			lag_samples = pl_f_p_cursor_d[pl][2] - i1
 			assert lag_samples > 0
 			delays[i_pl] = lag_samples
-	return delays, delays * 1.0 / sr0
+	return delays, delays * float(1.0 / sr0)
 
 
 
@@ -324,17 +328,17 @@ def basic_test_A():
 	samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=f_center+3.1e3, sr0=sr0, baudrate=baudrate*(1+1.5e-5), mod_index=rx_config.mod_index, BT=rx_config.BT_rx_match,
 															  n_payloads=n_payloads, noisePpHz=noisePpHz, T_init_silence=2.0, T_interval_array=(5e-3,)*(n_payloads-1), T_end_silence=2.0)
 	print("[Feeding samples]")
-	pl_f_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=1024*4, do_precompile=True, add_noise_amp=0.01)
+	pl_f_p_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=1024*4, do_precompile=True, add_noise_amp=0.01)
 	#pl_f_cursor_d = dict( [(x[0],x[1:3]) for x in pl_f_cursor_list] )
 
 	print("\n\n")
-	print("Received {}/{} payloads.".format(len(pl_f_cursor_list), n_payloads))
+	print("Received {}/{} payloads.".format(len(pl_f_p_cursor_list), n_payloads))
 	speed_printout(dt_array=dt_array, t_total=t_signal+t_silence, nsamples=len(samples), sr0=sr0)
 
-	delays_s, delays_t = get_dealys(payload_istart_iend_list=payload_istart_iend_list, pl_f_cursor_list=pl_f_cursor_list, sr0=sr0)
+	delays_s, delays_t = get_dealys(payload_istart_iend_list=payload_istart_iend_list, pl_f_p_cursor_list=pl_f_p_cursor_list, sr0=sr0)
 	for i_pl,_ in enumerate(payload_istart_iend_list):
 		if delays_s[i_pl] > 0:
-			print("pl #{}:  lags {} ms.  ({} samples)".format(i_pl, round(1e3*delays_t[i_pl],1), delays_s[i_pl]))
+			print("pl #{}:  lags {} ms.  ({} samples)".format(i_pl, round(1e3*float(delays_t[i_pl]), 1), delays_s[i_pl]))
 		else:
 			print("pl #{}:  missing".format(i_pl))
 
@@ -396,6 +400,72 @@ def compare_default_optimod_4800():
 
 	fig.set_layout_engine("tight")
 	plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+def mod_index_matrix_comparison():
+	f_tune 		= 437.1e6
+	f_center 	= 437.125e6
+	sr0 		= 1e6
+	n_payloads	= 64*3
+	rx_config1 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config2 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config1.mod_index = 0.5
+	rx_config2.mod_index = 0.75
+
+	rel_noiseP_array = np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34]) # , 0.28
+	noiseP_array1 = rel_noiseP_array / rx_config1.baudrate
+	noiseP_array2 = rel_noiseP_array / rx_config2.baudrate
+
+	print("rx-0.5 / tx-0.5")
+	reception_rate_array1, _ = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array1, tx_mod_index_override=0.50)
+	print("rx-0.5 / tx-0.75")
+	reception_rate_array2, _ = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array1, tx_mod_index_override=0.75)
+	print("rx-0.75 / tx-0.5")
+	reception_rate_array3, _ = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array2, tx_mod_index_override=0.50)
+	print("rx-0.75 / tx-0.75")
+	reception_rate_array4, _ = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array2, tx_mod_index_override=0.75)
+
+	fig = plt.figure(figsize=(15,11))
+	ax1 = fig.add_subplot(111)
+	ax1.set_title("Reception rate")
+
+	ax1.plot(rel_noiseP_array, reception_rate_array1, label="rx-0.50 // tx-0.50")
+	ax1.plot(rel_noiseP_array, reception_rate_array2, label="rx-0.50 // tx-0.75")
+	ax1.plot(rel_noiseP_array, reception_rate_array3, label="rx-0.75 // tx-0.50")
+	ax1.plot(rel_noiseP_array, reception_rate_array4, label="rx-0.75 // tx-0.75")
+	ax1.set_xlabel("RELATIVE noise power per 1/baudrate")
+	#ax1.semilogx()
+	ax1.set_ylabel("%")
+	ax1.grid()
+	ax1.legend()
+
+	fig.set_layout_engine("tight")
+	plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -696,6 +766,7 @@ basic_test_A()
 #basic_test_A()
 
 #compare_default_optimod_4800()
+mod_index_matrix_comparison()
 
 #compare_fftlens()
 #compare_timings()

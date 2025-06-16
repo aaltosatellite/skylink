@@ -115,7 +115,8 @@ class RadioLoop:
 		rx_streamer.issue_stream_cmd(stream_cmd)
 		while self.on:
 			if (n_rx_loops % 2000) == 0:
-				DBGPRINT("(rx-#{}) (sr~{} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4) ))
+				DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5)))
+			ts_s0 = time.time()
 			rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
 			avg_sr = n_rx_total / (time.perf_counter() - t00)
 			n_rx_total += rx_ret
@@ -125,7 +126,7 @@ class RadioLoop:
 			#if self.self_mute:
 			#	continue
 			if not self.que_rx_samples_out.full():
-				self.que_rx_samples_out.put_nowait(recv_buffer[0, :rx_ret].copy())
+				self.que_rx_samples_out.put_nowait((ts_s0, recv_buffer[0, :rx_ret].copy()))
 			else:
 				DBGPRINT("WARNING: radio-to-process queue overflow!")
 				raise Exception("radio-loop: radio-to-process queue overflow.")
@@ -216,7 +217,8 @@ class RadioLoop:
 		sdr.activateStream(rxStream)
 		while self.on:
 			if (n_rx_loops % 2000) == 0:
-				DBGPRINT("(rx-#{}) (sr~{} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4) ))
+				DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4), round(1e-6*self.radio_config.rx_sr0, 5)))
+			ts_s0 = time.time()
 			ret = sdr.readStream(rxStream, [buff], numElems=absolute_bufflen, timeoutUs=timeout)
 			rx_ret = ret.ret
 			n_rx_total += rx_ret
@@ -230,7 +232,7 @@ class RadioLoop:
 			#if self.self_mute:
 			#	continue
 			if not self.que_rx_samples_out.full():
-				self.que_rx_samples_out.put_nowait(buff[:rx_ret].copy())
+				self.que_rx_samples_out.put_nowait((ts_s0, buff[:rx_ret].copy()))
 			else:
 				DBGPRINT("WARNING: radio-to-process queue overflow!")
 				raise Exception("radio-loop: radio-to-process queue overflow.")
@@ -282,7 +284,7 @@ class RadioLoop:
 
 	# === RECORDING ==========================================================================================================================================================================
 	# === RECORDING ==========================================================================================================================================================================
-	def recording_start(self, fpath=None, sr0=None, fcenter0=None):
+	def _recording_start(self, fpath=None, sr0=None, fcenter0=None):
 		DBGPRINT("Recording start")
 		import pickle
 		if fpath is None:
@@ -319,6 +321,7 @@ class RadioLoop:
 		while self.on:
 			time.sleep(t_sleep)
 			batchlen = min(default_batchlen, nsamples-cursor )
+			ts_s0 = time.time()
 			batch = samples[cursor:cursor+batchlen]
 			assert len(batch) == batchlen
 			cursor += batchlen
@@ -326,7 +329,7 @@ class RadioLoop:
 				cursor = 0
 				DBGPRINT("Recordning cursor zeroed.")
 			if not self.que_rx_samples_out.full():
-				self.que_rx_samples_out.put_nowait(batch)
+				self.que_rx_samples_out.put_nowait((ts_s0,batch))
 			else:
 				DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
 			n_received += batchlen

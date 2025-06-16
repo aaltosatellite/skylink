@@ -3,7 +3,7 @@ import os
 import time
 import numpy as np
 import pickle
-from mtools.tools_dsp import waterfall_mx
+#from mtools.tools_dsp import waterfall_mx
 from scipy.signal import firwin
 from matplotlib import pyplot as plt
 from datetime import datetime as dtime
@@ -252,13 +252,13 @@ def load_samples(fpath):
 if __name__ == '__main__':
 	default_dpath = "/home/elmore/datasetit/radiotallenteet/"
 
-	f_tune_ = 436.0e6
-	sr_ = 4e6
-	smpls = usrp_record(f_tune=f_tune_,  sr=sr_, t_total=5.0, gain=55, show=False)
+	f_tune_ = 437.10e6
+	sr_ = 1.0e6
+	smpls = usrp_record(f_tune=f_tune_,  sr=sr_, t_total=20.0, gain=55, show=False)
 	print("samples max amp:", np.max(np.abs(smpls)) )
-	waterfall_mx(samples=smpls, fftlen=2048, fft_jump=1024, srate=sr_, plot_and_show=True, y_is_time=True)
-	#store_samples(samples=smpls, dpath=default_dpath, fname_base="Clio", f_tune=f_tune_, sr=sr_)
 
+	store_samples(samples=smpls, dpath=default_dpath, fname_base="Tallinna_".format(int(time.time())), f_tune=f_tune_, sr=sr_)
+	#waterfall_mx(samples=smpls, fftlen=2048, fft_jump=1024, srate=sr_, plot_and_show=True, y_is_time=True)
 	#smpls, f_tune_, sr_ = load_samples(fpath=default_dpath + "Clio-B.pkl")
 	#print("Loaded {} samples".format(len(smpls)))
 	#nn = len(smpls)

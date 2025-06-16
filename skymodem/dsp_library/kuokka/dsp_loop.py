@@ -22,7 +22,7 @@ def DBGPRINT(*args, **kwargs):
 
 
 class DSPLoop:
-	def __init__(self, dsp_config:DSPConfig, que_rx_samples_in:Queue, que_rx_payloads_out:queue.Queue, que_tx_payloads_in:Queue, que_tx_samples_out:Queue):
+	def __init__(self, dsp_config:DSPConfig, que_rx_samples_in:Queue, que_rx_payloads_out:queue.Queue, que_tx_payloads_in:Queue, que_tx_samples_out:Queue, que_signaldata_out:Queue):
 		DBGPRINT("Precompile DSP")
 		precompile_receiver(dsp_config, do_print=False)
 		self.dsp_config 			= dsp_config
@@ -37,6 +37,7 @@ class DSPLoop:
 		self.que_rcv_payloads_out	= que_rx_payloads_out
 		self.que_tx_payloads_in		= que_tx_payloads_in
 		self.que_tx_samples_out		= que_tx_samples_out
+		self.que_signaldata_out 	= que_signaldata_out
 		self.rx 				= Receiver(config=dsp_config)
 		self.rx_process_thread 	= threading.Thread(target=None, args=tuple())
 		self.tx_process_thread 	= threading.Thread(target=None, args=tuple())
@@ -144,10 +145,11 @@ class DSPLoop:
 
 	def _rx_loop(self):
 		default_batchlen = self.dsp_config.batch_maxlen // 2
+		T_sample = 1.0 / self.dsp_config.rx_sr0
 		while self.on:
 			try:
-				samples = self.que_rx_samples_in.get(timeout=0.20)
-				t_rx0 = time.monotonic() - len(samples) / self.dsp_config.rx_sr0
+				ts_s0_unix, samples = self.que_rx_samples_in.get(timeout=0.20)
+				t_rx0_mono = time.monotonic() - len(samples) * T_sample
 			except Empty:
 				continue
 			except Exception as e:
@@ -159,15 +161,18 @@ class DSPLoop:
 				while c < len(samples):
 					batch = samples[c:c+default_batchlen]
 					rx_pls, carrier_sensed = self.rx.process_samples(batch=batch, give_bits=False)
-					if carrier_sensed and ((t_rx0 + c / self.dsp_config.rx_sr0) > self.t_projected_tx_end):
-						self.que_rcv_payloads_out.put( ("cs", None) )
-					for rx_pl, rx_f_absolute in rx_pls:
+					t_mono = t_rx0_mono + c * T_sample
+					ts_unix = ts_s0_unix + c * T_sample
+					if carrier_sensed and (t_mono > self.t_projected_tx_end):
+						self.que_rcv_payloads_out.put( ("cs", None), timeout=1.0)
+					for rx_pl, rx_f_absolute, power_tuple in rx_pls:
 						if rx_pl in self.own_recently_sent:
 							del self.own_recently_sent[rx_pl]
 							DBGPRINT("Discarded self reception.")
 							continue
 						self.last_verified_freq = (rx_f_absolute, time.monotonic())
-						self.que_rcv_payloads_out.put( ("pl", rx_pl) )
+						self.que_rcv_payloads_out.put( ("pl", rx_pl), timeout=1.0)
+						self.que_signaldata_out.put((ts_unix, rx_f_absolute, power_tuple, self.dsp_config.baudrate, rx_pl), timeout=1.0)
 					c += default_batchlen
 
 

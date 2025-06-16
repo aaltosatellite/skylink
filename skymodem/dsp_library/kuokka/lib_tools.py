@@ -416,12 +416,31 @@ def radionoise(n, sr, W_per_Hz):
 	:return: n samples of normal distributed IQ noise
 	To verify signal energy, and spectral power density:
 		with df = sr/n
+		n * absfft**2 * (sr/n)**2  = W_per_Hz * sr
+		absfft * sqrt(n) * (sr/n) = sqrt(W_per_Hz * sr)
+		absfft = sqrt(W_per_Hz * sr) * sqrt(n)/sr
+		absfft = sqrt(W_per_Hz * n / sr)
+		absfft * sqrt(sr/n) = sqrt(W_per_Hz)
+		W_per_Hz = absfft**2 * (sr/n)
+		W_per_Hz * n2*df = W =  absfft**2 * (sr/n)**2 * n2
 		sum((fft(samples)*df)**2) ≈ W_per_Hz * sr
 		- Each fft-bin is (2*f_Nyquist) / n  Hertz wide.
 		- fft bins represent amplitudes of constituent component frquencies.
 	"""
 	cc = (0.5*W_per_Hz*sr)**0.5
 	return cc * (np.random.normal(0,1.0, n) + 1j*np.random.normal(0, 1.0, n))
+
+def signal_energy(samples, sr):
+	# returns exactly the same value as:   np.sum(np.abs(samples)**2 * dt)     | dt = 1/sr
+	# == np.sum(np.abs(np.fft.fft(samples))**2) * df / (sr**2)                 | df = sr/len(samples)   (valid for even and odd samplecounts)
+	# 			E = P*t,    t = n/sr = len(samples)/sr.
+	#		=> 	P = E/t = E * sr/n    = sumabsp2 * (1 / (len(samples) * sr))   * sr/len(samples)
+	#		=>	P = sumabsp2 * 1 / len(samples)**2
+	return np.sum(np.abs(np.fft.fft(samples))**2) / (len(samples) * sr)
+
+def signal_power(samples):
+	# returns exactly the same value as:   np.sum(np.abs(samples)**2) * dt / (dt*len(samples))     | dt = 1/sr
+	return np.sum(np.abs(np.fft.fft(samples))**2) / (len(samples)**2)
 # SAMPLE GENERATION ==========================================================================================================================================================================
 # SAMPLE GENERATION ==========================================================================================================================================================================
 
