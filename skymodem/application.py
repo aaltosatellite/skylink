@@ -9,7 +9,7 @@ from dsp_library.kuokka.lib_tools import get_doppler_low_high
 from dsp_library.kuokka.lib_tools import fractional_resampler_f_max_undisturbed
 from skylink_wrapper.cython_skylink import SkyLinkLoop, SkyConfiguration, EKEY_SKY_ARQ_DISCONNECTED, EKEY_SKY_PAYLOAD, EKEY_SKY_ARQ_CONNECTED
 from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_off
-import zmq
+import zmq, amqp
 import time
 import json
 from datetime import datetime as dtime
@@ -65,26 +65,31 @@ def bind_vc_sockets(vc_port_base, num_channels):
 		pub_sock.bind("tcp://*:{}".format( str(vc_port_base + i_vc*10) ))
 		pub_sock.set(zmq.RCVTIMEO, 1000)
 		pub_sockets.append(pub_sock)
-
 		sub_sock = context.socket(zmq.SUB)
 		sub_sock.bind("tcp://*:{}".format( str(vc_port_base + i_vc*10 + 1) ))
 		sub_sock.subscribe(b"")
 		sub_sock.set(zmq.RCVTIMEO, 1000)
 		sub_sockets.append(sub_sock)
-
 	signaldata_pub_sock = context.socket(zmq.PUB)
 	signaldata_pub_sock.bind("tcp://*:{}".format( str(vc_port_base + 2) ))
 	signaldata_pub_sock.set(zmq.RCVTIMEO, 1000)
 	#signaldata_pub_sock.append(pub_sock)
-
 	return pub_sockets, sub_sockets, signaldata_pub_sock, context
+
+
+
+def connect_amqp_pub_socket(broker_addr):
+	amqp_conn = amqp.Connection(broker_addr) #'broker.example.com'
+	ch = amqp_conn.channel()
+	#ch.basic_publish(amqp.Message('Hello World'), routing_key='test')
+	return ch, amqp_conn
 
 
 
 
 
 class SkyModem:
-	def __init__(self, dsp_config:DSPConfig, radio_config:RadioConfig, skylink_config:SkyConfiguration, hmac_key_list, vc_port_base):
+	def __init__(self, dsp_config:DSPConfig, radio_config:RadioConfig, skylink_config:SkyConfiguration, hmac_key_list, vc_port_base, amqp_broker_addr=None):
 		self.on = True
 		self.hmac_key_list = hmac_key_list
 		self.que_samples_radio_to_dsp 	= Queue(500)
@@ -100,6 +105,10 @@ class SkyModem:
 		self.sub_que_process_thread 	= threading.Thread(target=None, args=tuple())
 		self.skylink_reception_thread 	= threading.Thread(target=None, args=tuple())
 		pub_sockets, sub_sockets, signaldata_pub_sock, context = bind_vc_sockets(vc_port_base=vc_port_base, num_channels=num_virtual_channels)
+		self.amqp_connection = None
+		self.signaldata_amqp_pub_sock = None
+		if not (amqp_broker_addr is None):
+			self.signaldata_amqp_pub_sock, self.amqp_connection = connect_amqp_pub_socket(amqp_broker_addr)
 		self.pub_sockets = pub_sockets
 		self.sub_sockets = sub_sockets
 		self.signaldata_pub_sock = signaldata_pub_sock
@@ -181,6 +190,8 @@ class SkyModem:
 					"pl": 				signaldata_tuple[4],
 				}
 				self.signaldata_pub_sock.send(json.dumps(signaldata_d).encode("utf8"))
+				if self.signaldata_amqp_pub_sock:
+					self.signaldata_amqp_pub_sock.basic_publish(json.dumps(signaldata_d), routing_key="fs1p.store.signaldata", exchange="measurements")
 			try:
 				ekey, ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.20)
 			except Empty:
@@ -446,7 +457,8 @@ if __name__ == '__main__':
 		assert _args.mode == "usrp"
 		dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2)
 
-	modem = SkyModem(dsp_config=dsp_config_, radio_config=radio_config_, skylink_config=skylink_config_, hmac_key_list=hmac_keys, vc_port_base=vc_base)
+	amqp_broker_addr_ = "amqp://guest:guest@localhost:5672/"
+	modem = SkyModem(dsp_config=dsp_config_, radio_config=radio_config_, skylink_config=skylink_config_, hmac_key_list=hmac_keys, vc_port_base=vc_base, amqp_broker_addr=amqp_broker_addr_)
 	modem.start()
 	modem.dsp_loop.set_doppler_correction(False)
 	try:
