@@ -192,7 +192,6 @@ class SkyModem:
 					"baudrate": 		signaldata_tuple[3],
 					"pl": 				signaldata_tuple[4].hex(),
 				}
-
 				self.signaldata_pub_sock.send(json.dumps(signaldata_d).encode("utf8"))
 				if self.signaldata_amqp_pub_sock:
 					self.signaldata_amqp_pub_sock.basic_publish(amqp.Message(json.dumps(signaldata_d)), routing_key="fs1p.store.signaldata", exchange="measurements")

@@ -297,16 +297,16 @@ def deframe(bits, bit_frequencies, bit_powers, deframer_mx, rs_mx, rs_cfg):  # "
 				state = 1
 				frequency_sum = int(1e9 * bit_frequencies[ib])
 				frequency_sum_count = 1
-				power_sum = int(1e9 * bit_powers[ib,0])		# for power sense
-				noise_avg_sum = int(1e9 * bit_powers[ib,1])	# for power sense
+				power_sum = int(1e14 * bit_powers[ib,0])		# for power sense
+				noise_avg_sum = int(1e14 * bit_powers[ib,1])	# for power sense
 				power_sum_count = 1							# for power sense
 			continue
 		elif state == 1:
 			ok, latest_bits, bit_idx, data_len = deframe_header(bit=bit, latest_bits=latest_bits, bit_idx=bit_idx, use_rs=use_rs, data_maxlen=data_maxlen)
 			frequency_sum += int(1e9 * bit_frequencies[ib])
 			frequency_sum_count += 1
-			power_sum += int(1e9 * bit_powers[ib,0])		# for power sense
-			noise_avg_sum += int(1e9 * bit_powers[ib,1])	# for power sense
+			power_sum += int(1e14 * bit_powers[ib,0])		# for power sense
+			noise_avg_sum += int(1e14 * bit_powers[ib,1])	# for power sense
 			power_sum_count += 1							# for power sense
 			if ok < 0:
 				#print("\t(Deframer << 0! (Header deframe failed.))", ok)
@@ -321,8 +321,8 @@ def deframe(bits, bit_frequencies, bit_powers, deframer_mx, rs_mx, rs_cfg):  # "
 			ok, latest_bits, bit_idx, char_idx, pl_leng = deframe_payload(bit=bit, latest_bits=latest_bits, bit_idx=bit_idx, chars=chars, char_idx=char_idx, use_scrambler=use_scrambler, data_len=data_len, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg)
 			frequency_sum += int(1e9 * bit_frequencies[ib])
 			frequency_sum_count += 1
-			power_sum += int(1e9 * bit_powers[ib,0])		# for power sense
-			noise_avg_sum += int(1e9 * bit_powers[ib,1])	# for power sense
+			power_sum += int(1e14 * bit_powers[ib,0])		# for power sense
+			noise_avg_sum += int(1e14 * bit_powers[ib,1])	# for power sense
 			power_sum_count += 1							# for power sense
 			if ok < 0:
 				#print("\t(Deframer << 0! (Decode failed.))")
@@ -347,8 +347,8 @@ def deframe(bits, bit_frequencies, bit_powers, deframer_mx, rs_mx, rs_cfg):  # "
 				payload_frequencies = payload_frequencies0
 				#payload_frequencies = np.resize(payload_frequencies, len(payload_frequencies)+1)
 				payload_frequencies[-1] = freq
-				power = (1.0e-9*power_sum) / (1.0*power_sum_count)											# for power sense
-				noise_avg = (1.0e-9*noise_avg_sum) / (1.0*power_sum_count)									# for power sense
+				power = (1.0e-14*power_sum) / (1.0*power_sum_count)											# for power sense
+				noise_avg = (1.0e-14*noise_avg_sum) / (1.0*power_sum_count)									# for power sense
 				payload_powertuples0 = np.zeros((len(payload_powertuples)+1, 3), dtype=np.float64)	# for power sense
 				payload_powertuples0[:len(payload_powertuples)] = payload_powertuples						# for power sense
 				payload_powertuples = payload_powertuples0													# for power sense
