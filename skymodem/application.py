@@ -15,6 +15,7 @@ import json
 from datetime import datetime as dtime
 from queue import Queue, Empty
 import os, struct
+from urllib.parse import urlparse
 DEBUG_PRINT_ON = True
 
 def DBGPRINT(*args, **kwargs):
@@ -79,7 +80,9 @@ def bind_vc_sockets(vc_port_base, num_channels):
 
 
 def connect_amqp_pub_socket(broker_addr):
-	amqp_conn = amqp.Connection(broker_addr) #'broker.example.com'
+	amqp_url = urlparse(broker_addr)
+	amqp_conn = amqp.Connection(host=amqp_url.hostname, userid=amqp_url.username, password=amqp_url.password)
+	amqp_conn.connect()
 	ch = amqp_conn.channel()
 	#ch.basic_publish(amqp.Message('Hello World'), routing_key='test')
 	return ch, amqp_conn
@@ -187,11 +190,12 @@ class SkyModem:
 					"noise_power": 		signaldata_tuple[2][1],
 					"power_bw": 		signaldata_tuple[2][2],
 					"baudrate": 		signaldata_tuple[3],
-					"pl": 				signaldata_tuple[4],
+					"pl": 				signaldata_tuple[4].hex(),
 				}
+
 				self.signaldata_pub_sock.send(json.dumps(signaldata_d).encode("utf8"))
 				if self.signaldata_amqp_pub_sock:
-					self.signaldata_amqp_pub_sock.basic_publish(json.dumps(signaldata_d), routing_key="fs1p.store.signaldata", exchange="measurements")
+					self.signaldata_amqp_pub_sock.basic_publish(amqp.Message(json.dumps(signaldata_d)), routing_key="fs1p.store.signaldata", exchange="measurements")
 			try:
 				ekey, ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.20)
 			except Empty:
@@ -457,7 +461,7 @@ if __name__ == '__main__':
 		assert _args.mode == "usrp"
 		dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2)
 
-	amqp_broker_addr_ = "amqp://guest:guest@localhost:5672/"
+	amqp_broker_addr_ = "amqp://guest:guest@localhost:5672"
 	modem = SkyModem(dsp_config=dsp_config_, radio_config=radio_config_, skylink_config=skylink_config_, hmac_key_list=hmac_keys, vc_port_base=vc_base, amqp_broker_addr=amqp_broker_addr_)
 	modem.start()
 	modem.dsp_loop.set_doppler_correction(False)
