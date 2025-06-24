@@ -130,7 +130,7 @@ def create_fft_f_centerer_csense_statemx(fftlen, sps, f_center_search_map, mod_i
 	assert len(f_center_search_map) == fftlen
 	assert 0.5 < c_center_decay < 1.0
 	masklen = get_empiric_masklen(fftlen=fftlen, sps=sps)
-	power_band_length = int(0.5 * 1.1 * (mod_index/0.5) * fftlen / sps)*2 +1 # 0.75*baudrate is approximately the bandwidth of half max amplitude.		# for energy sense
+	power_band_length = int(0.5 * 0.75 * (mod_index/0.5) * fftlen / sps)*2 +1 # 0.75*baudrate is approximately the bandwidth of half max amplitude.		# for energy sense
 	assert power_band_length <= masklen
 	jumplen = int(fftlen/2)
 	f_center_search_map_arr = np.array(f_center_search_map).copy()
