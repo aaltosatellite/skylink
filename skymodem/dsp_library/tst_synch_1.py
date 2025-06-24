@@ -22,7 +22,6 @@ def _synchs_against_eachother_round(plott=False):
 	stream = stream + np.random.normal(0, 0.33, n_samples)
 	approximate_zeros = np.arange(1024)*sps #*(np.random.random()+0.3)
 	if plott:
-		from matplotlib import pyplot as plt
 		fig = plt.figure(figsize=(14,9))
 		ax = fig.add_subplot(111)
 		ax.plot(np.arange(n_samples), stream)
@@ -151,7 +150,7 @@ def make_fmdemod_samples(sps_f, baudrate, f_offset_in_br, n_symbols, mod_idx, BT
 
 
 def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, noisePpHz, f_offset_in_br, mod_idx, BT, lp_coeff, n_decay, synch_delay_mpr, do_prints, do_plots):
-	assert type(sps) == int
+	#assert type(sps) == int
 	assert type(n_symbols) == int
 	assert noisePpHz >= 0.0
 	assert abs(relative_rate_error) < 0.5
@@ -189,18 +188,18 @@ def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, n
 	dt_2 = time.perf_counter() - t0
 
 	# Do symbol synch
-	t0 = time.perf_counter()
-	JPLstatemx = create_classic_JPL_statemx(N_eps=claimed_sps, n_decay=n_decay)
+	JPLstatemx = create_classic_JPL_statemx(N_eps=int(claimed_sps), n_decay=n_decay)
 	_ = classic_JPL_synch_run(samples=samples2, statemx=JPLstatemx)
 	_ = classic_JPL_synch_run(samples=samples2, statemx=JPLstatemx)
-	JPLstatemx = create_classic_JPL_statemx(N_eps=claimed_sps, n_decay=n_decay)
+	JPLstatemx = create_classic_JPL_statemx(N_eps=int(claimed_sps), n_decay=n_decay)
 	t00 = time.perf_counter()
 	synchphase_arr = classic_JPL_synch_run(samples=samples2, statemx=JPLstatemx)
-	dt_3_1 = time.perf_counter() - t00
-	dt_3 = time.perf_counter() - t0
-	print("Classic synch in     {} ms".format(1000*dt_3_1))
-	ratio = (sps*9600*4) / (len(samples2) / dt_3_1)
+	dt_3 = time.perf_counter() - t00
+	print("Classic synch in     {} ms".format(1000*dt_3))
+	print("({} samples)".format(len(samples2)))
+	ratio = (sps*9600*1) / (len(samples2) / dt_3)
 	print("Core use: ", 100*ratio)
+	print("")
 
 	# Symbol decision
 	t0 = time.perf_counter()
@@ -233,18 +232,22 @@ def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, n
 
 
 	# Traveling synch
-	N_eps = int(claimed_sps + 4)
+	N_eps = int(8)
+	synchphase_arr_trv = np.zeros((len(samples2)+10,3), dtype=np.float64)
 	JPLstatemx_trv = create_traveling_phase_JPL_statemx(sps_f=sps, N_eps=N_eps, n_decay=n_decay)
-	_ = traveling_phase_JPL_synch_run(sample_arr=samples2, statemx=JPLstatemx_trv)
-	_ = traveling_phase_JPL_synch_run(sample_arr=samples2, statemx=JPLstatemx_trv)
+	_ = traveling_phase_JPL_synch_strm(sample_arr=samples2, i_sample0=0, nsamples=len(samples2), synch_arr=synchphase_arr_trv, synch_head0=0, statemx=JPLstatemx_trv)
+	_ = traveling_phase_JPL_synch_strm(sample_arr=samples2, i_sample0=0, nsamples=len(samples2), synch_arr=synchphase_arr_trv, synch_head0=0, statemx=JPLstatemx_trv)
+	#_ = traveling_phase_JPL_synch_run(sample_arr=samples2, statemx=JPLstatemx_trv)
+	#_ = traveling_phase_JPL_synch_run(sample_arr=samples2, statemx=JPLstatemx_trv)
 	JPLstatemx_trv = create_traveling_phase_JPL_statemx(sps_f=sps, N_eps=N_eps, n_decay=n_decay)
 	t00 = time.perf_counter()
-	synchphase_arr_trv = traveling_phase_JPL_synch_run(sample_arr=samples2, statemx=JPLstatemx_trv)
+	_ = traveling_phase_JPL_synch_strm(sample_arr=samples2, i_sample0=0, nsamples=len(samples2), synch_arr=synchphase_arr_trv, synch_head0=0, statemx=JPLstatemx_trv)
 	dt_4 = time.perf_counter() - t00
 	print("Traveling synch in  {} ms".format(dt_4*1000))
 	print("({} samples)".format(len(samples2)))
-	ratio = (sps*9600*4) / (len(samples2) / dt_4)
+	ratio = (sps*9600*1) / (len(samples2) / dt_4)
 	print("Core use: ", 100*ratio)
+	print("")
 
 	# Symbol decision trv
 	t0 = time.perf_counter()
@@ -284,7 +287,7 @@ def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, n
 		print("{} samples".format( n_samples ))
 		print("{} symbols".format( n_symbols ))
 		print("corresponds to    {} ms".format( round(1e3 * n_samples / sr) ))
-		print("dt-JPL:           {} ms".format( round(1e3 * dt_3_1, 2) ))
+		print("dt-JPL:           {} ms".format( round(1e3 * dt_3, 2) ))
 		print("{} decoded bits".format(n_decoded_bits))
 		print("Correlation max:  {}".format( corrmax ))
 		print("                  {} %".format( round(100*corrmax/n_symbols,1) ))

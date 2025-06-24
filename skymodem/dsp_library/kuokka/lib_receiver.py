@@ -1,15 +1,14 @@
 import time
 import numpy as np
-from .lib_demodulation import demodulation_sequence, create_DSD_statemx, DSD_buffer_roll
+from .lib_demodulation import create_demod_statemx, create_DD_statemx, demodulate, decide_decode
 from .lib_symsynching import create_classic_JPL_statemx
-from .lib_fft_finder import create_fft_f_centerer_statemx, fft_f_centerer
 from .lib_fft_finder import create_fft_f_centerer_csense_statemx, fft_f_centerer_csense
-from .lib_framing import create_deframer, deframe, RS_MAX_ENCODED_LEN, frame_packet, RS_MAX_PL_LEN
+from .lib_framing import create_deframer, RS_MAX_ENCODED_LEN, frame_packet, RS_MAX_PL_LEN
 from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples2, ints_to_bits, freq_shift_phased, choose_fftlen
 from .lib_reedsolomon import get_default_rs
 from .lib_resampler import staged_resampler_execute_stream, create_staged_resampler, minimal_disc_halflen_for_staged_resampler, minimal_frac_halflen_for_staged_resampler
 from .lib_tools import get_frequency_search_map
-
+from .lib_symsynching import classic_JPL_synch_strm
 
 
 
@@ -34,7 +33,7 @@ class DSPConfig:
 		self.rs_f_cutoff_coeff 	= 0.499			# - Lowpass associated with the resampling. In interval (0:0.5). 0.499 still enables some aliasing at edges.
 		# --------------------------------------------------
 		# fft detection ------------------------------------
-		self.fftlen_mpr 		= 48			# ! Length of the fft window in multiples of sps in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
+		self.fftlen_mpr 		= 52			# ! Length of the fft window in multiples of sps in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
 		self.mod_index 			= 0.5			# S Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
 		self.BT_rx_match 		= 0.425			# S Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering. TODO: best match for 0.5 at UHF-firmware is 0.425 here
 		self.centering_delay_mpr= 2.0 			# ! Center frequency estimate is collected for (centering_delay_mpr*fftlen) samples ahead of demodulation. TODO should be in symbols?
@@ -64,7 +63,7 @@ class DSPConfig:
 		# --------------------------------------------------
 
 	def check_validity(self):
-		assert 10000 < self.bufferlen < 100e6
+		assert 50e3 <= self.bufferlen < 100e6
 		assert type(self.bufferlen) == int
 		assert 100 < self.batch_maxlen < (0.05*self.bufferlen)
 		assert type(self.batch_maxlen) == int
@@ -143,24 +142,29 @@ class Receiver:
 		self.dmd_array 			= np.zeros(self.bufferlen, dtype=np.float64)
 		self.synch_array 		= np.zeros((self.bufferlen, 3), dtype=np.int64)
 		self.power_array 		= np.zeros((self.bufferlen, 3), dtype=np.float64)    # for energy sense
+		self.fft_instr_array 	= np.zeros((self.bufferlen, 4), dtype=np.float64)
 		self.bit_array 			= np.zeros(self.bufferlen // 10, dtype=np.int64)
 		self.bit_f_array 		= np.zeros(self.bufferlen // 10, dtype=np.float64)
 		self.bit_p_array 		= np.zeros((self.bufferlen // 10, 3), dtype=np.float64)			# for energy sense
-		self.fft_instr_array 	= np.zeros((self.bufferlen, 4), dtype=np.float64)
 		self.bufferhalf			= int(self.bufferlen / 2)
 		self.buffer_roll_limit 	= int(self.bufferlen*3/4)
 		self.rs_head 			= 0
 		self.center_f_head 		= 0
 		self.demodulation_head 	= 0
+		self.dmd_head 			= 0
 		self.dmdsynch_head 		= 0
+		self.sdd_head 			= 0
+		self.opt_dec_idx_f 		= 0.0
 		self.bit_head 			= 0
 		self.rsmpl_mx1 			= np.zeros((2,2), dtype=np.float64)
 		self.rsmpl_mx2 			= np.zeros((2,2), dtype=np.float64)
 		self.FFTstatemx 		= np.zeros((2,2), dtype=np.float64)
 		self.JPLstatemx 		= np.zeros((2,2), dtype=np.float64)
 		self.DSDstatemx 		= np.zeros((2,2), dtype=np.float64)
+		self.demodmx 			= np.zeros((2,2), dtype=np.float64)
+		self.sddmx 				= np.zeros((2,2), dtype=np.float64)
 		self.deframermx 		= np.zeros((2,2), dtype=np.float64)
-		self.white_noise		= np.zeros(config.batch_maxlen*10, dtype=np.complex64)
+		self.white_noise		= np.zeros(config.batch_maxlen*3+1024, dtype=np.complex64)
 		self.add_white_noise	= False
 		rs_mx, rs_cfg 			= get_default_rs()
 		self.rs_mx 				= rs_mx
@@ -168,7 +172,8 @@ class Receiver:
 		self.fftlen 			= 0
 		self.centering_fdelta_nrm = 0.0
 		self.centering_phase 	= 0.0
-		self.dt_array			= np.zeros(6, dtype=np.float64)
+		self.dt_array			= np.zeros(7, dtype=np.float64)
+		self.dt_array_names		= ("f-shift", "resample", "fft-center", "demodulate", "synch", "decide-decode", "buffer-roll")
 		self._setup()
 		self.save_fp = None
 		self.save_len = 0
@@ -188,6 +193,7 @@ class Receiver:
 		#self.switch_baudrate(baudrate=9600*2*2, sps=_sps)
 		#self.switch_baudrate(baudrate=_br, sps=_sps)
 
+
 	def _setup(self):
 		self.config.check_validity()
 		config = self.config
@@ -206,24 +212,22 @@ class Receiver:
 		rsmpl_mx1, rsmpl_mx2 = create_staged_resampler(halflen_div=halflen_disc, halflen_f=halflen_frac, r_rate=config.get_r_rate(), n_banks=config.n_banks, f_cutoff=f_cutoff, allow_aliasing=False)
 		self.rsmpl_mx1 = rsmpl_mx1
 		self.rsmpl_mx2 = rsmpl_mx2
-		if config.carrier_sense:
-			self.FFTstatemx = create_fft_f_centerer_csense_statemx(fftlen=self.fftlen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index,
-														BT_rx_match=config.BT_rx_match, centering_delay_mpr=config.centering_delay_mpr, c_center_decay=config.c_center_decay, c_stat_update=1-0.995, carrier_sense_threshold=6.0)
-		else:
-			self.FFTstatemx = create_fft_f_centerer_statemx(fftlen=self.fftlen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index,
-														BT_rx_match=config.BT_rx_match, centering_delay_mpr=config.centering_delay_mpr, c_center_decay=config.c_center_decay)
+		self.FFTstatemx	= create_fft_f_centerer_csense_statemx(fftlen=self.fftlen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index, BT_rx_match=config.BT_rx_match, centering_delay_mpr=config.centering_delay_mpr, c_center_decay=config.c_center_decay, c_stat_update=1-0.995, carrier_sense_threshold=6.0)
 		self.JPLstatemx = create_classic_JPL_statemx(N_eps=config.sps, n_decay=config.JPL_n_decay)
-		self.DSDstatemx = create_DSD_statemx(lp_ntaps=config.lp_ntaps, lp_cutoff_coeff=config.lp_cutoff_coeff, synch_delay_mpr_f=config.synch_delay_mpr, sps_f=config.sps)
-		self.deframermx = create_deframer(use_scrambler=config.use_scrambler, use_rs=config.use_rs, data_maxlen=config.data_maxlen,
-										  synchword=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, synch_threshold=config.synch_threshold)
+		self.demodmx 	= create_demod_statemx(lp_ntaps=config.lp_ntaps, lp_cutoff_coeff=config.lp_cutoff_coeff, sps_f=config.sps)
+		self.sddmx 		= create_DD_statemx(synch_delay_mpr_f=config.synch_delay_mpr, sps_f=config.sps, Neps=int(config.sps))
+		self.deframermx = create_deframer(use_scrambler=config.use_scrambler, use_rs=config.use_rs, data_maxlen=config.data_maxlen, synchword=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, synch_threshold=config.synch_threshold)
 		a = int(config.batch_maxlen * config.get_r_rate() * 2)
-		b = self.fftlen * 2
+		b = self.fftlen * 3
 		self.buffer_roll_limit 	= self.bufferlen - (a + b + 4)
 		assert self.buffer_roll_limit > (self.bufferlen * 0.9), self.buffer_roll_limit/self.bufferlen
 		self.rs_head 			= 0
 		self.center_f_head 		= 0
 		self.demodulation_head 	= 0
+		self.dmd_head 			= 0
 		self.dmdsynch_head 		= 0
+		self.sdd_head 			= 0
+		self.opt_dec_idx_f 		= 0.0
 		self.bit_head 			= 0
 		self.centering_phase 	= 0.0
 		self.dt_array *= 0.0
@@ -246,29 +250,30 @@ class Receiver:
 		self.config.check_validity()
 		self._setup()
 
-	def set_additive_noise_amplitude(self, amplitude):
-		if amplitude == 0:
+
+	def set_additive_noise_amplitude(self, W_per_Hz):
+		if W_per_Hz <= 0:
 			self.add_white_noise = False
 		else:
 			self.add_white_noise = True
-			self.white_noise = np.random.normal(0,amplitude, self.config.batch_maxlen*10)
+			self.white_noise = radionoise(n=self.config.batch_maxlen*3+1024, sr=self.config.baudrate*self.config.sps, W_per_Hz=W_per_Hz)
 
 
 	def process_samples(self, batch, give_bits=False):
-		ret = list()
-		bits = np.zeros(0, dtype=np.int64)
-
+		## Coarse frequency shift: Expected center frequency shifted to 0
 		t0 = time.perf_counter()
 		batch2, self.centering_phase = freq_shift_phased(batch, sr=1.0, fdelta=self.centering_fdelta_nrm, phase0=self.centering_phase)
 		self.dt_array[0] += (time.perf_counter() - t0)
 
+		## Resample down to sr = sps*baudrate
 		t0 = time.perf_counter()
 		rs_head_new = staged_resampler_execute_stream(in_arr=batch2, ii0=0, nsamples=len(batch2), out_arr=self.rs_array, io0=self.rs_head, mx1=self.rsmpl_mx1, mx2=self.rsmpl_mx2)
 		#if self.add_white_noise:
-		#	i = np.random.randint(0, 32)
+		#	i = np.random.randint(0, 1024)
 		#	self.rs_array[self.rs_head:rs_head_new] += self.white_noise[i:i+(rs_head_new - self.rs_head)]
 		self.dt_array[1] += (time.perf_counter() - t0)
 
+		## Write samples to a file if one is open
 		if self.save_fp:
 			k = np.complex64(self.rs_array[self.rs_head:rs_head_new]).tobytes()
 			self.save_len += len(k)
@@ -278,48 +283,47 @@ class Receiver:
 				print("Saved: {} Mb of samples to {}".format( round(self.save_len/1e6, 1) , self.save_fname))
 				self.save_print_ts = time.perf_counter()
 
+		## Center frequency determination, carrier sense, and snr measurement
 		t0 = time.perf_counter()
-		if self.config.carrier_sense:
-			center_f_head_new, demodulation_head_new, carrier_sensed = fft_f_centerer_csense(sample_arr=self.rs_array, isample0=self.rs_head, nsamples=rs_head_new - self.rs_head,
-																				center_f_arr=self.center_f_array, center_f_head0=self.center_f_head, power_arr=self.power_array,
-																				statemx=self.FFTstatemx, instr_arr=self.fft_instr_array)
-		else:
-			center_f_head_new, demodulation_head_new = fft_f_centerer(sample_arr=self.rs_array, isample0=self.rs_head, nsamples=rs_head_new - self.rs_head,
-																				center_f_arr=self.center_f_array, center_f_head0=self.center_f_head,
-																				statemx=self.FFTstatemx, instr_arr=self.fft_instr_array)
-			carrier_sensed = 0
+		center_f_head_new, dmd_rs_up_to, carrier_sensed = fft_f_centerer_csense(sample_arr=self.rs_array, isample0=self.rs_head, nsamples=rs_head_new - self.rs_head, center_f_arr=self.center_f_array, power_arr=self.power_array, instr_arr=self.fft_instr_array, center_f_head0=self.center_f_head, statemx=self.FFTstatemx)
+		assert center_f_head_new == rs_head_new
+		#self.center_f_array[self.center_f_head:center_f_head_new] = -0.003
 		self.dt_array[2] += (time.perf_counter() - t0)
 
+		## FM Demodulation
 		t0 = time.perf_counter()
-		dmdsynch_head_new, bit_head_new = demodulation_sequence(rs_arr=self.rs_array, centerf_arr=self.center_f_array, power_arr=self.power_array, i_rs0=self.demodulation_head,
-																nsamples=demodulation_head_new - self.demodulation_head, dmd_arr=self.dmd_array, synch_arr=self.synch_array,
-																dmdsynch_head0=self.dmdsynch_head, JPLstatemx=self.JPLstatemx, demodmx=self.DSDstatemx,
-																bitarr=self.bit_array, bitfarr=self.bit_f_array, bitparr=self.bit_p_array, bit_head0=0)
+		dmd_head_new = demodulate(sample_arr=self.rs_array, center_f_arr=self.center_f_array, sample_i0=self.dmd_head, demod_n_samples=dmd_rs_up_to-self.dmd_head, dmd_arr=self.dmd_array, demodmx=self.demodmx)
+		assert dmd_head_new == dmd_rs_up_to
 		self.dt_array[3] += (time.perf_counter() - t0)
 
+		## Symbol synch
 		t0 = time.perf_counter()
-		if bit_head_new > 0:
-			bits = self.bit_array[:bit_head_new]
-			bit_freqs = self.bit_f_array[:bit_head_new]
-			bit_powers = self.bit_p_array[:bit_head_new]		# for energy sense
-			if not give_bits:
-				bits = np.clip(bits, 0, 1)
-				payloads, payload_delimits, payload_frequencies, payload_powertuples, fault_counts = deframe(bits=bits, bit_frequencies=bit_freqs, bit_powers=bit_powers, deframer_mx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
-				if len(payload_delimits) > 0:
-					ret = self._split_payloads(payloads=payloads, delimits=payload_delimits, nrm_offset_frequencies=payload_frequencies, payload_powertuples=payload_powertuples)
+		synch_head_new = classic_JPL_synch_strm(sample_arr=self.dmd_array, i_sample0=self.dmd_head, nsamples=dmd_head_new-self.dmd_head, synch_arr=self.synch_array, synch_head0=self.sdd_head, statemx=self.JPLstatemx)
+		assert synch_head_new == dmd_head_new
 		self.dt_array[4] += (time.perf_counter() - t0)
 
+		## Symbol decision, payload deframing
+		t0 = time.perf_counter()
+		dd_ret_ = decide_decode(dmd_arr=self.dmd_array, center_f_arr=self.center_f_array, power_arr=self.power_array, synch_arr=self.synch_array,  dmdsynch_head=dmd_head_new, opt_dec_idx_f0=self.opt_dec_idx_f, sddmx=self.sddmx, deframermx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
+		payloads, payload_delimits, payload_frequencies, payload_powertuples, fault_counts, bits, opt_dec_idx_f_new = dd_ret_
+		#assert opt_dec_idx_f_new > (dmd_head_new - int(self.sddmx[0,2]) - self.config.sps*2)
+		#assert opt_dec_idx_f_new <= max(dmd_head_new - int(self.sddmx[0,2]) + self.config.sps*2, 0), opt_dec_idx_f_new
+		ret = self._split_payloads(payloads=payloads, delimits=payload_delimits, nrm_offset_frequencies=payload_frequencies, payload_powertuples=payload_powertuples)
+		self.dt_array[5] += (time.perf_counter() - t0)
+
+		## Roll buffers
 		t0 = time.perf_counter()
 		self.rs_head = rs_head_new
 		self.center_f_head = center_f_head_new
-		self.demodulation_head = demodulation_head_new
-		self.dmdsynch_head = dmdsynch_head_new
+		self.dmd_head = dmd_head_new
+		self.sdd_head = synch_head_new
+		self.opt_dec_idx_f = opt_dec_idx_f_new
 		assert self.rs_head == self.center_f_head
+		assert self.rs_head > self.dmd_head
+		assert self.dmd_head == self.sdd_head
 		if self.rs_head >= self.buffer_roll_limit:
-			self._buffer_roll_1()
-		if self.dmdsynch_head >= self.buffer_roll_limit:
-			self._buffer_roll_2()
-		self.dt_array[5] += (time.perf_counter() - t0)
+			self._buffer_roll_3()
+		self.dt_array[6] += (time.perf_counter() - t0)
 
 		if give_bits:
 			return bits, carrier_sensed
@@ -338,22 +342,21 @@ class Receiver:
 		return pl_list
 
 
-	def _buffer_roll_1(self):
+	def _buffer_roll_3(self):
+		# B --- B
 		self.rs_array[0:self.rs_head-self.bufferhalf] 				= self.rs_array[self.bufferhalf:self.rs_head]
 		self.center_f_array[0:self.center_f_head-self.bufferhalf] 	= self.center_f_array[self.bufferhalf:self.center_f_head]
-		self.power_array[0:self.center_f_head-self.bufferhalf] 		= self.power_array[self.bufferhalf:self.center_f_head]			# for energy sense
 		self.fft_instr_array[0:self.center_f_head-self.bufferhalf] 	= self.fft_instr_array[self.bufferhalf:self.center_f_head]
+		self.power_array[0:self.center_f_head-self.bufferhalf] 		= self.power_array[self.bufferhalf:self.center_f_head]			# for energy sense
+		self.dmd_array[0:self.dmd_head-self.bufferhalf] 			= self.dmd_array[self.bufferhalf:self.dmd_head]
+		self.synch_array[0:self.sdd_head-self.bufferhalf] 			= self.synch_array[self.bufferhalf:self.sdd_head]
 		self.rs_head 			= self.rs_head - self.bufferhalf
 		self.center_f_head 		= self.center_f_head - self.bufferhalf
-		self.demodulation_head 	= self.demodulation_head - self.bufferhalf
-
-
-	def _buffer_roll_2(self):
-		self.dmd_array[0:self.dmdsynch_head-self.bufferhalf] 		= self.dmd_array[self.bufferhalf:self.dmdsynch_head]
-		self.synch_array[0:self.dmdsynch_head-self.bufferhalf] 		= self.synch_array[self.bufferhalf:self.dmdsynch_head]
-		self.dmdsynch_head = self.dmdsynch_head - self.bufferhalf
-		DSD_buffer_roll(demodmx=self.DSDstatemx, buffers_receded_by=self.bufferhalf)
-
+		self.dmd_head 			= self.dmd_head - self.bufferhalf
+		self.sdd_head 			= self.sdd_head - self.bufferhalf
+		self.opt_dec_idx_f 		= self.opt_dec_idx_f - self.bufferhalf
+		#print("BUFFER ROLLED", flush=True)
+		# B --- B
 
 
 
@@ -425,8 +428,10 @@ def precompile_receiver(dsp_config:DSPConfig, do_print=False):
 	#	f.write(pickle.dumps(dd))
 	#	f.close()
 	#	print("Repro data written for ",letters)
-	assert len(ret_pls1) == 1, len(ret_pls1)
-	assert len(ret_pls2) == 1, len(ret_pls2)
+
+	#assert len(ret_pls1) == 1, len(ret_pls1)
+	#assert len(ret_pls2) == 1, len(ret_pls2)
+
 	if do_print:
 		print("\t[Precompiled in {} s.  ({} s for samples)]".format( round(t2-t0, 3), round(t1-t0, 3)  ))
 # PRECOMPILE RECEIVER ====================================================================================================

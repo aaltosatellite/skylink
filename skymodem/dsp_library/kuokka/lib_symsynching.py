@@ -7,9 +7,11 @@ from numba import njit, int64
 @njit(cache=True)
 def create_classic_JPL_statemx(N_eps, n_decay):
 	assert n_decay >= 1.0
+	assert N_eps >= 3.0
 	statemx = np.zeros((3, N_eps), dtype=np.float64)
 	statemx[0,0] = 1 - 1/n_decay
 	statemx[0,1] = 0	# absolute index
+	statemx[0,2] = 0	# ring index
 	statemx[1,:] *= 0.0 # sliding window
 	statemx[2,:] *= 0.0 # ring accumulator
 	return statemx
@@ -19,6 +21,7 @@ def create_classic_JPL_statemx(N_eps, n_decay):
 @njit(cache=True)
 def classic_JPL_synch_reset(statemx):
 	statemx[0,1] = 0  				# absolute index
+	statemx[0,2] = 0  				# ring index
 	statemx[1] = statemx[1] * 0.0  	# sliding window
 	statemx[2] = statemx[2] * 0.0	# ring accumulator
 
@@ -68,18 +71,21 @@ def classic_JPL_synch_strm(sample_arr, i_sample0, nsamples, synch_arr, synch_hea
 	N_eps = statemx.shape[1]
 	c_decay = statemx[0,0]
 	absolute_idx = int(statemx[0,1])
+	ring_idx = int(statemx[0,2])
 	synch_head = synch_head0
 	for i_sample in range(i_sample0, i_sample0 + nsamples):
-		ring_idx = absolute_idx % N_eps
+		#ring_idx = absolute_idx % N_eps
 		statemx[1][ring_idx] = sample_arr[i_sample]
 		statemx[2][ring_idx] += np.abs(np.sum(statemx[1]))   # np.abs(np.sum(ring))   VS  np.log(np.cosh(np.sum(ring*cc)))   # cc ~ 1/( avg_sample_amplitude*N_eps)
 		statemx[2][ring_idx] *= c_decay
 		synch_arr[synch_head][0] = np.argmax(statemx[2])
 		synch_arr[synch_head][1] = ring_idx
 		synch_arr[synch_head][2] = absolute_idx
+		ring_idx = (ring_idx + 1) % N_eps
 		synch_head += 1
 		absolute_idx += 1
 	statemx[0,1] = float(absolute_idx)
+	statemx[0,2] = float(ring_idx)
 	return synch_head
 
 
@@ -137,24 +143,23 @@ def traveling_phase_JPL_synch_strm(sample_arr, i_sample0, nsamples, synch_arr, s
 	long_acc_arr  = statemx[4,:]
 	synch_head = synch_head0
 	sps_inv = 1/sps_f
+	#assert eps_fracs_arr[0] == 0.0
+	eps_phase_arr = (eps_phase_arr[0] - eps_fracs_arr) % 1
 	for i_sample in range(i_sample0, i_sample0 + nsamples):
 		wave_acc_arr += sample_arr[i_sample]
-		i00 = np.ceil((phase0) * N_eps)
-		phase0 = (phase0 + sps_inv) % 1
-		eps_phase_arr_new = (phase0 - eps_fracs_arr) % 1
-		for i_eps in range(N_eps):
-			if eps_phase_arr_new[i_eps] < eps_phase_arr[i_eps]:
-				#assert i_eps >= i00
-				k = sample_arr[i_sample] * eps_phase_arr_new[i_eps] * sps_f   # " * N_eps"  ==  " / (1/N_eps)"
-				#assert abs(k) <= abs(sample_arr[i_sample])
-
-				long_acc_arr[i_eps] = (long_acc_arr[i_eps] + abs(wave_acc_arr[i_eps] - k)) * c_decay
-				wave_acc_arr[i_eps] = k
+		#i00 = np.ceil((phase0) * N_eps)
+		#phase0 = (phase0 + sps_inv) % 1
+		#eps_phase_arr_new = (phase0 - eps_fracs_arr) % 1
+		eps_phase_arr_new = (eps_phase_arr + sps_inv) % 1
+		overflow_arr = eps_phase_arr_new < eps_phase_arr
+		k_arr = sample_arr[i_sample] * eps_phase_arr_new[overflow_arr] * sps_f
+		long_acc_arr[overflow_arr] = (long_acc_arr[overflow_arr] + np.abs(wave_acc_arr[overflow_arr] - k_arr)) * c_decay
+		wave_acc_arr[overflow_arr] = k_arr
 		eps_phase_arr = eps_phase_arr_new
 		#synch_arr[synch_head][0] = np.argmax(long_acc_arr)
 		synch_arr[synch_head][0] = np.argmax(long_acc_arr) / N_eps
 		#synch_arr[synch_head][1] = int(round(phase0 * (N_eps))) % N_eps
-		synch_arr[synch_head][1] = phase0
+		synch_arr[synch_head][1] = eps_phase_arr[0]
 		synch_head += 1
 	statemx[0,2] = phase0
 	statemx[2,:] = eps_phase_arr
@@ -163,6 +168,53 @@ def traveling_phase_JPL_synch_strm(sample_arr, i_sample0, nsamples, synch_arr, s
 	return synch_head
 # === CLASSIC travelling phase ==============================================================================================================================================
 # ===========================================================================================================================================================================
+
+
+
+
+# === CLASSIC travelling phase 2 ============================================================================================================================================
+# ===========================================================================================================================================================================
+@njit(cache=True)
+def classic_JPL_synch_travel2(sample_arr, i_sample0, nsamples, synch_arr, synch_head0, statemx):
+	assert type(synch_arr[0,0]) is int64
+	assert synch_arr.shape[1] == 3
+	N_eps 			= statemx.shape[1]
+	sps 			= statemx[0,0]
+	spsi 			= statemx[0,1]
+	c_decay 		= statemx[0,2]
+	phase 			= statemx[0,3]
+	sum_idx 		= int(statemx[0,4])
+	absolute_idx 	= int(statemx[0,5])
+	synch_head 		= synch_head0
+	N_sum = int(sps)
+	assert N_eps == int(sps)  #will repeat indexes, but minimally.  (N_eps > sps) will jump indexes.
+	a = 0.0
+	b = 0.0
+	ring_idx_prev = 0
+	for i_sample in range(i_sample0, i_sample0 + nsamples):
+		sum_idx = (sum_idx + 1) % N_sum
+		statemx[1][sum_idx] = sample_arr[i_sample]
+		phase = (phase + spsi) % 1
+		ring_phase = (phase * N_eps)
+		ring_idx = int(ring_phase)
+		statemx[2][ring_idx_prev] += np.abs(np.sum(statemx[1][0:N_sum])) * b
+		for idx in range(ring_idx_prev+1, ring_idx):
+			statemx[2][ring_idx_prev] += np.abs(np.sum(statemx[1][0:N_sum]))
+		statemx[2][ring_idx_prev] += np.abs(np.sum(statemx[1][0:N_sum])) * b
+		statemx[2][ring_idx] += np.abs(np.sum(statemx[1][0:N_sum])) * (1-excess) 			# np.abs(np.sum(ring))   VS  np.log(np.cosh(np.sum(ring*cc)))   # cc ~ 1/( avg_sample_amplitude*N_eps)
+		statemx[2][(ring_idx+1)%N_eps] += np.abs(np.sum(statemx[1][0:N_sum])) * (excess) 	# np.abs(np.sum(ring))   VS  np.log(np.cosh(np.sum(ring*cc)))   # cc ~ 1/( avg_sample_amplitude*N_eps)
+		statemx[2][ring_idx] *= c_decay
+		synch_arr[synch_head][0] = np.argmax(statemx[2])
+		synch_arr[synch_head][1] = ring_idx
+		synch_arr[synch_head][2] = absolute_idx
+		synch_head += 1
+		absolute_idx += 1
+	statemx[0,1] = float(absolute_idx)
+	return synch_head
+# === CLASSIC travelling phase 2 ============================================================================================================================================
+# ===========================================================================================================================================================================
+
+
 
 
 

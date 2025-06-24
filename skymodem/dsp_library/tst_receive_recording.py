@@ -19,7 +19,7 @@ def receive_a_recording():
 	#prepend = np.concatenate( (samples[0:8000],)*int(0.5*1e6/8000.0) )
 	#samples = np.concatenate( (prepend, samples) )
 	sr0 = 1e6
-	samples = samples + radionoise(n=len(samples), sr=sr0, W_per_Hz=0.0001/9600)
+	samples = samples + radionoise(n=len(samples), sr=sr0, W_per_Hz=0.0033/9600)
 	nsamples = len(samples)
 
 	#samples = np.concatenate( (samples[0:300000], samples) )
@@ -34,7 +34,7 @@ def receive_a_recording():
 	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * (fshift0+(f_center-f_tune)))
 
 
-	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=3400000, batch_maxlen=batch_maxlen)
+	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=2000000, batch_maxlen=batch_maxlen)
 	#rx_config.sps 					= sps
 	rx_config.mod_index				= mod_index
 	rx_config.BT_rx_match			= BT_rx_match
@@ -44,13 +44,13 @@ def receive_a_recording():
 
 	precompile_receiver(dsp_config=rx_config, do_print=True)
 	rx = Receiver(config=rx_config)
-	rx2 = Receiver(config=rx_config)
+	#rx2 = Receiver(config=rx_config)
 	print("RX picked fftlen of {}".format(rx.get_fftlen()))
 
 	t0 = time.perf_counter()
-	rx.switch_baudrate(baudrate=9600*4, sps=rx_config.sps)
+	rx.switch_baudrate(baudrate=9600*1, sps=rx_config.sps)
 	dt = (time.perf_counter() - t0)
-	rx.switch_baudrate(baudrate=9600, sps=rx_config.sps)
+	#rx.switch_baudrate(baudrate=9600, sps=rx_config.sps)
 	print("Baudrate switch in: {} ms".format( round(dt*1e3, 1) ))
 
 	if False:
@@ -77,22 +77,24 @@ def receive_a_recording():
 	dt_total = 0
 	batchlen = 1024 * 4
 	carrier_sense_array = list()
+	carrier_sensed = 0
 	while feed_head < nsamples:
 		batch = samples[feed_head : feed_head+batchlen]
-
+		carrier_sensed_old = carrier_sensed
 		t0 = time.perf_counter()
 		ret_pl, carrier_sensed = rx.process_samples(batch=batch, give_bits=False)
 		dt_total += (time.perf_counter() - t0)
 		carrier_sense_array.append( (feed_head+batchlen, carrier_sensed) )
-
-		ret_b, _ = rx2.process_samples(batch=batch, give_bits=True)
+		if carrier_sensed > carrier_sensed_old:
+			print("(carrier up)")
+		#ret_b, _ = rx2.process_samples(batch=batch, give_bits=True)
 
 		if ret_pl:
 			pl_list.extend(ret_pl)
 			t_abs = feed_head / sr0
 			print("Extended with {} payloads at {} s".format( len(ret_pl),  round(t_abs, 2)) )
 
-		bits = np.concatenate( (bits, ret_b) )
+		#bits = np.concatenate( (bits, ret_b) )
 		feed_head += batchlen
 	carrier_sense_array = np.array(carrier_sense_array)
 	speed = nsamples / dt_total
@@ -106,82 +108,101 @@ def receive_a_recording():
 	print("budget use:     {} %".format( round( 100*budget_fraction , 2) ))
 	print("cpu core use:   {} %".format( round( 100*cpu_fraction , 2) ))
 	for i_dt in range(len(rx.dt_array)):
-		print("\tpart {}:            {} %".format(i_dt+1, round( 100*rx.dt_array[i_dt]/np.sum(rx.dt_array) , 2) ))
+		txt1 = "  part {: ^{width1}} ({}):".format(i_dt, rx.dt_array_names[i_dt], width1=2)
+		txt2 = "{}{}".format(" "*(max(0, 27-len(txt1))), round( 100*rx.dt_array[i_dt]/np.sum(rx.dt_array) , 2))
+		print(txt1 + txt2)
 	print("parts of total:    {} %".format( round( 100*np.sum(rx.dt_array)/dt_total , 2) ))
 	print("="*50)
 
-	print("Got {} bits".format(len(bits)))
+	#print("Got {} bits".format(len(bits)))
 	print("Got {} payloads".format(len(pl_list)))
 	print("with avg length of {}".format( np.average([len(x[0]) for x in pl_list]) ))
-	print("(from {} to {})".format( np.min([len(x[0]) for x in pl_list]), np.max([len(x[0]) for x in pl_list]) ))
+	#print("(from {} to {})".format( np.min([len(x[0]) for x in pl_list]), np.max([len(x[0]) for x in pl_list]) ))
 	print("Relative freq should be ~{}".format( round(expected_relative_f, 4) ))
 
 	for pl_bytes, pl_f, pl_pt in pl_list:
 		p_pl, p_noise, bw_p = pl_pt
-		print(round(1e-6*pl_f, 4), ":", round((p_pl-p_noise)/p_noise), bw_p, ":", len(pl_bytes), pl_bytes)
+		print(round(1e-6*pl_f, 4), ":", round(np.log10(p_pl/p_noise)*10.0,1), ":", bw_p, ":", len(pl_bytes), pl_bytes)
 	xx = np.arange(len(rx.center_f_array)) * 1000.0/(rx.config.sps*rx.config.baudrate)
 	x_t_s0_r10 = np.arange(len(samples[::20])) * 20 * 1000.0/sr0
 	x_sense_ms = carrier_sense_array[:,0] * 1000.0/(sr0)
+	fftlen = int(rx.FFTstatemx[0,0])
+	masklen = int(rx.FFTstatemx[0,3])
+	power_band_length = int(rx.FFTstatemx[0,8])
+	carrier_sense_threshold = rx.FFTstatemx[0,6]
 
-
-
+	"""
+	instr_arr[center_f_head,0] = max_expdec_corr
+	instr_arr[center_f_head,1] = max_corr			# for carrier sense
+	instr_arr[center_f_head,2] = max_corr_avg		# for carrier sense
+	instr_arr[center_f_head,3] = max_corr_std		# for carrier sense
+	# == Energy sense ====================================================================================================================================================================
+	power_arr[center_f_head,0] = band_power
+	power_arr[center_f_head,1] = bp_avg
+	power_arr[center_f_head,2] = power_band_length * (carrier_sensed*2-1)
+	"""
 
 	fig = plt.figure(figsize=(17,13))
-	fig2 = plt.figure(figsize=(17,9))
-
 	ax1 = fig.add_subplot(211)
 	ax2 = fig.add_subplot(212)
-	ax3 = fig2.add_subplot(111)
 
-
-	ax1.plot(xx, rx.center_f_array)
-	ax1.plot(xx, np.abs(rx.rs_array) / np.max(np.abs(rx.rs_array)))
-	ax1.plot(x_sense_ms, carrier_sense_array[:,1] )
+	ax1.plot(xx[::3], rx.center_f_array[::3], label="center f")
+	ax1.plot(xx[::3], (np.abs(rx.rs_array) / np.max(np.abs(rx.rs_array)))[::3], label="sample amplitude (renornmed)")
+	ax1.plot(xx[::3], rx.power_array[::3,0], label="power")
+	ax1.plot(xx[::3], (rx.power_array[::3,2] > 0)*1.0, label="carrier sense")
+	ax1.legend()
 	ax1.grid()
 
-	criterion0 = (rx.fft_instr_array[:,1] - rx.fft_instr_array[:,2]) / rx.fft_instr_array[:,3]
-	ax2.plot(xx[::10], rx.fft_instr_array[::10,0], label="corrmax smooth")
-	ax2.plot(xx[::10], rx.fft_instr_array[::10,1], label="corrmax raw")
-	ax2.plot(xx[::10], rx.fft_instr_array[::10,2], label="avg")
-	ax2.plot(xx[::10], rx.fft_instr_array[::10,3], label="std")
-	ax2.plot(xx[::10], criterion0[::10], label="criterion")
+	cs_criterion = (rx.fft_instr_array[:,1] - rx.fft_instr_array[:,2]) / rx.fft_instr_array[:,3]
+	ax2.plot(xx[::10], rx.fft_instr_array[::10,0], label="expdec max(corr)")
+	ax2.plot(xx[::10], rx.fft_instr_array[::10,1], label="max(corr) raw")
+	ax2.plot(xx[::10], rx.fft_instr_array[::10,2], label="max(corr) avg")
+	ax2.plot(xx[::10], rx.fft_instr_array[::10,3], label="max(corr) std")
+	ax2.plot(xx[::10], cs_criterion[::10], label="carrier sense criterion")
 	ax2.legend()
 	ax2.grid()
 
-	crit_filt_y = [criterion0[0]]
+	crit_filt_y = [cs_criterion[0]]
 	crit_filt_x = [xx[0]]
 	for i in range(len(xx)):
-		if criterion0[i] != crit_filt_y[-1]:
-			crit_filt_y.append(criterion0[i])
+		if cs_criterion[i] != crit_filt_y[-1]:
+			crit_filt_y.append(cs_criterion[i])
 			crit_filt_x.append(xx[i])
 	crit_filt_x = np.array(crit_filt_x)
 	crit_filt_y = np.array(crit_filt_y)
 
+	fig.set_layout_engine("tight")
 
-	ax3.plot(xx[::10], rx.fft_instr_array[::10,2], label="avg")
-	ax3.plot(xx[::10], rx.fft_instr_array[::10,3], label="std")
+
+	fig2 = plt.figure(figsize=(17,9))
+	ax3 = fig2.add_subplot(111)
+	ax3.plot(xx[::10], rx.fft_instr_array[::10,2], label="max(corr) avg")
+	ax3.plot(xx[::10], rx.fft_instr_array[::10,3], label="max(corr) std")
 	ax3.plot(crit_filt_x, crit_filt_y, label="criterion")
 	ax3.plot(crit_filt_x, rollsmooth(crit_filt_y, 1), label="criterion-smooth-1")
 	ax3.legend()
 	ax3.grid()
+	fig2.set_layout_engine("tight")
 
 
 	fig3 = plt.figure(figsize=(17,9))
 	ax5 = fig3.add_subplot(211)
-	ax6 = fig3.add_subplot(212)
 
-	ax5.plot(xx[::10], rx.power_array[::10,0], label="power")
-	ax5.plot(xx[::10], rx.power_array[::10,1], label="power avg")
-	ax5.plot(xx[::10], rx.power_array[::10,2], label="power std")
+	ax5.plot(xx[::3], rx.power_array[::3,0], label="power")
+	ax5.plot(xx[::3], rx.power_array[::3,1], label="power avg")
+	ax5.plot(xx[::3], (rx.power_array[::3,0] - rx.power_array[::3,1]) / rx.power_array[::3,1], label="snr")
+	ax5.plot(xx[::3], rx.dmd_array[::3], label="dmd")
+	#ax5.plot(xx[::10], (rx.power_array[::10,1]*(fftlen**2))/power_band_length, label="power avg")
+	#ax5.plot(xx[::10], rx.power_array[::10,2], label="power std")
 	ax5.legend()
 	ax5.grid()
 
-	ax6.plot(xx[::10], (rx.power_array[::10,0] - rx.power_array[::10,1]) / rx.power_array[::10,1], label="snr")
+	ax6 = fig3.add_subplot(212)
+	ax6.plot(xx[:], (rx.synch_array[:,0]) % 12, label="synch...")
 	ax6.legend()
 	ax6.grid()
 
-	fig.set_layout_engine("tight")
-	fig2.set_layout_engine("tight")
+	fig3.set_layout_engine("tight")
 	plt.show()
 
 

@@ -38,14 +38,12 @@ def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payl
 		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (preamble_bits, bits) )
 		tx_sps = sr0 / baudrate
-		pl_samples, _ = make_samples2(sps_f=tx_sps, bitstring=bits, f_offset=f_ofst_nrm, power=1.0, mod_index=mod_index,
-							   shaper_BT_prod=BT, n_silence_start=0, n_silence_end=0)
+		pl_samples, _ = make_samples2(sps_f=tx_sps, bitstring=bits, f_offset=f_ofst_nrm, power=1.0, mod_index=mod_index, shaper_BT_prod=BT, n_silence_start=0, n_silence_end=0)
 		payload_istart_iend_list.append( (pl, len(samples), len(samples)+len(pl_samples)) )
 		samples = np.concatenate((samples, pl_samples))
 		if i_pl < (n_payloads -1):
 			n_interval = int(sr0 * T_interval_array[i_pl])
 			samples = np.concatenate((samples, np.zeros(n_interval, dtype=np.complex128)))
-
 
 	samples = np.concatenate( (samples,np.zeros(n_end_samples, dtype=np.complex128)))
 	samples = samples + radionoise(n=len(samples), sr=sr0, W_per_Hz=noisePpHz)
@@ -63,7 +61,7 @@ def feed_samples_to_a_receiver(dsp_config:DSPConfig, samples, payload_istart_ien
 	t_signal = 0.0
 	t_silence = 0.0
 	if add_noise_amp > 0:
-		rx.set_additive_noise_amplitude(amplitude=add_noise_amp)
+		rx.set_additive_noise_amplitude(W_per_Hz=add_noise_amp)
 	while c < len(samples):
 		batchlen = min(default_batchlen, nsamples - c)
 		batch = samples[c:c+batchlen]
@@ -99,7 +97,8 @@ def tgt_loop(ii, noisePpHz, dsp_config:DSPConfig, n_payloads, f_center_error, re
 																  baudrate=dsp_config.baudrate * (1 + rel_baudrate_error), mod_index=tx_mod_index,
 																  BT=dsp_config.BT_rx_match, n_payloads=n_pl_run, noisePpHz=noisePpHz, T_init_silence=T_init_silence,
 																  T_interval_array=(T_interval,)*(n_pl_run-1), T_end_silence=T_end_silence)
-		pl_f_p_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=dsp_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=int(0.001 * dsp_config.rx_sr0), do_precompile=False)
+		pl_f_p_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=dsp_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list,
+																					   default_batchlen=int(0.001 * dsp_config.rx_sr0), do_precompile=False)
 		n_rcvd += len(pl_f_p_cursor_list)
 		delays_s, delays_t = get_dealys(payload_istart_iend_list=payload_istart_iend_list, pl_f_p_cursor_list=pl_f_p_cursor_list, sr0=dsp_config.rx_sr0)
 		if any(delays_t > 0):
@@ -139,7 +138,8 @@ def measure_execution_speed(rx_config:DSPConfig):
 															  baudrate=rx_config.baudrate*(1+1.5e-5), mod_index=rx_config.mod_index,
 															  BT=rx_config.BT_rx_match, n_payloads=12, noisePpHz=0.02/rx_config.baudrate, T_init_silence=T_init_silence,
 															  T_interval_array=(T_interval,)*(8-1), T_end_silence=T_end_silence)
-	pl_f_p_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=int(0.001 * rx_config.rx_sr0), do_precompile=False)
+	pl_f_p_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list,
+																				   default_batchlen=int(0.001 * rx_config.rx_sr0), do_precompile=False)
 	n_samples = len(samples)
 	n_signal_samples = sum([i1-i0 for (f,i0,i1) in payload_istart_iend_list])
 	return dt_array, t_signal, t_silence, n_samples, n_signal_samples
@@ -319,11 +319,10 @@ def basic_test_A():
 	sr0 		= 3.6e6
 	baudrate	= 9600 * 4
 	n_payloads	= 12
-	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=400000, batch_maxlen=1024 * 8)
 	#rx_config.mod_index = 0.7
 	#rx_config.BT_rx_match = -1
-	noisePpHz = 0.10/baudrate
-
+	noisePpHz = 0.001/baudrate
 	print("[Generating samples]")
 	samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=f_center+3.1e3, sr0=sr0, baudrate=baudrate*(1+1.5e-5), mod_index=rx_config.mod_index, BT=rx_config.BT_rx_match,
 															  n_payloads=n_payloads, noisePpHz=noisePpHz, T_init_silence=2.0, T_interval_array=(5e-3,)*(n_payloads-1), T_end_silence=2.0)
@@ -331,7 +330,6 @@ def basic_test_A():
 	pl_f_p_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=1024*4, do_precompile=True, add_noise_amp=0.01)
 	#pl_f_cursor_d = dict( [(x[0],x[1:3]) for x in pl_f_cursor_list] )
 
-	print("\n\n")
 	print("Received {}/{} payloads.".format(len(pl_f_p_cursor_list), n_payloads))
 	speed_printout(dt_array=dt_array, t_total=t_signal+t_silence, nsamples=len(samples), sr0=sr0)
 
@@ -341,7 +339,7 @@ def basic_test_A():
 			print("pl #{}:  lags {} ms.  ({} samples)".format(i_pl, round(1e3*float(delays_t[i_pl]), 1), delays_s[i_pl]))
 		else:
 			print("pl #{}:  missing".format(i_pl))
-
+	print("\n\n")
 
 
 def compare_default_optimod_4800():
@@ -761,12 +759,12 @@ def analyze_results_plot():
 
 
 
-basic_test_A()
-basic_test_A()
+#basic_test_A()
+#basic_test_A()
 #basic_test_A()
 
-#compare_default_optimod_4800()
-mod_index_matrix_comparison()
+compare_default_optimod_4800()
+#mod_index_matrix_comparison()
 
 #compare_fftlens()
 #compare_timings()

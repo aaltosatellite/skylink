@@ -206,3 +206,74 @@ class DSPLoop:
 
 
 
+
+def _rx_mpr_loop(dsp_config:DSPConfig, trig_ev, shm_buffer_ring_shm_names, flag_ring_shm_name, que_rcv_payloads_out, que_signaldata_out):
+	from multiprocessing import shared_memory
+	default_batchlen = dsp_config.batch_maxlen // 2
+	T_sample = 1.0 / dsp_config.rx_sr0
+	rx = Receiver(config=dsp_config)
+	buffer_ring = list()
+	for (name, shape, dtype) in shm_buffer_ring_shm_names:
+		shm = shared_memory.SharedMemory(name=name)
+		arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+		buffer_ring.append(arr)
+	ring_len = len(buffer_ring)
+	flag_ring_shm = shared_memory.SharedMemory(name=flag_ring_shm_name[0])
+	flag_arr = np.ndarray(shape=(ring_len, 3), dtype=np.int64, buffer=flag_ring_shm.buf) # (batch_counter, nsamples, ts_s0_mono/unix_ns)
+	process_array_head = 0
+	last_batch_index = -1
+	while True:
+		mono_to_unix = time.time() - time.monotonic()
+		trig = trig_ev.wait(timeout=0.20)
+		if not trig:
+			if flag_arr[0,0] < -1:
+				return
+			continue
+		trig_ev.clear()
+		while True:
+			if flag_arr[process_array_head,0] == -1:
+				break
+			if flag_arr[process_array_head,0] == (last_batch_index - ring_len + 1):
+				break
+			if (last_batch_index != -1) and (flag_arr[process_array_head,0] != (last_batch_index + 1)):
+				raise AssertionError("mpr dsp loop fell out of synch: ", (flag_arr[process_array_head,0], last_batch_index))
+			last_batch_index = flag_arr[process_array_head,0]
+			nsamples = int(flag_arr[process_array_head,1])
+			ts_s0_mono = flag_arr[process_array_head,2] * 1.0e-9
+			buffer_arr = buffer_ring[process_array_head]
+			c = 0
+			while c < nsamples:
+				rx_pls, carrier_sensed = rx.process_samples(batch=buffer_arr[c:min(c+default_batchlen,nsamples)] , give_bits=False)
+				ts_mono = ts_s0_mono + c * T_sample
+				ts_unix = ts_mono + mono_to_unix
+				if carrier_sensed:   # TODO: filter for ongoing own transmission ... "(t_mono > self.t_projected_tx_end)"
+					que_rcv_payloads_out.put( ("cs", None, ts_unix), timeout=1.0)
+				for rx_pl, rx_f_absolute, power_tuple in rx_pls:
+					que_rcv_payloads_out.put( ("pl", rx_pl, ts_unix, rx_f_absolute), timeout=1.0)
+					que_signaldata_out.put((ts_unix, rx_f_absolute, power_tuple, dsp_config.baudrate, rx_pl), timeout=1.0)
+				c += default_batchlen
+			process_array_head = (process_array_head+1) % ring_len
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
