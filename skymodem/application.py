@@ -9,6 +9,7 @@ from dsp_library.kuokka.lib_tools import get_doppler_low_high
 from dsp_library.kuokka.lib_tools import fractional_resampler_f_max_undisturbed
 from skylink_wrapper.cython_skylink import SkyLinkLoop, SkyConfiguration, EKEY_SKY_ARQ_DISCONNECTED, EKEY_SKY_PAYLOAD, EKEY_SKY_ARQ_CONNECTED
 from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_off
+from skylink_wrapper.cython_skylink import auth_flag_auth_tx, auth_flag_require_auth, auth_flag_require_seq
 import zmq, amqp
 import time
 import json
@@ -399,14 +400,14 @@ def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, m
 	return dsp_config, radio_config
 
 
-def read_key_from_header(file_path):
+def read_key_from_header(file_path: str, key_name: str):
 	"""
 	Function for reading the HMAC key from a header file.
 	Uses regular expressions to extract the key from a C-style array definition.
 
 	Args:
-		file_path: str
-
+		file_path: str		Path to secret file containing the authentication keys
+		key_name: str 		What is the key name in the secret file
 	Returns:
 		byte_array: The HMAC key as a bytearray.
 	"""
@@ -414,7 +415,7 @@ def read_key_from_header(file_path):
 		content = file.read()
 		# Regex to match the byte array in the .h file, allowing for line breaks and spaces
 		import re
-		match = re.search(r'hmac_key\s*\[\d+\]\s*=\s*\{([^}]+)\};', content, re.DOTALL)
+		match = re.search(key_name + r'\s*\[\d+\]\s*=\s*\{([^}]+)\};', content, re.DOTALL)
 		if not match:
 			raise ValueError(f"Key not found in the header file{file_path}")
 		# Extract the bytes and convert them to a byte array
@@ -430,7 +431,9 @@ def read_key_from_header(file_path):
 
 if __name__ == '__main__':
 	if os.path.isfile("secret.h"):
-		key0 = read_key_from_header("secret.h")
+		key0 = read_key_from_header("secret.h", "uplink_key")
+		key1 = read_key_from_header("secret.h", "downlink_key")
+		key2 = read_key_from_header("secret.h", "service_key")
 	else:
 		print("No external secret available, using development key.")
 		key0 = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
@@ -438,10 +441,37 @@ if __name__ == '__main__':
 	if key0 == b"":
 		print("Check HMAC Key!")
 		exit()
-	# Same key is used for all virtual channels.
-	hmac_keys = [key0, key0, key0, key0]
+	# Different keys for uplink, downlink, and service channel
+	hmac_keys = [key0, key1, key2]
+
 	skylink_config_ = SkyConfiguration(identity=b"PyGS")
 
+	#* DO NOT MODIFY FOLLOWING CONFIGURATIONS IN ANY SITUATION!!! *#
+	skylink_config_.vc[0].require_authentication = auth_flag_require_auth | auth_flag_require_seq | auth_flag_auth_tx
+	skylink_config_.vc[1].require_authentication = auth_flag_require_auth | auth_flag_require_seq | auth_flag_auth_tx
+	skylink_config_.vc[2].require_authentication = auth_flag_require_auth | auth_flag_auth_tx
+	skylink_config_.vc[3].require_authentication = 0 # disable auth etc on radio amateur channel
+
+	# different keys shall be used for attack vector prevention (eg. replay)
+	# sequence counter enable for non service channels
+	# also if downlink key is different to uplink, downlink key sharing is possible for third party verification without losing security
+
+	# channel 0 key configuration
+	skylink_config_.vc[0].rx_key = 1  # uses the downlink key [key index 1] (satellite sending)
+	skylink_config_.vc[0].tx_key = 0  # uses uplink key [key index 0] (satellite receiving)
+
+	# channel 1 key configuration
+	skylink_config_.vc[1].rx_key = 1  # uses the downlink key [key index 1] (satellite sending)
+	skylink_config_.vc[1].tx_key = 0  # uses uplink key [key index 0] (satellite receiving)
+
+	# service channel (2) configuration
+	skylink_config_.vc[2].rx_key = 2  # separate service channel beacon
+	skylink_config_.vc[2].tx_key = 2  # uses the same key for both channel as there is no beacon
+
+	# Radio amateur channel, key auth disabled
+	skylink_config_.vc[3].rx_key = 0  # setting does not change it
+	skylink_config_.vc[3].tx_key = 0
+	#* DO NOT MODIFY ABOVE CONFIGURATIONS IN ANY SITUATION!!! *#
 
 	dsp_config_, radio_config_ = None, None
 	import sys
