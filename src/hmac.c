@@ -217,7 +217,6 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 	if (incorrect_hash) {
 		SKY_PRINTF(SKY_DIAG_INFO | SKY_DIAG_HMAC, "HMAC: Invalid authentication code!\n")
 		self->diag->rx_hmac_fail++;
-		hmac_vc->send_sequence_reset = 1;
 		return SKY_RET_AUTH_FAILED;
 	}
 
@@ -241,7 +240,7 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 			SKY_PRINTF(SKY_DIAG_INFO | SKY_DIAG_HMAC, "HMAC: Larger than allowed sequence jump\n")
 			self->diag->rx_hmac_fail++;
 			hmac_vc->send_sequence_reset = 1;
-			return SKY_RET_EXCESSIVE_HMAC_JUMP;
+			//return SKY_RET_EXCESSIVE_HMAC_JUMP; //TODO: bypassed so that rx decoding for first beacons is not blocked.
 		}
 	}
 
