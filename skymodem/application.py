@@ -423,7 +423,6 @@ def read_key_from_header(file_path: str, key_name: str):
 		byte_array = bytes(int(b.strip(), 16) for b in byte_values if b.strip())
 		if len(byte_array) != 32:
 			raise ValueError("Key is not 32 bytes long.")
-		###print(byte_array.hex())  # only for debugging!
 		return byte_array
 
 
@@ -431,18 +430,37 @@ def read_key_from_header(file_path: str, key_name: str):
 
 if __name__ == '__main__':
 	if os.path.isfile("secret.h"):
-		key0 = read_key_from_header("secret.h", "uplink_key")
-		key1 = read_key_from_header("secret.h", "downlink_key")
-		key2 = read_key_from_header("secret.h", "service_key")
+		uplink_key = read_key_from_header("secret.h", "uplink_key")
+		downlink_key = read_key_from_header("secret.h", "downlink_key")
+		service_key = read_key_from_header("secret.h", "service_key")
 	else:
-		print("No external secret available, using development key.")
-		key0 = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
-
-	if key0 == b"":
+		print("No external secret available, using development keys.")
+		#key0 = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
+		# FS1p Development keys. Downlink, uplink, and service in order.
+		uplink_key = bytes([
+			0xc2, 0x54, 0x70, 0x55, 0x64, 0xa1, 0xba, 0x34,
+			0x84, 0x36, 0xb2, 0x5b, 0xfd, 0x97, 0x4c, 0x85,
+			0xb5, 0x29, 0x51, 0x15, 0x42, 0xfd, 0xe8, 0x90,
+			0x10, 0x0a, 0xe1, 0xb6, 0xd5, 0x6b, 0xf9, 0xfd
+		])
+		downlink_key = bytes([
+			0x41, 0xb7, 0xb5, 0xff, 0x40, 0x18, 0x8a, 0x78,
+			0x05, 0x82, 0x04, 0x3d, 0x1f, 0xda, 0xe4, 0x85,
+			0xdd, 0x85, 0x87, 0xef, 0x82, 0xd6, 0x49, 0xa8,
+			0x01, 0x3f, 0xb2, 0x80, 0x5c, 0xc1, 0x69, 0x0e
+		])
+		service_key = bytes([
+			0x8b, 0x16, 0x3a, 0x37, 0xd7, 0xda, 0x14, 0xde,
+			0xc1, 0x82, 0x60, 0xf3, 0xc6, 0x7c, 0xe0, 0xbe,
+			0x6f, 0x66, 0xfb, 0x7a, 0x36, 0xbd, 0x1e, 0x6d,
+			0x51, 0xf2, 0xed, 0xe4, 0x45, 0x65, 0x56, 0x6b
+		])
+	if uplink_key == b"":
 		print("Check HMAC Key!")
 		exit()
 	# Different keys for uplink, downlink, and service channel
-	hmac_keys = [key0, key1, key2]
+	hmac_keys = [uplink_key, downlink_key, service_key]
+	###print(f"HMAC keys: \n{uplink_key.hex()},\n{downlink_key.hex()},\n{service_key.hex()}") #DEBUG!!
 
 	skylink_config_ = SkyConfiguration(identity=b"PyGS")
 
