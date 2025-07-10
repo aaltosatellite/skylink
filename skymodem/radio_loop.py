@@ -93,7 +93,7 @@ class RadioLoop:
 		#print("FP0 ATR_RX", usrp.get_gpio_attr("FP0", "ATR_RX"))
 		#print("FP0 ATR_TX", usrp.get_gpio_attr("FP0", "ATR_TX"))
 		#print("FP0 ATR_XX", usrp.get_gpio_attr("FP0", "ATR_XX"))
-		print(usrp.set_gpio_src("FP0", "RX"))
+		#print(usrp.set_gpio_src("FP0", "RX"))
 		DBGPRINT("RX gain range:      {}".format( str(usrp.get_rx_gain_range(0))[:-1] ))
 		DBGPRINT("TX gain range:      {}".format( str(usrp.get_tx_gain_range(0))[:-1] ))
 		DBGPRINT("usrp RX gain:       {}".format( usrp.get_rx_gain(0) ))
