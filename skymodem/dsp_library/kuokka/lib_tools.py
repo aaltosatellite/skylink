@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit, prange, objmode
 import time
-
+import sys
 
 #DEFAULT_SYNCHWORD = 0x930B51DE
 DEFAULT_SYNCHWORD = 0x1ACFFC1D
@@ -287,7 +287,7 @@ def make_squarewave(binary_symbols, sps_f, i_sample_of_sym0_f, nsamples, npad):
 
 
 @njit(cache=True, parallel=True)
-def make_f_modulating_waveform(binary_symbols, sps_f, shaper_BT_prod, shaper_n_taps):
+def make_f_modulating_waveform_parallel(binary_symbols, sps_f, shaper_BT_prod, shaper_n_taps):
 	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
 	if shaper_BT_prod > 0:
 		pulse = gauss_curve_sps(sps_f=sps_f, BT=shaper_BT_prod, n_taps=shaper_n_taps)
@@ -305,6 +305,32 @@ def make_f_modulating_waveform(binary_symbols, sps_f, shaper_BT_prod, shaper_n_t
 		modulator1 = modulator0
 	modulator1 = modulator1 / np.max(np.abs(modulator1))
 	return modulator1
+
+@njit(cache=True, parallel=False)
+def make_f_modulating_waveform_simple(binary_symbols, sps_f, shaper_BT_prod, shaper_n_taps):
+	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+	if shaper_BT_prod > 0:
+		pulse = gauss_curve_sps(sps_f=sps_f, BT=shaper_BT_prod, n_taps=shaper_n_taps)
+		assert len(pulse) == shaper_n_taps
+	else:
+		pulse = np.ones(1, dtype=np.float64)
+	npulse = len(pulse)
+	modulator0 = make_squarewave(binary_symbols=binary_symbols, sps_f=sps_f, i_sample_of_sym0_f=0.0, nsamples=-1, npad=npulse//2)
+	if npulse > 1:
+		modulator1 = np.correlate(modulator0, pulse)
+		#modulator1 = np.zeros(len(modulator0)-npulse+1, dtype=np.float64)
+		#for i in prange(len(modulator1)):
+		#	modulator1[i] = np.sum(pulse * modulator0[i:i+npulse])
+	else:
+		modulator1 = modulator0
+	modulator1 = modulator1 / np.max(np.abs(modulator1))
+	return modulator1
+
+
+if int(sys.version.split(" ")[0].split(".")[1]) >= 11:
+	make_f_modulating_waveform = make_f_modulating_waveform_parallel
+else:
+	make_f_modulating_waveform = make_f_modulating_waveform_simple
 
 
 @njit(cache=True)
