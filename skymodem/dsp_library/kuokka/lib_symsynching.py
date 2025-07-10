@@ -9,7 +9,7 @@ def create_classic_JPL_statemx(N_eps, n_decay):
 	assert n_decay >= 1.0
 	assert N_eps >= 3.0
 	statemx = np.zeros((3, N_eps), dtype=np.float64)
-	statemx[0,0] = 1 - 1/n_decay
+	statemx[0,0] = 0.5**(1/n_decay)
 	statemx[0,1] = 0	# absolute index
 	statemx[0,2] = 0	# ring index
 	statemx[1,:] *= 0.0 # sliding window
@@ -36,7 +36,7 @@ def classic_JPL_synch_run(samples, statemx):
 	It finds a maximum amplitude producing phase of the data stream, given that symbol length matches closely to the
 	length of the sliding_window and ring_accumulator. This match has to be ~1% or better.
 
-	This is a special case of a more generic synchronizer, and hence possibly a suboptimal one.
+	This is a special case of a more general synchronizer, and hence possibly a suboptimal one.
 	The general JPL synchronizer with parameters c_constant=1, c_shape=0 and normalized_product=False is equivalent to this.
 
 	:param samples: 			1D array of demodulated real samples (float64 or float32)

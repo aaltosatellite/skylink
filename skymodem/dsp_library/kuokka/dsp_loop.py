@@ -1,6 +1,6 @@
 import queue
 import numpy as np
-from .lib_receiver import Receiver, DSPConfig, precompile_receiver
+from .lib_receiver import Receiver, RXDSPConfig, precompile_receiver
 from .lib_framing import frame_packet
 from .lib_tools import doppler_correction, ints_to_bits, DEFAULT_SYNCHWORD_LEN, DEFAULT_SYNCHWORD, make_samples2
 from .lib_reedsolomon import get_default_rs
@@ -8,6 +8,8 @@ from datetime import datetime as dtime
 import threading
 from queue import Queue, Empty
 import time
+import multiprocessing as mpr
+from multiprocessing import shared_memory
 
 
 
@@ -21,13 +23,48 @@ def DBGPRINT(*args, **kwargs):
 
 
 
+class TXDSPConfig:
+	def __init__(self, tx_sr0, tx_f_tune, tx_f_center, baudrate):
+		# radio device -------------------------------------
+		self.tx_sr0				= tx_sr0
+		self.tx_f_tune			= tx_f_tune
+		# --------------------------------------------------
+		# signal properties --------------------------------
+		self.tx_f_center 		= tx_f_center
+		self.baudrate			= baudrate		# Baudrate of the transmission. Has a definite effect on performance. More so if resampling rate is not adjusted.
+		# --------------------------------------------------
+		# --------------------------------------------------
+		self.tx_BT				= 0.5
+		self.tx_mod_index		= 0.5
+		# --------------------------------------------------
+		self.tx_f_adjustment_halfband = 12e3
+
+	def check_validity(self):
+		assert 1e3 < self.tx_sr0 < 32e6
+		assert self.tx_f_tune > 1.0e3
+		assert self.tx_f_center > 1.0e3
+		assert 0 < self.baudrate < (self.tx_sr0/2)
+		assert (abs(self.tx_f_tune - self.tx_f_center) + self.tx_f_adjustment_halfband + self.baudrate * 0.6) < (0.5 * self.tx_sr0), "Radio tuned to this frequency with this samplerate cannot see the entire band."
+		assert (self.tx_BT >= 0.4) or (self.tx_BT == -1)
+		assert 0.5 <= self.tx_mod_index < 10.0
+		if not (self.tx_mod_index in (0.5, 0.75)):
+			raise Warning("Non standard transmission modulation index of", self.tx_mod_index)
+
+
+
+
+
+
+
 class DSPLoop:
-	def __init__(self, dsp_config:DSPConfig, que_rx_samples_in:Queue, que_rx_payloads_out:queue.Queue, que_tx_payloads_in:Queue, que_tx_samples_out:Queue, que_signaldata_out:Queue):
+	def __init__(self, rx_dsp_config:RXDSPConfig, tx_dsp_config:TXDSPConfig, que_rx_samples_in:Queue, que_rx_payloads_out:queue.Queue, que_tx_payloads_in:Queue, que_tx_samples_out:Queue, que_signaldata_out:Queue):
 		DBGPRINT("Precompile DSP")
-		precompile_receiver(dsp_config, do_print=False)
-		self.dsp_config 			= dsp_config
+		precompile_receiver(rx_dsp_config, do_print=False)
+		self.rx_dsp_config 			= rx_dsp_config
+		self.tx_dsp_config			= tx_dsp_config
 		self.frequency_following 	= True
-		self.use_doppler_correction = True
+		self.baudrate_following 	= True
+		self.use_doppler_correction = False
 		self.preamble_bits 			= ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
 		rs_mx, rs_cfg 				= get_default_rs()
 		self.rs_mx 					= rs_mx
@@ -38,13 +75,14 @@ class DSPLoop:
 		self.que_tx_payloads_in		= que_tx_payloads_in
 		self.que_tx_samples_out		= que_tx_samples_out
 		self.que_signaldata_out 	= que_signaldata_out
-		self.rx 				= Receiver(config=dsp_config)
-		self.rx_process_thread 	= threading.Thread(target=None, args=tuple())
-		self.tx_process_thread 	= threading.Thread(target=None, args=tuple())
-		self.last_verified_freq = (0, 0.0)  # (absolute_frequency, monotonic_timestamp)
-		self.own_recently_sent 	= dict()
-		self.t_projected_tx_end	= time.monotonic()
-		self.on 				= True
+		self.rx 					= Receiver(config=rx_dsp_config)
+		self.rx_process_thread 		= threading.Thread(target=None, args=tuple())
+		self.tx_process_thread 		= threading.Thread(target=None, args=tuple())
+		self.last_verified_freq 	= (0, 0.0)  # (absolute_frequency, monotonic_timestamp)
+		self.last_verified_baudrate = None
+		self.own_recently_sent 		= dict()
+		self.t_projected_tx_end		= time.monotonic()
+		self.on 					= True
 
 
 	def is_ok(self):
@@ -72,7 +110,7 @@ class DSPLoop:
 
 	def set_baudrate(self, baudrate):
 		with self.rlock:
-			self.dsp_config.baudrate = baudrate
+			self.rx_dsp_config.baudrate = baudrate
 			self.rx.switch_baudrate(baudrate, sps=self.rx.config.sps)
 
 
@@ -84,11 +122,11 @@ class DSPLoop:
 	def get_state(self):
 		with self.rlock:
 			d_state = dict()
-			d_state["baudrate"] = self.dsp_config.baudrate
+			d_state["baudrate"] = self.rx_dsp_config.baudrate
 			d_state["frequency-following-on"] = self.frequency_following
 			d_state["doppler-correction-on"] = self.use_doppler_correction
-			d_state["f-sdr-tune"] = self.dsp_config.rx_f_tune
-			d_state["f-center"] = self.dsp_config.rx_f_center
+			d_state["f-sdr-tune"] = self.rx_dsp_config.rx_f_tune
+			d_state["f-center"] = self.rx_dsp_config.rx_f_center
 			if self.last_verified_freq[1] == 0.0:
 				d_state["f-last-reception"] = None
 			else:
@@ -109,29 +147,35 @@ class DSPLoop:
 		if self.frequency_following and ((time.monotonic() - self.last_verified_freq[1]) < 60.0) and (self.last_verified_freq[1] > 0):
 			f_recv_abs = self.last_verified_freq[0]
 			if self.use_doppler_correction:
-				f_use_abs, _ = doppler_correction(f_received=f_recv_abs, f_original=self.dsp_config.rx_f_center, f_at_target=self.dsp_config.rx_f_center)
+				f_use_abs, _ = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_f_center, f_tx_at_target=self.tx_dsp_config.tx_f_center)
 			else:
 				f_use_abs = f_recv_abs
 		else:
-			f_use_abs = self.dsp_config.rx_f_center
+			f_use_abs = self.tx_dsp_config.tx_f_center
 		if as_offset:
-			return f_use_abs - self.dsp_config.rx_f_tune
+			return f_use_abs - self.tx_dsp_config.tx_f_tune
 		return f_use_abs
+
+
+	def _get_transmit_baudrate(self):
+		if (not self.baudrate_following) or (not self.last_verified_baudrate):
+			return self.tx_dsp_config.baudrate
+		return self.last_verified_baudrate
 
 
 	def _compose_samples(self, payload, usrp_reshape, as_c64):
 		t00 = time.perf_counter()
+		baudrate = self._get_transmit_baudrate()
 		f_use_offset = self._get_transmit_frequency(as_offset=True)
-		f_offset_nrm = f_use_offset / self.dsp_config.tx_sr0
+		f_offset_nrm = f_use_offset / self.tx_dsp_config.tx_sr0
 		pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
 		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (self.preamble_bits, bits) )
-		sps = self.dsp_config.tx_sr0 / self.dsp_config.baudrate
-		n_silence_start = int(self.dsp_config.tx_sr0 * 2.0e-3) # TODO: this should be a setting?
+		sps = self.tx_dsp_config.tx_sr0 / baudrate
+		n_silence_start = int(self.tx_dsp_config.tx_sr0 * 2.0e-3) # TODO: this should be a setting?
 		dt1 = time.perf_counter() - t00
 		t00 = time.perf_counter()
-		samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.dsp_config.tx_mod_index,
-							   shaper_BT_prod=self.dsp_config.tx_BT, n_silence_start=n_silence_start, n_silence_end=0)
+		samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.tx_dsp_config.tx_mod_index, shaper_BT_prod=self.tx_dsp_config.tx_BT, n_silence_start=n_silence_start, n_silence_end=0)
 		#samples = np.exp(2j*np.pi*np.arange(len(samples)) * 0.005 )
 		dt2 = time.perf_counter() - t00
 		t00 = time.perf_counter()
@@ -140,16 +184,21 @@ class DSPLoop:
 		if as_c64:
 			samples = np.array(samples, dtype=np.complex64)
 		dt3 = time.perf_counter() - t00
-		return samples, f_use_offset+self.dsp_config.tx_f_tune, (dt1, dt2, dt3)
+		return samples, f_use_offset+self.tx_dsp_config.tx_f_tune, (dt1, dt2, dt3)
+	# ========================================================================================================================================================================================
+	# == private functions ===================================================================================================================================================================
 
 
+
+	# -- loops -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 	def _rx_loop(self):
-		default_batchlen = self.dsp_config.batch_maxlen // 2
-		T_sample = 1.0 / self.dsp_config.rx_sr0
+		default_batchlen = self.rx_dsp_config.batch_maxlen // 2
+		T_sample = 1.0 / self.rx_dsp_config.rx_sr0
 		while self.on:
+			unix_minus_mono = time.time() - time.monotonic()
 			try:
-				ts_s0_unix, samples = self.que_rx_samples_in.get(timeout=0.20)
-				t_rx0_mono = time.monotonic() - len(samples) * T_sample
+				ts_s0_mono, samples = self.que_rx_samples_in.get(timeout=0.20)
 			except Empty:
 				continue
 			except Exception as e:
@@ -161,18 +210,19 @@ class DSPLoop:
 				while c < len(samples):
 					batch = samples[c:c+default_batchlen]
 					rx_pls, carrier_sensed = self.rx.process_samples(batch=batch, give_bits=False)
-					t_mono = t_rx0_mono + c * T_sample
-					ts_unix = ts_s0_unix + c * T_sample
-					if carrier_sensed and (t_mono > self.t_projected_tx_end):
+					ts_mono = ts_s0_mono + c * T_sample
+					ts_unix = ts_mono + unix_minus_mono
+					if carrier_sensed and (ts_mono > self.t_projected_tx_end):
 						self.que_rcv_payloads_out.put( ("cs", None), timeout=1.0)
 					for rx_pl, rx_f_absolute, power_tuple in rx_pls:
 						if rx_pl in self.own_recently_sent:
-							del self.own_recently_sent[rx_pl]
+							#del self.own_recently_sent[rx_pl]
 							DBGPRINT("Discarded self reception.")
 							continue
 						self.last_verified_freq = (rx_f_absolute, time.monotonic())
+						self.last_verified_baudrate = self.rx_dsp_config.baudrate
 						self.que_rcv_payloads_out.put( ("pl", rx_pl), timeout=1.0)
-						self.que_signaldata_out.put((ts_unix, rx_f_absolute, power_tuple, self.dsp_config.baudrate, rx_pl), timeout=1.0)
+						self.que_signaldata_out.put((ts_unix, rx_f_absolute, power_tuple, self.rx_dsp_config.baudrate, rx_pl), timeout=1.0)
 					c += default_batchlen
 
 
@@ -196,7 +246,69 @@ class DSPLoop:
 				samplearr, f_use_abs, _ = self._compose_samples(payload, usrp_reshape=True, as_c64=True)
 			DBGPRINT("tx start at {} MHz".format( f_use_abs * 1e-6, 4 ))
 			self.que_tx_samples_out.put(samplearr, timeout=4.0)
-			self.t_projected_tx_end = time.monotonic() + 5e-3 + samplearr.shape[1] / self.dsp_config.tx_sr0
+			self.t_projected_tx_end = time.monotonic() + 5e-3 + samplearr.shape[1] / self.tx_dsp_config.tx_sr0
+
+
+	def _rx_loop_mpr(self, dsp_config_list, ring_len):
+		que_mpr_processes_out = mpr.Queue(256)
+		buffer_ring = list()
+		arrlen = int(2**21)
+		buffer_shm_list = list()
+		for _ in range(ring_len):
+			shm = shared_memory.SharedMemory(create=True, size=np.zeros(arrlen, dtype=np.complex128).nbytes)
+			arr = np.ndarray(shape=arrlen, dtype=np.complex128, buffer=shm.buf)
+			arr[:] = 0.0
+			buffer_ring.append(arr)
+			buffer_shm_list.append(shm)
+		flag_ring_shm = shared_memory.SharedMemory(create=True, size=np.zeros((ring_len,3), dtype=np.int64).nbytes )
+		ring_flag_arr = np.ndarray(shape=(ring_len, 3), dtype=np.int64, buffer=flag_ring_shm.buf) # (batch_counter, nsamples, ts_s0_mono/unix_ns)
+		ring_flag_arr[:] = -1
+		processes = dict()
+		process_events = list()
+		for i in range(len(dsp_config_list)):
+			mpr_ev = mpr.Event()
+			mpr_ev.clear()
+			process_events.append(mpr_ev)
+			process_idd = len(processes)
+			p = mpr.Process(target=_rx_mpr_process, args=(dsp_config_list[i], process_idd, mpr_ev, [shm.name for shm in buffer_shm_list], flag_ring_shm.name, que_mpr_processes_out), daemon=True) #dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm_names, flag_ring_shm_name, que_out
+			processes[process_idd] = p
+			p.start()
+		batch_index = 0
+		ring_head = 0
+		while self.on:
+			try:
+				ts_s0_mono, samples = self.que_rx_samples_in.get(timeout=0.20)
+				nsamples = len(samples)
+			except Empty:
+				continue
+			except Exception as e:
+				DBGPRINT("Queue.get() exception in ReceiverLoop run: ", e)
+				self.on = False
+				break
+			with self.rlock:
+				buffer_ring[ring_head][:nsamples] = samples
+				ring_flag_arr[ring_head] = (batch_index, nsamples, int(ts_s0_mono*1e9))
+				for mpr_ev in process_events:
+					mpr_ev.set()
+				while not que_mpr_processes_out.empty():
+					rcode, p_idd, tup = que_mpr_processes_out.get_nowait()
+					if rcode == "cs":
+						self.que_rcv_payloads_out.put( ("cs", None), timeout=1.0)
+					elif rcode == "pl":
+						(ts_unix, rx_f_absolute, power_tuple, baudrate, rx_pl) = tup
+						if rx_pl in self.own_recently_sent:
+							#del self.own_recently_sent[rx_pl]
+							DBGPRINT("Discarded self reception.")
+							continue
+						self.last_verified_baudrate = baudrate
+						self.last_verified_freq = (rx_f_absolute, time.monotonic())
+						self.que_rcv_payloads_out.put( ("pl", rx_pl), timeout=1.0)
+						self.que_signaldata_out.put((ts_unix, rx_f_absolute, power_tuple, baudrate, rx_pl), timeout=1.0)
+					else:
+						raise AssertionError("Unknown rcode from an rx process:", rcode)
+		ring_flag_arr[:] = -2
+	# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	# -- loops -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -204,14 +316,10 @@ class DSPLoop:
 
 
 
-
-
-
-def _rx_mpr_loop(dsp_config:DSPConfig, trig_ev, shm_buffer_ring_shm_names, flag_ring_shm_name, que_rcv_payloads_out, que_signaldata_out):
-	from multiprocessing import shared_memory
-	default_batchlen = dsp_config.batch_maxlen // 2
-	T_sample = 1.0 / dsp_config.rx_sr0
-	rx = Receiver(config=dsp_config)
+def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm_names, flag_ring_shm_name, que_out):
+	default_batchlen = rx_dsp_config.batch_maxlen // 2
+	T_sample = 1.0 / rx_dsp_config.rx_sr0
+	rx = Receiver(config=rx_dsp_config)
 	buffer_ring = list()
 	for (name, shape, dtype) in shm_buffer_ring_shm_names:
 		shm = shared_memory.SharedMemory(name=name)
@@ -219,40 +327,39 @@ def _rx_mpr_loop(dsp_config:DSPConfig, trig_ev, shm_buffer_ring_shm_names, flag_
 		buffer_ring.append(arr)
 	ring_len = len(buffer_ring)
 	flag_ring_shm = shared_memory.SharedMemory(name=flag_ring_shm_name[0])
-	flag_arr = np.ndarray(shape=(ring_len, 3), dtype=np.int64, buffer=flag_ring_shm.buf) # (batch_counter, nsamples, ts_s0_mono/unix_ns)
-	process_array_head = 0
+	ring_flag_arr = np.ndarray(shape=(ring_len, 3), dtype=np.int64, buffer=flag_ring_shm.buf) # (batch_counter, nsamples, ts_s0_mono/unix_ns)
+	ring_head = 0
 	last_batch_index = -1
 	while True:
-		mono_to_unix = time.time() - time.monotonic()
+		unix_minus_mono = time.time() - time.monotonic()
 		trig = trig_ev.wait(timeout=0.20)
 		if not trig:
-			if flag_arr[0,0] < -1:
+			if ring_flag_arr[0,0] < -1:
 				return
 			continue
 		trig_ev.clear()
 		while True:
-			if flag_arr[process_array_head,0] == -1:
+			if ring_flag_arr[ring_head,0] == -1:
 				break
-			if flag_arr[process_array_head,0] == (last_batch_index - ring_len + 1):
+			if ring_flag_arr[ring_head,0] == (last_batch_index - ring_len + 1):
 				break
-			if (last_batch_index != -1) and (flag_arr[process_array_head,0] != (last_batch_index + 1)):
-				raise AssertionError("mpr dsp loop fell out of synch: ", (flag_arr[process_array_head,0], last_batch_index))
-			last_batch_index = flag_arr[process_array_head,0]
-			nsamples = int(flag_arr[process_array_head,1])
-			ts_s0_mono = flag_arr[process_array_head,2] * 1.0e-9
-			buffer_arr = buffer_ring[process_array_head]
+			if (last_batch_index != -1) and (ring_flag_arr[ring_head,0] != (last_batch_index + 1)):
+				raise AssertionError("mpr dsp loop fell out of synch: ", (ring_flag_arr[ring_head,0], last_batch_index))
+			last_batch_index = ring_flag_arr[ring_head,0]
+			nsamples = int(ring_flag_arr[ring_head,1])
+			ts_s0_mono = ring_flag_arr[ring_head,2] * 1.0e-9
+			buffer_arr = buffer_ring[ring_head]
 			c = 0
 			while c < nsamples:
 				rx_pls, carrier_sensed = rx.process_samples(batch=buffer_arr[c:min(c+default_batchlen,nsamples)] , give_bits=False)
 				ts_mono = ts_s0_mono + c * T_sample
-				ts_unix = ts_mono + mono_to_unix
+				ts_unix = ts_mono + unix_minus_mono
 				if carrier_sensed:   # TODO: filter for ongoing own transmission ... "(t_mono > self.t_projected_tx_end)"
-					que_rcv_payloads_out.put( ("cs", None, ts_unix), timeout=1.0)
+					que_out.put( ("cs",idd,None), timeout=1.0)
 				for rx_pl, rx_f_absolute, power_tuple in rx_pls:
-					que_rcv_payloads_out.put( ("pl", rx_pl, ts_unix, rx_f_absolute), timeout=1.0)
-					que_signaldata_out.put((ts_unix, rx_f_absolute, power_tuple, dsp_config.baudrate, rx_pl), timeout=1.0)
+					que_out.put( ("pl",idd,(ts_unix, rx_f_absolute, power_tuple, rx_dsp_config.baudrate, rx_pl)), timeout=1.0) #(ts_unix, rx_f_absolute, power_tuple, self.dsp_config.baudrate, rx_pl)
 				c += default_batchlen
-			process_array_head = (process_array_head+1) % ring_len
+			ring_head = (ring_head+1) % ring_len
 
 
 

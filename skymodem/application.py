@@ -3,9 +3,9 @@ This file will contain the main application logic for the SkyModem application.
 """
 import threading
 from radio_loop import RadioLoop, RadioConfig
-from dsp_library.kuokka.dsp_loop import DSPLoop
-from dsp_library.kuokka.lib_receiver import DSPConfig
-from dsp_library.kuokka.lib_tools import get_doppler_low_high
+from dsp_library.kuokka.dsp_loop import DSPLoop, TXDSPConfig
+from dsp_library.kuokka.lib_receiver import RXDSPConfig
+from dsp_library.kuokka.lib_tools import get_doppler_low_high, usrp_B200_valid_samplerates
 from dsp_library.kuokka.lib_tools import fractional_resampler_f_max_undisturbed
 from skylink_wrapper.cython_skylink import SkyLinkLoop, SkyConfiguration, EKEY_SKY_ARQ_DISCONNECTED, EKEY_SKY_PAYLOAD, EKEY_SKY_ARQ_CONNECTED
 from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_off
@@ -93,7 +93,7 @@ def connect_amqp_pub_socket(broker_addr):
 
 
 class SkyModem:
-	def __init__(self, dsp_config:DSPConfig, radio_config:RadioConfig, skylink_config:SkyConfiguration, hmac_key_list, vc_port_base, amqp_broker_addr=None):
+	def __init__(self, rx_dsp_config:RXDSPConfig, tx_dsp_config:TXDSPConfig, radio_config:RadioConfig, skylink_config:SkyConfiguration, hmac_key_list, vc_port_base, amqp_broker_addr=None):
 		self.on = True
 		self.hmac_key_list = hmac_key_list
 		self.que_samples_radio_to_dsp 	= Queue(500)
@@ -103,7 +103,7 @@ class SkyModem:
 		self.que_signaldata_out 		= Queue(100)
 
 		self.radio_loop 	= RadioLoop(radio_config=radio_config, que_tx_samples_in=self.que_samples_dsp_to_radio, que_rx_samples_out=self.que_samples_radio_to_dsp)
-		self.dsp_loop 		= DSPLoop(dsp_config=dsp_config, que_rx_samples_in=self.que_samples_radio_to_dsp, que_rx_payloads_out=self.que_payloads_dsp_to_sky,
+		self.dsp_loop 		= DSPLoop(rx_dsp_config=rx_dsp_config, tx_dsp_config=tx_dsp_config, que_rx_samples_in=self.que_samples_radio_to_dsp, que_rx_payloads_out=self.que_payloads_dsp_to_sky,
 									   que_tx_payloads_in=self.que_payloads_sky_to_dsp, que_tx_samples_out=self.que_samples_dsp_to_radio, que_signaldata_out=self.que_signaldata_out)
 		self.skylink_loop 	= SkyLinkLoop(config=skylink_config, key_list=hmac_key_list, que_payloads_in=self.que_payloads_dsp_to_sky, que_payloads_out=self.que_payloads_sky_to_dsp)
 		self.sub_que_process_thread 	= threading.Thread(target=None, args=tuple())
@@ -112,7 +112,10 @@ class SkyModem:
 		self.amqp_connection = None
 		self.signaldata_amqp_pub_sock = None
 		if not (amqp_broker_addr is None):
-			self.signaldata_amqp_pub_sock, self.amqp_connection = connect_amqp_pub_socket(amqp_broker_addr)
+			try:
+				self.signaldata_amqp_pub_sock, self.amqp_connection = connect_amqp_pub_socket(amqp_broker_addr)
+			except:
+				pass
 		self.pub_sockets = pub_sockets
 		self.sub_sockets = sub_sockets
 		self.signaldata_pub_sock = signaldata_pub_sock
@@ -364,16 +367,16 @@ def get_usrp_receiver_config(f_center, baudrate, max_signal_bw):
 	from dsp_library.kuokka.lib_tools import determine_ftune_and_min_sr
 	f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
 	f_tune, minimum_samplerate = determine_ftune_and_min_sr(f_center_min=f_center_min, f_center_max=f_center_max, max_signal_bandwidth=max_signal_bw)
+	assert minimum_samplerate < 3e6
+	sr0 = 1e6
+	while sr0 < minimum_samplerate:
+		sr0 = [x for x in usrp_B200_valid_samplerates if x > sr0][0]
 	print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
-	assert minimum_samplerate < 2e6
-	if minimum_samplerate > 1e6:
-		sr0 = 2e6
-	else:
-		sr0 = 1e6
 	print("Using usrp radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr0*1e-6, 3) ))
 	radio_config 	= RadioConfig(mode="usrp", rx_sr=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr=sr0, tx_f_tune=f_tune, tx_f_center=f_center)
-	dsp_config 		= DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
-	return dsp_config, radio_config
+	rx_dsp_config 	= RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
+	tx_dsp_config 	= TXDSPConfig(tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate)
+	return rx_dsp_config, tx_dsp_config, radio_config
 
 
 def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, max_signal_bw):
@@ -381,7 +384,6 @@ def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, m
 	f_center_min = f_center_min - max_signal_bw * 0.6
 	f_center_max = f_center_max + max_signal_bw * 0.6
 	plateu_minimum_halfwidth = max( abs(f_tune - f_center_min), abs(f_tune - f_center_max) )
-
 	minimum_samplerate = int(2 * plateu_minimum_halfwidth)
 	sr_leecher = max(1e6, 1e6*int(minimum_samplerate/1e6))
 	while True:
@@ -396,8 +398,9 @@ def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, m
 	print("Calculated necessary samplerate at {} ks/s".format( round(1.0e-3 * sr_leecher, 1) ))
 	print("Using soapy-leecher radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr_leecher*1e-6, 3) ))
 	radio_config 	= RadioConfig(mode="soapy", rx_sr=sr_leecher, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr=sr_leecher, tx_f_tune=f_tune, tx_f_center=f_center)
-	dsp_config 		= DSPConfig(rx_sr0=sr_leecher, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr_leecher, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
-	return dsp_config, radio_config
+	rx_dsp_config 	= RXDSPConfig(rx_sr0=sr_leecher, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
+	tx_dsp_config 	= TXDSPConfig(tx_sr0=sr_leecher, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate)
+	return rx_dsp_config, tx_dsp_config, radio_config
 
 
 def read_key_from_header(file_path: str, key_name: str):
@@ -491,7 +494,7 @@ if __name__ == '__main__':
 	skylink_config_.vc[3].tx_key = 0
 	#* DO NOT MODIFY ABOVE CONFIGURATIONS IN ANY SITUATION!!! *#
 
-	dsp_config_, radio_config_ = None, None
+	rx_dsp_config_, tx_dsp_config_, radio_config_ = None, None, None
 	import sys
 	import argparse
 	parser = argparse.ArgumentParser()
@@ -503,15 +506,16 @@ if __name__ == '__main__':
 	assert vc_base < 60000
 
 	if _args.mode == "soapy":
-		dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, f_tune=436e6, sr_hardware=8e6, max_signal_bw=9600*4*1.2)
+		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, f_tune=436e6, sr_hardware=8e6, max_signal_bw=9600*4*1.2)
 	else:
 		assert _args.mode == "usrp"
-		dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2)
+		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2)
 
-	amqp_broker_addr_ = "amqp://guest:guest@localhost:5672"
-	modem = SkyModem(dsp_config=dsp_config_, radio_config=radio_config_, skylink_config=skylink_config_, hmac_key_list=hmac_keys, vc_port_base=vc_base, amqp_broker_addr=amqp_broker_addr_)
+	#amqp_broker_addr_ = "amqp://guest:guest@localhost:5672"
+	amqp_broker_addr_ = None
+	modem = SkyModem(rx_dsp_config=rx_dsp_config_, tx_dsp_config=tx_dsp_config_, radio_config=radio_config_, skylink_config=skylink_config_, hmac_key_list=hmac_keys, vc_port_base=vc_base, amqp_broker_addr=amqp_broker_addr_)
 	modem.start()
-	modem.dsp_loop.set_doppler_correction(False)
+	#modem.dsp_loop.set_doppler_correction(True)
 	try:
 		while True:
 			#print(threading.active_count(), "threads active")

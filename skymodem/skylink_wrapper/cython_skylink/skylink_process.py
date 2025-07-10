@@ -79,7 +79,7 @@ class SkyLinkLoop(threading.Thread):
 		while self.on:
 			sleeptime += 0.1e-3
 			with self.lock:
-				self.skylink.sky_tick( (int(time.time() * 1000) % mod_time_ticks) )
+				self.skylink.sky_tick( (int(time.monotonic() * 1000) % mod_time_ticks) )
 				while not self.que_payloads_from_dsp.empty():
 					code, data = self.que_payloads_from_dsp.get_nowait()
 					if code == "cs":

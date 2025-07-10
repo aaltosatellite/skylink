@@ -2,7 +2,7 @@ import numpy as np
 from kuokka.lib_framing import frame_packet
 from kuokka.lib_reedsolomon import get_default_rs, RS_MAX_ENCODED_LEN, RS_MAX_PL_LEN, RS_MIN_ENCODED_LEN
 from kuokka.lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_BITS, DEFAULT_SYNCHWORD_LEN, ints_to_bits
-from kuokka.lib_receiver import Receiver, DSPConfig, precompile_receiver
+from kuokka.lib_receiver import Receiver, RXDSPConfig, precompile_receiver
 from mtools.tools_dsp import waterfall_mx
 from mtools.tools_system import mpr_set
 from kuokka.lib_tools import make_samples2, radionoise
@@ -51,7 +51,7 @@ def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payl
 
 
 
-def feed_samples_to_a_receiver(dsp_config:DSPConfig, samples, payload_istart_iend_list, default_batchlen, do_precompile=False, add_noise_amp=0.0):
+def feed_samples_to_a_receiver(dsp_config:RXDSPConfig, samples, payload_istart_iend_list, default_batchlen, do_precompile=False, add_noise_amp=0.0):
 	if do_precompile:
 		precompile_receiver(dsp_config=dsp_config, do_print=False)
 	rx = Receiver(config=dsp_config)
@@ -80,7 +80,7 @@ def feed_samples_to_a_receiver(dsp_config:DSPConfig, samples, payload_istart_ien
 
 
 
-def tgt_loop(ii, noisePpHz, dsp_config:DSPConfig, n_payloads, f_center_error, rel_baudrate_error, tx_mod_index_override=None):
+def tgt_loop(ii, noisePpHz, dsp_config:RXDSPConfig, n_payloads, f_center_error, rel_baudrate_error, tx_mod_index_override=None):
 	if tx_mod_index_override is None:
 		tx_mod_index = dsp_config.mod_index
 	else:
@@ -108,7 +108,7 @@ def tgt_loop(ii, noisePpHz, dsp_config:DSPConfig, n_payloads, f_center_error, re
 
 
 
-def measure_curve_mpr(rx_config:DSPConfig, n_payloads, f_center_error, rel_baudrate_error, noiseP_array, tx_mod_index_override=None):
+def measure_curve_mpr(rx_config:RXDSPConfig, n_payloads, f_center_error, rel_baudrate_error, noiseP_array, tx_mod_index_override=None):
 	reception_rate_array = np.zeros(len(noiseP_array), dtype=np.float64) -1
 	delay_array = np.zeros(len(noiseP_array), dtype=np.float64) -2
 	argtuples = list()
@@ -118,15 +118,15 @@ def measure_curve_mpr(rx_config:DSPConfig, n_payloads, f_center_error, rel_baudr
 	for i_noise, r_rate, avg_delay_t in ret_list:
 		reception_rate_array[i_noise] = r_rate
 		delay_array[i_noise] = avg_delay_t
-	A = surf_integral(x_arr=noiseP_array, y_arr=reception_rate_array)
-	avg_delay = np.average( [x for x in delay_array if x > 0] ) if any(delay_array > 0) else -1
+	#A = surf_integral(x_arr=noiseP_array, y_arr=reception_rate_array)
+	#avg_delay = np.average( [x for x in delay_array if x > 0] ) if any(delay_array > 0) else -1
 	assert np.all(reception_rate_array >= 0)
 	assert np.all(delay_array > -2)
 	return reception_rate_array, delay_array
 
 
 
-def measure_execution_speed(rx_config:DSPConfig):
+def measure_execution_speed(rx_config:RXDSPConfig):
 	T_init_silence_minim  = 2 * rx_config.fftlen_mpr*rx_config.sps / (rx_config.sps*rx_config.baudrate)
 	assert T_init_silence_minim < 5.0
 	T_init_silence = 5.0
@@ -175,7 +175,7 @@ def speed_printout(dt_array, t_total, nsamples, sr0):
 
 
 
-def random_receiver_config_from_choises(attrname_array_d:dict, rx_config_basis:DSPConfig):
+def random_receiver_config_from_choises(attrname_array_d:dict, rx_config_basis:RXDSPConfig):
 	rx_config = deepcopy(rx_config_basis)
 	for _ in range(100):
 		try:
@@ -203,7 +203,7 @@ def surf_integral(x_arr, y_arr):
 
 
 
-def save_result(rx_config:DSPConfig, n_payloads, noiseP_array, reception_rate_array, A, avg_delay, dpath):
+def save_result(rx_config:RXDSPConfig, n_payloads, noiseP_array, reception_rate_array, A, avg_delay, dpath):
 	dd = {
 		"version" : 5.0,
 		"ts": dtime.now().isoformat(),
@@ -251,7 +251,7 @@ def load_results(dpath, minimum_version, fname_contains, mandatory_d_keys):
 
 
 def load_top_configs(dpath, minimum_version, fname_contains, mandatory_d_keys, top_n):
-	default_config = DSPConfig(rx_sr0=1e6, rx_f_tune=437.1e6, rx_f_center=437.125e6, tx_sr0=1e6, tx_f_tune=437.1e6, tx_f_center=437.125e6, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
+	default_config = RXDSPConfig(rx_sr0=1e6, rx_f_tune=437.1e6, rx_f_center=437.125e6, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
 	results = load_results(dpath=dpath, minimum_version=minimum_version, fname_contains=fname_contains, mandatory_d_keys=mandatory_d_keys)
 	results = sorted(results, key=lambda x: x["A"], reverse=True)
 	configs_dicts = list()
@@ -293,11 +293,11 @@ def test_precompilation_success_rate(N):
 	f_center 	= 437.125e6
 	sr0 		= 1e6
 	baudrate	= 9600
-	basic_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 8)
+	basic_config = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 8)
 	basic_config.sps 					= 21
 	basic_config.centering_delay_mpr 	= 5.0
 	basic_config.lp_cutoff_coeff 		= 0.63
-	basic_config.JPL_n_decay 			= 32
+	basic_config.JPL_n_halflife 		= 22
 	basic_config.synch_delay_mpr		= 16.0
 	# new default (but sps=21) fails at: 	36, 16, 165, 272, 45
 	# new default fails at: 				-
@@ -319,7 +319,7 @@ def basic_test_A():
 	sr0 		= 3.6e6
 	baudrate	= 9600 * 4
 	n_payloads	= 12
-	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=400000, batch_maxlen=1024 * 8)
+	rx_config = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=400000, batch_maxlen=1024 * 8)
 	#rx_config.mod_index = 0.7
 	#rx_config.BT_rx_match = -1
 	noisePpHz = 0.001/baudrate
@@ -347,14 +347,14 @@ def compare_default_optimod_4800():
 	f_center 	= 437.125e6
 	sr0 		= 1e6
 	n_payloads	= 64*3
-	rx_config1 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600 // 2, bufferlen=800000, batch_maxlen=1024 * 8)
-	rx_config2 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600 * 1, bufferlen=800000, batch_maxlen=1024 * 8)
-	rx_config3 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600 * 2, bufferlen=800000, batch_maxlen=1024 * 8)
-	rx_config4 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600 * 4, bufferlen=800000, batch_maxlen=1024 * 8)
-	rx_config5 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config1 = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600 // 2, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config2 = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600 * 1, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config3 = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600 * 2, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config4 = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600 * 4, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config5 = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	rx_config5.mod_index = 0.7
 	rx_config5.BT_rx_match = 0.5
-	rx_config6 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config6 = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	rx_config6.mod_index = 0.75
 	rx_config6.BT_rx_match = 0.5
 	rx_config6.lp_cutoff_coeff = 0.575
@@ -416,8 +416,8 @@ def mod_index_matrix_comparison():
 	f_center 	= 437.125e6
 	sr0 		= 1e6
 	n_payloads	= 64*3
-	rx_config1 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
-	rx_config2 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config1 = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config2 = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	rx_config1.mod_index = 0.5
 	rx_config2.mod_index = 0.75
 
@@ -472,8 +472,8 @@ def compare_fftlens():
 	f_center 	= 437.125e6
 	sr0 		= 1e6
 	n_payloads	= 32
-	rx_config1 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
-	rx_config2 = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config1 = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config2 = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	rx_config2.fftlen = 512 + 256
 
 	rel_noiseP_array = np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.26]) # , 0.28
@@ -511,13 +511,13 @@ def compare_timings():
 	f_tune 		= 437.1e6
 	f_center 	= 437.125e6
 	sr0 		= 1e6
-	rx_config_default = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+	rx_config_default = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
 	config_optim_1 = deepcopy(rx_config_default)
 	config_optim_1.sps = 19
 	config_optim_1.lp_cutoff_coeff = 0.583
 	config_optim_1.centering_delay_mpr = 2.0
 	config_optim_1.synch_delay_mpr = 16
-	config_optim_1.JPL_n_decay = 44
+	config_optim_1.JPL_n_halflife = 30
 
 	_ = measure_execution_speed(rx_config=rx_config_default)
 	dt_array, t_signal, t_silence, n_samples, n_signal_samples = measure_execution_speed(rx_config=rx_config_default)
@@ -541,50 +541,25 @@ def optimizer_A(t_run_min):
 	f_center_error 		= 3e3
 	rel_baudrate_error 	= 1.5e-5
 
-	rel_noiseP_array 	= np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26])   #,0.28
+	rel_noiseP_array 	= np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28])   #,0.28
 	noiseP_array 		= rel_noiseP_array / 9600
 
-	rx_config_basis = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
+	rx_config_basis = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
 	rx_config_basis.mod_index = 0.75
 	#rx_config_basis.BT_rx_match = BT_rx_match
 	#rx_config_basis.BT_rx_match = -1
 
-	"""
-	self.sps 				= 12 			# ! sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
-	self.fftlen_mpr 		= 50			# ! Length of the fft window in multiples of sps in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
-		self.mod_index 			= 0.5			# S Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
-		self.BT_rx_match 		= 0.425			# S Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering. TODO: best match for 0.5 at UHF-firmware is 0.425 here
-	self.centering_delay_mpr= 2.15 			# ! Center frequency estimate is collected for (centering_delay_mpr*fftlen) samples ahead of demodulation. TODO should be in symbols?
-	self.c_center_decay		= 0.94 			# ! Exponential decay factor of the center frequency correlation sum.
-	self.JPL_n_decay 		= 55 			# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
-	self.lp_ntaps			= 161			# ! number of taps in the low-pass filter in demodulation
-	self.lp_cutoff_coeff	= 0.600			# ! cutoff frequency of the low-pass filter, as multiples of baudrate
-	self.synch_delay_mpr	= 30 			# ! demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
-	"""
-
-	"""
-	self.sps 				= 12 			# ! sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
-	self.fftlen_mpr 		= 48			# ! Length of the fft window in multiples of sps in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
-		self.mod_index 			= 0.5			# S Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
-		self.BT_rx_match 		= 0.425			# S Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering. TODO: best match for 0.5 at UHF-firmware is 0.425 here
-	self.centering_delay_mpr= 2.0 			# ! Center frequency estimate is collected for (centering_delay_mpr*fftlen) samples ahead of demodulation. TODO should be in symbols?
-	self.c_center_decay		= 0.94 			# ! Exponential decay factor of the center frequency correlation sum.
-	self.JPL_n_decay 		= 55 			# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
-	self.lp_ntaps			= 161			# ! number of taps in the low-pass filter in demodulation
-	self.lp_cutoff_coeff	= 0.570			# ! cutoff frequency of the low-pass filter, as multiples of baudrate (0.570 seems best both for mod_idx=0.5 and mod_idx=0.75)
-	self.synch_delay_mpr	= 30 			# ! demodulator decides symbols synch_delay_mpr symboltimes behind the synchronizer. This allows a synch to be found before symbols are decoded.
-	"""
-
 	attrname_array_d1 = {
 		"mod_index" :     		[0.5, 0.75],
-		"sps": 				    [8,10,12,16,22],
-		"fftlen_mpr": 			[int(x)   for x in np.linspace(0.20,2.0, 128)  * 50],
-		"centering_delay_mpr" : [float(x) for x in np.linspace(0.15,2.0, 128) * 2.15],
-		"c_center_decay" :      [1-1/float(x) for x in np.geomspace(3,500, 512)],
-		"JPL_n_decay" :         [int(x)   for x in np.linspace(0.25,2.0, 128) * 55],
-		"lp_ntaps" :            [int(x)*2+1 for x in np.linspace(0.1,2.0, 128) * 161/2.0],
-		#"lp_cutoff_coeff" :     [float(x) for x in np.linspace(0.50,2.0, 128) * 0.570],
-		"synch_delay_mpr" :     [float(x) for x in np.linspace(0.25,2.0, 128) * 30.0],
+		"sps" : 				[8,10,12,14,16,22],
+		"fftlen_mpr" : 			[int(x)   for x in np.linspace(0.50,3.0, 128)  * 52],
+		"centering_delay_mpr" : [float(x) for x in np.linspace(0.15,2.0, 128) * 2.0],
+		"c_center_decay" : 		[1-1/float(x) for x in np.geomspace(3,500, 512)],
+		"JPL_n_halflife" : 		[int(x)   for x in np.linspace(0.25,2.0, 128) * 55],
+		"lp_ntaps" : 			[int(x*0.5)*2+1 for x in np.linspace(0.1,2.0, 128) * 161],
+		#"lp_cutoff_coeff" : 	[float(x) for x in np.linspace(0.50,2.0, 128) * 0.570],
+		#"mod_index" : 			[float(x) for x in np.linspace(0.50, 1.5, 256)],
+		"synch_delay_mpr" : 	[float(x) for x in np.linspace(0.25,2.0, 128) * 30.0],
 	}
 	attrname_array_d2 = {
 		"lp_cutoff_coeff" :     [float(x) for x in np.linspace(0.50,0.65, 128) * 1.0],
@@ -632,12 +607,6 @@ def analyze_results_plot():
 	results = [r for r in results if r["A"] > 0]
 	#results = [r for r in results if r["A"] > 2.55e-5]
 
-	#results = [r for r in results if 0.57 < r["rx_config"]["lp_cutoff_coeff"] < 0.63]   	# !!!!
-	#results = [r for r in results if r["rx_config"]["JPL_n_decay"] > 20]					# !!!!
-
-	#results = [r for r in results if r["rx_config"]["fftlen_mpr"] > 30]
-	#results = [r for r in results if r["rx_config"]["sps"] > 8]
-
 	#results = [r for r in results if r["rx_config"]["c_center_decay"] > 0.8]
 
 	results = [r for r in results if r["rx_config"]["BT_rx_match"] > 0.0]
@@ -645,13 +614,12 @@ def analyze_results_plot():
 	#results = [r for r in results if r["rx_config"]["mod_index"] < 1.0]
 	#results = [r for r in results if r["rx_config"]["lp_cutoff_coeff"] >= 0.55]
 	#results = [r for r in results if r["rx_config"]["lp_cutoff_coeff"] <= 0.60]
-
 	#results = [r for r in results if r["rx_config"]["mod_index"] < 0.6]
 
 	print("{} remain after filtering.".format(len(results)))
 
 
-	parameter_names = ["mod_index", "lp_cutoff_coeff", "sps", "fftlen_mpr",  "centering_delay_mpr", "c_center_decay", "JPL_n_decay", "lp_ntaps", "synch_delay_mpr"]
+	parameter_names = ["mod_index", "lp_cutoff_coeff", "sps", "fftlen_mpr",  "centering_delay_mpr", "c_center_decay", "JPL_n_halflife", "lp_ntaps", "synch_delay_mpr"]
 	for res in results[0:4]:
 		print("A:       {}".format(res["A"]))
 		print("delay:   {}".format(1e3*res["avg_delay"]))
@@ -669,7 +637,7 @@ def analyze_results_plot():
 	delay_array = [d["avg_delay"] for d in results]
 	ts_bool_array = [1.0 * (dtime.fromisoformat(r["ts"]) > dtime(year=2025, month=4, day=24, hour=0, minute=0)) for r in results]
 	print("sum ts_bool_array:", sum(ts_bool_array))
-	color_arr = version_array # == 5.0
+	color_arr = mod_idx_array
 
 
 	parameter_arrays0 = dict()
@@ -701,36 +669,36 @@ def analyze_results_plot():
 
 
 
-	fig3 = plt.figure(figsize=(12,10))
-	ax31 = fig3.add_subplot(331)
-	ax32 = fig3.add_subplot(332)
-	ax33 = fig3.add_subplot(333)
-	ax34 = fig3.add_subplot(334)
-	ax35 = fig3.add_subplot(335)
-	ax36 = fig3.add_subplot(336)
-	ax37 = fig3.add_subplot(337)
-	ax38 = fig3.add_subplot(338)
-	ax39 = fig3.add_subplot(339)
-	for i,ax in enumerate([ax31,ax32,ax33,ax34,ax35,ax36,ax37,ax38,ax39]):
+	fig2 = plt.figure(figsize=(18,14))
+	ax21 = fig2.add_subplot(331)
+	ax22 = fig2.add_subplot(332)
+	ax23 = fig2.add_subplot(333)
+	ax24 = fig2.add_subplot(334)
+	ax25 = fig2.add_subplot(335)
+	ax26 = fig2.add_subplot(336)
+	ax27 = fig2.add_subplot(337)
+	ax28 = fig2.add_subplot(338)
+	ax29 = fig2.add_subplot(339)
+	for i,ax in enumerate([ax21,ax22,ax23,ax24,ax25,ax26,ax27,ax28,ax29]):
 		#ax.scatter(parameter_arrays0[parameter_names[i]], delay_array0, color="grey", marker=".", s=3)
 		ax.scatter(parameter_arrays[parameter_names[i]], delay_array, c=color_arr)
 		ax.set_xlabel(parameter_names[i])
 		ax.set_ylabel("delay")
 		ax.grid()
-	fig3.set_layout_engine("tight")
+	fig2.set_layout_engine("tight")
 
 
 
 
-	fig2 = plt.figure(figsize=(12,10))
-	ax21 = fig2.add_subplot(321)
-	ax22 = fig2.add_subplot(322)
-	ax23 = fig2.add_subplot(323)
-	ax24 = fig2.add_subplot(324)
-	ax25 = fig2.add_subplot(325)
-	ax26 = fig2.add_subplot(326)
+	fig3 = plt.figure(figsize=(12,10))
+	ax31 = fig3.add_subplot(321)
+	ax32 = fig3.add_subplot(322)
+	ax33 = fig3.add_subplot(323)
+	ax34 = fig3.add_subplot(324)
+	ax35 = fig3.add_subplot(325)
+	ax36 = fig3.add_subplot(326)
 	pairs = set()
-	for i, ax in enumerate([ax21,ax22,ax23,ax24,ax25,ax26]):
+	for i, ax in enumerate([ax31,ax32,ax33,ax34,ax35,ax36]):
 		a,b = np.random.randint(0,9,2)
 		a,b = tuple(sorted( (a,b) ))
 		while (a==b) or ((a,b) in pairs):
@@ -742,7 +710,35 @@ def analyze_results_plot():
 		ax.set_xlabel(parameter_names[a])
 		ax.set_ylabel(parameter_names[b])
 		ax.grid()
-	fig2.set_layout_engine("tight")
+	fig3.set_layout_engine("tight")
+
+	delay_array = np.array(delay_array)
+	ordered_indexing = sorted(list(range(len(parameter_arrays["sps"]))), key=lambda k: delay_array[k])
+	ordered_indexing = np.array(ordered_indexing, dtype=np.int64)
+	print(ordered_indexing.dtype)
+	xarr41_A = (parameter_arrays["fftlen_mpr"]*parameter_arrays["centering_delay_mpr"]*parameter_arrays["sps"]) / (parameter_arrays["sps"]*9600)
+	xarr41_B = (parameter_arrays["synch_delay_mpr"]*parameter_arrays["sps"]) / (parameter_arrays["sps"]*9600)
+	xarr41_C = (parameter_arrays["lp_ntaps"]*0.5) / (parameter_arrays["sps"]*9600)
+	xarr41 = xarr41_A + xarr41_B + xarr41_C + 0.0e-3
+	#delay1 = (fftlen_mpr * sps * centering_delay_mpr) / (sps * baudrate)
+	#delay2 = (synch_delay_mpr * sps) / (sps * baudrate)
+	#delay3 = (lp_ntaps * 0.5) / (sps * baudrate)
+	print(len(ordered_indexing))
+	print(len(delay_array))
+	print(ordered_indexing[0:10])
+	fig4 = plt.figure(figsize=(12,12))
+	ax41 = fig4.add_subplot(111)
+	ax41.scatter(np.arange(len(ordered_indexing)), delay_array[ordered_indexing])
+	ax41.scatter(np.arange(len(ordered_indexing)), xarr41[ordered_indexing])
+	ax41.scatter(np.arange(len(ordered_indexing)), xarr41_A[ordered_indexing])
+	ax41.scatter(np.arange(len(ordered_indexing)), xarr41_B[ordered_indexing])
+	ax41.scatter(np.arange(len(ordered_indexing)), xarr41_C[ordered_indexing])
+	ax41.set_xlabel("X")
+	ax41.set_ylabel("Y")
+	ax41.grid()
+	fig4.set_layout_engine("tight")
+
+
 
 
 
@@ -763,15 +759,15 @@ def analyze_results_plot():
 #basic_test_A()
 #basic_test_A()
 
-compare_default_optimod_4800()
+#compare_default_optimod_4800()
 #mod_index_matrix_comparison()
 
 #compare_fftlens()
 #compare_timings()
 
-#analyze_results_plot()
+analyze_results_plot()
 
-#optimizer_A(t_run_min=20.0)
+#optimizer_A(t_run_min=30.0)
 
 #test_precompilation_success_rate(1000)
 

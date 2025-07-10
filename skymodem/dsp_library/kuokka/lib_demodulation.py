@@ -215,23 +215,23 @@ def create_DD_statemx(synch_delay_mpr_f, sps_f, Neps):
 
 
 @njit(cache=True, parallel=False)
-def decide_decode(dmd_arr, center_f_arr, power_arr, synch_arr, dmdsynch_head, opt_dec_idx_f0, sddmx, deframermx, rs_mx, rs_cfg):
-	assert opt_dec_idx_f0 >= 0
-	opt_dec_idx_f	= opt_dec_idx_f0
+def decide_decode(dmd_arr, center_f_arr, power_arr, synch_arr, dmdsynch_head, opt_tap_idx_f0, sddmx, deframermx, rs_mx, rs_cfg):
+	assert opt_tap_idx_f0 >= 0
+	opt_tap_idx_f	= opt_tap_idx_f0
 	sps_f 			= sddmx[0,1]
 	synch_delay_i 	= int(sddmx[0,2])
 	Neps 			= int(sddmx[0,3])
 	assert synch_delay_i >= 0
-	bitarr    = np.zeros(int(1.5*(dmdsynch_head - opt_dec_idx_f)/sps_f)+3, dtype=np.int64)
-	bit_f_arr = np.zeros(int(1.5*(dmdsynch_head - opt_dec_idx_f)/sps_f)+3, dtype=np.float64)
-	bit_p_arr = np.zeros((int(1.5*(dmdsynch_head - opt_dec_idx_f)/sps_f)+3, 3), dtype=np.float64) 		# for power sense
+	bitarr    = np.zeros(int(1.5*(dmdsynch_head - opt_tap_idx_f)/sps_f)+3, dtype=np.int64)
+	bit_f_arr = np.zeros(int(1.5*(dmdsynch_head - opt_tap_idx_f)/sps_f)+3, dtype=np.float64)
+	bit_p_arr = np.zeros((int(1.5*(dmdsynch_head - opt_tap_idx_f)/sps_f)+3, 3), dtype=np.float64) 		# for power sense
 	ibit = 0
 	#print("Process len:", dmdsynch_head - opt_dec_idx_f0)
 	while True:
-		vsym, i_tap = symbol_decision(dmd_arr=dmd_arr, synch_arr=synch_arr, dmd_synch_head_i=dmdsynch_head, prev_dmd_idx_f=opt_dec_idx_f, sps_f=sps_f, synch_delay_i=synch_delay_i, N_eps_i=Neps)
+		vsym, i_tap = symbol_decision(dmd_arr=dmd_arr, synch_arr=synch_arr, dmd_synch_head_i=dmdsynch_head, prev_dmd_idx_f=opt_tap_idx_f, sps_f=sps_f, synch_delay_i=synch_delay_i, N_eps_i=Neps)
 		if i_tap < 0:
 			break
-		opt_dec_idx_f = i_tap
+		opt_tap_idx_f = i_tap
 		bitarr[ibit] = np.sign(vsym)
 		bit_f_arr[ibit] = center_f_arr[int(round(i_tap))] 		# int(round(i_tap))
 		bit_p_arr[ibit] = power_arr[int(round(i_tap))]			# for power sense
@@ -239,7 +239,7 @@ def decide_decode(dmd_arr, center_f_arr, power_arr, synch_arr, dmdsynch_head, op
 		ibit += 1
 	bits = np.clip(bitarr[:ibit], 0, 1)
 	payloads, payload_delimits, payload_frequencies, payload_powertuples, fault_counts = deframe(bits=bits, bit_frequencies=bit_f_arr[:ibit], bit_powers=bit_p_arr[:ibit], deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
-	return payloads, payload_delimits, payload_frequencies, payload_powertuples, fault_counts, bitarr[:ibit], opt_dec_idx_f
+	return payloads, payload_delimits, payload_frequencies, payload_powertuples, fault_counts, bitarr[:ibit], opt_tap_idx_f
 
 
 

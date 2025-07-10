@@ -3,7 +3,8 @@ from kuokka.lib_tools import make_samples1, make_samples2
 import time
 import numpy as np
 from kuokka.dsp_loop import DSPLoop
-from kuokka.lib_receiver import DSPConfig
+from kuokka.lib_receiver import RXDSPConfig
+from kuokka.dsp_loop import TXDSPConfig
 from queue import Queue
 from matplotlib import pyplot as plt
 
@@ -67,9 +68,10 @@ def speedbench_raw_modulation2(sr, baudrate, BT):
 
 
 def speedbench_packet_modulation(sr, baudrate, BT):
-	dsp_config = DSPConfig(rx_sr0=sr,  rx_f_tune=437.1e6, rx_f_center=437.125e6, tx_sr0=sr, tx_f_tune=437.1e6, tx_f_center=437.125e6, baudrate=baudrate, bufferlen=800000, batch_maxlen=16000)
-	dsp_config.tx_BT = BT
-	dsploop = DSPLoop(dsp_config=dsp_config, que_tx_samples_out=Queue(10), que_tx_payloads_in=Queue(10), que_rx_payloads_out=Queue(10), que_rx_samples_in=Queue(10))
+	rx_dsp_config = RXDSPConfig(rx_sr0=sr, rx_f_tune=437.06e6, rx_f_center=437.125e6, baudrate=baudrate, bufferlen=800000, batch_maxlen=16000)
+	rx_dsp_config.tx_BT = BT
+	tx_dsp_config = TXDSPConfig(tx_sr0=sr, tx_f_tune=rx_dsp_config.rx_f_tune, tx_f_center=rx_dsp_config.rx_f_center, baudrate=baudrate)
+	dsploop = DSPLoop(rx_dsp_config=rx_dsp_config, tx_dsp_config=tx_dsp_config, que_tx_samples_out=Queue(10), que_tx_payloads_in=Queue(10), que_rx_payloads_out=Queue(10), que_rx_samples_in=Queue(10), que_signaldata_out=Queue(10))
 
 	pl = os.urandom(200)
 
@@ -84,15 +86,18 @@ def speedbench_packet_modulation(sr, baudrate, BT):
 	speed_bits 		= len(pl)*8 / T_call
 	speed_ratio_1 	= speed_bits / baudrate
 	speed_ratio_2 	= (len(samples)/T_call) / sr
-	print("dt1,dt2,dt3:    ({}, {}, {}) µs".format( *[round(1e6*dt, 1) for dt in (dt1,dt2,dt3)] ))
+	#print("dt1,dt2,dt3:    ({}, {}, {}) µs".format( *[round(1e6*dt, 1) for dt in (dt1,dt2,dt3)] ))
 	print("="*40)
-	print("sr: {} Ms/s     baudrate: {} sym/s".format( round(sr*1e-6, 2), round(baudrate, 0) ))
-	print("BT:             {}".format( round(BT, 2) ))
+	print("sr:  {} Ms/s      baudrate:  {} sym/s".format( round(sr*1e-6, 2), round(baudrate, 0) ))
+	print("BT:  {}".format( round(BT, 2) ))
 	#print("")
 	#print("T_call:         {} ms".format( round(1e3*T_call, 2) ))
 	#print("mod byterate:   {} kbyte/s".format( round(1e-3*speed_bytes, 2) ))
 	print("speed ratio by baudrate:     {}".format( round(speed_ratio_1, 1) ))
 	print("speed ratio by samplerate:   {}".format( round(speed_ratio_2, 1) ))
+	print("(framing and bit array:  {} %)".format( round(100*dt1/(dt1+dt2+dt3), 2) ))
+	print("(sample generation:      {} %)".format( round(100*dt2/(dt1+dt2+dt3), 2) ))
+	print("(reshaping and retyping: {} %)".format( round(100*dt3/(dt1+dt2+dt3), 2) ))
 	print("="*40)
 	print("")
 
@@ -145,7 +150,7 @@ def plot_modulation_comparison(sr, baudrate, BT):
 #speedbench_raw_modulation2(sr=1e6, baudrate=9600 * 4, BT=0.5)
 
 
-#plot_modulation_comparison(sr=1.0e6, baudrate=9600*2, BT=0.5)
+plot_modulation_comparison(sr=1.0e6, baudrate=9600*2, BT=0.5)
 
 
 print("")

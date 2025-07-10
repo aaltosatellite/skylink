@@ -83,6 +83,17 @@ class RadioLoop:
 		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(self.radio_config.tx_f_tune), 0)
 		usrp.set_rx_gain(rx_gain, 0)
 		usrp.set_tx_gain(tx_gain, 0)
+		usrp.set_gpio_attr("FP0", "ATR_TX", 0x0100, 0x0100)
+		usrp.set_gpio_attr("FP0", "ATR_XX", 0x0100, 0x0100)
+		#print("bank 0:", usrp.get_gpio_banks(0)) #['FP0', 'RXA', 'TXA']  (No further banks in B210)
+		#print("FP0 CTRL", usrp.get_gpio_attr("FP0", "CTRL"))
+		#print("FP0 DDR", usrp.get_gpio_attr("FP0", "DDR"))
+		#print("FP0 OUT", usrp.get_gpio_attr("FP0", "OUT"))
+		#print("FP0 ATR_0X", usrp.get_gpio_attr("FP0", "ATR_0X"))
+		#print("FP0 ATR_RX", usrp.get_gpio_attr("FP0", "ATR_RX"))
+		#print("FP0 ATR_TX", usrp.get_gpio_attr("FP0", "ATR_TX"))
+		#print("FP0 ATR_XX", usrp.get_gpio_attr("FP0", "ATR_XX"))
+		print(usrp.set_gpio_src("FP0", "RX"))
 		DBGPRINT("RX gain range:      {}".format( str(usrp.get_rx_gain_range(0))[:-1] ))
 		DBGPRINT("TX gain range:      {}".format( str(usrp.get_tx_gain_range(0))[:-1] ))
 		DBGPRINT("usrp RX gain:       {}".format( usrp.get_rx_gain(0) ))
@@ -116,7 +127,7 @@ class RadioLoop:
 		while self.on:
 			if (n_rx_loops % 2000) == 0:
 				DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5)))
-			ts_s0 = time.time()
+			ts_s0 = time.monotonic()
 			rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
 			avg_sr = n_rx_total / (time.perf_counter() - t00)
 			n_rx_total += rx_ret
@@ -209,7 +220,7 @@ class RadioLoop:
 		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
 		timeout = int(1e6 * bufferlen * 0.8 / self.radio_config.rx_sr0)
 		n_rx_loops = 0
-		buff = np.zeros(2097152, np.complex64)
+		buff = np.zeros(int(2**21), np.complex64)
 		absolute_bufflen = len(buff)
 		n_rx_total = 0
 		avg_sr = 0.0
@@ -218,7 +229,7 @@ class RadioLoop:
 		while self.on:
 			if (n_rx_loops % 2000) == 0:
 				DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4), round(1e-6*self.radio_config.rx_sr0, 5)))
-			ts_s0 = time.time()
+			ts_s0 = time.monotonic()
 			ret = sdr.readStream(rxStream, [buff], numElems=absolute_bufflen, timeoutUs=timeout)
 			rx_ret = ret.ret
 			n_rx_total += rx_ret
@@ -321,7 +332,7 @@ class RadioLoop:
 		while self.on:
 			time.sleep(t_sleep)
 			batchlen = min(default_batchlen, nsamples-cursor )
-			ts_s0 = time.time()
+			ts_s0 = time.monotonic()
 			batch = samples[cursor:cursor+batchlen]
 			assert len(batch) == batchlen
 			cursor += batchlen

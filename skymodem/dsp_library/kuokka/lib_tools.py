@@ -513,11 +513,11 @@ def get_doppler_low_high(f_center, v_relative):
 	return f_center_min, f_center_max
 
 
-def doppler_correction(f_received, f_original, f_at_target):
+def doppler_correction(f_rx_received, f_rx_original, f_tx_at_target):
 	c = 299792458.0
 	#f_received = f_original * c/(c+v_src)
-	v_src = c * (f_original/f_received - 1)
-	f_send = f_at_target * c/(c-v_src)
+	v_src = c * (f_rx_original/f_rx_received - 1)
+	f_send = f_tx_at_target * (c+v_src)/c
 	return f_send, v_src # v_src is the derivative of separating distance. (negative if satellite is approaching)
 
 

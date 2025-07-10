@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from kuokka.lib_tools import radionoise, make_samples, gauss_curve_sps
-from kuokka.lib_fft_detector import construct_fft_mask
+from kuokka.lib_tools import radionoise, make_samples2, gauss_curve_sps
+from kuokka.lib_fft_finder import construct_fft_mask
 from mtools.tools_dsp import waterfall_mx, fft_usual
 import time
 from scipy.signal import windows, firwin
@@ -31,7 +31,7 @@ def surf_integral(x_arr, y_arr):
 def test_centering_masks(nbits, sps, baudrate, mod_index, noiseSPD):
 	sr 			= baudrate * sps
 	bits = np.random.randint(0,2, nbits)*2 -1
-	signal_samples = make_samples(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=-1, shaper_n_taps=31)
+	signal_samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_BT_prod=-1, n_silence_start=0, n_silence_end=0)
 	nsignal = len(signal_samples)
 	nnoise = nsignal//2 + int(sps*0.333)
 	noise_samples = np.zeros(nnoise, dtype=np.complex128)
@@ -40,7 +40,7 @@ def test_centering_masks(nbits, sps, baudrate, mod_index, noiseSPD):
 	samples = samples + radionoise(n=nsamples, sr=sr, W_per_Hz=noiseSPD)
 
 	masklen = int(2.5 * 0.5 * 1024 / sps)*2 +1
-	mask = construct_fft_mask(sps=sps, mod_index=mod_index, BT_=-1, fftlen=1024, masklen=masklen, nn=1000)
+	mask = construct_fft_mask(sps=sps, mod_index=mod_index, BT_rx_match=0.5, fftlen=1024, masklen=masklen, nn=1000)
 	mask = mask - np.average(mask)
 	classic_mask = np.ones( int(0.5 * 1024 / sps)*2 +1, dtype=np.float64 )
 
@@ -55,11 +55,15 @@ def test_centering_masks(nbits, sps, baudrate, mod_index, noiseSPD):
 
 
 
-def filter_frequency_response(sps, baudrate, mod_index):
+def filter_frequency_response(sps, baudrate, mod_index, filter):
 	sr = baudrate * sps
-	filtr0 = np.sinc(np.linspace(-0.5,0.5, sps))
-	filtr1 = filtr0 * np.exp(2j*np.pi * np.arange(len(filtr0)) * 0.5*mod_index*baudrate/sr)
-	filtr2 = filtr0 * np.exp(2j*np.pi * np.arange(len(filtr0)) * -0.5*mod_index*baudrate/sr)
+	if not (filter is None):
+		assert len(filter) == sps, (len(filter), sps)
+		filtr1 = filter
+	else:
+		filtr0 = np.sinc(np.linspace(-0.5,0.5, sps))
+		filtr1 = filtr0 * np.exp(2j*np.pi * np.arange(len(filtr0)) * 0.5*mod_index*baudrate/sr)
+		filtr2 = filtr0 * np.exp(2j*np.pi * np.arange(len(filtr0)) * -0.5*mod_index*baudrate/sr)
 
 	filtred_A = np.convolve( radionoise(n=30000, sr=1.0, W_per_Hz=1.0), filtr1)
 	filter_fresp_fft, filter_fresp_freqs = fft_usual(iq_arr=filtred_A, srate=sr, take_abs=True)
@@ -76,7 +80,7 @@ def get_signal_frequency_profile(sps, baudrate, mod_index, noiseSPD, nrep):
 	freqs_tx_profile = np.zeros(1024)
 	for ii in range(nrep):
 		bits = np.random.randint(0,2, nbits)*2 -1
-		samples = make_samples(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_mode=0, shaper_BT_prod=-1, shaper_n_taps=31)
+		samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_BT_prod=-1)
 		samples = samples + radionoise(n=len(samples), sr=sr, W_per_Hz=noiseSPD)
 		i0 = np.random.randint(0,sps+1)
 		fft_tx_profile_, freqs_tx_profile = fft_usual(iq_arr=samples[i0:i0+1024], srate=sr, take_abs=True)
@@ -110,7 +114,7 @@ def make_symbol_filters(sps, mod_index, sinc_limit=0.5, ntaps=None, window=False
 def filter_demodulation_experiment(nbits, sps, baudrate, mod_index, noiseSPD, filters, waterfall=False, do_print=True):
 	sr 			= baudrate * sps
 	bits = np.random.randint(0,2, nbits)*2 -1
-	signal_samples = make_samples(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=31)
+	signal_samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_BT_prod=0.5)
 	nsignal = len(signal_samples)
 	nnoise = nsignal//2 + int(sps*0.333)
 	noise_samples = np.zeros(nnoise, dtype=np.complex128)
@@ -119,8 +123,8 @@ def filter_demodulation_experiment(nbits, sps, baudrate, mod_index, noiseSPD, fi
 	samples = samples + radionoise(n=nsamples, sr=sr, W_per_Hz=noiseSPD)
 
 	if waterfall:
-		waterfall_mx(samples=samples, fftlen=sps, fft_jump=sps//2, srate=sr, plot_and_show=True, y_is_time=False)
-		waterfall_mx(samples=samples, fftlen=2048, fft_jump=1024, srate=sr, plot_and_show=True, y_is_time=False)
+		waterfall_mx(samples=samples, fftlen=sps, fft_jump=sps//2, fft_stack=1, srate=sr, plot_and_show=True, y_is_time=False)
+		waterfall_mx(samples=samples, fftlen=2048, fft_jump=1024, fft_stack=1, srate=sr, plot_and_show=True, y_is_time=False)
 
 	#filtr0 = np.sinc(np.linspace(-0.5,0.5, sps))  # !
 	#filtr1 = filtr0 * np.exp(2j*np.pi * np.arange(len(filtr0)) *  0.5*mod_index*baudrate/sr) # !
@@ -362,7 +366,7 @@ def measure_curve_by_sinc_limit():
 	curves = list()
 	As = list()
 	for ii,sinc_limit in enumerate(sinc_limit_arr):
-		filters = make_symbol_filters(sps=9, mod_index=0.5, sinc_limit=sinc_limit, ntaps=9+4, window=False, use_firwin=False)
+		filters = make_symbol_filters(sps=9, mod_index=0.5, sinc_limit=float(sinc_limit), ntaps=9+4, window=False, use_firwin=False)
 		A, rateio_curve = measure_A(sps=9, baudrate=9600, mod_index=0.5, noise_arr=noise_arr, n_rep=n_rep, filters=filters)
 		print("#{} SL:{}   A:{}".format(ii, sinc_limit, A))
 		curves.append(rateio_curve)
@@ -386,10 +390,91 @@ def measure_curve_by_sinc_limit():
 
 
 
-measure_curve_by_sinc_limit()
+def filter_frequency_response_2(filter):
+	freqs = np.linspace(-0.49, 0.49, 1000)
+	response = freqs*0.0
+	for i,f in enumerate(freqs):
+		samples = np.exp(2j*np.pi * np.arange(3000) * f)
+		response[i] = np.sum(np.abs(np.convolve(samples, filter))) / 3000.0
+	return freqs, response
+
+
+
+def plot_filter_ffts():
+	filter1, _ = make_symbol_filters(sps=181, mod_index=0.750, sinc_limit=0.1, ntaps=None, window=False, use_firwin=False)
+	filter2, _ = make_symbol_filters(sps=181, mod_index=0.750, sinc_limit=0.1, ntaps=None, window=True, use_firwin=False)
+	filter3, _ = make_symbol_filters(sps=181, mod_index=0.750, sinc_limit=0.1, ntaps=None, window=False, use_firwin=True)
+	filter4 =  np.exp(2j*np.pi * np.arange(181) * +0.5*0.750/181)
+
+	from mtools.tools_dsp import fft_usual
+
+	fig = plt.figure(figsize=(14,11))
+	ax1 = fig.add_subplot(211)
+	ax2 = fig.add_subplot(212)
+
+	fft1, freqs = fft_usual(iq_arr=filter1, srate=1.0, take_abs=True)
+	fft2, freqs = fft_usual(iq_arr=filter2, srate=1.0, take_abs=True)
+	fft3, freqs = fft_usual(iq_arr=filter3, srate=1.0, take_abs=True)
+	fft4, freqs = fft_usual(iq_arr=filter4, srate=1.0, take_abs=True)
+
+	ax1.plot(freqs, fft1, label="1")
+	ax1.plot(freqs, fft2, label="2")
+	ax1.plot(freqs, fft3, label="3")
+	ax1.plot(freqs, fft4, label="4")
+	ax1.grid()
+	ax1.legend()
+
+	freqs_tx_profile, fft_tx_profile = get_signal_frequency_profile(sps=17, baudrate=9600, mod_index=0.75, noiseSPD=0.0/9600, nrep=100)
+
+	fil0 = None
+	fil0 = make_symbol_filters(sps=17, mod_index=0.75, sinc_limit=0.5, ntaps=None, window=False, use_firwin=False)[0]
+	fil1 = make_symbol_filters(sps=17, mod_index=0.75, sinc_limit=0.1, ntaps=None, window=False, use_firwin=False)[0]
+	fil2 = make_symbol_filters(sps=17, mod_index=0.75, sinc_limit=0.1, ntaps=None, window=True, use_firwin=False)[0]
+	fil3 = make_symbol_filters(sps=17, mod_index=0.75, sinc_limit=0.1, ntaps=None, window=False, use_firwin=True)[0]
+	fil4 = np.exp(2j*np.pi * np.arange(17) * +0.5*0.750/17)
+	filter_fresp_freqs, filter_fresp_fft0 = filter_frequency_response_2(filter=fil0)
+	filter_fresp_freqs, filter_fresp_fft1 = filter_frequency_response_2(filter=fil1)
+	filter_fresp_freqs, filter_fresp_fft2 = filter_frequency_response_2(filter=fil2)
+	filter_fresp_freqs, filter_fresp_fft3 = filter_frequency_response_2(filter=fil3)
+	filter_fresp_freqs, filter_fresp_fft4 = filter_frequency_response_2(filter=fil4)
+	filter_fresp_freqs2, filter_fresp_fft4_2 = filter_frequency_response_2(filter=fil4)
+
+	ax2.plot(filter_fresp_freqs, filter_fresp_fft0, label="filter freq response 0")
+	ax2.plot(filter_fresp_freqs, filter_fresp_fft1, label="filter freq response 1")
+	ax2.plot(filter_fresp_freqs, filter_fresp_fft2, label="filter freq response 2")
+	ax2.plot(filter_fresp_freqs, filter_fresp_fft3, label="filter freq response 3")
+	ax2.plot(filter_fresp_freqs, filter_fresp_fft4, label="filter freq response 4")
+	#ax2.plot(filter_fresp_freqs2, filter_fresp_fft4_2*16, label="filter freq response 4 (algo 2)", color="black")
+	ax2.plot(freqs_tx_profile/(17*9600), fft_tx_profile/10, label="signal freq profile", color="black")
+	ax2.grid()
+	ax2.legend()
+
+
+	fig.set_layout_engine("tight")
+	plt.show()
+
+
+
+
+
+
+
+
+
+
+
+plot_filter_ffts()
+
+#measure_curve_by_sinc_limit()
+
+
+
 #filters = make_symbol_filters(sps=17, mod_index=0.705, sinc_limit=0.5, ntaps=None, window=False, use_firwin=False)
-#ret_ = filter_demodulation_experiment(nbits=1000, sps=17, baudrate=9600, mod_index=0.705, noiseSPD=0.0005/9600, filters=filters, waterfall=True)
-#plot_results(ret_)
+filter1 = np.exp(2j*np.pi * np.arange(17) * +0.5*0.75/17)
+filter2 = np.exp(2j*np.pi * np.arange(17) * -0.5*0.75/17)
+filters = (filter1,filter2)
+ret_ = filter_demodulation_experiment(nbits=1000, sps=17, baudrate=9600, mod_index=0.75, noiseSPD=0.2/9600, filters=filters, waterfall=True)
+plot_results(ret_)
 
 
 

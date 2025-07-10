@@ -12,19 +12,16 @@ from .lib_symsynching import classic_JPL_synch_strm
 
 
 
-class DSPConfig:
-	def __init__(self, rx_sr0, rx_f_tune, rx_f_center, tx_sr0, tx_f_tune, tx_f_center, baudrate, bufferlen, batch_maxlen):
+class RXDSPConfig:
+	def __init__(self, rx_sr0, rx_f_tune, rx_f_center, baudrate, bufferlen, batch_maxlen):
 		self.bufferlen			= bufferlen
 		self.batch_maxlen		= batch_maxlen
 		# radio device -------------------------------------
 		self.rx_sr0 			= rx_sr0		# Raw samplerate of the radio. Will be downsampled with a rate of baudrate*sps/sr0
 		self.rx_f_tune 			= rx_f_tune		# Tuned frequency of the radio in absolute Hz (for example 350.0e6)
-		self.tx_sr0				= tx_sr0
-		self.tx_f_tune			= tx_f_tune
 		# --------------------------------------------------
 		# signal properties --------------------------------
 		self.rx_f_center 		= rx_f_center	# The (absolute) frequency of the transmissions in absolute Hz (for example 350.12e6)
-		self.tx_f_center 		= tx_f_center
 		self.baudrate			= baudrate		# Baudrate of the transmission. Has a definite effect on performance. More so if resampling rate is not adjusted.
 		# --------------------------------------------------
 		# resampling ---------------------------------------
@@ -41,7 +38,7 @@ class DSPConfig:
 		self.search_halfband	= 20.0e3 		# - Determines the frequency band above and below the center frequency where the demodulator looks for signals. (For 437MHz at orbital speeds, maximum doppler ~11kHz)
 		# --------------------------------------------------
 		# JPL synchronizer ---------------------------------
-		self.JPL_n_decay 		= 55 			# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (1 - 1/JPL_n_decay)
+		self.JPL_n_halflife 	= 38 			# ! How quickly JPL-synchronizer's accumulator exponentially decays. The values are updated as: acc = (acc + measurement) * (0.5**(1/JPL_n_halflife))
 		# --------------------------------------------------
 		# demodulation -------------------------------------
 		self.lp_ntaps			= 161			# ! number of taps in the low-pass filter in demodulation
@@ -57,28 +54,21 @@ class DSPConfig:
 		self.synch_threshold 	= 3
 		self.data_maxlen 		= RS_MAX_ENCODED_LEN
 		# --------------------------------------------------
-		# --------------------------------------------------
-		self.tx_BT				= 0.5
-		self.tx_mod_index		= 0.5
-		# --------------------------------------------------
 
 	def check_validity(self):
 		assert 50e3 <= self.bufferlen < 100e6
 		assert type(self.bufferlen) == int
 		assert 100 < self.batch_maxlen < (0.05*self.bufferlen)
 		assert type(self.batch_maxlen) == int
-
-		for (sr0,f_tune,f_center) in [(self.rx_sr0, self.rx_f_tune, self.rx_f_center), (self.tx_sr0, self.tx_f_tune, self.tx_f_center)]:
-			assert 1e3 < sr0 < 32e6
-			assert f_tune > 1.0
-			assert f_center > 1.0
-			assert 0 < self.baudrate < (sr0/2)
+		assert 1e3 < self.rx_sr0 < 32e6
+		assert self.rx_f_tune > 1.0
+		assert self.rx_f_center > 1.0
+		assert 0 < self.baudrate < (self.rx_sr0/2)
 		assert (abs(self.rx_f_tune - self.rx_f_center) + self.search_halfband + self.baudrate * 0.6) < (0.5 * self.rx_sr0), "Radio tuned to this frequency with this samplerate cannot see the entire band."
 		assert ((self.search_halfband + self.baudrate*0.6) / (self.baudrate * self.sps)) < 0.5, "Resampling down to this sps at this baudrate cannot see the entire search band."
-		#sign1 = np.sign(self.rx_f_center+(self.search_halfband+self.baudrate*0.6) - self.rx_f_tune )
-		#sign2 = np.sign(self.rx_f_center-(self.search_halfband+self.baudrate*0.6) - self.rx_f_tune )
-		#assert sign1 == sign2, "The search band stretches across tuning frequency. DC-spike will potentially interfere with reception."
-
+		sign1 = np.sign(self.rx_f_center+(self.search_halfband+self.baudrate*0.6) - self.rx_f_tune )
+		sign2 = np.sign(self.rx_f_center-(self.search_halfband+self.baudrate*0.6) - self.rx_f_tune )
+		assert sign1 == sign2, "The search band stretches across tuning frequency. DC-spike will potentially interfere with reception. With very high bandwidths this in inevitable, and this assertion should be commented out."
 		assert 2 < self.sps <= 100
 		assert type(self.sps) == int
 		#assert 4 < self.d_halflen < 42
@@ -94,7 +84,7 @@ class DSPConfig:
 		assert (self.BT_rx_match >= 0.4) or (self.BT_rx_match == -1)  # Canonically BT should never be under 0.5. However, using 0.425 when generating samples produces best match to recordings from UHF with CC1125 chip.
 		assert 1 <= self.centering_delay_mpr < 20
 		assert 0.6 < self.c_center_decay < 1.0
-		assert 1.0 <= self.JPL_n_decay < 100.0
+		assert 1.0 <= self.JPL_n_halflife < 100.0
 		assert 30.0 <= self.lp_ntaps < 300.0
 		assert type(self.lp_ntaps) == int
 		assert (self.lp_ntaps % 2) == 1
@@ -108,8 +98,6 @@ class DSPConfig:
 		assert self.data_maxlen > 10
 		if self.use_rs:
 			assert self.data_maxlen == RS_MAX_ENCODED_LEN
-		assert (self.tx_BT >= 0.4) or (self.tx_BT == -1)
-		assert 0.5 <= self.tx_mod_index < 10.0
 
 	def get_r_rate(self):
 		r_rate = self.sps * self.baudrate / self.rx_sr0
@@ -133,7 +121,7 @@ SAVE_DPATH = ""
 
 
 class Receiver:
-	def __init__(self, config:DSPConfig):
+	def __init__(self, config:RXDSPConfig):
 		config.check_validity()
 		self.config 			= config
 		self.bufferlen 			= int(config.bufferlen)
@@ -143,24 +131,17 @@ class Receiver:
 		self.synch_array 		= np.zeros((self.bufferlen, 3), dtype=np.int64)
 		self.power_array 		= np.zeros((self.bufferlen, 3), dtype=np.float64)    # for energy sense
 		self.fft_instr_array 	= np.zeros((self.bufferlen, 4), dtype=np.float64)
-		self.bit_array 			= np.zeros(self.bufferlen // 10, dtype=np.int64)
-		self.bit_f_array 		= np.zeros(self.bufferlen // 10, dtype=np.float64)
-		self.bit_p_array 		= np.zeros((self.bufferlen // 10, 3), dtype=np.float64)			# for energy sense
 		self.bufferhalf			= int(self.bufferlen / 2)
 		self.buffer_roll_limit 	= int(self.bufferlen*3/4)
 		self.rs_head 			= 0
 		self.center_f_head 		= 0
-		self.demodulation_head 	= 0
 		self.dmd_head 			= 0
-		self.dmdsynch_head 		= 0
-		self.sdd_head 			= 0
-		self.opt_dec_idx_f 		= 0.0
-		self.bit_head 			= 0
+		self.synch_head 		= 0
+		self.opt_tap_idx_f 		= 0.0
 		self.rsmpl_mx1 			= np.zeros((2,2), dtype=np.float64)
 		self.rsmpl_mx2 			= np.zeros((2,2), dtype=np.float64)
 		self.FFTstatemx 		= np.zeros((2,2), dtype=np.float64)
 		self.JPLstatemx 		= np.zeros((2,2), dtype=np.float64)
-		self.DSDstatemx 		= np.zeros((2,2), dtype=np.float64)
 		self.demodmx 			= np.zeros((2,2), dtype=np.float64)
 		self.sddmx 				= np.zeros((2,2), dtype=np.float64)
 		self.deframermx 		= np.zeros((2,2), dtype=np.float64)
@@ -174,17 +155,17 @@ class Receiver:
 		self.centering_phase 	= 0.0
 		self.dt_array			= np.zeros(7, dtype=np.float64)
 		self.dt_array_names		= ("f-shift", "resample", "fft-center", "demodulate", "synch", "decide-decode", "buffer-roll")
-		self._setup()
-		self.save_fp = None
-		self.save_len = 0
-		self.save_print_ts = 0
-		self.save_fname = ""
+		self.save_fp 			= None
+		self.save_len 			= 0
+		self.save_print_ts 		= 0
+		self.save_fname 		= ""
 		if SAVE_DPATH:
 			import os
 			assert os.path.isdir(SAVE_DPATH)
 			self.save_fname = "receiver_samplerec_{}.bytes".format( str(int(time.time())) )
 			self.save_fp = open(SAVE_DPATH + "/" + self.save_fname, "wb" )
 			print("saving to ", SAVE_DPATH + "/" + self.save_fname)
+		self._setup()
 		# This series of baudrate switches pre-generates correlation masks to memory.
 		#_br = self.config.baudrate
 		#_sps = self.config.sps
@@ -213,7 +194,7 @@ class Receiver:
 		self.rsmpl_mx1 = rsmpl_mx1
 		self.rsmpl_mx2 = rsmpl_mx2
 		self.FFTstatemx	= create_fft_f_centerer_csense_statemx(fftlen=self.fftlen, sps=config.sps, f_center_search_map=f_center_search_map, mod_index=config.mod_index, BT_rx_match=config.BT_rx_match, centering_delay_mpr=config.centering_delay_mpr, c_center_decay=config.c_center_decay, c_stat_update=1-0.995, carrier_sense_threshold=6.0)
-		self.JPLstatemx = create_classic_JPL_statemx(N_eps=config.sps, n_decay=config.JPL_n_decay)
+		self.JPLstatemx = create_classic_JPL_statemx(N_eps=config.sps, n_decay=config.JPL_n_halflife)
 		self.demodmx 	= create_demod_statemx(lp_ntaps=config.lp_ntaps, lp_cutoff_coeff=config.lp_cutoff_coeff, sps_f=config.sps)
 		self.sddmx 		= create_DD_statemx(synch_delay_mpr_f=config.synch_delay_mpr, sps_f=config.sps, Neps=int(config.sps))
 		self.deframermx = create_deframer(use_scrambler=config.use_scrambler, use_rs=config.use_rs, data_maxlen=config.data_maxlen, synchword=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, synch_threshold=config.synch_threshold)
@@ -223,12 +204,9 @@ class Receiver:
 		assert self.buffer_roll_limit > (self.bufferlen * 0.9), self.buffer_roll_limit/self.bufferlen
 		self.rs_head 			= 0
 		self.center_f_head 		= 0
-		self.demodulation_head 	= 0
 		self.dmd_head 			= 0
-		self.dmdsynch_head 		= 0
-		self.sdd_head 			= 0
-		self.opt_dec_idx_f 		= 0.0
-		self.bit_head 			= 0
+		self.synch_head 		= 0
+		self.opt_tap_idx_f 		= 0.0
 		self.centering_phase 	= 0.0
 		self.dt_array *= 0.0
 
@@ -298,16 +276,16 @@ class Receiver:
 
 		## Symbol synch
 		t0 = time.perf_counter()
-		synch_head_new = classic_JPL_synch_strm(sample_arr=self.dmd_array, i_sample0=self.dmd_head, nsamples=dmd_head_new-self.dmd_head, synch_arr=self.synch_array, synch_head0=self.sdd_head, statemx=self.JPLstatemx)
+		synch_head_new = classic_JPL_synch_strm(sample_arr=self.dmd_array, i_sample0=self.dmd_head, nsamples=dmd_head_new-self.dmd_head, synch_arr=self.synch_array, synch_head0=self.synch_head, statemx=self.JPLstatemx)
 		assert synch_head_new == dmd_head_new
 		self.dt_array[4] += (time.perf_counter() - t0)
 
 		## Symbol decision, payload deframing
 		t0 = time.perf_counter()
-		dd_ret_ = decide_decode(dmd_arr=self.dmd_array, center_f_arr=self.center_f_array, power_arr=self.power_array, synch_arr=self.synch_array,  dmdsynch_head=dmd_head_new, opt_dec_idx_f0=self.opt_dec_idx_f, sddmx=self.sddmx, deframermx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
-		payloads, payload_delimits, payload_frequencies, payload_powertuples, fault_counts, bits, opt_dec_idx_f_new = dd_ret_
-		#assert opt_dec_idx_f_new > (dmd_head_new - int(self.sddmx[0,2]) - self.config.sps*2)
-		#assert opt_dec_idx_f_new <= max(dmd_head_new - int(self.sddmx[0,2]) + self.config.sps*2, 0), opt_dec_idx_f_new
+		dd_ret_ = decide_decode(dmd_arr=self.dmd_array, center_f_arr=self.center_f_array, power_arr=self.power_array, synch_arr=self.synch_array, dmdsynch_head=dmd_head_new, opt_tap_idx_f0=self.opt_tap_idx_f, sddmx=self.sddmx, deframermx=self.deframermx, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg)
+		payloads, payload_delimits, payload_frequencies, payload_powertuples, fault_counts, bits, opt_tap_idx_f_new = dd_ret_
+		#assert opt_tap_idx_f_new > (dmd_head_new - int(self.sddmx[0,2]) - self.config.sps*2)
+		#assert opt_tap_idx_f_new <= max(dmd_head_new - int(self.sddmx[0,2]) + self.config.sps*2, 0), opt_tap_idx_f_new
 		ret = self._split_payloads(payloads=payloads, delimits=payload_delimits, nrm_offset_frequencies=payload_frequencies, payload_powertuples=payload_powertuples)
 		self.dt_array[5] += (time.perf_counter() - t0)
 
@@ -316,11 +294,11 @@ class Receiver:
 		self.rs_head = rs_head_new
 		self.center_f_head = center_f_head_new
 		self.dmd_head = dmd_head_new
-		self.sdd_head = synch_head_new
-		self.opt_dec_idx_f = opt_dec_idx_f_new
+		self.synch_head = synch_head_new
+		self.opt_tap_idx_f = opt_tap_idx_f_new
 		assert self.rs_head == self.center_f_head
 		assert self.rs_head > self.dmd_head
-		assert self.dmd_head == self.sdd_head
+		assert self.dmd_head == self.synch_head
 		if self.rs_head >= self.buffer_roll_limit:
 			self._buffer_roll_3()
 		self.dt_array[6] += (time.perf_counter() - t0)
@@ -349,12 +327,12 @@ class Receiver:
 		self.fft_instr_array[0:self.center_f_head-self.bufferhalf] 	= self.fft_instr_array[self.bufferhalf:self.center_f_head]
 		self.power_array[0:self.center_f_head-self.bufferhalf] 		= self.power_array[self.bufferhalf:self.center_f_head]			# for energy sense
 		self.dmd_array[0:self.dmd_head-self.bufferhalf] 			= self.dmd_array[self.bufferhalf:self.dmd_head]
-		self.synch_array[0:self.sdd_head-self.bufferhalf] 			= self.synch_array[self.bufferhalf:self.sdd_head]
+		self.synch_array[0:self.synch_head - self.bufferhalf] 			= self.synch_array[self.bufferhalf:self.synch_head]
 		self.rs_head 			= self.rs_head - self.bufferhalf
 		self.center_f_head 		= self.center_f_head - self.bufferhalf
 		self.dmd_head 			= self.dmd_head - self.bufferhalf
-		self.sdd_head 			= self.sdd_head - self.bufferhalf
-		self.opt_dec_idx_f 		= self.opt_dec_idx_f - self.bufferhalf
+		self.synch_head 			= self.synch_head - self.bufferhalf
+		self.opt_tap_idx_f 		= self.opt_tap_idx_f - self.bufferhalf
 		#print("BUFFER ROLLED", flush=True)
 		# B --- B
 
@@ -364,7 +342,7 @@ class Receiver:
 
 
 # PRECOMPILE RECEIVER ====================================================================================================
-def get_a_precompiling_sampleset(dsp_config:DSPConfig, do_print=False):
+def get_a_precompiling_sampleset(dsp_config:RXDSPConfig, do_print=False):
 	sr0 = dsp_config.rx_sr0
 	rel_offset_raw = (dsp_config.rx_f_center-dsp_config.rx_f_tune) / sr0  #0.1 * (sps*baudrate/sr0)
 	rs_mx, rs_cfg = get_default_rs()
@@ -389,7 +367,7 @@ def get_a_precompiling_sampleset(dsp_config:DSPConfig, do_print=False):
 	return noiseless, noise, noisePpHz
 
 
-def precompile_receiver(dsp_config:DSPConfig, do_print=False):
+def precompile_receiver(dsp_config:RXDSPConfig, do_print=False):
 	if do_print:
 		print("[Precompiling]")
 	t0 = time.perf_counter()
@@ -433,7 +411,7 @@ def precompile_receiver(dsp_config:DSPConfig, do_print=False):
 	#assert len(ret_pls2) == 1, len(ret_pls2)
 
 	if do_print:
-		print("\t[Precompiled in {} s.  ({} s for samples)]".format( round(t2-t0, 3), round(t1-t0, 3)  ))
+		print("\t[Precompiled in {} s.  ({} s for sample generation)]".format( round(t2-t0, 3), round(t1-t0, 3)  ))
 # PRECOMPILE RECEIVER ====================================================================================================
 # @:374
 

@@ -1,5 +1,5 @@
 import numpy as np
-from kuokka.lib_receiver import DSPConfig, Receiver, precompile_receiver
+from kuokka.lib_receiver import RXDSPConfig, Receiver, precompile_receiver
 from mtools.tools_dsp import create_resampler, resampler_execute
 from mtools.tools_dsp import waterfall_mx
 from kuokka.lib_tools import radionoise
@@ -28,13 +28,13 @@ def receive_a_recording():
 	mod_index			= 0.5			# tx param
 	BT_rx_match 		= 0.425
 	batch_maxlen 		= 1024*8
-	f_tune				= 437.10e6
+	f_tune				= 437.060e6
 	f_center			= 437.00e6 + 125e3
 
 	samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * (fshift0+(f_center-f_tune)))
 
 
-	rx_config = DSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate, bufferlen=2000000, batch_maxlen=batch_maxlen)
+	rx_config = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=2000000, batch_maxlen=batch_maxlen)
 	#rx_config.sps 					= sps
 	rx_config.mod_index				= mod_index
 	rx_config.BT_rx_match			= BT_rx_match
@@ -53,7 +53,7 @@ def receive_a_recording():
 	#rx.switch_baudrate(baudrate=9600, sps=rx_config.sps)
 	print("Baudrate switch in: {} ms".format( round(dt*1e3, 1) ))
 
-	if False:
+	if np.sqrt(2) > 100:
 		fftlen = rx.get_fftlen()
 		waterfall_mx(samples=samples, fftlen=2048, fft_jump=2048//2, fft_stack=1, srate=sr0, plot_and_show=True, y_is_time=True)
 		fftstate = rx.FFTstatemx
@@ -71,7 +71,6 @@ def receive_a_recording():
 		fig.set_layout_engine("tight")
 		plt.show()
 
-	bits = np.zeros(0, dtype=np.int64)
 	pl_list = list()
 	feed_head = 0
 	dt_total = 0
@@ -184,13 +183,13 @@ def receive_a_recording():
 	ax3.grid()
 	fig2.set_layout_engine("tight")
 
-
+	snr_arr = np.clip((rx.power_array[::3,0] - rx.power_array[::3,1]) / rx.power_array[::3,1], 1e-1, np.inf)
+	snr_arr = np.log10(snr_arr) * 10.0
 	fig3 = plt.figure(figsize=(17,9))
 	ax5 = fig3.add_subplot(211)
-
 	ax5.plot(xx[::3], rx.power_array[::3,0], label="power")
 	ax5.plot(xx[::3], rx.power_array[::3,1], label="power avg")
-	ax5.plot(xx[::3], (rx.power_array[::3,0] - rx.power_array[::3,1]) / rx.power_array[::3,1], label="snr")
+	ax5.plot(xx[::3], snr_arr, label="snr")
 	ax5.plot(xx[::3], rx.dmd_array[::3], label="dmd")
 	#ax5.plot(xx[::10], (rx.power_array[::10,1]*(fftlen**2))/power_band_length, label="power avg")
 	#ax5.plot(xx[::10], rx.power_array[::10,2], label="power std")
