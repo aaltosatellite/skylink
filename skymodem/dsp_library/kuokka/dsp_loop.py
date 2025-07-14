@@ -110,6 +110,7 @@ class DSPLoop:
 
 	def set_baudrate(self, baudrate):
 		with self.rlock:
+			self.tx_dsp_config.baudrate = baudrate
 			self.rx_dsp_config.baudrate = baudrate
 			self.rx.switch_baudrate(baudrate, sps=self.rx.config.sps)
 
