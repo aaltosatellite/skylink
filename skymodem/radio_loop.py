@@ -6,6 +6,7 @@ from queue import Queue, Empty
 import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_TX, SOAPY_SDR_CF32
 from datetime import datetime as dtime
+from kuokka.lib_tools import radionoise, make_samples2
 
 
 DEBUG_PRINT_ON = True
@@ -360,4 +361,112 @@ class RadioLoop:
 				break
 	# === RECORDING ==========================================================================================================================================================================
 	# === RECORDING ==========================================================================================================================================================================
+
+
+
+
+	# === SIM ================================================================================================================================================================================
+	# === SIM ================================================================================================================================================================================
+	def _sim_start(self, fpath=None, sr0=None, fcenter0=None):
+		DBGPRINT("Sim start")
+		import pickle
+		if fpath is None:
+			fpath, fcenter0, sr0 = ("/home/elmore/datasetit/radiotallenteet/uhf-965_437.0MHz-1000ksps.pickled",-124.0e3, 1e6)
+		f = open(fpath, "rb")
+		rd = f.read()
+		f.close()
+		samples = pickle.loads(rd)
+		samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/sr0) * (fcenter0+25e3))
+		assert len(samples.shape) == 1
+		assert type(samples) == np.ndarray
+		samples = np.complex64(samples)
+		self.radio_config.rx_sr0 	= sr0
+		self.radio_config.tx_sr0 	= sr0
+		self.radio_config.rx_f_tune = 437e6
+		self.radio_config.tx_f_tune = 437e6
+		self.radio_config.rx_f_center = self.radio_config.rx_f_tune + 25e3
+		self.radio_config.tx_f_center = self.radio_config.tx_f_tune + 25e3
+		self.rx_thread 			= threading.Thread(target=self._sim_rx_loop,  args=(samples, sr0), daemon=True) #TODO bufferlen as setting?
+		self.tx_thread 			= threading.Thread(target=self._sim_tx_loop,  args=tuple(),        daemon=True) #TODO bufferlen as setting?
+		self.on = True
+		self.rx_thread.start()
+		self.tx_thread.start()
+
+
+	def _sim_rx_loop(self, noiseSPD, ts_pl_list, realtime):
+		time.sleep(2)
+		n_received = 0
+		t0 = time.perf_counter()
+		t_sleep = 0.0
+		batchlen = 1024*2
+		ts_pl_list = sorted(ts_pl_list, key=lambda k: k[0])
+		ts_pl_list = [[x[0]+t0,x[1],x[2]] for x in ts_pl_list]
+		pl_head = 0
+		transmission_dict = dict()
+		while self.on:
+			time.sleep(t_sleep)
+			ts_s0 = time.perf_counter()
+			batch = radionoise(batchlen, sr=self.radio_config.rx_sr0, W_per_Hz=noiseSPD)
+
+			while (ts_s0 + batchlen/self.radio_config.rx_sr0) > ts_pl_list[pl_head][0]:
+				assert ts_pl_list[pl_head][1] in ("samples", "data")
+				if ts_pl_list[pl_head][1] == "data":
+					bits, baudrate, f_abs, power, mod_idx = ts_pl_list[pl_head][2]
+					sps = self.radio_config.rx_sr0 / baudrate
+					f_offset_rel = (f_abs - self.radio_config.rx_f_tune) / self.radio_config.rx_sr0
+					transmission = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_rel, power=power, mod_index=mod_idx, shaper_BT_prod=0.5, n_silence_start=0, n_silence_end=0)
+				else:
+					transmission = ts_pl_list[pl_head][2]
+				i_start = int((ts_pl_list[pl_head][0]-t0) * self.radio_config.rx_sr0)
+				transmission_dict[pl_head] = transmission, i_start
+				pl_head += 1
+			for k in transmission_dict.keys():
+				transmission, i_start = transmission_dict[k]
+				i0_batch 	= np.clip(i_start - n_received, 0, batchlen)
+				i0_tx 		= np.clip(n_received - i_start, 0, len(transmission))
+				i_end_batch = np.clip(i0_batch + len(transmission)-i0_tx, 0, batchlen)
+				i_end_tx 	= np.clip(i0_tx + batchlen-i0_batch, 0, len(transmission))
+				if (i0_tx == i_end_tx) and (i0_tx == len(transmission)):
+					del transmission_dict[k]
+				else:
+					batch[i0_batch:i_end_batch] += transmission[i0_tx,i_end_tx]
+
+			if not self.que_rx_samples_out.full():
+				self.que_rx_samples_out.put_nowait((ts_s0,batch))
+			else:
+				DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
+			n_received += batchlen
+			t_next = t0 + ((n_received) / self.radio_config.rx_sr0)
+			t_sleep = max(0, t_next - time.perf_counter())
+
+
+	def _sim_tx_loop(self, tx_samples_out_que):
+		while self.on:
+			try:
+				samplearr = self.que_tx_samples_in.get(timeout=0.20)
+			except Empty:
+				continue
+			except Exception as e:
+				DBGPRINT("Queue.get() exception (tx-thread):", e)
+				self.on = False
+				break
+			samplearr = samplearr[0]
+			assert len(samplearr) > 100
+			assert len(samplearr.shape) == 2
+			assert samplearr.shape[0] == 1
+			assert samplearr.shape[1] > 100
+			samplearr = samplearr[0]
+			if tx_samples_out_que:
+				tx_samples_out_que.put(samplearr, timeout=1.0)
+	# === SIM ================================================================================================================================================================================
+	# === SIM ================================================================================================================================================================================
+
+
+
+
+
+
+
+
+
 

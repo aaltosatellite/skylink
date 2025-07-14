@@ -298,12 +298,6 @@ class SkyModem:
 				#response_dict["kuokka"] = dict()
 			elif ctrl_command == "clear_stats":
 				self.skylink_loop.sky_diag_clear()
-			elif ctrl_command == "set_config":
-				DBGPRINT("command unimplemented 1")			# TODO
-				return
-			elif ctrl_command == "get_config":
-				DBGPRINT("command unimplemented 2")			# TODO
-				return
 			elif ctrl_command == "arq_connect":
 				self.skylink_loop.arq_connect(ichannel=ichannel)
 				response_dict["rsp"] = "arq_connecting"
@@ -311,15 +305,6 @@ class SkyModem:
 			elif ctrl_command == "arq_disconnect":
 				self.skylink_loop.arq_disconnect(ichannel=ichannel)
 				response_dict["rsp"] = "ack"
-			elif ctrl_command == "mac_reset":
-				DBGPRINT("command unimplemented 3")			# TODO
-				return
-			elif ctrl_command == "set_sequences":
-				DBGPRINT("command unimplemented 4")			# TODO
-				return
-			elif ctrl_command == "debug":
-				DBGPRINT("command unimplemented 5")			# TODO
-				return
 			elif ctrl_command == "set_baudrate":
 				assert control_dict["baudrate"] in (9600, 9600*2, 9600*4), "invalid baudrate field in control_dict"
 				self.dsp_loop.set_baudrate(control_dict["baudrate"])

@@ -2,7 +2,7 @@ import queue
 import numpy as np
 from .lib_receiver import Receiver, RXDSPConfig, precompile_receiver
 from .lib_framing import frame_packet
-from .lib_tools import doppler_correction, ints_to_bits, DEFAULT_SYNCHWORD_LEN, DEFAULT_SYNCHWORD, make_samples2
+from .lib_tools import doppler_correction, ints_to_bits, DEFAULT_SYNCHWORD_LEN, DEFAULT_SYNCHWORD, make_samples2, snr_dB
 from .lib_reedsolomon import get_default_rs
 from datetime import datetime as dtime
 import threading
@@ -219,6 +219,7 @@ class DSPLoop:
 							#del self.own_recently_sent[rx_pl]
 							DBGPRINT("Discarded self reception.")
 							continue
+						DBGPRINT("RX-PL: {} bytes,   {} MHz,   {} SNR".format(len(rx_pl), round(rx_f_absolute*1e-6, 3), round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)))
 						self.last_verified_freq = (rx_f_absolute, time.monotonic())
 						self.last_verified_baudrate = self.rx_dsp_config.baudrate
 						self.que_rcv_payloads_out.put( ("pl", rx_pl), timeout=1.0)
@@ -244,7 +245,7 @@ class DSPLoop:
 				self._clean_own_sent()
 				self.own_recently_sent[payload] = time.monotonic()
 				samplearr, f_use_abs, _ = self._compose_samples(payload, usrp_reshape=True, as_c64=True)
-			DBGPRINT("tx start at {} MHz".format( f_use_abs * 1e-6, 4 ))
+			DBGPRINT("TX Start at {} MHz".format( f_use_abs * 1e-6, 3))
 			self.que_tx_samples_out.put(samplearr, timeout=4.0)
 			self.t_projected_tx_end = time.monotonic() + 5e-3 + samplearr.shape[1] / self.tx_dsp_config.tx_sr0
 

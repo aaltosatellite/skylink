@@ -122,7 +122,7 @@ class SkyLinkLoop(threading.Thread):
 						ri, rb = self.skylink.sky_vc_read_next_received(ichannel)
 						if ri < 0:
 							break
-						DBGPRINT("VC {} received {} bytes.".format(ichannel, len(rb)))
+						DBGPRINT("VC {} reception gave {} bytes.".format(ichannel, len(rb)))
 						self.que_received_messages.put_nowait( (EKEY_SKY_PAYLOAD, ichannel, rb) )
 						sleeptime = 0.0
 

@@ -583,6 +583,11 @@ def fractional_resampler_f_max_undisturbed(sr0, sr1, halflen, f_cutoff_coeff):
 
 
 
+def snr_dB(pl_power, noise_power):
+	snr_lin = (pl_power-noise_power) / noise_power
+	snr_dB = 10*np.log10( max(1e-6, snr_lin) )
+	return snr_dB
+
 
 
 def pll_df_std0_polyfit(c_freq, c_limit):
