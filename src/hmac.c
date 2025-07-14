@@ -187,7 +187,6 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 		// Remove the HMAC field if it exists.
 		if (frame_is_authenticated != 0)
 			parsed->payload_len -= SKY_HMAC_LENGTH;
-
 		return SKY_RET_OK;
 	}
 
@@ -233,7 +232,8 @@ int sky_hmac_check_authentication(SkyHandle self, const SkyRadioFrame *frame, Sk
 	if (vc_conf->require_authentication & SKY_CONFIG_FLAG_REQUIRE_SEQUENCE)
 	{
 		// Get distance between received sequence number and the expected next sequence number.
-		uint16_t jump = frame_sequence - hmac_vc->sequence_rx;
+		int32_t jump = ((int32_t)frame_sequence) - hmac_vc->sequence_rx;
+		jump = positive_modulo(jump, 65536);
 
 		// Check if jump is too large
 		if (jump > self->conf->hmac.maximum_jump) {

@@ -179,8 +179,9 @@ static void sky_rx_process_ext_mac_control(SkyHandle self, int rx_time_ticks, Sk
 		return;
 
 	// No unauthenticated MAC updates and frame is not authenticated.
-	if (self->conf->mac.unauthenticated_mac_updates == 0 && parsed->hdr.flag_authenticated == 0)
-		return;
+	// (Commented out, since the attack this protects against also doubles as simple ewar blocking attack)
+	//if (self->conf->mac.unauthenticated_mac_updates == 0 && parsed->hdr.flag_authenticated == 0)
+	//	return;
 
 	// Get window and remaining time
 	uint16_t w = sky_ntoh16(tdd_ext->TDDControl.window);

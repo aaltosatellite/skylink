@@ -615,10 +615,10 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 		 */
 
 		/* Make sure the frame is from the correct peer. */
-		if (0 /* memcpy(parsed->identity, vchannel->peer_identity, size) != 0*/) {
-			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_BUG, "Third player entered the game! :o\n");
-			return SKY_RET_INVALID_ARQ_STATE;
-		}
+		//if (0 /* memcpy(parsed->identity, vchannel->peer_identity, size) != 0*/) {
+		//	SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_BUG, "Third player entered the game! :o\n");
+		//	return SKY_RET_INVALID_ARQ_STATE;
+		//}
 
 		/* Handle ARQ control extension */
 		if (parsed->arq_ctrl != NULL)

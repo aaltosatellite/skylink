@@ -251,9 +251,10 @@ void sky_mac_carrier_sensed(SkyMAC* mac, sky_tick_t now)
 	// Get ticks to own window opening.
 	int32_t ticks_to_own_window_priori = mac_time_to_own_window(mac, now);
 
-	// Is the time to window opening less then the fallback of carrier sense ticks?
-	if(ticks_to_own_window_priori <= mac->config->carrier_sense_ticks) {
-		// Update cycle and its startpoint.
+	// Is the time to window opening less than "carrier_sense_ticks"?
+	// And also larger than 0, so the window is not open, so this was not our own transmission?
+	if((ticks_to_own_window_priori <= mac->config->carrier_sense_ticks) && (ticks_to_own_window_priori > 0) ) {
+		// Update cycle starting point T0 into a state where the cycle (and our window) open "carrier_sense_ticks" ticks from now.
 		int32_t cycle = get_mac_cycle(mac);
 		mac->T0 = wrap_time_ticks((now - cycle) + mac->config->carrier_sense_ticks);
 	}
