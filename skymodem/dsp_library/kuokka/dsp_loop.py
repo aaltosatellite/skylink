@@ -63,7 +63,7 @@ class DSPLoop:
 		self.rx_dsp_config 			= rx_dsp_config
 		self.tx_dsp_config			= tx_dsp_config
 		self.frequency_following 	= True
-		self.baudrate_following 	= True
+		self.baudrate_following 	= False
 		self.use_doppler_correction = False
 		self.preamble_bits 			= ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
 		rs_mx, rs_cfg 				= get_default_rs()
@@ -302,6 +302,7 @@ class DSPLoop:
 							#del self.own_recently_sent[rx_pl]
 							DBGPRINT("Discarded self reception.")
 							continue
+						DBGPRINT("RX-PL: {} bytes,   {} MHz,   {} SNR".format(len(rx_pl), round(rx_f_absolute*1e-6, 3), round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)))
 						self.last_verified_baudrate = baudrate
 						self.last_verified_freq = (rx_f_absolute, time.monotonic())
 						self.que_rcv_payloads_out.put( ("pl", rx_pl), timeout=1.0)
