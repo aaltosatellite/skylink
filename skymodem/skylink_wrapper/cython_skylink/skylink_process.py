@@ -79,14 +79,16 @@ class SkyLinkLoop(threading.Thread):
 		while self.on:
 			sleeptime += 0.1e-3
 			with self.lock:
-				self.skylink.sky_tick( (int(time.monotonic() * 1000) % mod_time_ticks) )
+				t_tick_mono = (int(time.monotonic() * 1000) % mod_time_ticks)
+				self.skylink.sky_tick(t_tick_mono)
 				while not self.que_payloads_from_dsp.empty():
-					code, data = self.que_payloads_from_dsp.get_nowait()
+					code, data, ts_mono = self.que_payloads_from_dsp.get_nowait()
 					if code == "cs":
 						self.skylink.carrier_sensed()
 					if code == "pl":
 						pl = data
-						sky_rx_ret = self.skylink.sky_rx(pl, int(time.monotonic() * 1000) % mod_time_ticks )
+						#assert ts_mono < t_tick_mono
+						sky_rx_ret = self.skylink.sky_rx(pl, ts_mono)
 						color_code = "\033[92m"  # Green (default when no errors)
 						if sky_rx_ret == -7:
 							color_code = "\033[93m"  # Yellow

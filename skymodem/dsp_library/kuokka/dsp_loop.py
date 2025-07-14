@@ -214,7 +214,7 @@ class DSPLoop:
 					ts_mono = ts_s0_mono + c * T_sample
 					ts_unix = ts_mono + unix_minus_mono
 					if carrier_sensed and (ts_mono > self.t_projected_tx_end):
-						self.que_rcv_payloads_out.put( ("cs", None), timeout=1.0)
+						self.que_rcv_payloads_out.put( ("cs", None, ts_mono), timeout=1.0)
 					for rx_pl, rx_f_absolute, power_tuple in rx_pls:
 						if rx_pl in self.own_recently_sent:
 							#del self.own_recently_sent[rx_pl]
@@ -223,7 +223,7 @@ class DSPLoop:
 						DBGPRINT("RX-PL: {} bytes,   {} MHz,   {} SNR".format(len(rx_pl), round(rx_f_absolute*1e-6, 3), round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)))
 						self.last_verified_freq = (rx_f_absolute, time.monotonic())
 						self.last_verified_baudrate = self.rx_dsp_config.baudrate
-						self.que_rcv_payloads_out.put( ("pl", rx_pl), timeout=1.0)
+						self.que_rcv_payloads_out.put( ("pl", rx_pl, ts_mono), timeout=1.0)
 						self.que_signaldata_out.put((ts_unix, rx_f_absolute, power_tuple, self.rx_dsp_config.baudrate, rx_pl), timeout=1.0)
 					c += default_batchlen
 
@@ -295,9 +295,10 @@ class DSPLoop:
 				while not que_mpr_processes_out.empty():
 					rcode, p_idd, tup = que_mpr_processes_out.get_nowait()
 					if rcode == "cs":
-						self.que_rcv_payloads_out.put( ("cs", None), timeout=1.0)
+						ts_mono = tup[0]
+						self.que_rcv_payloads_out.put( ("cs", None, ts_mono), timeout=1.0)
 					elif rcode == "pl":
-						(ts_unix, rx_f_absolute, power_tuple, baudrate, rx_pl) = tup
+						(ts_mono, ts_unix, rx_f_absolute, power_tuple, baudrate, rx_pl) = tup
 						if rx_pl in self.own_recently_sent:
 							#del self.own_recently_sent[rx_pl]
 							DBGPRINT("Discarded self reception.")
@@ -305,7 +306,7 @@ class DSPLoop:
 						DBGPRINT("RX-PL: {} bytes,   {} MHz,   {} SNR".format(len(rx_pl), round(rx_f_absolute*1e-6, 3), round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)))
 						self.last_verified_baudrate = baudrate
 						self.last_verified_freq = (rx_f_absolute, time.monotonic())
-						self.que_rcv_payloads_out.put( ("pl", rx_pl), timeout=1.0)
+						self.que_rcv_payloads_out.put( ("pl", rx_pl, ts_mono), timeout=1.0)
 						self.que_signaldata_out.put((ts_unix, rx_f_absolute, power_tuple, baudrate, rx_pl), timeout=1.0)
 					else:
 						raise AssertionError("Unknown rcode from an rx process:", rcode)
@@ -358,9 +359,9 @@ def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm
 				ts_mono = ts_s0_mono + c * T_sample
 				ts_unix = ts_mono + unix_minus_mono
 				if carrier_sensed:   # TODO: filter for ongoing own transmission ... "(t_mono > self.t_projected_tx_end)"
-					que_out.put( ("cs",idd,None), timeout=1.0)
+					que_out.put( ("cs",idd, (ts_mono,)), timeout=1.0)
 				for rx_pl, rx_f_absolute, power_tuple in rx_pls:
-					que_out.put( ("pl",idd,(ts_unix, rx_f_absolute, power_tuple, rx_dsp_config.baudrate, rx_pl)), timeout=1.0) #(ts_unix, rx_f_absolute, power_tuple, self.dsp_config.baudrate, rx_pl)
+					que_out.put( ("pl",idd,(ts_mono, ts_unix, rx_f_absolute, power_tuple, rx_dsp_config.baudrate, rx_pl)), timeout=1.0) #(ts_unix, rx_f_absolute, power_tuple, self.dsp_config.baudrate, rx_pl)
 				c += default_batchlen
 			ring_head = (ring_head+1) % ring_len
 
