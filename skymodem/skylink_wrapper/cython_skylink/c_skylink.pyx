@@ -360,16 +360,17 @@ cdef class SkyLink:
 
 
 	# === RX/TX ============================================================================================================================
-	cdef _sky_rx(self, uint8_t* data, int leng):
+	cdef _sky_rx(self, uint8_t* data, int leng, int rx_time_tick):
 		cdef c_skylink.SkyRadioFrame frame;
 		cdef int iret = 0;
 		memcpy(frame.raw, data, leng)
 		frame.length = leng
+		frame.rx_time_ticks = rx_time_tick
 		iret = c_skylink.sky_rx(self.handle, &frame)
 		return iret
 
-	def sky_rx(self, raw_frame_bytes):
-		return self._sky_rx(<uint8_t*> raw_frame_bytes, <int> len(raw_frame_bytes))
+	def sky_rx(self, raw_frame_bytes, rx_time_tick):
+		return self._sky_rx(<uint8_t*> raw_frame_bytes, <int> len(raw_frame_bytes), <int> rx_time_tick, )
 
 
 	cdef _sky_tx(self):

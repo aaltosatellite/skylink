@@ -86,7 +86,7 @@ class SkyLinkLoop(threading.Thread):
 						self.skylink.carrier_sensed()
 					if code == "pl":
 						pl = data
-						sky_rx_ret = self.skylink.sky_rx(pl)
+						sky_rx_ret = self.skylink.sky_rx(pl, int(time.monotonic() * 1000) % mod_time_ticks )
 						color_code = "\033[92m"  # Green (default when no errors)
 						if sky_rx_ret == -7:
 							color_code = "\033[93m"  # Yellow
