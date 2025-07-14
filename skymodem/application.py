@@ -306,7 +306,7 @@ class SkyModem:
 				self.skylink_loop.arq_disconnect(ichannel=ichannel)
 				response_dict["rsp"] = "ack"
 			elif ctrl_command == "set_baudrate":
-				assert control_dict["baudrate"] in (9600, 9600*2, 9600*4), "invalid baudrate field in control_dict"
+				assert control_dict["baudrate"] in (4800, 9600, 9600*2, 9600*4), "invalid baudrate field in control_dict"
 				self.dsp_loop.set_baudrate(control_dict["baudrate"])
 				response_dict["rsp"] = "ack"
 			elif ctrl_command == "set_skylink_config":
