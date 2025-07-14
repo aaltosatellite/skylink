@@ -6,7 +6,7 @@ from queue import Queue, Empty
 import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_TX, SOAPY_SDR_CF32
 from datetime import datetime as dtime
-from kuokka.lib_tools import radionoise, make_samples2
+#from kuokka.lib_tools import radionoise, make_samples2
 
 
 DEBUG_PRINT_ON = True
