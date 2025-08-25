@@ -5,11 +5,11 @@ from numba import njit, int64
 # === CLASSIC ===============================================================================================================================================================
 # ===========================================================================================================================================================================
 @njit(cache=True)
-def create_classic_JPL_statemx(N_eps, n_decay):
-	assert n_decay >= 1.0
+def create_classic_JPL_statemx(N_eps, n_halflife):
+	assert n_halflife >= 1.0
 	assert N_eps >= 3.0
 	statemx = np.zeros((3, N_eps), dtype=np.float64)
-	statemx[0,0] = 0.5**(1/n_decay)
+	statemx[0,0] = 0.5**(1 / n_halflife)
 	statemx[0,1] = 0	# absolute index
 	statemx[0,2] = 0	# ring index
 	statemx[1,:] *= 0.0 # sliding window

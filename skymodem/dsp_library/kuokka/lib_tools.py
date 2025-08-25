@@ -522,8 +522,50 @@ def choose_fftlen(len_ideal, window_halfwid):
 
 
 
-# FREQUENCY MANAGEMENT ==========================================================================================================================================================================
-# FREQUENCY MANAGEMENT ==========================================================================================================================================================================
+# FREQUENCY MANAGEMENT =======================================================================================================================================================================
+# FREQUENCY MANAGEMENT =======================================================================================================================================================================
+# ============================================================================================================================================================================================
+@njit(cache=True)
+def create_freq_shifter_precomp(sr, fdelta, max_batchlen, fdelta_threshold):  # fdelta_threshold can be something like (1e-6 * sr).
+	#print("CREATING FREQ SHIFTER: ",sr, fdelta, max_batchlen, fdelta_threshold)
+	assert sr > 0.0
+	assert abs(fdelta) < sr*0.5
+	assert max_batchlen > 1
+	assert 0.0 < fdelta_threshold < (0.5*sr)
+	m = 4
+	while True:
+		m += 1
+		assert m < 1e6
+		n = int(round(fdelta / (sr/m)))
+		fdelta_actual = n * (sr/m)
+		err = abs(fdelta_actual - fdelta)
+		if err >= fdelta_threshold:
+			continue
+		assert abs(fdelta-fdelta_actual) < fdelta_threshold
+		shifter = np.exp(2j*np.pi * (n/m) * np.arange(max_batchlen + m + 2))   # (n/m) === (fdelta_actual/sr)
+		# np.angle(arr[i]) === np.angle(arr[i+m]) === np.angle(arr[i%m])
+		for _ in range(32):
+			i = np.random.randint(len(shifter) - (m+1))
+			d1 = (np.angle(shifter[i]) - np.angle(shifter[i+m])) % (np.pi*2)
+			d2 = (np.angle(shifter[i]) - np.angle(shifter[i%m])) % (np.pi*2)
+			b1 = np.isclose(d1, 0.0) or np.isclose(d1, np.pi*2)
+			b2 = np.isclose(d2, 0.0) or np.isclose(d2, np.pi*2)
+			assert b1, d1
+			assert b2, d2
+		return shifter, m, fdelta_actual
+
+
+@njit(cache=True)
+def freq_shift_phased_precomp(batch, shifter_arr, phase_idx0, phase_mod):
+	#shifted = batch * shifter_arr[phase_idx0:phase_idx0+len(batch)]
+	shifted = np.zeros_like(batch)  # opening the vector multiplication above into a for-loop makes the numba-accelerated version ~10% faster.
+	for i in range(len(shifted)):
+		shifted[i] = batch[i] * shifter_arr[i + phase_idx0]
+	phase_idx1 = (phase_idx0 + len(batch)) % phase_mod
+	return shifted, phase_idx1
+# ============================================================================================================================================================================================
+
+
 @njit(cache=True)
 def freq_shift_phased(batch, sr, fdelta, phase0):
 	shifted = batch * np.exp(2j*np.pi*(fdelta/sr)*np.arange(len(batch)) + phase0*1j)
@@ -613,8 +655,24 @@ def pll_df_std0_polyfit(c_freq, c_limit):
 
 
 
-
-
+def dt_array_report(dt_array, nsamples, sr0, dt_array_names):
+	dt_total = np.sum(dt_array)
+	speed = nsamples / dt_total
+	overmatch = speed / sr0
+	budget_fraction	= (1/overmatch) / 0.5
+	cpu_fraction	= (1/overmatch) / 1.0
+	S = "="*50
+	S += "\n" + "speed:          {} Ms/s".format( round(1e-6 * speed, 2) )
+	S += "\n" + "overmatch:      {}".format( round(overmatch, 2) )
+	S += "\n" + "budget use:     {} %".format( round( 100*budget_fraction , 2) )
+	S += "\n" + "cpu core use:   {} %".format( round( 100*cpu_fraction , 2) )
+	for i_dt in range(len(dt_array)):
+		txt1 = "  part {: ^{width1}} ({}):".format(i_dt, dt_array_names[i_dt], width1=2)
+		txt2 = "{}{}".format(" "*(max(0, 27-len(txt1))), round( 100*dt_array[i_dt]/np.sum(dt_array) , 2))
+		S += "\n" + txt1 + txt2
+	S += "\n" + "parts of total:    {} %".format( round( 100*np.sum(dt_array)/dt_total , 2) )
+	S += "\n" + "="*50
+	return S
 
 
 

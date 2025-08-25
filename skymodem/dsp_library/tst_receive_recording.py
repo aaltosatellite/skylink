@@ -19,7 +19,7 @@ def receive_a_recording():
 	#prepend = np.concatenate( (samples[0:8000],)*int(0.5*1e6/8000.0) )
 	#samples = np.concatenate( (prepend, samples) )
 	sr0 = 1e6
-	samples = samples + radionoise(n=len(samples), sr=sr0, W_per_Hz=0.0033/9600)
+	samples = samples + radionoise(n=len(samples), sr=sr0, W_per_Hz=0.13/9600)
 	nsamples = len(samples)
 
 	#samples = np.concatenate( (samples[0:300000], samples) )
@@ -81,12 +81,12 @@ def receive_a_recording():
 		batch = samples[feed_head : feed_head+batchlen]
 		carrier_sensed_old = carrier_sensed
 		t0 = time.perf_counter()
-		ret_pl, carrier_sensed = rx.process_samples(batch=batch, give_bits=False)
+		ret_pl, carrier_sensed = rx.process_batch(batch=batch, give_bits=False)
 		dt_total += (time.perf_counter() - t0)
 		carrier_sense_array.append( (feed_head+batchlen, carrier_sensed) )
 		if carrier_sensed > carrier_sensed_old:
 			print("(carrier up)")
-		#ret_b, _ = rx2.process_samples(batch=batch, give_bits=True)
+		#ret_b, _ = rx2.process_batch(batch=batch, give_bits=True)
 
 		if ret_pl:
 			pl_list.extend(ret_pl)
@@ -153,11 +153,12 @@ def receive_a_recording():
 	ax1.grid()
 
 	cs_criterion = (rx.fft_instr_array[:,1] - rx.fft_instr_array[:,2]) / rx.fft_instr_array[:,3]
-	ax2.plot(xx[::10], rx.fft_instr_array[::10,0], label="expdec max(corr)")
-	ax2.plot(xx[::10], rx.fft_instr_array[::10,1], label="max(corr) raw")
-	ax2.plot(xx[::10], rx.fft_instr_array[::10,2], label="max(corr) avg")
-	ax2.plot(xx[::10], rx.fft_instr_array[::10,3], label="max(corr) std")
-	ax2.plot(xx[::10], cs_criterion[::10], label="carrier sense criterion")
+	ax2.plot(xx[::10], rx.fft_instr_array[::10,0], label="expdec max(maskcorr)")
+	ax2.plot(xx[::10], rx.fft_instr_array[::10,1], label="max(maskcorr)")
+	ax2.plot(xx[::10], rx.fft_instr_array[::10,2], label="max(maskcorr) avg")
+	ax2.plot(xx[::10], rx.fft_instr_array[::10,3], label="max(maskcorr) std")
+	ax2.plot(xx[::10], rx.fft_instr_array[::10,4], label="carrier streak")
+	ax2.plot(xx[::10], cs_criterion[::10], label="carrier sense criterion", color="black")
 	ax2.legend()
 	ax2.grid()
 
@@ -175,8 +176,8 @@ def receive_a_recording():
 
 	fig2 = plt.figure(figsize=(17,9))
 	ax3 = fig2.add_subplot(111)
-	ax3.plot(xx[::10], rx.fft_instr_array[::10,2], label="max(corr) avg")
-	ax3.plot(xx[::10], rx.fft_instr_array[::10,3], label="max(corr) std")
+	ax3.plot(xx[::10], rx.fft_instr_array[::10,2], label="max(maskcorr) avg")
+	ax3.plot(xx[::10], rx.fft_instr_array[::10,3], label="max(maskcorr) std")
 	ax3.plot(crit_filt_x, crit_filt_y, label="criterion")
 	ax3.plot(crit_filt_x, rollsmooth(crit_filt_y, 1), label="criterion-smooth-1")
 	ax3.legend()
@@ -190,7 +191,7 @@ def receive_a_recording():
 	ax5.plot(xx[::3], rx.power_array[::3,0], label="power")
 	ax5.plot(xx[::3], rx.power_array[::3,1], label="power avg")
 	ax5.plot(xx[::3], snr_arr, label="snr")
-	ax5.plot(xx[::3], rx.dmd_array[::3], label="dmd")
+	#ax5.plot(xx[::3], rx.dmd_array[::3], label="dmd")
 	#ax5.plot(xx[::10], (rx.power_array[::10,1]*(fftlen**2))/power_band_length, label="power avg")
 	#ax5.plot(xx[::10], rx.power_array[::10,2], label="power std")
 	ax5.legend()

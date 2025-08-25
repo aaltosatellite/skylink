@@ -36,16 +36,17 @@ def construct_fft_mask(sps, mod_index, BT_rx_match, fftlen, masklen, nn):
 	return mask
 
 
-def get_empiric_masklen(fftlen, sps): #TODO this should be a function of mod_idx and BT...
-	return int(0.5 * 1.5 * fftlen / sps)*2 + 1
+def get_empiric_masklen(fftlen, sps, mod_index): #TODO this should be a function of mod_idx and BT...
+	return int(0.5 * 1.5 * (max(mod_index, 0.5)/0.5) * fftlen / sps)*2 + 1
 
 
 #@njit(cache=True)
-def create_fft_f_centerer_statemx(fftlen, sps, f_center_search_map, mod_index, BT_rx_match, centering_delay_mpr, c_center_decay):
+def create_fft_f_centerer_statemx(fftlen, sps, f_center_search_map, mod_index, BT_rx_match, centering_delay_mpr, centerf_halflife):
 	assert fftlen >= 32
 	assert len(f_center_search_map) == fftlen
-	assert 0.5 < c_center_decay < 1.0
-	masklen = get_empiric_masklen(fftlen=fftlen, sps=sps)
+	assert 1.0 <= centerf_halflife < 50.0
+	c_center_decay = 0.5**(1/centerf_halflife)
+	masklen = get_empiric_masklen(fftlen=fftlen, sps=sps, mod_index=mod_index)
 	jumplen = int(fftlen/2)
 	statemx = np.zeros( (8,fftlen) , dtype=np.float64 )
 	statemx[0,0]  = fftlen
@@ -125,12 +126,13 @@ def fft_f_centerer(sample_arr, isample0, nsamples, center_f_arr, center_f_head0,
 
 
 # === carrier sensed =========================================================================================================================================================================
-def create_fft_f_centerer_csense_statemx(fftlen, sps, f_center_search_map, mod_index, BT_rx_match, centering_delay_mpr, c_center_decay, c_stat_update, carrier_sense_threshold):
+def create_fft_f_centerer_csense_statemx(fftlen, sps, baudrate, f_center_search_map, mod_index, BT_rx_match, centering_delay_mpr, centerf_halflife, c_stat_update, carrier_sense_threshold):
 	assert fftlen >= 32
 	assert len(f_center_search_map) == fftlen
-	assert 0.5 < c_center_decay < 1.0
-	masklen = get_empiric_masklen(fftlen=fftlen, sps=sps)
-	power_band_length = int(0.5 * 0.75 * (mod_index/0.5) * fftlen / sps)*2 +1 # 0.75*baudrate is approximately the bandwidth of half max amplitude.		# for energy sense
+	assert 1.0 <= centerf_halflife < 50.0
+	c_center_decay = 0.5**(1/centerf_halflife)
+	masklen = get_empiric_masklen(fftlen=fftlen, sps=sps, mod_index=mod_index)
+	power_band_length = int(0.5 * 0.95 * (max(0.5,mod_index)/0.5) * fftlen / sps)*2 +1 # 0.75*baudrate is approximately the bandwidth of half max amplitude. 0.95 gives the most accurate SNR reading.		# for energy sense
 	assert power_band_length <= masklen
 	jumplen = int(fftlen/2)
 	f_center_search_map_arr = np.array(f_center_search_map).copy()
@@ -140,6 +142,8 @@ def create_fft_f_centerer_csense_statemx(fftlen, sps, f_center_search_map, mod_i
 	search_center_indexes = np.array([i for i in range(len(f_center_search_map_arr)) if (f_center_search_map_arr[i]>0)])	# for energy sense
 	assert np.all(search_center_indexes >= masklen//2)
 	assert np.all(search_center_indexes < (fftlen-masklen//2))
+	fftrate = sps*baudrate / jumplen
+	stat_reset_limit = fftrate * 12.0
 	statemx = np.zeros( (8,fftlen) , dtype=np.float64 )
 	statemx[0,0]  = fftlen
 	statemx[0,1]  = jumplen
@@ -150,6 +154,7 @@ def create_fft_f_centerer_csense_statemx(fftlen, sps, f_center_search_map, mod_i
 	statemx[0,6]  = carrier_sense_threshold
 	statemx[0,7]  = len(search_center_indexes)   																			# for energy sense
 	statemx[0,8]  = power_band_length  																						# for energy sense
+	statemx[0,9]  = stat_reset_limit
 	statemx[0,10] = 0 		# idx  (this runs from (fftlen-jumplen) to fftlen-1 and then an fft is called)
 	statemx[0,11] = -1.0	# f_center
 	statemx[0,12] = 0.0		# max_corr avg
@@ -161,6 +166,7 @@ def create_fft_f_centerer_csense_statemx(fftlen, sps, f_center_search_map, mod_i
 	statemx[0,18] = 0.1		# band power avg																				# for energy sense
 	statemx[0,19] = 1.0		# band power std																				# for energy sense
 	statemx[0,20] = 0.0		# band power																					# for energy sense
+	statemx[0,21] = 0.0		# carrier streak
 	statemx[1,:]  = np.fft.fftshift( np.fft.fftfreq(fftlen, d=1.0) ) # frequency table
 	statemx[2,:]  = 0.0		# fft mask-correlation
 	statemx[3,:]  = 0.0		# window (real) (the only reason this matrix would be complex...)
@@ -183,6 +189,7 @@ def fft_f_centerer_csense(sample_arr, isample0, nsamples, center_f_arr, power_ar
 	carrier_sense_threshold = statemx[0,6]		# for carrier sense
 	n_search_indexes	= int(statemx[0,7]) 	# for energy sense
 	power_band_length	= int(statemx[0,8]) 	# for energy sense
+	stat_reset_limit	= statemx[0,9]
 	idx 				= int(statemx[0,10])
 	f_center 			= statemx[0,11]
 	max_corr_avg 		= statemx[0,12]			# for carrier sense
@@ -194,6 +201,7 @@ def fft_f_centerer_csense(sample_arr, isample0, nsamples, center_f_arr, power_ar
 	bp_avg 				= statemx[0,18] 		# for energy sense
 	bp_std 				= statemx[0,19] 		# for energy sense
 	band_power 			= statemx[0,20] 		# for energy sense
+	carrier_streak		= statemx[0,21]
 	window 				= statemx[3,:] + 1j*statemx[4,:]
 	corr_mask			= statemx[5,0:masklen]
 	boolean_search_map  = statemx[6,:]
@@ -223,21 +231,28 @@ def fft_f_centerer_csense(sample_arr, isample0, nsamples, center_f_arr, power_ar
 			argmax_expdec_corr = np.argmax(statemx[2,:])
 			max_expdec_corr = statemx[2,argmax_expdec_corr]
 			f_center = statemx[1,:][argmax_expdec_corr]
+
+			# == carrier & energy sense ================================================================================================================================================================
 			max_corr = np.max(corr_array)	# for carrier sense
-			max_corr_avg, max_corr_std = stat_update(avg0=max_corr_avg, std0=max_corr_std, value=max_corr, c_update=c_stat_update, n_update=n_stat_update, clip_limit_instd=5.5, clip_replacement_instd=1.15) # for carrier sense
-			n_stat_update += 1				# for carrier sense
-			carrier_sensed = int(((max_corr-max_corr_avg)/max_corr_std) > carrier_sense_threshold) # for carrier sense
-			# == Energy sense ================================================================================================================================================================
-			if not carrier_sensed:
-				i_a = search_center_indexes[np.random.randint(0,n_search_indexes)] - power_band_length//2  # random spot instead of argmax_expdec, to obtain non-biased average.
-				i_b = i_a + power_band_length
-				band_power = np.sum(fft[i_a:i_b]**2) / (fftlen**2)
-				bp_avg, bp_std = stat_update(avg0=bp_avg, std0=bp_std, value=band_power, c_update=c_stat_update, n_update=n_stat_update, clip_limit_instd=5.5, clip_replacement_instd=1.15)
-			else:
+			carrier_sensed = 0
+			if n_stat_update > (1/c_stat_update):
+				carrier_sensed = int(((max_corr-max_corr_avg)/max_corr_std) > carrier_sense_threshold) # for carrier sense
+			if carrier_sensed:
+				carrier_streak += 1
+				if carrier_streak > stat_reset_limit:
+					n_stat_update = 1
 				i_a = argmax_expdec_corr - power_band_length//2
 				i_b = i_a + power_band_length
 				band_power = np.sum(fft[i_a:i_b]**2) / (fftlen**2)
-			# == Energy sense ================================================================================================================================================================
+			if not carrier_sensed:
+				carrier_streak = 0
+				max_corr_avg, max_corr_std = stat_update(avg0=max_corr_avg, std0=max_corr_std, value=max_corr, c_update=c_stat_update, n_update=n_stat_update, clip_limit_instd=carrier_sense_threshold, clip_replacement_instd=4.00) # for carrier sense
+				i_a = search_center_indexes[np.random.randint(0,n_search_indexes)] - power_band_length//2  # random spot instead of argmax_expdec, to obtain non-biased average.
+				i_b = i_a + power_band_length
+				band_power = np.sum(fft[i_a:i_b]**2) / (fftlen**2)
+				bp_avg, bp_std = stat_update(avg0=bp_avg, std0=bp_std, value=band_power, c_update=c_stat_update, n_update=n_stat_update, clip_limit_instd=carrier_sense_threshold, clip_replacement_instd=4.00)
+				n_stat_update += 1				# for carrier sense
+			# == carrier & energy sense ================================================================================================================================================================
 
 		center_f_arr[max(0,center_f_head-n_centering_delay)] = f_center
 		# == Energy sense ====================================================================================================================================================================
@@ -249,6 +264,7 @@ def fft_f_centerer_csense(sample_arr, isample0, nsamples, center_f_arr, power_ar
 		instr_arr[center_f_head,1] = max_corr			# for carrier sense
 		instr_arr[center_f_head,2] = max_corr_avg		# for carrier sense
 		instr_arr[center_f_head,3] = max_corr_std		# for carrier sense
+		instr_arr[center_f_head,4] = carrier_streak		# for carrier sense
 		center_f_head += 1
 	#assert center_f_head == center_f_head0 + nsamples
 	statemx[0,10] = idx
@@ -262,6 +278,7 @@ def fft_f_centerer_csense(sample_arr, isample0, nsamples, center_f_arr, power_ar
 	statemx[0,18] = bp_avg			# for energy sense
 	statemx[0,19] = bp_std			# for energy sense
 	statemx[0,20] = band_power		# for energy sense
+	statemx[0,21] = carrier_streak
 	statemx[3,:] = window.real
 	statemx[4,:] = window.imag
 	dmd_up_to = max(0, center_f_head - (n_centering_delay + 1))

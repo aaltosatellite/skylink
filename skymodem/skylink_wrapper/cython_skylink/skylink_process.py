@@ -116,7 +116,7 @@ class SkyLinkLoop(threading.Thread):
 					if tx_i == 0:
 						break
 					DBGPRINT("Transmitting a frame of {} bytes uplink.".format(len(frame_bytes)))
-					self.que_payloads_to_dsp.put_nowait(frame_bytes)
+					self.que_payloads_to_dsp.put_nowait((frame_bytes,time.monotonic()))
 					sleeptime = 0.0
 
 				for ichannel in range(num_virtual_channels):

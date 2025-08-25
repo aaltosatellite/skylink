@@ -7,6 +7,7 @@ import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_TX, SOAPY_SDR_CF32
 from datetime import datetime as dtime
 #from kuokka.lib_tools import radionoise, make_samples2
+from .lib_tools import make_samples2, radionoise
 
 
 DEBUG_PRINT_ON = True
@@ -67,6 +68,8 @@ class RadioLoop:
 		else:
 			self._soapy_start()
 
+	def sim_start(self, noiseSPD, ts_pl_list, rx_samplearr_que, tx_sample_que):
+		self._sim_start(noiseSPD=noiseSPD, ts_pl_list=ts_pl_list, rx_samplearr_que=rx_samplearr_que, tx_sample_que=tx_sample_que)
 
 
 
@@ -128,7 +131,8 @@ class RadioLoop:
 		while self.on:
 			if (n_rx_loops % 2000) == 0:
 				DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5)))
-			ts_s0 = time.monotonic()
+			ts_s0_mono = time.monotonic()
+			ts_s0_unix = time.time()
 			rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
 			avg_sr = n_rx_total / (time.perf_counter() - t00)
 			n_rx_total += rx_ret
@@ -138,7 +142,7 @@ class RadioLoop:
 			#if self.self_mute:
 			#	continue
 			if not self.que_rx_samples_out.full():
-				self.que_rx_samples_out.put_nowait((ts_s0, recv_buffer[0, :rx_ret].copy()))
+				self.que_rx_samples_out.put_nowait((recv_buffer[0, :rx_ret].copy(), ts_s0_mono, ts_s0_unix))
 			else:
 				DBGPRINT("WARNING: radio-to-process queue overflow!")
 				raise Exception("radio-loop: radio-to-process queue overflow.")
@@ -230,7 +234,8 @@ class RadioLoop:
 		while self.on:
 			if (n_rx_loops % 2000) == 0:
 				DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4), round(1e-6*self.radio_config.rx_sr0, 5)))
-			ts_s0 = time.monotonic()
+			ts_s0_mono = time.monotonic()
+			ts_s0_unix = time.time()
 			ret = sdr.readStream(rxStream, [buff], numElems=absolute_bufflen, timeoutUs=timeout)
 			rx_ret = ret.ret
 			n_rx_total += rx_ret
@@ -244,7 +249,7 @@ class RadioLoop:
 			#if self.self_mute:
 			#	continue
 			if not self.que_rx_samples_out.full():
-				self.que_rx_samples_out.put_nowait((ts_s0, buff[:rx_ret].copy()))
+				self.que_rx_samples_out.put_nowait((buff[:rx_ret].copy(), ts_s0_mono, ts_s0_unix))
 			else:
 				DBGPRINT("WARNING: radio-to-process queue overflow!")
 				raise Exception("radio-loop: radio-to-process queue overflow.")
@@ -333,7 +338,8 @@ class RadioLoop:
 		while self.on:
 			time.sleep(t_sleep)
 			batchlen = min(default_batchlen, nsamples-cursor )
-			ts_s0 = time.monotonic()
+			ts_s0_mono = time.monotonic()
+			ts_s0_unix = time.time()
 			batch = samples[cursor:cursor+batchlen]
 			assert len(batch) == batchlen
 			cursor += batchlen
@@ -341,7 +347,7 @@ class RadioLoop:
 				cursor = 0
 				DBGPRINT("Recordning cursor zeroed.")
 			if not self.que_rx_samples_out.full():
-				self.que_rx_samples_out.put_nowait((ts_s0,batch))
+				self.que_rx_samples_out.put_nowait((batch.copy(),ts_s0_mono,ts_s0_unix))
 			else:
 				DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
 			n_received += batchlen
@@ -367,76 +373,68 @@ class RadioLoop:
 
 	# === SIM ================================================================================================================================================================================
 	# === SIM ================================================================================================================================================================================
-	def _sim_start(self, fpath=None, sr0=None, fcenter0=None):
+	def _sim_start(self, noiseSPD, ts_pl_list, rx_samplearr_que, tx_sample_que):
 		DBGPRINT("Sim start")
-		import pickle
-		if fpath is None:
-			fpath, fcenter0, sr0 = ("/home/elmore/datasetit/radiotallenteet/uhf-965_437.0MHz-1000ksps.pickled",-124.0e3, 1e6)
-		f = open(fpath, "rb")
-		rd = f.read()
-		f.close()
-		samples = pickle.loads(rd)
-		samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * (1/sr0) * (fcenter0+25e3))
-		assert len(samples.shape) == 1
-		assert type(samples) == np.ndarray
-		samples = np.complex64(samples)
-		self.radio_config.rx_sr0 	= sr0
-		self.radio_config.tx_sr0 	= sr0
+		#self.radio_config.rx_sr0 	= sr0
+		#self.radio_config.tx_sr0 	= sr0
 		self.radio_config.rx_f_tune = 437e6
 		self.radio_config.tx_f_tune = 437e6
 		self.radio_config.rx_f_center = self.radio_config.rx_f_tune + 25e3
 		self.radio_config.tx_f_center = self.radio_config.tx_f_tune + 25e3
-		self.rx_thread 			= threading.Thread(target=self._sim_rx_loop,  args=(samples, sr0), daemon=True) #TODO bufferlen as setting?
-		self.tx_thread 			= threading.Thread(target=self._sim_tx_loop,  args=tuple(),        daemon=True) #TODO bufferlen as setting?
+		self.rx_thread = threading.Thread(target=self._sim_rx_loop,  args=(noiseSPD, ts_pl_list, rx_samplearr_que),  daemon=True) #TODO bufferlen as setting?
+		self.tx_thread = threading.Thread(target=self._sim_tx_loop,  args=(tx_sample_que,),  daemon=True) #TODO bufferlen as setting?
 		self.on = True
 		self.rx_thread.start()
 		self.tx_thread.start()
 
 
-	def _sim_rx_loop(self, noiseSPD, ts_pl_list, realtime):
+	def _sim_rx_loop(self, noiseSPD, ts_pl_list, samplearr_que):
 		time.sleep(2)
 		n_received = 0
 		t0 = time.perf_counter()
 		t_sleep = 0.0
 		batchlen = 1024*2
-		ts_pl_list = sorted(ts_pl_list, key=lambda k: k[0])
-		ts_pl_list = [[x[0]+t0,x[1],x[2]] for x in ts_pl_list]
+		ts_pl_list = sorted(ts_pl_list, key=lambda x_: x_[0])
+		ts_pl_list = [[x[0]+t0,x[1]] for x in ts_pl_list]
 		pl_head = 0
 		transmission_dict = dict()
 		while self.on:
 			time.sleep(t_sleep)
-			ts_s0 = time.perf_counter()
+			ts_s0_mono = time.monotonic()
+			ts_s0_unix = time.time()
 			batch = radionoise(batchlen, sr=self.radio_config.rx_sr0, W_per_Hz=noiseSPD)
 
-			while (ts_s0 + batchlen/self.radio_config.rx_sr0) > ts_pl_list[pl_head][0]:
-				assert ts_pl_list[pl_head][1] in ("samples", "data")
-				if ts_pl_list[pl_head][1] == "data":
-					bits, baudrate, f_abs, power, mod_idx = ts_pl_list[pl_head][2]
-					sps = self.radio_config.rx_sr0 / baudrate
-					f_offset_rel = (f_abs - self.radio_config.rx_f_tune) / self.radio_config.rx_sr0
-					transmission = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_rel, power=power, mod_index=mod_idx, shaper_BT_prod=0.5, n_silence_start=0, n_silence_end=0)
-				else:
-					transmission = ts_pl_list[pl_head][2]
+			while (pl_head < len(ts_pl_list)) and ((ts_s0_mono + batchlen/self.radio_config.rx_sr0) > ts_pl_list[pl_head][0]):
+				bits, baudrate, f_abs, power, mod_idx = ts_pl_list[pl_head][1]
+				sps = self.radio_config.rx_sr0 / baudrate
+				f_offset_rel = (f_abs - self.radio_config.rx_f_tune) / self.radio_config.rx_sr0
+				transmission = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_rel, power=power, mod_index=mod_idx, shaper_BT_prod=0.5, n_silence_start=0, n_silence_end=0)
 				i_start = int((ts_pl_list[pl_head][0]-t0) * self.radio_config.rx_sr0)
 				transmission_dict[pl_head] = transmission, i_start
 				pl_head += 1
+
+			while not samplearr_que.empty():
+				transmission = samplearr_que.get_nowait()
+				i_start = n_received + 10
+				transmission_dict[np.random.randint(0,int(1e12))] = transmission, i_start
+
 			for k in transmission_dict.keys():
 				transmission, i_start = transmission_dict[k]
 				i0_batch 	= np.clip(i_start - n_received, 0, batchlen)
 				i0_tx 		= np.clip(n_received - i_start, 0, len(transmission))
 				i_end_batch = np.clip(i0_batch + len(transmission)-i0_tx, 0, batchlen)
 				i_end_tx 	= np.clip(i0_tx + batchlen-i0_batch, 0, len(transmission))
-				if (i0_tx == i_end_tx) and (i0_tx == len(transmission)):
+				if (i0_batch == i_end_batch) and (i0_batch == 0):
 					del transmission_dict[k]
 				else:
 					batch[i0_batch:i_end_batch] += transmission[i0_tx,i_end_tx]
 
 			if not self.que_rx_samples_out.full():
-				self.que_rx_samples_out.put_nowait((ts_s0,batch))
+				self.que_rx_samples_out.put_nowait((batch, ts_s0_mono, ts_s0_unix))
 			else:
 				DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
 			n_received += batchlen
-			t_next = t0 + ((n_received) / self.radio_config.rx_sr0)
+			t_next = t0 + (n_received / self.radio_config.rx_sr0)
 			t_sleep = max(0, t_next - time.perf_counter())
 
 

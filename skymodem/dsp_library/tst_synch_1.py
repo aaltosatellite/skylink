@@ -30,7 +30,7 @@ def _synchs_against_eachother_round(plott=False):
 		plt.show()
 	N_eps = int(round(sps))
 
-	mx_clss   = create_classic_JPL_statemx(N_eps=N_eps, n_decay=12)
+	mx_clss   = create_classic_JPL_statemx(N_eps=N_eps, n_halflife=12)
 	mx_gene_1 = create_general_JPL_statemx_1(sps_int=N_eps, n_decay=12, c_constant=1.0, c_shape=0.0, shape_idx=0)
 	mx_gene_2 = create_general_JPL_statemx_2(sps_int=N_eps, n_decay=12, c_constant=1.0, c_shape=0.0, shape_idx=0)
 
@@ -42,13 +42,13 @@ def _synchs_against_eachother_round(plott=False):
 	# synch runs produce equal outputs
 
 	out_clss_strm = np.zeros( (len(stream), 3), dtype=np.int64)
-	mx_clss   = create_classic_JPL_statemx(N_eps=N_eps, n_decay=12)
+	mx_clss   = create_classic_JPL_statemx(N_eps=N_eps, n_halflife=12)
 	synch_head = classic_JPL_synch_strm(sample_arr=stream, i_sample0=0, nsamples=len(stream), synch_arr=out_clss_strm, synch_head0=0, statemx=mx_clss)
 	assert np.allclose(out_clss_strm, out_clss)
 	assert synch_head == len(stream)
 	# stream synch (classic) produces the same as single shot run
 
-	mx_clss   = create_classic_JPL_statemx(N_eps=N_eps, n_decay=12)
+	mx_clss   = create_classic_JPL_statemx(N_eps=N_eps, n_halflife=12)
 	mx_gene_1 = create_general_JPL_statemx_1(sps_int=N_eps, n_decay=12, c_constant=1.0, c_shape=0.0, shape_idx=0)
 	mx_gene_2 = create_general_JPL_statemx_2(sps_int=N_eps, n_decay=12, c_constant=1.0, c_shape=0.0, shape_idx=0)
 	for i,s in enumerate(stream):
@@ -98,7 +98,7 @@ def speedbench_classic_JPL():
 	"""
 	Measures the speed of classic JPL synch in step- and stream variants.
 	"""
-	statemx = create_classic_JPL_statemx(N_eps=17, n_decay=12)
+	statemx = create_classic_JPL_statemx(N_eps=17, n_halflife=12)
 
 	samples = np.random.normal(0,1, 3000000)
 	synch_arr = np.zeros( (len(samples), 3), dtype=np.int64)
@@ -188,10 +188,10 @@ def synch_and_decode_experiment(sps, baudrate, n_symbols, relative_rate_error, n
 	dt_2 = time.perf_counter() - t0
 
 	# Do symbol synch
-	JPLstatemx = create_classic_JPL_statemx(N_eps=int(claimed_sps), n_decay=n_decay)
+	JPLstatemx = create_classic_JPL_statemx(N_eps=int(claimed_sps), n_halflife=n_decay)
 	_ = classic_JPL_synch_run(samples=samples2, statemx=JPLstatemx)
 	_ = classic_JPL_synch_run(samples=samples2, statemx=JPLstatemx)
-	JPLstatemx = create_classic_JPL_statemx(N_eps=int(claimed_sps), n_decay=n_decay)
+	JPLstatemx = create_classic_JPL_statemx(N_eps=int(claimed_sps), n_halflife=n_decay)
 	t00 = time.perf_counter()
 	synchphase_arr = classic_JPL_synch_run(samples=samples2, statemx=JPLstatemx)
 	dt_3 = time.perf_counter() - t00

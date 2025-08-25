@@ -66,7 +66,7 @@ def feed_samples_to_a_receiver(dsp_config:RXDSPConfig, samples, payload_istart_i
 		batchlen = min(default_batchlen, nsamples - c)
 		batch = samples[c:c+batchlen]
 		t0 = time.perf_counter()
-		ret_list, carrier_sensed = rx.process_samples(batch, give_bits=False)
+		ret_list, carrier_sensed = rx.process_batch(batch=batch, give_bits=False)
 		dt_ = time.perf_counter() - t0
 		batch_contains_signal = any([(not ((c>i1) or ((c+batchlen)<i0))) for (_,i0,i1) in payload_istart_iend_list])
 		if batch_contains_signal:
@@ -297,7 +297,7 @@ def test_precompilation_success_rate(N):
 	basic_config.sps 					= 21
 	basic_config.centering_delay_mpr 	= 5.0
 	basic_config.lp_cutoff_coeff 		= 0.63
-	basic_config.JPL_n_halflife 		= 22
+	basic_config.JPL_halflife 			= 22
 	basic_config.synch_delay_mpr		= 16.0
 	# new default (but sps=21) fails at: 	36, 16, 165, 272, 45
 	# new default fails at: 				-
@@ -517,7 +517,7 @@ def compare_timings():
 	config_optim_1.lp_cutoff_coeff = 0.583
 	config_optim_1.centering_delay_mpr = 2.0
 	config_optim_1.synch_delay_mpr = 16
-	config_optim_1.JPL_n_halflife = 30
+	config_optim_1.JPL_halflife = 30
 
 	_ = measure_execution_speed(rx_config=rx_config_default)
 	dt_array, t_signal, t_silence, n_samples, n_signal_samples = measure_execution_speed(rx_config=rx_config_default)
@@ -554,8 +554,8 @@ def optimizer_A(t_run_min):
 		"sps" : 				[8,10,12,14,16,22],
 		"fftlen_mpr" : 			[int(x)   for x in np.linspace(0.50,3.0, 128)  * 52],
 		"centering_delay_mpr" : [float(x) for x in np.linspace(0.15,2.0, 128) * 2.0],
-		"c_center_decay" : 		[1-1/float(x) for x in np.geomspace(3,500, 512)],
-		"JPL_n_halflife" : 		[int(x)   for x in np.linspace(0.25,2.0, 128) * 55],
+		"centerf_halflife" : 	[float(x) for x in np.linspace(2,20, 128)],
+		"JPL_halflife" : 		[int(x)   for x in np.linspace(0.25,2.0, 128) * 55],
 		"lp_ntaps" : 			[int(x*0.5)*2+1 for x in np.linspace(0.1,2.0, 128) * 161],
 		#"lp_cutoff_coeff" : 	[float(x) for x in np.linspace(0.50,2.0, 128) * 0.570],
 		#"mod_index" : 			[float(x) for x in np.linspace(0.50, 1.5, 256)],
@@ -607,7 +607,6 @@ def analyze_results_plot():
 	results = [r for r in results if r["A"] > 0]
 	#results = [r for r in results if r["A"] > 2.55e-5]
 
-	#results = [r for r in results if r["rx_config"]["c_center_decay"] > 0.8]
 
 	results = [r for r in results if r["rx_config"]["BT_rx_match"] > 0.0]
 	#results = [r for r in results if r["rx_config"]["mod_index"] == 0.5]
@@ -619,7 +618,7 @@ def analyze_results_plot():
 	print("{} remain after filtering.".format(len(results)))
 
 
-	parameter_names = ["mod_index", "lp_cutoff_coeff", "sps", "fftlen_mpr",  "centering_delay_mpr", "c_center_decay", "JPL_n_halflife", "lp_ntaps", "synch_delay_mpr"]
+	parameter_names = ["mod_index", "lp_cutoff_coeff", "sps", "fftlen_mpr",  "centering_delay_mpr", "centerf_halflife", "JPL_halflife", "lp_ntaps", "synch_delay_mpr"]
 	for res in results[0:4]:
 		print("A:       {}".format(res["A"]))
 		print("delay:   {}".format(1e3*res["avg_delay"]))
@@ -716,26 +715,37 @@ def analyze_results_plot():
 	ordered_indexing = sorted(list(range(len(parameter_arrays["sps"]))), key=lambda k: delay_array[k])
 	ordered_indexing = np.array(ordered_indexing, dtype=np.int64)
 	print(ordered_indexing.dtype)
+
 	xarr41_A = (parameter_arrays["fftlen_mpr"]*parameter_arrays["centering_delay_mpr"]*parameter_arrays["sps"]) / (parameter_arrays["sps"]*9600)
 	xarr41_B = (parameter_arrays["synch_delay_mpr"]*parameter_arrays["sps"]) / (parameter_arrays["sps"]*9600)
 	xarr41_C = (parameter_arrays["lp_ntaps"]*0.5) / (parameter_arrays["sps"]*9600)
+
+	xarr41_A = (parameter_arrays["fftlen_mpr"]*parameter_arrays["centering_delay_mpr"]) / 9600		# fftlen * centering_delay
+	xarr41_B = (parameter_arrays["synch_delay_mpr"]) / 9600
+	xarr41_C = (parameter_arrays["lp_ntaps"]*0.5) / (parameter_arrays["sps"]*9600)
+
 	xarr41 = xarr41_A + xarr41_B + xarr41_C + 0.0e-3
 	#delay1 = (fftlen_mpr * sps * centering_delay_mpr) / (sps * baudrate)
 	#delay2 = (synch_delay_mpr * sps) / (sps * baudrate)
 	#delay3 = (lp_ntaps * 0.5) / (sps * baudrate)
+	print("avg error against A:     ", 1000*np.average( np.abs( delay_array[ordered_indexing] - (xarr41_A[ordered_indexing]) ) ))
+	print("avg error against A+B:   ", 1000*np.average( np.abs( delay_array[ordered_indexing] - (xarr41_A[ordered_indexing]+xarr41_B[ordered_indexing]) ) ))
+	print("avg error against A+C:   ", 1000*np.average( np.abs( delay_array[ordered_indexing] - (xarr41_A[ordered_indexing]+xarr41_C[ordered_indexing]) ) ))
+	print("avg error against A+B+C: ", 1000*np.average( np.abs( delay_array[ordered_indexing] - (xarr41_A[ordered_indexing]+xarr41_B[ordered_indexing]+xarr41_C[ordered_indexing]) ) ))
 	print(len(ordered_indexing))
 	print(len(delay_array))
 	print(ordered_indexing[0:10])
 	fig4 = plt.figure(figsize=(12,12))
 	ax41 = fig4.add_subplot(111)
-	ax41.scatter(np.arange(len(ordered_indexing)), delay_array[ordered_indexing])
-	ax41.scatter(np.arange(len(ordered_indexing)), xarr41[ordered_indexing])
-	ax41.scatter(np.arange(len(ordered_indexing)), xarr41_A[ordered_indexing])
-	ax41.scatter(np.arange(len(ordered_indexing)), xarr41_B[ordered_indexing])
-	ax41.scatter(np.arange(len(ordered_indexing)), xarr41_C[ordered_indexing])
+	ax41.scatter(np.arange(len(ordered_indexing)), delay_array[ordered_indexing], label="measured")
+	ax41.scatter(np.arange(len(ordered_indexing)), xarr41[ordered_indexing], label="expected")
+	ax41.scatter(np.arange(len(ordered_indexing)), xarr41_A[ordered_indexing], label="term A (centering delay)")
+	ax41.scatter(np.arange(len(ordered_indexing)), xarr41_B[ordered_indexing], label="term B (synch delay)")
+	ax41.scatter(np.arange(len(ordered_indexing)), xarr41_C[ordered_indexing], label="term C (lowpass filter delay)")
 	ax41.set_xlabel("X")
 	ax41.set_ylabel("Y")
 	ax41.grid()
+	ax41.legend()
 	fig4.set_layout_engine("tight")
 
 

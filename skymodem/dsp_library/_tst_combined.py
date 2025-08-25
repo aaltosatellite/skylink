@@ -43,15 +43,15 @@ def draw(draw_time_series=False):
 	samples[i0:i1] = samples[i0:i1] * fshifter
 
 	config = RXDSPConfig(rx_sr0=1e6, rx_f_tune=437.066e6, rx_f_center=437.125e6, baudrate=9600, bufferlen=int(len(samples) * 0.3), batch_maxlen=1024 * 16)
-	config.c_center_decay = 0.9
+	config.centerf_halflife = 12
 	r_rate = config.get_r_rate()
 	rx = Receiver(config=config)
 	batchlen = int(0.5*1024/r_rate)
 	fftcorr_mx = list()
 
 	c = 0
-	while c < len(samples)-batchlen:
-		rx.process_samples(batch=samples[c:c+batchlen], give_bits=False)
+	while c < len(samples):
+		rx.process_batch(batch=samples[c:c+batchlen], give_bits=False)
 		c += batchlen
 		line = rx.FFTstatemx[2,:]*1.0
 		line[np.argmax(line)] *= 100

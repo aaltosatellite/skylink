@@ -58,8 +58,8 @@ def tst_demodulation_continuity():
 	bitfarr1 		= np.zeros(3*int(nsamples/sps), dtype=np.float64)
 	bitfarr2 		= np.zeros(3*int(nsamples/sps), dtype=np.float64)
 
-	JPLstatemx1 = create_classic_JPL_statemx(N_eps=sps, n_decay=JPLdecay)
-	JPLstatemx2 = create_classic_JPL_statemx(N_eps=sps, n_decay=JPLdecay)
+	JPLstatemx1 = create_classic_JPL_statemx(N_eps=sps, n_halflife=JPLdecay)
+	JPLstatemx2 = create_classic_JPL_statemx(N_eps=sps, n_halflife=JPLdecay)
 	DSD_statemx1 = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff_coeff=lp_cutoff_coeff, synch_delay_mpr_f=synch_delay_mpr, sps_f=sps)
 	DSD_statemx2 = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff_coeff=lp_cutoff_coeff, synch_delay_mpr_f=synch_delay_mpr, sps_f=sps)
 
