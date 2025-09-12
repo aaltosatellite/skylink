@@ -194,7 +194,7 @@ def fft_f_centerer_csense(sample_arr, isample0, nsamples, center_f_arr, power_ar
 	f_center 			= statemx[0,11]
 	max_corr_avg 		= statemx[0,12]			# for carrier sense
 	max_corr_std 		= statemx[0,13]			# for carrier sense
-	n_stat_update 		= statemx[0,14]			# for carrier sense
+	n_stat_update 		= int(statemx[0,14])	# for carrier sense
 	carrier_sensed 		= int(statemx[0,15])	# for carrier sense
 	max_expdec_corr 	= statemx[0,16]
 	max_corr 			= statemx[0,17] 		# for carrier sense
@@ -233,10 +233,10 @@ def fft_f_centerer_csense(sample_arr, isample0, nsamples, center_f_arr, power_ar
 			f_center = statemx[1,:][argmax_expdec_corr]
 
 			# == carrier & energy sense ================================================================================================================================================================
-			max_corr = np.max(corr_array)	# for carrier sense
+			max_corr = np.max(corr_array)
 			carrier_sensed = 0
 			if n_stat_update > (1/c_stat_update):
-				carrier_sensed = int(((max_corr-max_corr_avg)/max_corr_std) > carrier_sense_threshold) # for carrier sense
+				carrier_sensed = int(((max_corr-max_corr_avg)/max_corr_std) > carrier_sense_threshold)
 			if carrier_sensed:
 				carrier_streak += 1
 				if carrier_streak > stat_reset_limit:
@@ -247,11 +247,11 @@ def fft_f_centerer_csense(sample_arr, isample0, nsamples, center_f_arr, power_ar
 			if not carrier_sensed:
 				carrier_streak = 0
 				max_corr_avg, max_corr_std = stat_update(avg0=max_corr_avg, std0=max_corr_std, value=max_corr, c_update=c_stat_update, n_update=n_stat_update, clip_limit_instd=carrier_sense_threshold, clip_replacement_instd=4.00) # for carrier sense
-				i_a = search_center_indexes[np.random.randint(0,n_search_indexes)] - power_band_length//2  # random spot instead of argmax_expdec, to obtain non-biased average.
+				i_a = search_center_indexes[int(n_stat_update % n_search_indexes)] - power_band_length//2  # (was np.random.randint(0,n_search_indexes)) random spot instead of argmax_expdec, to obtain non-biased average.
 				i_b = i_a + power_band_length
 				band_power = np.sum(fft[i_a:i_b]**2) / (fftlen**2)
 				bp_avg, bp_std = stat_update(avg0=bp_avg, std0=bp_std, value=band_power, c_update=c_stat_update, n_update=n_stat_update, clip_limit_instd=carrier_sense_threshold, clip_replacement_instd=4.00)
-				n_stat_update += 1				# for carrier sense
+				n_stat_update += 1
 			# == carrier & energy sense ================================================================================================================================================================
 
 		center_f_arr[max(0,center_f_head-n_centering_delay)] = f_center

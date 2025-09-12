@@ -364,7 +364,7 @@ def utest_Reed_Solomon_1():
 
 
 
-def utest_Reed_Solomon_2(do_plot):
+def utest_Reed_Solomon_2_bits(do_plot):
 	rs_mx, rs_cfg = get_default_rs()
 	nrep = 320
 	n_error_array = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,]
@@ -373,7 +373,7 @@ def utest_Reed_Solomon_2(do_plot):
 	ok_fraction_array_223 = list()
 	avg_errorcount_array_223 = list()
 	print("")
-	print("## Reed Solomon 2 =============================================")
+	print("## Reed Solomon 2 (bits) ======================================")
 	for msglen,okfrac_array,errorcount_arr in ( (64,ok_fraction_array_64,avg_errorcount_array_64), (223,ok_fraction_array_223,avg_errorcount_array_223) ):
 		for n_error in n_error_array:
 			okcount 			= 0
@@ -430,6 +430,85 @@ def utest_Reed_Solomon_2(do_plot):
 
 
 
+
+def utest_Reed_Solomon_2_bytes(do_plot):
+	rs_mx, rs_cfg = get_default_rs()
+	nrep = 640
+	n_error_array = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+	ok_fraction_array_64 = list()
+	avg_errorcount_array_64 = list()
+	ok_fraction_array_223 = list()
+	avg_errorcount_array_223 = list()
+	print("")
+	print("## Reed Solomon 2 (bytes) ======================================")
+	for msglen,okfrac_array,errorcount_arr in ( (64,ok_fraction_array_64,avg_errorcount_array_64), (223,ok_fraction_array_223,avg_errorcount_array_223) ):
+		for n_error in n_error_array:
+			okcount 			= 0
+			misread_ok_count 	= 0
+			errorcount_sum 		= 0
+			for _ in range(nrep):
+				#msglen = np.random.randint(1, 224)
+				msg = np.random.randint(0,256, msglen)
+				msg_encoded = RS_encode(msg=msg, rs_mx=rs_mx, rs_cfg=rs_cfg)
+
+				idxes = np.arange(msglen)
+				np.random.shuffle(idxes)
+				corrupted = msg_encoded.copy()
+				for i in range(n_error):
+					og = corrupted[idxes[i]] * 1
+					while corrupted[idxes[i]] == og:
+						corrupted[idxes[i]] = np.random.randint(0, 256)
+				assert (len(msg_encoded) - np.sum( corrupted == msg_encoded )) == n_error
+
+				decoded, errcount = RS_decode(msg=corrupted, rs_mx=rs_mx, rs_cfg=rs_cfg)
+				if errcount < 0:
+					continue
+				if (len(decoded) != len(msg)) or (not np.allclose(decoded, msg)):
+					misread_ok_count += 1
+					continue
+				okcount += 1
+				errorcount_sum += errcount
+			if n_error <= 16:
+				assert okcount == nrep
+			if (n_error > 16) and (nrep > 10):
+				assert okcount < nrep
+			okfrac_array.append( okcount / nrep )
+			errorcount_arr.append( errorcount_sum / max(1,okcount) )
+	print("\tAll with less than 16 errors corrected successfully.")
+	print("\tDecoding probability drops off after 16 as expected.")
+	print("\t[Passes.]")
+	print("## Reed Solomon 2 ===============================================")
+	print("")
+
+	if do_plot:
+		fig = plt.figure(figsize=(14,11))
+		ax1 = fig.add_subplot(211)
+		ax2 = fig.add_subplot(212)
+
+		ax1.plot(n_error_array, ok_fraction_array_64, marker="x", label="msglen=64")
+		ax1.plot(n_error_array, ok_fraction_array_223, marker="x", label="msglen=223")
+		ax1.grid()
+		ax1.legend()
+		ax1.set_ylabel("fraction of successful decode")
+		ax1.set_xlabel("# bytes corrupted")
+
+		ax2.plot(n_error_array, avg_errorcount_array_64, marker="x", label="msglen=64")
+		ax2.plot(n_error_array, avg_errorcount_array_223, marker="x", label="msglen=223")
+		ax2.plot(n_error_array, n_error_array, label="x=y", linestyle="--", color="black")
+		ax2.grid()
+		ax2.legend()
+		ax2.set_ylabel("estimated arrorcount")
+		ax2.set_xlabel("# bytes corrupted")
+
+		fig.set_layout_engine("tight")
+		plt.show()
+
+
+
+
+
+
+
 def utest_Reed_Solomon_3(N_trials):
 	"""
 	Was run with N_trials = 1e7, and encountered 0 successes.
@@ -437,7 +516,7 @@ def utest_Reed_Solomon_3(N_trials):
 	rs_mx, rs_cfg = get_default_rs()
 	print("")
 	print("## Reed Solomon 3 =============================================")
-	print("Testing the probability of noise successfully decoding as a Reed-Solomon encoded message")
+	print("\tTesting the probability of noise successfully decoding as a Reed-Solomon encoded message")
 	NN = N_trials
 	n_success = 0
 	for _ in range(NN):
@@ -448,9 +527,9 @@ def utest_Reed_Solomon_3(N_trials):
 			n_success += 1
 
 	if n_success == 0:
-		print("No success detected with {} trials. Rate is less than {} %".format(NN,  round(100 * 1/NN, 4)))
+		print("\tNo success detected with {} trials. Rate is less than {} %".format(NN,  round(100 * 1/NN, 4)))
 	else:
-		print("{}/{} success detected:  {} % ".format(n_success, NN,  round(100*n_success/NN, 4)))
+		print("\t{}/{} success detected:  {} % ".format(n_success, NN,  round(100*n_success/NN, 4)))
 	print("## Reed Solomon 3 ===============================================")
 	print("")
 
@@ -525,8 +604,9 @@ def utest_framing_basic_test_1():
 				bits[32:56] = corrupt_n_bits_of_bitarr(bitarr=bits[32:56], n_corrupt=rint(0,4))
 				bits[56:] = corrupt_n_bits_of_bitarr(bitarr=bits[56:], n_corrupt=n_corrupt)
 				bits = np.concatenate( (noiseA, bits) )
+				bit_powers = np.zeros ((len(bits),3),dtype=np.int64)+1.0
 				deframermx = create_deframer(use_scrambler=True, use_rs=True, data_maxlen=255, synchword=synchword, synchword_len=32, synch_threshold=3)
-				payloads, payload_delimits, _, _ = deframe(bits=bits, bit_frequencies=bits*0, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+				payloads, payload_delimits, _, _, _ = deframe(bits=bits, bit_frequencies=bits*0, bit_powers=bit_powers, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 				assert len(payload_delimits) == 1, (len(payload_delimits), pl_len, n_corrupt, deframermx[1,0])
 				pl = payloads[payload_delimits[0,0]:payload_delimits[0,1]]
 				assert np.all(pl == pl_chars)
@@ -547,8 +627,9 @@ def utest_framing_basic_test_1():
 		noiseB = np.random.randint(0,2, rint(0, 16))
 		noiseC = np.random.randint(0,2, rint(0, 16))
 		bits = np.concatenate( (noiseA, bits1, noiseB, bits2, noiseC) )
+		bit_powers = np.zeros((len(bits),3),dtype=np.int64)+1.0
 		deframermx = create_deframer(use_scrambler=True, use_rs=True, data_maxlen=255, synchword=synchword, synchword_len=32, synch_threshold=3)
-		payloads, payload_delimits, _, _ = deframe(bits=bits, bit_frequencies=bits*0, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+		payloads, payload_delimits, _, _, _ = deframe(bits=bits, bit_frequencies=bits*0, bit_powers=bit_powers, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 		assert len(payload_delimits) == 2
 		pl1 = payloads[payload_delimits[0,0]:payload_delimits[0,1]]
 		pl2 = payloads[payload_delimits[1,0]:payload_delimits[1,1]]
@@ -594,7 +675,8 @@ def utest_framing_basic_test_2():
 		while bit_head < len(bits):
 			batchlen = rint(0,  600)
 			batchlen = min(len(bits) - bit_head, batchlen)
-			payload_bits, payload_delimits, _, fault_counts_ = deframe(bits=bits[bit_head:bit_head+batchlen], bit_frequencies=bits*0, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+			bit_powers = np.zeros((len(bits),3),dtype=np.int64)+1.0
+			payload_bits, payload_delimits, _, _, fault_counts_ = deframe(bits=bits[bit_head:bit_head+batchlen], bit_frequencies=bits*0, bit_powers=bit_powers, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 			fault_counts += fault_counts_
 			if len(payload_delimits) > 0:
 				for delims in payload_delimits:
@@ -634,7 +716,7 @@ def utest_framing_basic_test_3():
 	rs_mx, rs_cfg = get_default_rs()
 	n_bits_total = 0
 	fault_counts = np.zeros(2)
-	n_loops = 60000
+	n_loops = 2000
 	n_success = 0
 	for ii in range(n_loops):
 		synchword = DEFAULT_SYNCHWORD
@@ -654,7 +736,8 @@ def utest_framing_basic_test_3():
 		while bit_head < len(bits):
 			batchlen = rint(0,  400)
 			batchlen = min(len(bits) - bit_head, batchlen)
-			payload_chars, payload_delimits, _, fault_counts_ = deframe(bits=bits[bit_head:bit_head+batchlen], bit_frequencies=bits*0, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+			bit_powers = np.zeros((len(bits),3),dtype=np.int64)+1.0
+			payload_chars, payload_delimits, _, _, fault_counts_ = deframe(bits=bits[bit_head:bit_head+batchlen], bit_frequencies=bits*0, bit_powers=bit_powers, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 			fault_counts += fault_counts_
 			if len(payload_delimits) > 0:
 				delims = payload_delimits[0]
@@ -666,7 +749,7 @@ def utest_framing_basic_test_3():
 	n_missing = n_loops - n_success
 	print("\tSuccess rate: {}/{} = {} %".format(n_success, n_loops,  round(100*n_success/n_loops, 6) ))
 	print("\tMissing rate: {}/{} = {} %".format(n_missing, n_loops,  round(100*n_missing/n_loops, 6) ))
-	print("\t=> Continuous decoding has a loss rate of : ~1/{}".format(round(n_loops/n_missing) ))
+	#print("\t=> Continuous decoding has a loss rate of : ~1/{}".format(round(n_loops/n_missing) ))
 
 	print("\tFault counts:   {}".format(fault_counts))
 	print("\tFault rate:  ~1/{}".format( round( n_bits_total/np.sum(fault_counts) )))
@@ -714,17 +797,18 @@ def speedbench_framing():
 	if use_rs:
 		bits = corrupt_n_bits_of_bitarr(bitarr=bits, n_corrupt=6)
 	bits = np.array(bits, dtype=np.int8)
+	bit_powers = np.zeros((len(bits),3),dtype=np.int64)+1.0
 	bit_fs = bits*0.0
 	deframermx = create_deframer(use_scrambler=use_scrambler, use_rs=use_rs, data_maxlen=255, synchword=synchword, synchword_len=32, synch_threshold=3)
-	payloads, payload_delimits, _, fault_counts = deframe(bits=bits, bit_frequencies=bits*0, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+	payloads, payload_delimits, _, _, fault_counts = deframe(bits=bits, bit_frequencies=bits*0, bit_powers=bit_powers, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 	assert len(payload_delimits) == 1
 	assert np.all(payloads == pl_chars)
-	_ = deframe(bits=bits, bit_frequencies=bit_fs, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
-	_ = deframe(bits=bits, bit_frequencies=bit_fs, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
-	_ = deframe(bits=bits, bit_frequencies=bit_fs, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+	_ = deframe(bits=bits, bit_frequencies=bit_fs, bit_powers=bit_powers, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+	_ = deframe(bits=bits, bit_frequencies=bit_fs, bit_powers=bit_powers, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+	_ = deframe(bits=bits, bit_frequencies=bit_fs, bit_powers=bit_powers, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 	t0 = time.perf_counter()
 	for _ in range(nreps):
-		_ = deframe(bits=bits, bit_frequencies=bit_fs, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
+		_ = deframe(bits=bits, bit_frequencies=bit_fs, bit_powers=bit_powers, deframer_mx=deframermx, rs_mx=rs_mx, rs_cfg=rs_cfg)
 	T_deframe = (time.perf_counter() - t0) / nreps
 	speed_packets = 1 / T_deframe
 	speed_bytes = len(pl_chars) / T_deframe
@@ -752,22 +836,19 @@ def speedbench_framing():
 
 utest_golay24()
 utest_golay24_success_rate_on_noise()
-
 utest_synchword_deframing()
-
 utest_Reed_Solomon_1()
-utest_Reed_Solomon_2(do_plot=True)
+utest_Reed_Solomon_2_bits(do_plot=True)
+utest_Reed_Solomon_2_bytes(do_plot=True)
 utest_Reed_Solomon_3(N_trials=10000)
-
 utest_framing_basic_test_1()
+utest_framing_basic_test_2()
+utest_framing_basic_test_3()
 
-#utest_framing_basic_test_2()
 
-#utest_framing_basic_test_3()
-
-#speedbench_golay()
-#speedbench_Reed_Solomon()
-#speedbench_framing()
+speedbench_golay()
+speedbench_Reed_Solomon()
+speedbench_framing()
 
 
 

@@ -165,13 +165,13 @@ class Receiver:
 		self.centering_phase 	= 0.0
 		self.centering_phase_idx= 0
 		self.freq_shifter_mod   = 1
+		self.n_processed		= 0
 		self.dt_array			= np.zeros(7, dtype=np.float64)
 		self.dt_array_names		= ("f-shift", "resample", "fft-center", "demodulate", "synch", "decide-decode", "buffer-roll")
 		self.save_fp 			= None
 		self.save_len 			= 0
 		self.save_print_ts 		= 0
 		self.save_fname 		= ""
-		self.n_processed		= 0
 		if SAVE_DPATH:
 			import os
 			assert os.path.isdir(SAVE_DPATH)
@@ -190,7 +190,7 @@ class Receiver:
 
 	def _setup(self):
 		c_stat_update = 1/200
-		carrier_sense_threshold = 6.0
+		carrier_sense_threshold = 5.0
 		self.config.check_validity()
 		config = self.config
 		self.fftlen, _ = choose_fftlen(config.fftlen_mpr*config.sps, window_halfwid=int(0.06*config.fftlen_mpr*config.sps))
@@ -206,6 +206,7 @@ class Receiver:
 		#print("[derived fractional halflen of {}]".format(halflen_frac))
 		self.centering_fdelta_nrm = -(config.rx_f_center - config.rx_f_tune) / config.rx_sr0
 		shifter, m, fdelta_actual = create_freq_shifter_precomp(sr=config.rx_sr0, fdelta=-(config.rx_f_center - config.rx_f_tune), max_batchlen=config.batch_maxlen, fdelta_threshold=config.rx_sr0*1e-6)
+		#print("fdelta - fdelta_actual: {} Hz (m:{}, fd_a:{})".format( abs(fdelta_actual - -(config.rx_f_center - config.rx_f_tune)), m, fdelta_actual ))
 		self.freq_shifter_arr = shifter
 		self.freq_shifter_mod = m
 		rsmpl_mx1, rsmpl_mx2 = create_staged_resampler(halflen_div=halflen_disc, halflen_f=halflen_frac, r_rate=config.get_r_rate(), n_banks=config.n_banks, f_cutoff=f_cutoff, allow_aliasing=False)
@@ -256,6 +257,7 @@ class Receiver:
 			self.add_white_noise = True
 			self.white_noise = radionoise(n=self.config.batch_maxlen*3+1024, sr=self.config.baudrate*self.config.sps, W_per_Hz=W_per_Hz)
 
+
 	def process_samples(self, samples, give_bits=False):
 		if len(samples) <= self.config.batch_maxlen:
 			return self.process_batch(batch=samples, give_bits=give_bits)
@@ -278,6 +280,7 @@ class Receiver:
 				bits = np.concatenate( (bits, bits_) )
 				carrier_sensed = carrier_sensed or carrier_sensed_
 			return bits, carrier_sensed
+
 
 	def process_batch(self, batch, give_bits):
 		assert len(batch) <= self.config.batch_maxlen

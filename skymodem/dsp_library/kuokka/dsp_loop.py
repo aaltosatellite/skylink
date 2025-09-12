@@ -15,7 +15,9 @@ from copy import copy
 SHM_MEM_BASENAME = "QHXTSGLGANV-"
 
 DEBUG_PRINT_ON = True
-def DBGPRINT(*args, **kwargs):
+def DBGPRINT(toggle:int, *args, **kwargs):
+	if not toggle:
+		return
 	ts = "[{}]".format( dtime.now().isoformat()[-15:] )
 	ts += " "*(17-len(ts)) + "[DSPLoop]" + "   "
 	first, args = args[0], args[1:]
@@ -58,8 +60,12 @@ class TXDSPConfig:
 
 
 class DSPLoop:
+	DBGP_ERRORS 	= 1<<0
+	DBGP_INITSTOP 	= 1<<1
+	DBGP_RX 		= 1<<2
+	DBGP_TX 		= 1<<3
 	def __init__(self, rx_dsp_config:RXDSPConfig, tx_dsp_config:TXDSPConfig, que_rx_samples_in:Queue, que_rx_payloads_out:queue.Queue, que_tx_payloads_in:Queue, que_tx_samples_out:Queue, que_signaldata_out:Queue):
-		DBGPRINT("Precompile DSP")
+		DBGPRINT(1, "Precompile DSP")
 		precompile_receiver(rx_dsp_config, do_print=False)
 		self.rx_dsp_config 			= rx_dsp_config
 		self.tx_dsp_config			= tx_dsp_config
@@ -89,6 +95,7 @@ class DSPLoop:
 		self.t_now_mono				= 0.0
 		self.dsp_perf_stats			= None
 		self.dsp_perf_stats_mpr		= dict()
+		self.dbgprint_mask			= self.DBGP_ERRORS | self.DBGP_INITSTOP | self.DBGP_RX | self.DBGP_TX
 
 
 	def is_ok(self):
@@ -116,7 +123,7 @@ class DSPLoop:
 
 	def start_multimode(self, baudrates, mem_index):
 		rx_dsp_config_list = []
-		ring_length = 32
+		ring_length = 42
 		for baudrate in baudrates:
 			config = copy(self.rx_dsp_config)
 			config.baudrate = baudrate
@@ -235,7 +242,7 @@ class DSPLoop:
 			except Empty:
 				continue
 			except Exception as e:
-				DBGPRINT("Queue.get() exception in _rx_loop(): ", e)
+				DBGPRINT(self.dbgprint_mask&self.DBGP_ERRORS, "Queue.get() exception in _rx_loop(): ", e)
 				self.on = False
 				return
 			with self.rlock:
@@ -253,9 +260,9 @@ class DSPLoop:
 					for rx_pl, rx_f_absolute, power_tuple in rx_pls:
 						self._clean_own_sent(ts_now_mono=self.t_now_mono)
 						if rx_pl in self.own_recently_sent:
-							DBGPRINT("Discarded self reception.")
+							DBGPRINT(self.dbgprint_mask&self.DBGP_RX, "Discarded self reception.")
 							continue
-						DBGPRINT("RX-PL: {} bytes,   {} MHz,   {} SNR".format(len(rx_pl), round(rx_f_absolute*1e-6, 3), round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)))
+						DBGPRINT(self.dbgprint_mask&self.DBGP_RX, "RX-PL: {} bytes,   {} MHz,   {} SNR".format(len(rx_pl), round(rx_f_absolute*1e-6, 3), round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)))
 						self.last_verified_freq = (rx_f_absolute, ts_mono)
 						self.last_verified_baudrate = self.rx_dsp_config.baudrate
 						self.que_rx_payloads_out.put(("pl", rx_pl, ts_mono), timeout=1.0)
@@ -274,14 +281,14 @@ class DSPLoop:
 			except Empty:
 				continue
 			except Exception as e:
-				DBGPRINT("Queue.get() exception in _tx_loop():", e)
+				DBGPRINT(self.dbgprint_mask&self.DBGP_ERRORS, "Queue.get() exception in _tx_loop():", e)
 				self.on = False
 				return
 			with self.rlock:
 				assert type(payload) in (bytes, bytearray)
 				self.own_recently_sent[payload] = t_start_mono
 				samplearr, f_use_abs, _ = self._compose_samples(payload=payload, ts_now_mono=self.t_now_mono, usrp_reshape=True, as_c64=True)
-				DBGPRINT("TX Start at {} MHz".format( f_use_abs * 1e-6, 3))
+				DBGPRINT(self.dbgprint_mask&self.DBGP_TX, "TX Start at {} MHz".format( f_use_abs * 1e-6, 3))
 				t_end_mono = t_start_mono + (samplearr.shape[1] / self.tx_dsp_config.tx_sr0)
 				self._schedule_tx(t_start_mono=t_start_mono -5e-3, t_end_mono=t_end_mono +5e-3)
 			self.que_tx_samples_out.put(samplearr, timeout=4.0)
@@ -290,11 +297,11 @@ class DSPLoop:
 	def _rx_loop_mpr(self, dsp_config_list, ring_len, mem_idx):
 		base_name = SHM_MEM_BASENAME + str(mem_idx) + "-"
 		_mpr_memfree_idxed(base_name, [str(i) for i in range(ring_len+10)]+["A"])
-		idle_timeout = 2.5 # todo: a parameter?
-		que_mpr_processes_out = mpr.Queue(256)
-		que_rdy_rprt = mpr.Queue(64)
+		idle_timeout 			= 10.0 # todo: a parameter?
+		que_mpr_processes_out 	= mpr.Queue(300)
+		que_rdy_rprt 			= mpr.Queue(64)
+		arrlen 					= int(1024 * 4)
 		buffer_ring = list()
-		arrlen = int(2**21)
 		buffer_shm_list = list()
 		for ii in range(ring_len):
 			name_ = base_name + str(ii)
@@ -314,9 +321,10 @@ class DSPLoop:
 			mpr_ev.clear()
 			process_events.append(mpr_ev)
 			process_idd = len(processes)
-			p = mpr.Process(target=_rx_mpr_process, args=(dsp_config_list[i], process_idd, mpr_ev, [(shm.name,arrlen,np.complex128) for shm in buffer_shm_list], flag_ring_shm.name, que_mpr_processes_out, que_rdy_rprt, idle_timeout), daemon=True) #dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm_names, flag_ring_shm_name, que_out
+			p = mpr.Process(target=_rx_mpr_process, args=(dsp_config_list[i], process_idd, mpr_ev, [(shm.name,arrlen,np.complex128) for shm in buffer_shm_list], flag_ring_shm.name, que_mpr_processes_out, que_rdy_rprt, idle_timeout, self.dbgprint_mask), daemon=True) #dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm_names, flag_ring_shm_name, que_out
 			processes.append(p)
 			p.start()
+
 		rdy_batch_indexes = [0,] * len(dsp_config_list)
 		min_rdy_index = min(rdy_batch_indexes)
 		batch_index = 0
@@ -324,38 +332,11 @@ class DSPLoop:
 		ts_last_cs = 0.0
 		wait_sleep_streak = 0
 		while self.on:
-			while not que_rdy_rprt.empty():
-				(idd, rdy_batch_index) = que_rdy_rprt.get_nowait()
-				rdy_batch_indexes[idd] = rdy_batch_index
-				min_rdy_index = min(rdy_batch_indexes)
-			if (batch_index - min_rdy_index) > (ring_len-8):
-				wait_sleep_streak += 1
-				if wait_sleep_streak > 1000:
-					DBGPRINT("ERROR: Processing thread {} stalled in _rx_loop_mpr().".format( rdy_batch_indexes.index(min_rdy_index) ))
-					self.on = False
-					return
-				time.sleep(0.0025)
-				continue
-			wait_sleep_streak = 0
-			try:
-				samples, ts_s0_mono, ts_s0_unix = self.que_rx_samples_in.get(timeout=0.25)
-				nsamples = len(samples)
-			except Empty:
-				samples, ts_s0_mono, ts_s0_unix = None,None,None
-				nsamples = 0
-			except Exception as e:
-				DBGPRINT("Queue.get() exception in _rx_loop_mpr(): ", e)
-				self.on = False
-				break
-			with self.rlock:
-				if not (samples is None):
-					buffer_ring[ring_head][:nsamples] = samples
-					ring_flag_arr[ring_head] = (batch_index, nsamples, int(ts_s0_mono*1e9), int(ts_s0_unix*1e9))
-					ring_head = (ring_head+1) % ring_len
-					batch_index += 1
-					self.t_now_mono = ts_s0_mono
-				for mpr_ev in process_events:
+			# Set events. Communicates main loop is alive.
+			for mpr_ev in process_events:
 					mpr_ev.set()
+			# Deplete queue of payloads and carrier-sense reports.
+			with self.rlock:
 				while not que_mpr_processes_out.empty():
 					rcode, p_idd, tup = que_mpr_processes_out.get_nowait()
 					ts_mono, ts_unix = tup[:2]
@@ -367,9 +348,9 @@ class DSPLoop:
 						(ts_mono, ts_unix, rx_pl, rx_f_absolute, power_tuple, baudrate) = tup
 						self._clean_own_sent(ts_now_mono=self.t_now_mono)
 						if rx_pl in self.own_recently_sent:
-							DBGPRINT("Discarded self reception.")
+							DBGPRINT(self.dbgprint_mask&self.DBGP_RX, "Discarded self reception.")
 							continue
-						DBGPRINT("RX-PL: {} bytes,   {} MHz, br: {}, SNR: {}".format(len(rx_pl), round(rx_f_absolute*1e-6, 3), baudrate, round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)))
+						DBGPRINT(self.dbgprint_mask&self.DBGP_RX, "RX-PL: {} bytes,   {} MHz, br: {}, SNR: {}".format(len(rx_pl), round(rx_f_absolute*1e-6, 3), baudrate, round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)))
 						self.last_verified_baudrate = baudrate
 						self.last_verified_freq = (rx_f_absolute, ts_mono)
 						self.que_rx_payloads_out.put(("pl", rx_pl, ts_mono), timeout=1.0)
@@ -378,7 +359,42 @@ class DSPLoop:
 					elif rcode == "-1":
 						dt_array, n_processed = tup
 						self.dsp_perf_stats_mpr[p_idd] = (dt_array, n_processed)
-						pass
+			# Read processes reporting advance in batch processing.
+			while not que_rdy_rprt.empty():
+				(idd, rdy_batch_index) = que_rdy_rprt.get_nowait()
+				rdy_batch_indexes[idd] = rdy_batch_index
+				min_rdy_index = min(rdy_batch_indexes)
+			# If any process is more than (ring_len-8) behind, wait up to 1000 cycles of 2.5ms, and then perform error exit.
+			a_process_is_behind = (batch_index - min_rdy_index) > (ring_len-8)
+			if a_process_is_behind:
+				wait_sleep_streak += 1
+				if wait_sleep_streak > 1000:
+					DBGPRINT(self.dbgprint_mask&self.DBGP_ERRORS, "ERROR: Processing thread {} stalled in _rx_loop_mpr().".format( rdy_batch_indexes.index(min_rdy_index) ))
+					self.on = False
+					return
+				time.sleep(0.0025)
+			# If no process is behind, zero the counter, and receive more samples to process.
+			if not a_process_is_behind:
+				wait_sleep_streak = 0
+				try:
+					samples, ts_s0_mono, ts_s0_unix = self.que_rx_samples_in.get(timeout=0.20)
+					nsamples = len(samples)
+				except Empty:
+					samples, ts_s0_mono, ts_s0_unix = None,None,None
+					nsamples = 0
+				except Exception as e:
+					DBGPRINT(self.dbgprint_mask&self.DBGP_ERRORS, "Queue.get() exception in _rx_loop_mpr(): ", e)
+					self.on = False
+					break
+				with self.rlock:
+					if not (samples is None):
+						buffer_ring[ring_head][:nsamples] = samples
+						ring_flag_arr[ring_head] = (batch_index, nsamples, int(ts_s0_mono*1e9), int(ts_s0_unix*1e9))
+						ring_head = (ring_head+1) % ring_len
+						batch_index += 1
+						self.t_now_mono = ts_s0_mono
+						for mpr_ev in process_events:
+							mpr_ev.set()
 		ring_flag_arr[:] = -2
 		_mpr_memfree_idxed(base_name, [str(i) for i in range(ring_len)]+["A"])
 	# -- loops -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -395,14 +411,14 @@ def _mpr_memfree_idxed(basename, suffixes):
 			n_ok += 1
 		except:
 			pass
-	DBGPRINT("{}/{} shared memories unlinked by main-thread.".format(n_ok, n0))
+	DBGPRINT(1, "{}/{} shared memories unlinked by main-thread.".format(n_ok, n0))
 
 
 
 
 
 
-def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm_names, flag_ring_shm_name, que_out, que_rdy_rprt, idle_timeout):
+def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm_names, flag_ring_shm_name, que_out, que_rdy_rprt, idle_timeout, dbgprint_mask):
 	default_batchlen = rx_dsp_config.batch_maxlen // 2
 	T_sample = 1.0 / rx_dsp_config.rx_sr0
 	rx = Receiver(config=rx_dsp_config)
@@ -420,16 +436,16 @@ def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm
 	last_batch_index = -1
 	t_timeout = time.monotonic() + idle_timeout
 	t_next_stats = time.monotonic()
-	DBGPRINT("mpr-thread-{} LOOP START".format(idd))
+	DBGPRINT(dbgprint_mask&DSPLoop.DBGP_INITSTOP, "mpr-thread-{} LOOP START".format(idd))
 	while True:
 		trig = trig_ev.wait(timeout=0.25)
 		if not trig:
 			if ring_flag_arr[0,0] < -1:
-				DBGPRINT("\tmpr-thread-{} exits: Flag ring < -1. Benign.".format(idd))
+				DBGPRINT(dbgprint_mask&DSPLoop.DBGP_INITSTOP,"\tmpr-thread-{} exits: Flag ring < -1. Benign.".format(idd))
 				_mpr_memfree(idd, buffer_shm_list=buffer_shm_list, flag_ring_shm=flag_ring_shm)
 				return
 			if time.monotonic() > t_timeout:
-				DBGPRINT("\tmpr-thread-{} exits: Timeout. Benign or Malign.".format(idd))
+				DBGPRINT(dbgprint_mask&(DSPLoop.DBGP_INITSTOP | DSPLoop.DBGP_ERRORS),"\tmpr-thread-{} exits: Timeout. Benign or Malign.".format(idd))
 				_mpr_memfree(idd, buffer_shm_list=buffer_shm_list, flag_ring_shm=flag_ring_shm)
 				return
 			continue
@@ -438,7 +454,7 @@ def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm
 			t_timeout = time.monotonic() + idle_timeout
 			r0,r1,r2,r3 = ring_flag_arr[ring_head]  # (batch_counter, nsamples, ts_s0_mono_ns, ts_s0_unix_ns)
 			if r0 < -1:
-				DBGPRINT("\tmpr-thread-{} exits: Flag ring[i,0] < -1. Benign.".format(idd))
+				DBGPRINT(dbgprint_mask&DSPLoop.DBGP_INITSTOP,"\tmpr-thread-{} exits: Flag ring[i,0] < -1. Benign.".format(idd))
 				_mpr_memfree(idd, buffer_shm_list=buffer_shm_list, flag_ring_shm=flag_ring_shm)
 				return
 			if (r0 == (last_batch_index - ring_len + 1)) or (r0 == -1): # last entry from previous loop, or unused slot during the first loop.
@@ -447,7 +463,7 @@ def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm
 					que_out.put( ("-1", idd, (rx.dt_array, rx.n_processed)) )
 				break
 			if (last_batch_index != -1) and (r0 != (last_batch_index + 1)): # either the first batch, or batch index is next in order from the last one.
-				DBGPRINT("\tmpr-thread-{} exits: Out of synch ({} vs {}). Malign.".format(idd, last_batch_index, r0 ))
+				DBGPRINT(dbgprint_mask&(DSPLoop.DBGP_INITSTOP | DSPLoop.DBGP_ERRORS),"\tmpr-thread-{} exits: Out of synch ({} vs {}). Malign.".format(idd, last_batch_index, r0 ))
 				_mpr_memfree(idd, buffer_shm_list=buffer_shm_list, flag_ring_shm=flag_ring_shm)
 				return
 			last_batch_index = r0
@@ -490,7 +506,7 @@ def _mpr_memfree(idd, buffer_shm_list, flag_ring_shm):
 		n_ok += 1
 	except:
 		pass
-	DBGPRINT("{}/{} of shared memories unlinked by mpr-thread-{}.".format(n_ok, n0, idd))
+	DBGPRINT(1, "{}/{} of shared memories unlinked by mpr-thread-{}.".format(n_ok, n0, idd))
 
 
 

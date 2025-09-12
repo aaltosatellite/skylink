@@ -45,6 +45,7 @@ class RadioLoop:
 		self.rx_thread 			= threading.Thread(target=None, args=tuple())
 		self.tx_thread 			= threading.Thread(target=None, args=tuple())
 		self.self_mute 			= False
+		self.sample_maxamps 	= np.zeros(3, np.float64)
 
 
 	def is_ok(self):
@@ -89,6 +90,7 @@ class RadioLoop:
 		usrp.set_tx_gain(tx_gain, 0)
 		usrp.set_gpio_attr("FP0", "ATR_TX", 0x0100, 0x0100)
 		usrp.set_gpio_attr("FP0", "ATR_XX", 0x0100, 0x0100)
+		time.sleep(0.1)
 		#print("bank 0:", usrp.get_gpio_banks(0)) #['FP0', 'RXA', 'TXA']  (No further banks in B210)
 		#print("FP0 CTRL", usrp.get_gpio_attr("FP0", "CTRL"))
 		#print("FP0 DDR", usrp.get_gpio_attr("FP0", "DDR"))
@@ -98,12 +100,14 @@ class RadioLoop:
 		#print("FP0 ATR_TX", usrp.get_gpio_attr("FP0", "ATR_TX"))
 		#print("FP0 ATR_XX", usrp.get_gpio_attr("FP0", "ATR_XX"))
 		#print(usrp.set_gpio_src("FP0", "RX"))
+		self.rx_sr0_actual = float(usrp.get_rx_freq(0))
+		self.tx_sr0_actual = float(usrp.get_tx_freq(0))
 		DBGPRINT("RX gain range:      {}".format( str(usrp.get_rx_gain_range(0))[:-1] ))
 		DBGPRINT("TX gain range:      {}".format( str(usrp.get_tx_gain_range(0))[:-1] ))
 		DBGPRINT("usrp RX gain:       {}".format( usrp.get_rx_gain(0) ))
 		DBGPRINT("usrp TX gain:       {}".format( usrp.get_tx_gain(0) ))
-		DBGPRINT("usrp RX samplerate: {} ksps".format( round(usrp.get_rx_rate(0)*1e-3, 3) ))
-		DBGPRINT("usrp TX samplerate: {} ksps".format( round(usrp.get_tx_rate(0)*1e-3, 3) ))
+		DBGPRINT("usrp RX samplerate: {} ksps".format( round(usrp.get_rx_rate(0)*1e-3, 6) ))
+		DBGPRINT("usrp TX samplerate: {} ksps".format( round(usrp.get_tx_rate(0)*1e-3, 6) ))
 		DBGPRINT("usrp RX tune-f:     {} MHz".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
 		DBGPRINT("usrp TX tune-f:     {} MHz".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
 		self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 1024*2), daemon=True) #TODO bufferlen as setting?
@@ -126,11 +130,14 @@ class RadioLoop:
 		n_rx_loops = 0
 		n_rx_total = 0
 		avg_sr = 0.0
+		dt_amplitude_measure = 0.0
 		t00 = time.perf_counter()
 		rx_streamer.issue_stream_cmd(stream_cmd)
 		while self.on:
 			if (n_rx_loops % 2000) == 0:
-				DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5)))
+				DBGPRINT("(sr~{} MS/s measured vs {} MS/s specced). Amplitudes ({},{},{})".format( round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5), self.sample_maxamps[0], self.sample_maxamps[1], self.sample_maxamps[2]) )
+				#amp_measure_percentage = 100 * dt_amplitude_measure/(time.perf_counter()-t00)
+				#DBGPRINT("t_ampl_measure: {} ms.  ({} % of total).".format( round(dt_amplitude_measure*1e3,3), round(amp_measure_percentage, 3) ))
 			ts_s0_mono = time.monotonic()
 			ts_s0_unix = time.time()
 			rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
@@ -141,8 +148,14 @@ class RadioLoop:
 				#assert rx_ret == rx_buffer_len
 			#if self.self_mute:
 			#	continue
+			buff_ = recv_buffer[0, :rx_ret].copy()
+			t00_ = time.perf_counter()
+			self.sample_maxamps[0] = np.max( (self.sample_maxamps[0], np.max(buff_.real)) )
+			self.sample_maxamps[1] = np.max( (self.sample_maxamps[1], np.max(buff_.imag)) )
+			self.sample_maxamps[2] = np.max( (self.sample_maxamps[2], np.max(np.abs(buff_))) )
+			dt_amplitude_measure += (time.perf_counter() - t00_)
 			if not self.que_rx_samples_out.full():
-				self.que_rx_samples_out.put_nowait((recv_buffer[0, :rx_ret].copy(), ts_s0_mono, ts_s0_unix))
+				self.que_rx_samples_out.put_nowait((buff_, ts_s0_mono, ts_s0_unix))
 			else:
 				DBGPRINT("WARNING: radio-to-process queue overflow!")
 				raise Exception("radio-loop: radio-to-process queue overflow.")

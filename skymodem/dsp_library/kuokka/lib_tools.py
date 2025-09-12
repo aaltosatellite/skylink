@@ -303,6 +303,7 @@ def make_f_modulating_waveform_parallel(binary_symbols, sps_f, shaper_BT_prod, s
 			modulator1[i] = np.sum(pulse * modulator0[i:i+npulse])
 	else:
 		modulator1 = modulator0
+	#print("np.max(np.abs(modulator1)), len(modulator1)", np.max(np.abs(modulator1)),  len(modulator1), npulse )
 	modulator1 = modulator1 / np.max(np.abs(modulator1))
 	return modulator1
 
@@ -433,13 +434,13 @@ def ints_to_bits(int_arr, bits_per_int):
 			bits[i*bits_per_int+j] = (int_arr[i]>>j) & 1
 	return bits
 
-
+@njit(cache=True)
 def radionoise(n, sr, W_per_Hz):
 	"""
 	:param n: number of samples
 	:param sr: samplerate
 	:param W_per_Hz: spectral power density (Watts per Hertz)
-	:return: n samples of normal distributed IQ noise
+	:return: n samples of gaussian IQ noise
 	To verify signal energy, and spectral power density:
 		with df = sr/n
 		n * absfft**2 * (sr/n)**2  = W_per_Hz * sr

@@ -354,8 +354,9 @@ def staged_resampler_execute_stream(in_arr, ii0, nsamples, out_arr, io0, mx1, mx
 	only_div_stage = int(mx1[0,4].real)
 	if only_div_stage:
 		return div_resampler_execute_stream(in_arr=in_arr, ii0=ii0, nsamples=nsamples, out_arr=out_arr, io0=io0, statemx=mx1)
-	io1 = div_resampler_execute_stream(in_arr=in_arr, ii0=ii0, nsamples=nsamples, out_arr=out_arr, io0=io0, statemx=mx1)
-	io2 = resampler_execute_stream(in_arr=out_arr, ii0=io0, nsamples=io1-io0, out_arr=out_arr, io0=io0, statemx=mx2)
+	mid_arr = np.zeros(nsamples+10, dtype=in_arr.dtype)
+	io1 = div_resampler_execute_stream(in_arr=in_arr, ii0=ii0, nsamples=nsamples, out_arr=mid_arr, io0=0, statemx=mx1)
+	io2 = resampler_execute_stream(in_arr=mid_arr, ii0=0, nsamples=io1, out_arr=out_arr, io0=io0, statemx=mx2)
 	return io2
 ## === staged resampler ======================================================================================================================================================================
 ## ===========================================================================================================================================================================================
