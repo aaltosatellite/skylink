@@ -2,9 +2,8 @@ import queue
 import numpy as np
 from .lib_receiver import Receiver, RXDSPConfig, precompile_receiver
 from .lib_framing import frame_packet
-from .lib_tools import doppler_correction, ints_to_bits, DEFAULT_SYNCHWORD_LEN, DEFAULT_SYNCHWORD, make_samples2, snr_dB
+from .lib_tools import doppler_correction, ints_to_bits, DEFAULT_SYNCHWORD_LEN, DEFAULT_SYNCHWORD, make_samples2, snr_dB, DebugPrinter
 from .lib_reedsolomon import get_default_rs
-from datetime import datetime as dtime
 import threading
 from queue import Queue, Empty
 import time
@@ -14,16 +13,8 @@ from copy import copy
 
 SHM_MEM_BASENAME = "QHXTSGLGANV-"
 
-DEBUG_PRINT_ON = True
-def DBGPRINT(toggle:int, *args, **kwargs):
-	if not toggle:
-		return
-	ts = "[{}]".format( dtime.now().isoformat()[-15:] )
-	ts += " "*(17-len(ts)) + "[DSPLoop]" + "   "
-	first, args = args[0], args[1:]
-	if DEBUG_PRINT_ON:
-		print(ts+str(first), *args, **kwargs, flush=True)
-
+_dbgprinter = DebugPrinter(log_title="DSPLoop", stdprint=True, zmqprint_host_port=("localhost", 11001))
+DBGPRINT = _dbgprinter.DBGPRINT_toggled
 
 
 class TXDSPConfig:

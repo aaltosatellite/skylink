@@ -5,18 +5,26 @@ import threading
 from queue import Queue, Empty
 import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_TX, SOAPY_SDR_CF32
-from datetime import datetime as dtime
 #from kuokka.lib_tools import radionoise, make_samples2
-from .lib_tools import make_samples2, radionoise
+from .lib_tools import make_samples2, radionoise, DebugPrinter
 
+"""try:
+	from mtools.zmq_printout import ZMQPIn
+	ZMQP_PRINTER = ZMQPIn(port=11001, hostname="localhost")
+except:
+	ZMQP_PRINTER = None
 
 DEBUG_PRINT_ON = True
 def DBGPRINT(*args, **kwargs):
 	ts = "[{}]".format( dtime.now().isoformat()[-15:] )
 	ts += " "*(17-len(ts)) + "[RadioLoop]" + " "
 	first, args = args[0], args[1:]
-	if DEBUG_PRINT_ON:
-		print(ts+str(first), *args, **kwargs)
+	if not DEBUG_PRINT_ON:
+		return
+	if not (ZMQP_PRINTER is None):
+		ZMQP_PRINTER.print(ts+str(first))
+	else:
+		print(ts+str(first), *args, **kwargs)"""
 
 
 
@@ -46,7 +54,8 @@ class RadioLoop:
 		self.tx_thread 			= threading.Thread(target=None, args=tuple())
 		self.self_mute 			= False
 		self.sample_maxamps 	= np.zeros(3, np.float64)
-
+		self.dbgprinter 		= DebugPrinter(log_title="RadioLoop", stdprint=True, zmqprint_host_port=("localhost", 11001))
+		self.DBGPRINT 			= self.dbgprinter.DBGPRINT
 
 	def is_ok(self):
 		if not self.on:
@@ -78,7 +87,7 @@ class RadioLoop:
 	# === USRP ===============================================================================================================================================================================
 	def _usrp_start(self):
 		# This noise injection enforces the jit-compilation of much of the signal processing pipeline before the loop starts.
-		DBGPRINT("USRP start")
+		self.DBGPRINT("USRP start")
 		rx_gain = 56 # dB
 		tx_gain = 56 # dB
 		usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
@@ -102,14 +111,25 @@ class RadioLoop:
 		#print(usrp.set_gpio_src("FP0", "RX"))
 		self.rx_sr0_actual = float(usrp.get_rx_freq(0))
 		self.tx_sr0_actual = float(usrp.get_tx_freq(0))
-		DBGPRINT("RX gain range:      {}".format( str(usrp.get_rx_gain_range(0))[:-1] ))
-		DBGPRINT("TX gain range:      {}".format( str(usrp.get_tx_gain_range(0))[:-1] ))
-		DBGPRINT("usrp RX gain:       {}".format( usrp.get_rx_gain(0) ))
-		DBGPRINT("usrp TX gain:       {}".format( usrp.get_tx_gain(0) ))
-		DBGPRINT("usrp RX samplerate: {} ksps".format( round(usrp.get_rx_rate(0)*1e-3, 6) ))
-		DBGPRINT("usrp TX samplerate: {} ksps".format( round(usrp.get_tx_rate(0)*1e-3, 6) ))
-		DBGPRINT("usrp RX tune-f:     {} MHz".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
-		DBGPRINT("usrp TX tune-f:     {} MHz".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
+		#DBGPRINT("-------------------------------------------------")
+		#DBGPRINT("RX num channels", usrp.get_rx_num_channels())
+		#DBGPRINT("TX num channels", usrp.get_tx_num_channels())
+		self.DBGPRINT("RX antennas(0):         {}".format(usrp.get_rx_antennas(0)))
+		self.DBGPRINT("TX antennas(0):         {}".format(usrp.get_tx_antennas(0)))
+		self.DBGPRINT("RX antenna in use(0):   {}".format(usrp.get_rx_antenna(0)))
+		self.DBGPRINT("TX antenna in use(0):   {}".format( usrp.get_tx_antenna(0)))
+		#DBGPRINT("RX antennas(1)", usrp.get_rx_antennas(1))
+		#DBGPRINT("TX antennas(1)", usrp.get_tx_antennas(1))
+		#DBGPRINT("-------------------------------------------------")
+
+		self.DBGPRINT("RX gain range:        {}".format( str(usrp.get_rx_gain_range(0))[:-1] ))
+		self.DBGPRINT("TX gain range:        {}".format( str(usrp.get_tx_gain_range(0))[:-1] ))
+		self.DBGPRINT("usrp RX gain:         {}".format( usrp.get_rx_gain(0) ))
+		self.DBGPRINT("usrp TX gain:         {}".format( usrp.get_tx_gain(0) ))
+		self.DBGPRINT("usrp RX samplerate:   {} ksps".format( round(usrp.get_rx_rate(0)*1e-3, 6) ))
+		self.DBGPRINT("usrp TX samplerate:   {} ksps".format( round(usrp.get_tx_rate(0)*1e-3, 6) ))
+		self.DBGPRINT("usrp RX tune-f:       {} MHz".format( round(usrp.get_rx_freq(0)*1e-6, 3) ))
+		self.DBGPRINT("usrp TX tune-f:       {} MHz".format( round(usrp.get_tx_freq(0)*1e-6, 3) ))
 		self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 1024*2), daemon=True) #TODO bufferlen as setting?
 		self.tx_thread 			= threading.Thread(target=self._usrp_tx_loop,    args=(usrp, 1024*2), daemon=True) #TODO bufferlen as setting?
 		self.on = True
@@ -121,6 +141,9 @@ class RadioLoop:
 		# Set up the stream and receive buffer
 		st_args = uhd.usrp.StreamArgs("fc32", "sc16")
 		st_args.channels = [0]
+		print("cpu format",st_args.cpu_format)
+		print("otw format",st_args.otw_format)
+		print("args",st_args.args)
 		rx_streamer = usrp.get_rx_stream(st_args)
 		# Start Stream
 		stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
@@ -131,20 +154,31 @@ class RadioLoop:
 		n_rx_total = 0
 		avg_sr = 0.0
 		dt_amplitude_measure = 0.0
+		print_interval = 20.0
+		maxreset_interval = 30.0
+		t_next_print    = time.monotonic()
+		t_next_maxreset = time.monotonic() + maxreset_interval
 		t00 = time.perf_counter()
 		rx_streamer.issue_stream_cmd(stream_cmd)
+		t00 = (t00+time.perf_counter())/2.0
 		while self.on:
-			if (n_rx_loops % 2000) == 0:
-				DBGPRINT("(sr~{} MS/s measured vs {} MS/s specced). Amplitudes ({},{},{})".format( round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5), self.sample_maxamps[0], self.sample_maxamps[1], self.sample_maxamps[2]) )
+			ts_mono = time.monotonic()
+			if ts_mono >= t_next_print:
+				ampmax_int_time = round(ts_mono - (t_next_maxreset - print_interval), 1)
+				self.DBGPRINT("(sr~{} MS/s measured vs {} MS/s specced). sample-amp-max({}s): ({}, {}, {})".format( round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5), ampmax_int_time, self.sample_maxamps[0], self.sample_maxamps[1], self.sample_maxamps[2]) )
 				#amp_measure_percentage = 100 * dt_amplitude_measure/(time.perf_counter()-t00)
 				#DBGPRINT("t_ampl_measure: {} ms.  ({} % of total).".format( round(dt_amplitude_measure*1e3,3), round(amp_measure_percentage, 3) ))
-			ts_s0_mono = time.monotonic()
+				t_next_print = ts_mono + print_interval
+			if ts_mono >= t_next_maxreset:
+				self.sample_maxamps[:] = 0.0
+				t_next_maxreset = ts_mono + maxreset_interval
+			ts_s0_mono = ts_mono
 			ts_s0_unix = time.time()
 			rx_ret = rx_streamer.recv(recv_buffer, metadata) #blocking until rx_buffer_len samples acquired
 			avg_sr = n_rx_total / (time.perf_counter() - t00)
 			n_rx_total += rx_ret
 			if rx_ret != rx_buffer_len:
-				DBGPRINT("RECV RETURNED NON-FULL BUFFER WITH RET VALUE "+str(rx_ret))
+				self.DBGPRINT("WARNING: RECV RETURNED NON-FULL BUFFER WITH RET VALUE "+str(rx_ret))
 				#assert rx_ret == rx_buffer_len
 			#if self.self_mute:
 			#	continue
@@ -157,7 +191,7 @@ class RadioLoop:
 			if not self.que_rx_samples_out.full():
 				self.que_rx_samples_out.put_nowait((buff_, ts_s0_mono, ts_s0_unix))
 			else:
-				DBGPRINT("WARNING: radio-to-process queue overflow!")
+				self.DBGPRINT("WARNING: radio-to-process queue overflow!")
 				raise Exception("radio-loop: radio-to-process queue overflow.")
 			n_rx_loops += 1
 
@@ -168,30 +202,46 @@ class RadioLoop:
 		tx_stream_args.channels = [0]
 		tx_streamer = usrp.get_tx_stream(tx_stream_args)
 		tx_metadata = uhd.types.TXMetadata()
+		tx_metadata.end_of_burst = False
 		while self.on:
 			try:
 				samplearr = self.que_tx_samples_in.get(timeout=0.20)
 			except Empty:
 				continue
 			except Exception as e:
-				DBGPRINT("Queue.get() exception (tx-thread):", e)
+				self.DBGPRINT("Queue.get() exception (tx-thread):", e)
 				self.on = False
 				break
+
+			if not (samplearr.dtype == np.complex64):
+				if samplearr.dtype == np.complex128:
+					self.DBGPRINT("TX SAMPLES OF WRONG DTYPE: {}. SHOULD BE np.complex64. Converting and transmitting.".format( str(samplearr.dtype) ))
+					samplearr = np.astype(samplearr, np.complex64)
+				else:
+					self.DBGPRINT("TX SAMPLES OF WRONG DTYPE: {}. SHOULD BE np.complex64. No transmission.".format( str(samplearr.dtype) ))
+					continue
+
+			if not (samplearr.shape[0] == 1) and (len(samplearr.shape) == 2):
+				self.DBGPRINT("TX SAMPLES IN WRONG SHAPE: {}. SHOULD BE (1,n). No transmission.".format( str(samplearr.shape) ) )
+				continue
+
 			N = samplearr.shape[1]
 			dtt = N / self.radio_config.tx_sr0
 			idx = 0
 			t_end = time.perf_counter() + dtt
 			self.self_mute = True  # the 5ms initial silence in composed samples also ensures this will have effect.
+			tx_metadata.start_of_burst = True
 			while idx < N:
 				if (N - idx) <= tx_batch_len:
 					tx_metadata.end_of_burst = True
 				tx_streamer.send(samplearr[0,idx:idx+tx_batch_len], tx_metadata)
+				tx_metadata.start_of_burst = False
 				idx += tx_batch_len
 			tx_metadata.end_of_burst = False
 			t_to_end = max(0, t_end - time.perf_counter())
 			time.sleep(t_to_end + 0.0e-3)
 			self.self_mute = False
-			DBGPRINT("tx end. sleep of {}/{} ms.".format( round(t_to_end*1e3, 2), round(dtt*1e3, 2) ))
+			self.DBGPRINT("tx end. sleep of {}/{} ms.".format( round(t_to_end*1e3, 2), round(dtt*1e3, 2) ))
 	# === USRP ===============================================================================================================================================================================
 	# === USRP ===============================================================================================================================================================================
 
@@ -204,29 +254,29 @@ class RadioLoop:
 		This start method will be called when used on the ground station machine.
 		The Soapy-code is incomplete, and will certainly not work yet. You will need to attach to a 'leecher' device created by the soapy-shared library.
 		"""
-		DBGPRINT("SoapySDR start")
+		self.DBGPRINT("SoapySDR start")
 		args = dict(device="uhd")
 		sdr = SoapySDR.Device(args) #args
 		SoapySDR.setLogLevel(SoapySDR.SOAPY_SDR_FATAL)
 		if type(sdr) == tuple:
 			sdr = sdr[0]
 		print(sdr)
-		DBGPRINT("SoapySDR driver key: ", sdr.getDriverKey())
-		DBGPRINT("SoapySDR driver key: ", sdr.getHardwareKey())
-		DBGPRINT("Assuming we are on a SoapyShared leecher device.")
-		DBGPRINT("Radio parameters can not be changed, instead we config to what we believe they are.")
-		DBGPRINT("Assuming:  f-tune = {} MHz".format(self.radio_config.rx_f_tune))
-		DBGPRINT("Assuming:  	 sr > {} MS/s".format(self.radio_config.rx_sr0))
+		self.DBGPRINT("SoapySDR driver key: ", sdr.getDriverKey())
+		self.DBGPRINT("SoapySDR driver key: ", sdr.getHardwareKey())
+		self.DBGPRINT("Assuming we are on a SoapyShared leecher device.")
+		self.DBGPRINT("Radio parameters can not be changed, instead we config to what we believe they are.")
+		self.DBGPRINT("Assuming:  f-tune = {} MHz".format(self.radio_config.rx_f_tune))
+		self.DBGPRINT("Assuming:  	 sr > {} MS/s".format(self.radio_config.rx_sr0))
 		sdr.setSampleRate(SOAPY_SDR_RX, 0, self.radio_config.rx_sr0)
 		sdr.setSampleRate(SOAPY_SDR_TX, 0, self.radio_config.tx_sr0)
 		sdr.setFrequency(SOAPY_SDR_RX, 0, self.radio_config.rx_f_tune)
 		sdr.setFrequency(SOAPY_SDR_TX, 0, self.radio_config.tx_f_tune)
 		sdr.setGain(SOAPY_SDR_RX, 0, 56)
 		sdr.setGain(SOAPY_SDR_TX, 0, 56)
-		DBGPRINT("RX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_RX, 0) ))
-		DBGPRINT("TX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_TX, 0) ))
-		DBGPRINT("RX gain:            {}".format( sdr.getGain(SOAPY_SDR_RX, 0) ))
-		DBGPRINT("TX gain:            {}".format( sdr.getGain(SOAPY_SDR_TX, 0) ))
+		self.DBGPRINT("RX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_RX, 0) ))
+		self.DBGPRINT("TX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_TX, 0) ))
+		self.DBGPRINT("RX gain:            {}".format( sdr.getGain(SOAPY_SDR_RX, 0) ))
+		self.DBGPRINT("TX gain:            {}".format( sdr.getGain(SOAPY_SDR_TX, 0) ))
 		self.rx_thread			= threading.Thread(target=self._soapy_rx_loop,   args=(sdr, 1024*4), daemon=True)
 		self.tx_thread 			= threading.Thread(target=self._soapy_tx_loop,   args=(sdr, 1024*4), daemon=True) #TODO bufferlen as setting?
 		self.on = True
@@ -238,15 +288,18 @@ class RadioLoop:
 		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
 		timeout = int(1e6 * bufferlen * 0.8 / self.radio_config.rx_sr0)
 		n_rx_loops = 0
+		print_interval = 20.0
 		buff = np.zeros(int(2**21), np.complex64)
 		absolute_bufflen = len(buff)
 		n_rx_total = 0
 		avg_sr = 0.0
+		t_next_print = time.monotonic()
 		t00 = time.perf_counter()
 		sdr.activateStream(rxStream)
 		while self.on:
-			if (n_rx_loops % 2000) == 0:
-				DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4), round(1e-6*self.radio_config.rx_sr0, 5)))
+			if time.monotonic() >= t_next_print:
+				self.DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4), round(1e-6*self.radio_config.rx_sr0, 5)))
+				t_next_print = time.monotonic() + print_interval
 			ts_s0_mono = time.monotonic()
 			ts_s0_unix = time.time()
 			ret = sdr.readStream(rxStream, [buff], numElems=absolute_bufflen, timeoutUs=timeout)
@@ -264,7 +317,7 @@ class RadioLoop:
 			if not self.que_rx_samples_out.full():
 				self.que_rx_samples_out.put_nowait((buff[:rx_ret].copy(), ts_s0_mono, ts_s0_unix))
 			else:
-				DBGPRINT("WARNING: radio-to-process queue overflow!")
+				self.DBGPRINT("WARNING: radio-to-process queue overflow!")
 				raise Exception("radio-loop: radio-to-process queue overflow.")
 			n_rx_loops += 1
 		sdr.deactivateStream(rxStream) #stop streaming
@@ -280,7 +333,7 @@ class RadioLoop:
 			except Empty:
 				continue
 			except Exception as e:
-				DBGPRINT("Queue.get() exception (tx-thread):", e)
+				self.DBGPRINT("Queue.get() exception (tx-thread):", e)
 				self.on = False
 				break
 			N = samplearr.shape[1]
@@ -306,7 +359,7 @@ class RadioLoop:
 			t_to_end = max(0, t_end - time.perf_counter())
 			time.sleep(t_to_end + 0.0e-3)
 			self.self_mute = False
-			DBGPRINT("tx end. sleep of {}/{} ms.".format( round(t_to_end*1e3, 2), round(dtt*1e3, 2) ))
+			self.DBGPRINT("tx end. sleep of {}/{} ms.".format( round(t_to_end*1e3, 2), round(dtt*1e3, 2) ))
 	# === Soapy ==============================================================================================================================================================================
 	# === Soapy ==============================================================================================================================================================================
 
@@ -315,7 +368,7 @@ class RadioLoop:
 	# === RECORDING ==========================================================================================================================================================================
 	# === RECORDING ==========================================================================================================================================================================
 	def _recording_start(self, fpath=None, sr0=None, fcenter0=None):
-		DBGPRINT("Recording start")
+		self.DBGPRINT("Recording start")
 		import pickle
 		if fpath is None:
 			fpath, fcenter0, sr0 = ("/home/elmore/datasetit/radiotallenteet/uhf-965_437.0MHz-1000ksps.pickled",-124.0e3, 1e6)
@@ -358,11 +411,11 @@ class RadioLoop:
 			cursor += batchlen
 			if cursor >= nsamples:
 				cursor = 0
-				DBGPRINT("Recordning cursor zeroed.")
+				self.DBGPRINT("Recordning cursor zeroed.")
 			if not self.que_rx_samples_out.full():
 				self.que_rx_samples_out.put_nowait((batch.copy(),ts_s0_mono,ts_s0_unix))
 			else:
-				DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
+				self.DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
 			n_received += batchlen
 			t_next = t0 + ((n_received + batchlen) / self.radio_config.rx_sr0)
 			t_sleep = max(0, t_next - time.perf_counter())
@@ -375,7 +428,7 @@ class RadioLoop:
 			except Empty:
 				continue
 			except Exception as e:
-				DBGPRINT("Queue.get() exception (tx-thread):", e)
+				self.DBGPRINT("Queue.get() exception (tx-thread):", e)
 				self.on = False
 				break
 	# === RECORDING ==========================================================================================================================================================================
@@ -387,7 +440,7 @@ class RadioLoop:
 	# === SIM ================================================================================================================================================================================
 	# === SIM ================================================================================================================================================================================
 	def _sim_start(self, noiseSPD, ts_pl_list, rx_samplearr_que, tx_sample_que):
-		DBGPRINT("Sim start")
+		self.DBGPRINT("Sim start")
 		#self.radio_config.rx_sr0 	= sr0
 		#self.radio_config.tx_sr0 	= sr0
 		self.radio_config.rx_f_tune = 437e6
@@ -445,7 +498,7 @@ class RadioLoop:
 			if not self.que_rx_samples_out.full():
 				self.que_rx_samples_out.put_nowait((batch, ts_s0_mono, ts_s0_unix))
 			else:
-				DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
+				self.DBGPRINT("WARNING! radio-to-process queue overflow!  {}".format( 1e-6 * n_received / (time.perf_counter() - t0) ))
 			n_received += batchlen
 			t_next = t0 + (n_received / self.radio_config.rx_sr0)
 			t_sleep = max(0, t_next - time.perf_counter())
@@ -458,7 +511,7 @@ class RadioLoop:
 			except Empty:
 				continue
 			except Exception as e:
-				DBGPRINT("Queue.get() exception (tx-thread):", e)
+				self.DBGPRINT("Queue.get() exception (tx-thread):", e)
 				self.on = False
 				break
 			samplearr = samplearr[0]

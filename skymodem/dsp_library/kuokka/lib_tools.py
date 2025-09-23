@@ -526,7 +526,7 @@ def choose_fftlen(len_ideal, window_halfwid):
 # FREQUENCY MANAGEMENT =======================================================================================================================================================================
 # FREQUENCY MANAGEMENT =======================================================================================================================================================================
 # ============================================================================================================================================================================================
-@njit(cache=True)
+#@njit(cache=True)
 def create_freq_shifter_precomp(sr, fdelta, max_batchlen, fdelta_threshold):  # fdelta_threshold can be something like (1e-6 * sr).
 	#print("CREATING FREQ SHIFTER: ",sr, fdelta, max_batchlen, fdelta_threshold)
 	assert sr > 0.0
@@ -617,19 +617,75 @@ def get_frequency_search_map(fftlen, f_min_nrm, f_max_nrm, assert_in_window=True
 	assert np.sum(mapping) > 0, mapping
 	return mapping
 
+
 def fractional_resampler_f_max_undisturbed(sr0, sr1, halflen, f_cutoff_coeff):
 	f_slope_center = f_cutoff_coeff * (sr1/sr0) * sr0
 	halfwidth      = 0.94 * sr0 / halflen
 	return f_slope_center - halfwidth
-# FREQUENCY MANAGEMENT ==========================================================================================================================================================================
-# FREQUENCY MANAGEMENT ==========================================================================================================================================================================
+# FREQUENCY MANAGEMENT =======================================================================================================================================================================
+# FREQUENCY MANAGEMENT =======================================================================================================================================================================
 
 
 
 def snr_dB(pl_power, noise_power):
 	snr_lin = (pl_power-noise_power) / noise_power
-	snr_dB = 10*np.log10( max(1e-6, snr_lin) )
-	return snr_dB
+	snr_dB_ = 10*np.log10( max(1e-6, snr_lin) )
+	return snr_dB_
+
+
+# DEBUG PRINTING =============================================================================================================================================================================
+from datetime import datetime as dtime
+try:
+	from mtools.zmq_printout import ZMQPIn
+	#ZMQP_PRINTER = ZMQPIn(port=11001, hostname="localhost")
+except:
+	ZMQPIn = None
+
+class DebugPrinter:
+	def __init__(self, log_title:str, stdprint:bool=True, zmqprint_host_port=None):
+		self.title = "[{}]".format(log_title)
+		self.stdprint = stdprint
+		self.zmqp = None
+		self.zmqp_host = None
+		self.zmqp_port = None
+		if zmqprint_host_port:
+			self.zmqp_host = zmqprint_host_port[0]
+			self.zmqp_port = zmqprint_host_port[1]
+			assert type(self.zmqp_host) == str
+			assert type(self.zmqp_port) == int
+			assert 1000 < self.zmqp_port < (2**16)
+			if ZMQPIn:
+				self.zmqp = ZMQPIn(port=self.zmqp_port, hostname=self.zmqp_host)
+			else:
+				print("Warning: ZMQPrint configured, but no ZMQPrint library imported.")
+
+	def DBGPRINT(self, first, *args):
+		ts = "[{}]".format( dtime.now().isoformat()[11:] )
+		ts += " "*(17-len(ts)) + self.title + " "
+		ts += " "*(30-len(ts))
+		#first, args = args[0], args[1:]
+		if self.zmqp:
+			self.zmqp.print(ts+str(first))
+		if self.stdprint:
+			print(ts+str(first), *args)
+
+
+	def DBGPRINT_toggled(self, toggle, first, *args):
+		if not toggle:
+			return
+		self.DBGPRINT(first, *args)
+# DEBUG PRINTING =============================================================================================================================================================================
+
+
+
+
+
+
+
+
+
+
+
 
 
 
