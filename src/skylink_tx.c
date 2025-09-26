@@ -166,7 +166,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 
 	// Copy source identifier
 	memcpy(&frame->raw[0], self->conf->identity, 6);
-	tx_frame.ptr += 6;
+	tx_frame.ptr = &frame->raw[6];
 	frame->length += 6;
 
 	// Set the static header
