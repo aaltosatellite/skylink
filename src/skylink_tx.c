@@ -163,16 +163,11 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	tx_frame.frame = frame;
 	sky_frame_clear(frame);
 
-	// Set the start byte
-	const unsigned int identity_len = self->conf->identity_len;
-	frame->raw[0] = SKYLINK_FRAME_VERSION_BYTE | identity_len;
-	tx_frame.ptr = &frame->raw[1];
-	frame->length = 1;
 
 	// Copy source identifier
-	memcpy(&frame->raw[1], self->conf->identity, identity_len);
-	tx_frame.ptr += identity_len;
-	frame->length += identity_len;
+	memcpy(&frame->raw[0], self->conf->identity, 6);
+	tx_frame.ptr += 6;
+	frame->length += 6;
 
 	// Set the static header
 	SkyStaticHeader *hdr = (SkyStaticHeader*)tx_frame.ptr;

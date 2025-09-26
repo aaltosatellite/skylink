@@ -30,7 +30,8 @@ struct sky_virtual_channel_s {
 	uint8_t need_recall;
 
 	// A unique identifier of the current ARQ session, if ARQ is on.
-	uint32_t arq_session_identifier;
+	// This is a 14-bit value for frame packing purposes.
+	uint16_t arq_session_identifier;
 
 	sky_tick_t last_tx_tick;            // Tick of last time peer confirmed new payloads received, or being in sync with us.
 	sky_tick_t last_rx_tick;            // Tick of last time a new continuous payloads was received, or we confirmed sync with peer.
@@ -58,10 +59,10 @@ void sky_vc_wipe_to_arq_off_state(SkyVirtualChannel* vchannel);
 void sky_vc_wipe_to_arq_init_state(SkyVirtualChannel *vchannel);
 
 // Sets the virtual channel to reliable transmission state
-void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* vchannel, uint32_t identifier);
+void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel* vchannel, uint16_t identifier);
 
 // Processes a handshake received in a packet.
-int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint32_t identifier);
+int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint16_t identifier);
 
 // If too much time has passed since previous successful communication, fall back to non-reliable state.
 void sky_vc_check_timeouts(SkyVirtualChannel* vchannel, sky_tick_t now, sky_tick_t timeout, SkyDiagnostics* diag);

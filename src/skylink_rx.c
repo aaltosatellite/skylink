@@ -67,13 +67,30 @@ int sky_rx_with_fec(SkyHandle self, SkyRadioFrame* frame)
 }
 
 // Returns boolean 1/0 whether the frame should be filtered out.
-static int filter_by_identity(SkyHandle self, const uint8_t *identity, unsigned int identity_len)
+static int filter_by_identity(SkyHandle self, const uint8_t *identity)
 {
-	// Same identity as in configuration and same identity length as in configuration.
-	if ((memcmp(identity, self->conf->identity, identity_len) == 0) && (self->conf->identity_len == identity_len))
+	// Same identity as in configuration
+	if ((memcmp(identity, self->conf->identity, 6) == 0))
 		return 1;
 
 	return SKY_RET_OK;
+}
+static unsigned int calculate_extension_length(uint8_t included_extensions)
+{
+	unsigned int length = 0;
+	if (included_extensions & (1 << EXTENSION_ARQ_SEQUENCE))
+		length += sizeof(ExtARQSeq);
+	if (included_extensions & (1 << EXTENSION_ARQ_REQUEST))
+		length += sizeof(ExtARQReq);
+	if (included_extensions & (1 << EXTENSION_ARQ_CTRL))
+		length += sizeof(ExtARQCtrl);
+	if (included_extensions & (1 << EXTENSION_ARQ_HANDSHAKE))
+		length += sizeof(ExtARQHandshake);
+	if (included_extensions & (1 << EXTENSION_MAC_TDD_CONTROL))
+		length += sizeof(ExtTDDControl);
+	if (included_extensions & (1 << EXTENSION_HMAC_SEQUENCE_RESET))
+		length += sizeof(ExtHMACSequenceReset);
+	return length;
 }
 
 // Pass recieved frame for the protocol logic.
@@ -91,37 +108,22 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 
 	int ret;
 
-#if 0
-	// Check CRC if present
-	if ( /* TODO */ 0 && (ret = sky_check_crc32(frame)) != SKY_RET_OK) {
-		self->diag->rx_fec_fail++;
-		return ret;
-	}
-#endif
-
 	// Initialize parsed frame structure to zero.
 	SkyParsedFrame parsed;
 	memset(&parsed, 0, sizeof(SkyParsedFrame));
 
-	// Validate protocol version
-	const uint8_t version = frame->raw[0] & SKYLINK_FRAME_VERSION_MASK;
-	if (version != SKYLINK_FRAME_VERSION_BYTE)
-		return SKY_RET_INVALID_VERSION;
-
 	// Validate identity field
-	parsed.identity = &frame->raw[1];
-	parsed.identity_len = (frame->raw[0] & SKYLINK_FRAME_IDENTITY_MASK);
-	if ((parsed.identity_len == 0) || (parsed.identity_len > SKY_MAX_IDENTITY_LEN))
-		return SKY_RET_INVALID_VERSION;
+	parsed.identity = &frame->raw[0];
 
 	// Identity filtering
-	if (filter_by_identity(self, parsed.identity, parsed.identity_len)) // TODO: Filtering callback function
+	if (filter_by_identity(self, parsed.identity))
 		return SKY_RET_FILTERED_BY_IDENTITY;
 
 	// Get start position for header and payload. Copy header to parsed frame structure.
-	const unsigned header_start = 1 + parsed.identity_len;
+	const unsigned header_start = 6; // Just the identity
 	memcpy(&parsed.hdr, &frame->raw[header_start], sizeof(SkyStaticHeader));
-	const unsigned payload_start = header_start + sizeof(SkyStaticHeader) + parsed.hdr.extension_length;
+	const unsigned extension_length = calculate_extension_length(parsed.hdr.included_extensions);
+	const unsigned payload_start = header_start + sizeof(SkyStaticHeader) + extension_length;
 
 	// Frame length is smaller than where the payload should start.
 	if (payload_start > frame->length)
@@ -141,16 +143,13 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 	parsed.payload_len = frame->length - payload_start;
 
 	// Validate CRC32 if present
-	// TODO: Currently CRC32 can not be used together with HMAC.
-	// This is because the HMAC extension is added before CRC32 and CRC32 raises length of frame and flag.
-	// The incorrect length and raised flag will cause the HMAC check to fail.
 	if (parsed.hdr.flag_crced) {
 		if ((ret = sky_check_crc32(frame, &parsed)) < 0)
 			return ret;
 	}
 
 	// Parse and validate all extension headers
-	if ((ret = sky_frame_parse_extension_headers(frame, &parsed)) < 0)
+	if ((ret = sky_frame_parse_extension_headers(frame, &parsed, extension_length)) < 0)
 		return ret;
 
 	// Check the authentication/HMAC if the virtual channel necessitates it.
@@ -174,7 +173,7 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 static void sky_rx_process_ext_mac_control(SkyHandle self, int rx_time_ticks, SkyParsedFrame* parsed)
 {
 	// Check if the frame has a MAC/TDD extension
-	const SkyHeaderExtension *tdd_ext = parsed->mac_tdd;
+	const ExtTDDControl *tdd_ext = parsed->mac_tdd;
 	if (tdd_ext == NULL)
 		return;
 
@@ -184,8 +183,8 @@ static void sky_rx_process_ext_mac_control(SkyHandle self, int rx_time_ticks, Sk
 	//	return;
 
 	// Get window and remaining time
-	uint16_t w = sky_ntoh16(tdd_ext->TDDControl.window);
-	uint16_t r = sky_ntoh16(tdd_ext->TDDControl.remaining);
+	uint16_t w = sky_ntoh16(tdd_ext->window);
+	uint16_t r = sky_ntoh16(tdd_ext->remaining);
 
 	// Print debug info
 	SKY_PRINTF(SKY_DIAG_MAC | SKY_DIAG_DEBUG, "MAC Updated: Window length %d, window remaining %d\n", w, r);

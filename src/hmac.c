@@ -143,14 +143,10 @@ int sky_hmac_extend_with_authentication(SkyHandle self, SkyTransmitFrame* tx_fra
 }
 
 /* Process HMAC Sequence Reset extension header */
-static void sky_rx_process_ext_hmac_sequence_reset(SkyHMAC *hmac, const SkyHeaderExtension* ext, unsigned int vc)
+static void sky_rx_process_ext_hmac_sequence_reset(SkyHMAC *hmac, const ExtHMACSequenceReset* ext, unsigned int vc)
 {
-	// Make sure the extension has the correct length.
-	if (ext->length != sizeof(ExtHMACSequenceReset))
-		return;
-
 	// Parse new sequence number and set it
-	uint16_t new_sequence = sky_ntoh16(ext->HMACSequenceReset.sequence);
+	uint16_t new_sequence = sky_ntoh16(ext->sequence);
 	hmac->vc[vc].sequence_tx = new_sequence;
 
 	SKY_PRINTF(SKY_DIAG_INFO | SKY_DIAG_HMAC, "VC #%d sequence numbering reset to %u\n", vc, new_sequence);

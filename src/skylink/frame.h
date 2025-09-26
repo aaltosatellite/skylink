@@ -4,16 +4,7 @@
 #include "skylink/skylink.h"
 #include "sky_platform.h"
 
-/* Maximum number of bytes in frame identity field. */
-#define SKY_MAX_IDENTITY_LEN            (7)
-
-/*
- * All packets start with this.
- * ("encoded" protocol + version identifier)
- */
-#define SKYLINK_FRAME_VERSION_BYTE      (0b01100 << 3)
-#define SKYLINK_FRAME_VERSION_MASK      (0b11111000)
-#define SKYLINK_FRAME_IDENTITY_MASK     (0b00000111)
+#define SKY_MAX_IDENTITY_LEN			(6) // Not variable length anymore so this is just the length.
 
 /*
  * Frame header flags
@@ -37,14 +28,21 @@ typedef enum {
 
 
 // The maximum payload size that fits a worst case frame with all extensions.
-#define SKY_PAYLOAD_MAX_LEN             (181)
-
+#ifndef SKY_FULL_DUPLEX
+#define SKY_PAYLOAD_MAX_LEN             (195)
+#else
+// In full duplex mode TDD MAC control extension is not needed, saving 4 bytes.
+#define SKY_PAYLOAD_MAX_LEN             (199)
+#endif
 #define SKY_FRAME_MIN_LEN               (1 + 2 + 4)
 #define SKY_FRAME_MAX_LEN               (223) // Limited by Reed-Solomon message length
 
-//#define SKY_PAYLOAD_MAX_LEN             (SKY_FRAME_MAX_LEN - (1 + SKY_MAX_IDENTITY_LEN + SKY_HMAC_LENGTH) )
-// (1 + sizeof(ExtTDDControl)) + (1 + sizeof(ExtARQReq) + (1 + sizeof(ExtARQSeq)) + (1 + sizeof(ExtARQCtrl)))
+// #define SKY_PAYLOAD_MAX_LEN             (SKY_FRAME_MAX_LEN - (1 + SKY_MAX_IDENTITY_LEN + SKY_HMAC_LENGTH) )
 
+// Max header length is:
+int s = sizeof(SkyStaticHeader) + sizeof(ExtTDDControl) + sizeof(ExtARQReq) + sizeof(ExtARQSeq) +  sizeof(ExtARQCtrl) + sizeof(ExtARQHandshake) + sizeof(ExtHMACSequenceReset);
+// 223 - 1 (Version and identity length) - 7 (Max identity length) - 26 (Max header length) - 4 (HMAC or CRC32) = 185
+// Goal: 223 - 6 (Static identity length) - 18 (New max header length) - 4 (HMAC or CRC32) = 195 in half duplex or 199 in full duplex due to no TDD MAC control extension.
 
 /* frames ========================================================================================== */
 struct sky_radio_frame
@@ -92,34 +90,21 @@ typedef struct __attribute__((__packed__)) {
 
 /* ARQ Handshake extension */
 typedef struct __attribute__((__packed__)) {
-	uint8_t  peer_state;
-	uint32_t identifier;
+	uint16_t identifier_and_peer_state; // 14 bits should be enough for session identifier. last 2 bits for peer state. packed in single uint16_t to avoid endianess issues.
 } ExtARQHandshake;
 
 /* TDD MAC Control extension */
+#ifndef SKY_FULL_DUPLEX
 typedef struct __attribute__((__packed__)) {
 	uint16_t window;
 	uint16_t remaining;
 } ExtTDDControl;
+#endif
 
 /* HMAC Sequence Reset extension */
 typedef struct __attribute__((__packed__)) {
 	uint16_t sequence;
 } ExtHMACSequenceReset;
-
-/* General Extension Header struct */
-typedef struct __attribute__((__packed__)) {
-	uint8_t type    : 4;
-	uint8_t length  : 4;
-	union {
-		ExtARQSeq ARQSeq;
-		ExtARQReq ARQReq;
-		ExtARQCtrl ARQCtrl;
-		ExtARQHandshake ARQHandshake;
-		ExtTDDControl TDDControl;
-		ExtHMACSequenceReset HMACSequenceReset;
-	};
-} SkyHeaderExtension;
 
 /* extensions ====================================================================================== */
 
@@ -151,7 +136,7 @@ typedef struct __attribute__((__packed__)) {
 	unsigned int frame_sequence : 16;
 
 	/* Extension header length */
-	unsigned int extension_length : 8;
+	unsigned int included_extensions : 8;
 
 } SkyStaticHeader;
 
@@ -161,12 +146,12 @@ typedef struct {
 	const uint8_t* identity;
 	unsigned int identity_len;
 	SkyStaticHeader hdr;
-	const SkyHeaderExtension* arq_sequence;
-	const SkyHeaderExtension* arq_request;
-	const SkyHeaderExtension* arq_ctrl;
-	const SkyHeaderExtension* arq_handshake;
-	const SkyHeaderExtension* mac_tdd;
-	const SkyHeaderExtension* hmac_reset;
+	const ExtARQSeq* arq_sequence;
+	const ExtARQReq* arq_request;
+	const ExtARQCtrl* arq_ctrl;
+	const ExtARQHandshake* arq_handshake;
+	const ExtTDDControl* mac_tdd;
+	const ExtHMACSequenceReset* hmac_reset;
 	const uint8_t* payload;
 	unsigned int payload_len;
 } SkyParsedFrame;
@@ -249,7 +234,7 @@ int sky_frame_get_space_left(const SkyRadioFrame* radioFrame);
  * (internal)
  * Parse and validate all header extensions inside the frame.
  */
-int sky_frame_parse_extension_headers(const SkyRadioFrame *frame, SkyParsedFrame *parsed);
+int sky_frame_parse_extension_headers(const SkyRadioFrame *frame, SkyParsedFrame *parsed, unsigned int extension_length);
 
 
 #endif // __SKYLINK_FRAME_H__

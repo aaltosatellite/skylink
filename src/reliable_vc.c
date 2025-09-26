@@ -55,6 +55,11 @@ SkyVirtualChannel* sky_vc_create(SkyVCConfig* config)
 		config->usable_element_size = 32;
 	if ((config->require_authentication & (SKY_CONFIG_FLAG_AUTHENTICATE_TX | SKY_CONFIG_FLAG_USE_CRC32)) == 0)
 		config->require_authentication |= SKY_CONFIG_FLAG_USE_CRC32;
+		// Don't use CRC32 if authentication is on. Having both is redundant and reduces the maximum payload size by 4 bytes for an unnecessary scenario.
+	if (((config->require_authentication & SKY_CONFIG_FLAG_AUTHENTICATE_TX) != 0) && ((config->require_authentication & SKY_CONFIG_FLAG_USE_CRC32) != 0)){
+		config->require_authentication &= ~SKY_CONFIG_FLAG_USE_CRC32;
+		config->require_authentication |= SKY_CONFIG_FLAG_AUTHENTICATE_TX;
+	}
 
 	// Allocate memory for the virtual channel struct.
 	SkyVirtualChannel* vchannel = SKY_MALLOC(sizeof(SkyVirtualChannel));
@@ -119,7 +124,7 @@ void sky_vc_wipe_to_arq_init_state(SkyVirtualChannel *vchannel)
 	// Reset VC and set arq state to init.
 	vchannel->need_recall = 0;
 	vchannel->arq_state = ARQ_STATE_IN_INIT;
-	vchannel->arq_session_identifier = (uint32_t)sky_get_tick_time();
+	vchannel->arq_session_identifier = (uint16_t)sky_get_tick_time() % 0x3FFF; // 14-bit identifier
 	vchannel->last_tx_tick = sky_get_tick_time();
 	vchannel->last_rx_tick = sky_get_tick_time();
 	vchannel->last_ctrl_send_tick = 0;
@@ -128,7 +133,7 @@ void sky_vc_wipe_to_arq_init_state(SkyVirtualChannel *vchannel)
 }
 
 // Clean the rings and set the VC to arq on state. (Reliable state)
-void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel *vchannel, uint32_t identifier)
+void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel *vchannel, uint16_t identifier)
 {
 	// Wipe the rings.
 	sky_rcv_ring_wipe(vchannel->rcvRing, vchannel->elementBuffer, 0);
@@ -477,8 +482,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 				return packet_length;
 
 			// Does the packet fit in remaining space?
-			int required_length = packet_length + (int)sizeof(ExtARQSeq) + 1;
-			if (required_length <= sky_frame_get_space_left(tx_frame->frame))
+			if (packet_length + (int)sizeof(ExtARQSeq) <= sky_frame_get_space_left(tx_frame->frame))
 			{
 				// Add ARQ sequence number extension
 				sky_frame_add_extension_arq_sequence(tx_frame, packet_sequence);
@@ -511,7 +515,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 }
 
 // Process a handshake recieved in a packet.
-/*static*/ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint32_t identifier)
+/*static*/ int sky_vc_handle_handshake(SkyVirtualChannel* vchannel, uint8_t peer_state, uint16_t identifier)
 {
 	switch (vchannel->arq_state) {
 	case ARQ_STATE_OFF:
@@ -539,16 +543,11 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 			vchannel->handshake_send = 0;
 			return 1;
 		}
-		else if (identifier > vchannel->arq_session_identifier) { // TODO: Overflow not considered!
-			// A newer identifier is received.
+		else {
+			// Different identifier just accept the handshake.
 			sky_vc_wipe_to_arq_on_state(vchannel, identifier);
 			vchannel->handshake_send = 1;
 			return 1;
-		}
-		else {
-			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received invalid ARQ hanshake %u\n", identifier);
-			// Invalid response identity
-			return 0;
 		}
 
 	case ARQ_STATE_ON:
@@ -556,10 +555,6 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 		 * Our ARQ is on and we received a new handshake from somebody.
 		 */
 
-		/* Make sure the frame is from the correct peer. */
-		//if (memcpy(parsed->identity, vchannel->peer_identity, size) != 0) {
-
-		// peer_state != ARQ_STATE_OFF
 		if (identifier == vchannel->arq_session_identifier) {
 			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received repeated ARQ hanshake %u\n", identifier);
 			// Matching session identifier matches so this is just redundant re-transmitted handshake.
@@ -573,10 +568,9 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received newer ARQ hanshake %u\n", identifier);
 			// The peer is trying to reconnect to us so just accept the new handshake.
 			sky_vc_wipe_to_arq_on_state(vchannel, identifier);
-			vchannel->handshake_send = 1; // Needed?
+			vchannel->handshake_send = 1;
 			return 1;
 		}
-		// peer_state == ARQ_STATE_OFF
 	}
 
 	return SKY_RET_INVALID_ARQ_STATE;
@@ -589,8 +583,11 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 	/* Handle incoming ARQ handshake first in any state.
 	 * Our state machine might advance during handshake handling. */
 	if (parsed->arq_handshake != NULL) {
-		const ExtARQHandshake *handshake = &parsed->arq_handshake->ARQHandshake;
-		sky_vc_handle_handshake(vchannel, handshake->peer_state, handshake->identifier);
+		const ExtARQHandshake *handshake = parsed->arq_handshake;
+		uint16_t identifier_and_peer_state = sky_ntoh16(handshake->identifier_and_peer_state);
+		uint8_t peer_state = identifier_and_peer_state & 0x03;
+		uint16_t identifier = (identifier_and_peer_state >> 2);
+		sky_vc_handle_handshake(vchannel, peer_state, identifier);
 	}
 
 	switch (vchannel->arq_state) {
@@ -624,8 +621,8 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 		if (parsed->arq_ctrl != NULL)
 		{
 			// Get the sequence numbers from the ARQ control and update the sync.
-			sky_arq_sequence_t rx_sequence = sky_arq_seq_ntoh(parsed->arq_ctrl->ARQCtrl.rx_sequence);
-			sky_arq_sequence_t tx_sequence = sky_arq_seq_ntoh(parsed->arq_ctrl->ARQCtrl.tx_sequence);
+			sky_arq_sequence_t rx_sequence = sky_arq_seq_ntoh(parsed->arq_ctrl->rx_sequence);
+			sky_arq_sequence_t tx_sequence = sky_arq_seq_ntoh(parsed->arq_ctrl->tx_sequence); // Just use the frame sequence number to save bytes from ARQ control header.
 			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ CTRL %d %d\n", (int)rx_sequence, (int)tx_sequence);
 			sky_vc_update_tx_sync(vchannel, rx_sequence, now);
 			sky_vc_update_rx_sync(vchannel, tx_sequence, now);
@@ -642,7 +639,7 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 			}
 
 			// Get the sequence number from the ARQ sequence header and push the packet to buffer.
-			sky_arq_sequence_t packet_sequence = sky_arq_seq_ntoh(parsed->arq_sequence->ARQSeq.sequence);
+			sky_arq_sequence_t packet_sequence = sky_arq_seq_ntoh(parsed->arq_sequence->sequence);
 			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ packet %d\n", (int)packet_sequence);
 			sky_vc_push_rx_packet(vchannel, parsed->payload, parsed->payload_len, packet_sequence, now);
 		}
@@ -651,8 +648,8 @@ int sky_vc_process_frame(SkyVirtualChannel *vchannel, SkyParsedFrame *parsed, sk
 		if (parsed->arq_request != NULL)
 		{
 			// Get the sequence numbers from the ARQ request and a mask for resends then schedule the resends.
-			sky_arq_sequence_t window_start = sky_arq_seq_ntoh(parsed->arq_request->ARQReq.sequence);
-			sky_arq_mask_t mask = sky_arq_mask_ntoh(parsed->arq_request->ARQReq.mask);
+			sky_arq_sequence_t window_start = sky_arq_seq_ntoh(parsed->arq_request->sequence);
+			sky_arq_mask_t mask = sky_arq_mask_ntoh(parsed->arq_request->mask);
 			SKY_PRINTF(SKY_DIAG_ARQ | SKY_DIAG_DEBUG, "Received ARQ Request: %d %04x\n", (int)window_start, (int)mask);
 			sendRing_schedule_resends_by_mask(vchannel->sendRing, window_start, mask);
 		}

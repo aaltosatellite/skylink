@@ -37,17 +37,14 @@ int sky_frame_add_extension_arq_sequence(SkyTransmitFrame *tx_frame, sky_arq_seq
 {
 	// Ensure that the extensions field is the last field in the frame and the frame still has room for the extension.
 	//SKY_ASSERT(tx_frame->flag_has_payload == 0);
-	SKY_ASSERT(tx_frame->frame->length + 1 + sizeof(ExtARQSeq) < SKY_PAYLOAD_MAX_LEN);
+	SKY_ASSERT(tx_frame->frame->length + sizeof(ExtARQSeq) < SKY_PAYLOAD_MAX_LEN);
 
 	// Cast a pointer to the cursor position and fill the extension header.
-	SkyHeaderExtension *extension = (SkyHeaderExtension *)tx_frame->ptr;
-	extension->type = EXTENSION_ARQ_SEQUENCE;
-	extension->length = sizeof(ExtARQSeq);
-	extension->ARQSeq.sequence = sky_arq_seq_hton(sequence);
+	ExtARQSeq *extension = (ExtARQSeq *)tx_frame->ptr;
+	extension->sequence = sky_arq_seq_hton(sequence);
 
 	// Move cursor forward and update frame and extension length.
-	const unsigned int len = 1 + sizeof(ExtARQSeq);
-	tx_frame->hdr->extension_length += len;
+	const unsigned int len = sizeof(ExtARQSeq);
 	tx_frame->frame->length += len;
 	tx_frame->ptr += len;
 	return SKY_RET_OK;
@@ -58,18 +55,16 @@ int sky_frame_add_extension_arq_request(SkyTransmitFrame *tx_frame, sky_arq_sequ
 {
 	// Ensure that the extensions field is the last field in the frame and frame has still room for the extension.
 	//SKY_ASSERT(tx_frame->flag_has_payload == 0);
-	SKY_ASSERT(tx_frame->frame->length + 1 + sizeof(ExtARQReq) < SKY_PAYLOAD_MAX_LEN);
+	SKY_ASSERT(tx_frame->frame->length + sizeof(ExtARQReq) < SKY_PAYLOAD_MAX_LEN);
 
 	// Cast a pointer to the extension header and fill the extension header.
-	SkyHeaderExtension *extension = (SkyHeaderExtension *)tx_frame->ptr;
-	extension->type = EXTENSION_ARQ_REQUEST;
-	extension->length = sizeof(ExtARQReq);
-	extension->ARQReq.sequence = sky_arq_seq_hton(sequence);
-	extension->ARQReq.mask = sky_arq_mask_hton(mask);
+	ExtARQReq *extension = (ExtARQReq *)tx_frame->ptr;
+	extension->sequence = sky_arq_seq_hton(sequence);
+	extension->mask = sky_arq_mask_hton(mask);
 
 	// Move cursor forward and update frame and extension length.
-	const unsigned int len = 1 + sizeof(ExtARQReq);
-	tx_frame->hdr->extension_length += len;
+	const unsigned int len = sizeof(ExtARQReq);
+	tx_frame->hdr->included_extensions = tx_frame->hdr->included_extensions | (1 << EXTENSION_ARQ_REQUEST);
 	tx_frame->frame->length += len;
 	tx_frame->ptr += len;
 	return SKY_RET_OK;
@@ -80,18 +75,15 @@ int sky_frame_add_extension_arq_ctrl(SkyTransmitFrame *tx_frame, sky_arq_sequenc
 {
 	// Ensure that the extensions field is the last field in the frame and frame has still room for the extension.
 	//SKY_ASSERT(tx_frame->flag_has_payload == 0);
-	SKY_ASSERT(tx_frame->frame->length + 1 + sizeof(ExtARQCtrl) < SKY_PAYLOAD_MAX_LEN);
+	SKY_ASSERT(tx_frame->frame->length + sizeof(ExtARQCtrl) < SKY_PAYLOAD_MAX_LEN);
 
 	// Cast a pointer to the extension header and fill the extension header.
-	SkyHeaderExtension *extension = (SkyHeaderExtension *)tx_frame->ptr;
-	extension->type = EXTENSION_ARQ_CTRL;
-	extension->length = sizeof(ExtARQCtrl);
-	extension->ARQCtrl.tx_sequence = sky_arq_seq_hton(tx_sequence);
-	extension->ARQCtrl.rx_sequence = sky_arq_seq_hton(rx_sequence);
+	ExtARQCtrl *extension = (ExtARQCtrl *)tx_frame->ptr;
+	extension->rx_sequence = sky_arq_seq_hton(rx_sequence);
 
 	// Move cursor forward and update frame and extension length.
-	const unsigned int len = 1 + sizeof(ExtARQCtrl);
-	tx_frame->hdr->extension_length += len;
+	const unsigned int len = sizeof(ExtARQCtrl);
+	tx_frame->hdr->included_extensions = tx_frame->hdr->included_extensions | (1 << EXTENSION_ARQ_CTRL);
 	tx_frame->frame->length += len;
 	tx_frame->ptr += len;
 	return SKY_RET_OK;
@@ -102,18 +94,19 @@ int sky_frame_add_extension_arq_handshake(SkyTransmitFrame *tx_frame, uint8_t st
 {
 	// Ensure that the extensions field is the last field in the frame and frame has still room for the extension.
 	//SKY_ASSERT(tx_frame->flag_has_payload == 0);
-	SKY_ASSERT(tx_frame->frame->length + 1 + sizeof(ExtARQHandshake) < SKY_PAYLOAD_MAX_LEN);
+	SKY_ASSERT(tx_frame->frame->length + sizeof(ExtARQHandshake) < SKY_PAYLOAD_MAX_LEN);
 
 	// Cast a pointer to the extension header and fill the extension header.
-	SkyHeaderExtension *extension = (SkyHeaderExtension *)tx_frame->ptr;
-	extension->type = EXTENSION_ARQ_HANDSHAKE;
-	extension->length = sizeof(ExtARQHandshake);
-	extension->ARQHandshake.peer_state = state_flag;
-	extension->ARQHandshake.identifier = sky_hton32(identifier);
+	ExtARQHandshake *extension = (ExtARQHandshake *)tx_frame->ptr;
+
+	// Just set peer state with overflow to prevent endianess issues.
+	// Lowest 2 bits are peer state, rest is identifier.
+	uint16_t id_and_state = (identifier % 0x3FFF) << 2 | (state_flag & 0x03);
+	extension->identifier_and_peer_state = sky_hton16(id_and_state);
 
 	// Move cursor forward and update frame and extension length.
-	const unsigned int len = 1 + sizeof(ExtARQHandshake);
-	tx_frame->hdr->extension_length += len;
+	const unsigned int len = sizeof(ExtARQHandshake);
+	tx_frame->hdr->included_extensions = tx_frame->hdr->included_extensions | (1 << EXTENSION_ARQ_HANDSHAKE);
 	tx_frame->frame->length += len;
 	tx_frame->ptr += len;
 	return SKY_RET_OK;
@@ -127,15 +120,13 @@ int sky_frame_add_extension_mac_tdd_control(SkyTransmitFrame *tx_frame, uint16_t
 	SKY_ASSERT(tx_frame->frame->length < SKY_PAYLOAD_MAX_LEN - sizeof(ExtTDDControl));
 
 	// Cast a pointer to the extension header and fill the extension header.
-	SkyHeaderExtension *extension = (SkyHeaderExtension *)tx_frame->ptr;
-	extension->type = EXTENSION_MAC_TDD_CONTROL;
-	extension->length = sizeof(ExtTDDControl);
-	extension->TDDControl.window = sky_hton16(window);
-	extension->TDDControl.remaining = sky_hton16(remaining);
+	ExtTDDControl *extension = (ExtTDDControl *)tx_frame->ptr;
+	extension->window = sky_hton16(window);
+	extension->remaining = sky_hton16(remaining);
 
 	// Move cursor forward and update frame and extension length.
-	const unsigned int len = 1 + sizeof(ExtTDDControl);
-	tx_frame->hdr->extension_length += len;
+	const unsigned int len = sizeof(ExtTDDControl);
+	tx_frame->hdr->included_extensions = tx_frame->hdr->included_extensions | (1 << EXTENSION_MAC_TDD_CONTROL);
 	tx_frame->frame->length += len;
 	tx_frame->ptr += len;
 	return SKY_RET_OK;
@@ -149,15 +140,13 @@ int sky_frame_add_extension_hmac_sequence_reset(SkyTransmitFrame *tx_frame, uint
 	SKY_ASSERT(tx_frame->frame->length < SKY_PAYLOAD_MAX_LEN - sizeof(ExtHMACSequenceReset));
 
 	// Cast a pointer to the extension header and fill the extension header.
-	SkyHeaderExtension *extension = (SkyHeaderExtension *)tx_frame->ptr;
-	extension->type = EXTENSION_HMAC_SEQUENCE_RESET;
-	extension->length = sizeof(ExtHMACSequenceReset);
-	extension->HMACSequenceReset.sequence = sky_hton16(sequence);
+	ExtHMACSequenceReset *extension = (ExtHMACSequenceReset *)tx_frame->ptr;
+	extension->sequence = sky_hton16(sequence);
 
 	// Move cursor forward and update frame and extension length.
-	const unsigned int len = 1 + sizeof(ExtHMACSequenceReset);
+	const unsigned int len = sizeof(ExtHMACSequenceReset);
+	tx_frame->hdr->included_extensions = tx_frame->hdr->included_extensions | (1 << EXTENSION_HMAC_SEQUENCE_RESET);
 	tx_frame->frame->length += len;
-	tx_frame->hdr->extension_length += len;
 	tx_frame->ptr += len;
 	return SKY_RET_OK;
 }
@@ -191,101 +180,65 @@ int sky_frame_extend_with_payload(SkyTransmitFrame *tx_frame, const uint8_t *pay
 
 
 // Parse and validate all header extensions inside the frame.
-int sky_frame_parse_extension_headers(const SkyRadioFrame* frame, SkyParsedFrame* parsed)
+int sky_frame_parse_extension_headers(const SkyRadioFrame* frame, SkyParsedFrame* parsed, unsigned int extension_length)
 {
 	// Get cursor position for the start of the extension header.
-	unsigned int cursor = 1 + (frame->raw[0] & SKYLINK_FRAME_IDENTITY_MASK) + sizeof(SkyStaticHeader);
+	unsigned int cursor = 6 + sizeof(SkyStaticHeader);
 	// Get the end position of the extension header.
-	unsigned int end = cursor + parsed->hdr.extension_length;
+	unsigned int end = cursor + extension_length;
 	// Check for overflow
 	if (end > frame->length)
 		return SKY_RET_INVALID_EXT_LENGTH;
 
+	uint8_t extensions = parsed->hdr.included_extensions;
+	uint8_t current_extension = 0;
+
 	// Iterate all extension headers
-	while (cursor < end)
+	while (extensions)
 	{
-		// Cast a pointer to cursor position
-		SkyHeaderExtension* ext = (SkyHeaderExtension*)&frame->raw[cursor];
-
-		// Move cursor forward and check overflow
-		cursor += 1 + ext->length;
-		if (cursor > frame->length)
-			return SKY_RET_INVALID_EXT_LENGTH;
-
-		// Validate header field length and store the pointer to the results struct.
-		switch (ext->type)
+		uint8_t ext_found = (extensions & (0x01 << current_extension));
+		extensions = extensions & ~(0x01 << current_extension);
+		 // Extension not present, skip to next extension type.
+		if (ext_found == 0) {
+			current_extension++;
+			continue;
+		}
+		switch (current_extension)
 		{
 		case EXTENSION_ARQ_SEQUENCE:
-			// Check for redundant extensions and invalid length.
-			if (parsed->arq_sequence != NULL)
-				return SKY_RET_REDUNDANT_EXTENSIONS;
-			if (ext->length != sizeof(ExtARQSeq))
-				return SKY_RET_INVALID_EXT_LENGTH;
-
-			// Store pointer to the frame.
-			parsed->arq_sequence = ext;
-			break; // TODO: Endianess swaps could be done during this step.
-
+			ExtARQSeq *arq_seq = (ExtARQSeq*)&frame->raw[cursor];
+			parsed->arq_sequence = arq_seq;
+			cursor += sizeof(ExtARQSeq);
+			break;
 		case EXTENSION_ARQ_REQUEST:
-			// Check for redundant extensions and invalid length.
-			if (parsed->arq_request != NULL)
-				return SKY_RET_REDUNDANT_EXTENSIONS;
-			if (ext->length != sizeof(ExtARQReq))
-				return SKY_RET_INVALID_EXT_LENGTH;
-
-			// Store pointer to the frame.
-			parsed->arq_request = ext;
+			ExtARQReq *arq_req = (ExtARQReq*)&frame->raw[cursor];
+			parsed->arq_request = arq_req;
+			cursor += sizeof(ExtARQReq);
 			break;
-
 		case EXTENSION_ARQ_CTRL:
-			// Check for redundant extensions and invalid length.
-			if (parsed->arq_ctrl != NULL)
-				return SKY_RET_REDUNDANT_EXTENSIONS;
-			if (ext->length != sizeof(ExtARQCtrl))
-				return SKY_RET_INVALID_EXT_LENGTH;
-
-			// Store pointer to the frame.
-			parsed->arq_ctrl = ext;
+			ExtARQCtrl *arq_ctrl = (ExtARQCtrl*)&frame->raw[cursor];
+			parsed->arq_ctrl = arq_ctrl;
+			cursor += sizeof(ExtARQCtrl);
 			break;
-
 		case EXTENSION_ARQ_HANDSHAKE:
-			// Check for redundant extensions and invalid length.
-			if (parsed->arq_handshake != NULL)
-				return SKY_RET_REDUNDANT_EXTENSIONS;
-			if (ext->length != sizeof(ExtARQHandshake))
-				return SKY_RET_INVALID_EXT_LENGTH;
-
-			// Store pointer to the frame.
-			parsed->arq_handshake = ext;
+			ExtARQHandshake *arq_handshake = (ExtARQHandshake*)&frame->raw[cursor];
+			parsed->arq_handshake = arq_handshake;
+			cursor += sizeof(ExtARQHandshake);
 			break;
-
 		case EXTENSION_MAC_TDD_CONTROL:
-			// Check for redundant extensions and invalid length.
-			if (parsed->mac_tdd != NULL)
-				return SKY_RET_REDUNDANT_EXTENSIONS;
-			if (ext->length != sizeof(ExtTDDControl))
-				return SKY_RET_INVALID_EXT_LENGTH;
-
-			// Store pointer to the frame.
-			parsed->mac_tdd = ext;
+			ExtTDDControl *mac_tdd = (ExtTDDControl*)&frame->raw[cursor];
+			parsed->mac_tdd = mac_tdd;
+			cursor += sizeof(ExtTDDControl);
 			break;
-
 		case EXTENSION_HMAC_SEQUENCE_RESET:
-			// Check for redundant extensions and invalid length.
-			if (parsed->hmac_reset != NULL)
-				return SKY_RET_REDUNDANT_EXTENSIONS;
-			if (ext->length != sizeof(ExtHMACSequenceReset))
-				return SKY_RET_INVALID_EXT_LENGTH;
-
-			// Store pointer to the frame.
-			parsed->hmac_reset = ext;
+			ExtHMACSequenceReset *hmac_reset = (ExtHMACSequenceReset*)&frame->raw[cursor];
+			parsed->hmac_reset = hmac_reset;
+			cursor += sizeof(ExtHMACSequenceReset);
 			break;
-
 		default: // Invalid extension type
 			return SKY_RET_INVALID_EXT_TYPE;
 		}
-
-
+		current_extension++;
 	}
 	// Parsing was successful.
 	return SKY_RET_OK;
