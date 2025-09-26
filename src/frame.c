@@ -80,6 +80,7 @@ int sky_frame_add_extension_arq_ctrl(SkyTransmitFrame *tx_frame, sky_arq_sequenc
 	// Cast a pointer to the extension header and fill the extension header.
 	ExtARQCtrl *extension = (ExtARQCtrl *)tx_frame->ptr;
 	extension->rx_sequence = sky_arq_seq_hton(rx_sequence);
+	extension->tx_sequence = sky_arq_seq_hton(tx_sequence);
 
 	// Move cursor forward and update frame and extension length.
 	const unsigned int len = sizeof(ExtARQCtrl);
