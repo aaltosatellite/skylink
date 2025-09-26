@@ -40,7 +40,7 @@ typedef enum {
 // #define SKY_PAYLOAD_MAX_LEN             (SKY_FRAME_MAX_LEN - (1 + SKY_MAX_IDENTITY_LEN + SKY_HMAC_LENGTH) )
 
 // Max header length is:
-int s = sizeof(SkyStaticHeader) + sizeof(ExtTDDControl) + sizeof(ExtARQReq) + sizeof(ExtARQSeq) +  sizeof(ExtARQCtrl) + sizeof(ExtARQHandshake) + sizeof(ExtHMACSequenceReset);
+// sizeof(SkyStaticHeader) + sizeof(ExtTDDControl) + sizeof(ExtARQReq) + sizeof(ExtARQSeq) +  sizeof(ExtARQCtrl) + sizeof(ExtARQHandshake) + sizeof(ExtHMACSequenceReset); 18
 // 223 - 1 (Version and identity length) - 7 (Max identity length) - 26 (Max header length) - 4 (HMAC or CRC32) = 185
 // Goal: 223 - 6 (Static identity length) - 18 (New max header length) - 4 (HMAC or CRC32) = 195 in half duplex or 199 in full duplex due to no TDD MAC control extension.
 
