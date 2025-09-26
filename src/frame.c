@@ -45,6 +45,7 @@ int sky_frame_add_extension_arq_sequence(SkyTransmitFrame *tx_frame, sky_arq_seq
 
 	// Move cursor forward and update frame and extension length.
 	const unsigned int len = sizeof(ExtARQSeq);
+	tx_frame->hdr->included_extensions = tx_frame->hdr->included_extensions | (1 << EXTENSION_ARQ_SEQUENCE);
 	tx_frame->frame->length += len;
 	tx_frame->ptr += len;
 	return SKY_RET_OK;
