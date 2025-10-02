@@ -169,17 +169,19 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--mode",    type=str, default="usrp", choices=("usrp", "soapy"), required=False)
 	parser.add_argument("--vc_base", type=int, default=7100,   required=False)
+	parser.add_argument("--center_freq", type=float, default=437.125e6, help="Center frequency used for communications [Hz]")
 	_args = parser.parse_args(sys.argv[1:])
 	vc_base = _args.vc_base
 	assert vc_base >= 1000
 	assert vc_base < 60000
 
-	if _args.mode == "soapy":
-		ftune_correction = 20e3
-		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=437.1250e6 + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2)
+	if _args.mode == "soapy": 
+		ftune_correction = 40e3
+		print(f"Using Soapy mode, center_freq={_args.center_freq} Hz, and ftune_correction={ftune_correction} Hz")
+		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2)
 	else:
 		assert _args.mode == "usrp"
-		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=437.0250e6 + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2)
+		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2)
 
 	#amqp_broker_addr_ = "amqp://guest:guest@localhost:5672"
 	amqp_broker_addr_ = "amqp://modem:fs1pmodem@192.168.10.2:5672"
