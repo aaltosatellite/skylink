@@ -56,6 +56,8 @@ class RadioLoop:
 		self.sample_maxamps 	= np.zeros(3, np.float64)
 		self.dbgprinter 		= DebugPrinter(log_title="RadioLoop", stdprint=True, zmqprint_host_port=("localhost", 11001))
 		self.DBGPRINT 			= self.dbgprinter.DBGPRINT
+		self.rx_gain0 			= 40
+		self.tx_gain0 			= 40
 
 	def is_ok(self):
 		if not self.on:
@@ -88,15 +90,13 @@ class RadioLoop:
 	def _usrp_start(self):
 		# This noise injection enforces the jit-compilation of much of the signal processing pipeline before the loop starts.
 		self.DBGPRINT("USRP start")
-		rx_gain = 56 # dB
-		tx_gain = 56 # dB
 		usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
 		usrp.set_rx_rate(self.radio_config.rx_sr0, 0)
 		usrp.set_tx_rate(self.radio_config.tx_sr0, 0)
 		usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(self.radio_config.rx_f_tune), 0)
 		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(self.radio_config.tx_f_tune), 0)
-		usrp.set_rx_gain(rx_gain, 0)
-		usrp.set_tx_gain(tx_gain, 0)
+		usrp.set_rx_gain(self.rx_gain0, 0)
+		usrp.set_tx_gain(self.tx_gain0, 0)
 		usrp.set_gpio_attr("FP0", "ATR_TX", 0x0100, 0x0100)
 		usrp.set_gpio_attr("FP0", "ATR_XX", 0x0100, 0x0100)
 		time.sleep(0.1)
@@ -141,23 +141,23 @@ class RadioLoop:
 		# Set up the stream and receive buffer
 		st_args = uhd.usrp.StreamArgs("fc32", "sc16")
 		st_args.channels = [0]
-		print("cpu format",st_args.cpu_format)
-		print("otw format",st_args.otw_format)
-		print("args",st_args.args)
+		#print("cpu format",st_args.cpu_format)
+		#print("otw format",st_args.otw_format)
+		#print("args",st_args.args)
 		rx_streamer = usrp.get_rx_stream(st_args)
 		# Start Stream
 		stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
 		stream_cmd.stream_now = True
-		recv_buffer = np.zeros((1, rx_buffer_len), dtype=np.complex64)
 		metadata = uhd.types.RXMetadata()
-		n_rx_loops = 0
-		n_rx_total = 0
-		avg_sr = 0.0
-		dt_amplitude_measure = 0.0
-		print_interval = 20.0
-		maxreset_interval = 30.0
-		t_next_print    = time.monotonic()
-		t_next_maxreset = time.monotonic() + maxreset_interval
+		recv_buffer 			= np.zeros((1, rx_buffer_len), dtype=np.complex64)
+		n_rx_loops 				= 0
+		n_rx_total 				= 0
+		avg_sr 					= 0.0
+		dt_amplitude_measure 	= 0.0
+		print_interval 			= 10.0
+		maxreset_interval 		= 30.0
+		t_next_print    		= time.monotonic()
+		t_next_maxreset 		= time.monotonic() + maxreset_interval
 		t00 = time.perf_counter()
 		rx_streamer.issue_stream_cmd(stream_cmd)
 		t00 = (t00+time.perf_counter())/2.0
@@ -165,12 +165,12 @@ class RadioLoop:
 			ts_mono = time.monotonic()
 			if ts_mono >= t_next_print:
 				ampmax_int_time = round(ts_mono - (t_next_maxreset - print_interval), 1)
-				self.DBGPRINT("(sr~{} MS/s measured vs {} MS/s specced). sample-amp-max({}s): ({}, {}, {})".format( round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5), ampmax_int_time, self.sample_maxamps[0], self.sample_maxamps[1], self.sample_maxamps[2]) )
+				self.DBGPRINT("(sr~{} MS/s measured vs {} MS/s specced). component-max:{}, avg-amplitude:{} ({}s)".format( round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5), self.sample_maxamps[0], self.sample_maxamps[1], ampmax_int_time) )
 				#amp_measure_percentage = 100 * dt_amplitude_measure/(time.perf_counter()-t00)
 				#DBGPRINT("t_ampl_measure: {} ms.  ({} % of total).".format( round(dt_amplitude_measure*1e3,3), round(amp_measure_percentage, 3) ))
 				t_next_print = ts_mono + print_interval
 			if ts_mono >= t_next_maxreset:
-				self.sample_maxamps[:] = 0.0
+				self.sample_maxamps[0] = 0.0
 				t_next_maxreset = ts_mono + maxreset_interval
 			ts_s0_mono = ts_mono
 			ts_s0_unix = time.time()
@@ -184,9 +184,8 @@ class RadioLoop:
 			#	continue
 			buff_ = recv_buffer[0, :rx_ret].copy()
 			t00_ = time.perf_counter()
-			self.sample_maxamps[0] = np.max( (self.sample_maxamps[0], np.max(buff_.real)) )
-			self.sample_maxamps[1] = np.max( (self.sample_maxamps[1], np.max(buff_.imag)) )
-			self.sample_maxamps[2] = np.max( (self.sample_maxamps[2], np.max(np.abs(buff_))) )
+			self.sample_maxamps[0] = np.max( (self.sample_maxamps[0], np.max(np.abs(buff_.real))) )
+			self.sample_maxamps[1] = self.sample_maxamps[1] +  (np.average( np.abs(buff_[0:32]) ) - self.sample_maxamps[1]) * 0.1
 			dt_amplitude_measure += (time.perf_counter() - t00_)
 			if not self.que_rx_samples_out.full():
 				self.que_rx_samples_out.put_nowait((buff_, ts_s0_mono, ts_s0_unix))
@@ -271,8 +270,8 @@ class RadioLoop:
 		sdr.setSampleRate(SOAPY_SDR_TX, 0, self.radio_config.tx_sr0)
 		sdr.setFrequency(SOAPY_SDR_RX, 0, self.radio_config.rx_f_tune)
 		sdr.setFrequency(SOAPY_SDR_TX, 0, self.radio_config.tx_f_tune)
-		sdr.setGain(SOAPY_SDR_RX, 0, 56)
-		sdr.setGain(SOAPY_SDR_TX, 0, 56)
+		sdr.setGain(SOAPY_SDR_RX, 0, self.rx_gain0)
+		sdr.setGain(SOAPY_SDR_TX, 0, self.tx_gain0)
 		self.DBGPRINT("RX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_RX, 0) ))
 		self.DBGPRINT("TX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_TX, 0) ))
 		self.DBGPRINT("RX gain:            {}".format( sdr.getGain(SOAPY_SDR_RX, 0) ))
@@ -286,26 +285,42 @@ class RadioLoop:
 
 	def _soapy_rx_loop(self, sdr:SoapySDR.Device, bufferlen):
 		rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
-		timeout = int(1e6 * bufferlen * 0.8 / self.radio_config.rx_sr0)
-		n_rx_loops = 0
-		print_interval = 20.0
-		buff = np.zeros(int(2**21), np.complex64)
-		absolute_bufflen = len(buff)
-		n_rx_total = 0
-		avg_sr = 0.0
-		t_next_print = time.monotonic()
+		rx_call_timeout = int(1e6 * bufferlen * 0.8 / self.radio_config.rx_sr0)
+		recv_buffer 			= np.zeros(int(2**21), np.complex64)
+		n_rx_loops 				= 0
+		n_rx_total 				= 0
+		avg_sr 					= 0.0
+		dt_amplitude_measure 	= 0.0
+		print_interval 			= 10.0
+		maxreset_interval 		= 30.0
+		t_next_print    		= time.monotonic()
+		t_next_maxreset 		= time.monotonic() + maxreset_interval
+		absolute_bufflen 		= len(recv_buffer)
 		t00 = time.perf_counter()
 		sdr.activateStream(rxStream)
+		t00 = (t00+time.perf_counter())/2.0
 		while self.on:
-			if time.monotonic() >= t_next_print:
-				self.DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4), round(1e-6*self.radio_config.rx_sr0, 5)))
-				t_next_print = time.monotonic() + print_interval
-			ts_s0_mono = time.monotonic()
+			ts_mono = time.monotonic()
+			if ts_mono >= t_next_print:
+				ampmax_int_time = round(ts_mono - (t_next_maxreset - print_interval), 1)
+				#self.DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4), round(1e-6*self.radio_config.rx_sr0, 5)))
+				self.DBGPRINT("(sr~{} MS/s measured vs {} MS/s specced). component-max:{}, avg-amplitude:{} ({}s)".format( round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5), self.sample_maxamps[0], self.sample_maxamps[1], ampmax_int_time) )
+				t_next_print = ts_mono + print_interval
+			if ts_mono >= t_next_maxreset:
+				self.sample_maxamps[0] = 0.0
+				t_next_maxreset = ts_mono + maxreset_interval
+			ts_s0_mono = ts_mono
 			ts_s0_unix = time.time()
-			ret = sdr.readStream(rxStream, [buff], numElems=absolute_bufflen, timeoutUs=timeout)
+			ret = sdr.readStream(rxStream, [recv_buffer], numElems=absolute_bufflen, timeoutUs=rx_call_timeout)
 			rx_ret = ret.ret
 			n_rx_total += rx_ret
 			avg_sr = n_rx_total / (time.perf_counter() - t00)
+
+			buff_ = recv_buffer[:rx_ret].copy()
+			t00_ = time.perf_counter()
+			self.sample_maxamps[0] = np.max( (self.sample_maxamps[0], np.max(np.abs(buff_.real))) )
+			self.sample_maxamps[1] = self.sample_maxamps[1] +  (np.average( np.abs(buff_[0:32]) ) - self.sample_maxamps[1]) * 0.1
+			dt_amplitude_measure += (time.perf_counter() - t00_)
 			#print(ret.ret) #num samples or error code
 			#print(ret.flags) #flags set by receive operation
 			#print(ret.timeNs) #timestamp for receive buffer
@@ -315,7 +330,7 @@ class RadioLoop:
 			#if self.self_mute:
 			#	continue
 			if not self.que_rx_samples_out.full():
-				self.que_rx_samples_out.put_nowait((buff[:rx_ret].copy(), ts_s0_mono, ts_s0_unix))
+				self.que_rx_samples_out.put_nowait((recv_buffer[:rx_ret].copy(), ts_s0_mono, ts_s0_unix))
 			else:
 				self.DBGPRINT("WARNING: radio-to-process queue overflow!")
 				raise Exception("radio-loop: radio-to-process queue overflow.")
@@ -343,15 +358,12 @@ class RadioLoop:
 			idx = 0
 			t_end = time.perf_counter() + dtt
 			self.self_mute = True  # the 5ms initial silence in composed samples also ensures this will have effect.
-
 			while idx < N:
 				blen = min(batchlen, len(samplearr) - idx)
-				#t0 = time.perf_counter()
 				if idx < (len(samplearr)-batchlen):
 					sdr.writeStream(txStream, [samplearr[idx:idx+blen]], blen, timeoutUs=1000000)
 				else:
 					sdr.writeStream(txStream, [samplearr[idx:idx+blen]], blen, timeoutUs=1000000, flags=SoapySDR.SOAPY_SDR_END_BURST)
-				#print("written in ", round( 1e6*(time.perf_counter() - t0), 2), "µs")
 				idx += batchlen
 			#sdr.deactivateStream(txStream)
 			#sdr.closeStream(txStream)

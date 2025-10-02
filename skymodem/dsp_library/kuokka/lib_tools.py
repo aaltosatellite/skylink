@@ -657,7 +657,7 @@ class DebugPrinter:
 			if ZMQPIn:
 				self.zmqp = ZMQPIn(port=self.zmqp_port, hostname=self.zmqp_host)
 			else:
-				print("Warning: ZMQPrint configured, but no ZMQPrint library imported.")
+				print("Warning: ZMQPrint host configured, but no ZMQPrint library imported.")
 
 	def DBGPRINT(self, first, *args):
 		ts = "[{}]".format( dtime.now().isoformat()[11:] )

@@ -225,6 +225,8 @@ def utest_golay24():
 	print("\t\tAll decoded successfully")
 
 	print("\t4 errors:")
+	n_deco = 0
+	n_recog = 0
 	for _ in range(nrep):
 		x = np.random.randint(0, 2**12 -1)
 		encoded = encode_golay24(x)
@@ -234,7 +236,32 @@ def utest_golay24():
 			enc_scrambled = enc_scrambled ^ (1 << ibit)
 		decoded = decode_golay24(enc_scrambled)[0]
 		assert (decoded == x) or (decoded == -1), (x, encoded, decoded)
-	print("\t\tAll decoded successfully OR recognized as corrupt")
+		if decoded == x:
+			n_deco += 1
+		elif (decoded == -1):
+			n_recog += 1
+	print("\t\tAll decoded successfully ({}) OR recognized as corrupt ({})".format(n_deco, n_recog))
+
+	print("\t5 errors:")
+	n_ok_or_err = 0
+	n_falsepos  = 0
+	for _ in range(nrep):
+		x = np.random.randint(0, 2**12 -1)
+		encoded = encode_golay24(x)
+		enc_scrambled = encoded
+		scrambled_bits = set()
+		for _ in range(5):
+			ibit = np.random.randint(0,24)
+			while ibit in scrambled_bits:
+				ibit = np.random.randint(0,24)
+			scrambled_bits.add(ibit)
+			enc_scrambled = enc_scrambled ^ (1 << ibit)
+		decoded = decode_golay24(enc_scrambled)[0]
+		if ((decoded == x) or (decoded == -1)):
+			n_ok_or_err += 1
+		else:
+			n_falsepos += 1
+	print("\t\t{} % of cases produces incorrect decoding.".format( round(100*n_falsepos/nrep) ))
 	print("\t[Passes.]")
 	print("## Golay24 test ==============================================")
 
@@ -253,6 +280,7 @@ def utest_golay24_success_rate_on_noise():
 			goes_through += 1
 	through_rate = goes_through / NN
 	print("{} % of random bit sequences are valid Golay24 codes.".format(round(through_rate*100, 1)))
+	print("\t[Passes.]")
 	print("## Golay24 through rate on noise =============================")
 
 
@@ -838,8 +866,8 @@ utest_golay24()
 utest_golay24_success_rate_on_noise()
 utest_synchword_deframing()
 utest_Reed_Solomon_1()
-utest_Reed_Solomon_2_bits(do_plot=True)
-utest_Reed_Solomon_2_bytes(do_plot=True)
+utest_Reed_Solomon_2_bits(do_plot=False)
+utest_Reed_Solomon_2_bytes(do_plot=False)
 utest_Reed_Solomon_3(N_trials=10000)
 utest_framing_basic_test_1()
 utest_framing_basic_test_2()
