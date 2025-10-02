@@ -1,94 +1,79 @@
 import numpy as np
-from kuokka.lib_demodulation import demodulation_sequence, create_DSD_statemx
+from kuokka.lib_demodulation import create_DD_statemx, create_demod_statemx, demodulate
 from kuokka.lib_symsynching import create_classic_JPL_statemx
-
-
+from matplotlib import pyplot as plt
+from kuokka.lib_tools import radionoise, make_samples2
 
 
 
 
 def tst_demodulation_continuity():
-	sps 			= 17
-	JPLdecay 		= 16
-	synch_delay_mpr = 8
-	lp_cutoff_coeff = 0.63
+	sps 			= 10.0
+	#JPLdecay 		= 16
+	#synch_delay_mpr = 8
+	lp_cutoff_coeff = 0.499*sps
 	lp_ntaps 		= 171
 	baudrate 		= 9600
 	sr 				= sps*baudrate
+	f_offset		= 0.1
+	mod_idx			= 0.5
+	n_silence_start	= int(0.1 * sr)
+	n_silence_end	= int(0.05 * sr)
 
-	noiseamp = 0.7
-	samples 		= np.zeros(0, dtype=np.complex128)
-	center_f_array 	= np.zeros(0, dtype=np.float64)
-	n_signal_segments = np.random.randint(0, 90)
-	signal_total = 0
-	print("Testing demodulation is continuous / batch boundary agnostic")
-	print("{} signal segments".format(n_signal_segments))
-	for i in range(n_signal_segments):
-		if np.random.random() > 0.15:
-			noiselen = np.random.randint(0, sps*900)
-			noise = np.random.normal(0, noiseamp, noiselen) + 1j*np.random.normal(0, noiseamp, noiselen)
-			samples = np.concatenate( (samples, noise) )
-			center_f_array = np.concatenate( (center_f_array, np.zeros(noiselen)-1.0 ) )
+	bitstring = np.random.randint(0, 2, 256*8)*2 -1
 
-		if np.random.random() > 0.15:
-			siglen = np.random.randint(0, sps*600)
-			signal_total += siglen
-			f_signal = (np.random.random()-0.5)*2 * 0.4
-			signal = np.random.normal(0, noiseamp, siglen) + 1j*np.random.normal(0, noiseamp, siglen)
-			samples = np.concatenate( (samples, signal) )
-			center_f_array = np.concatenate( (center_f_array, np.zeros(siglen)+f_signal ) )
-
-		if np.random.random() > 0.15:
-			noiselen = np.random.randint(0, sps*10)
-			noise = np.random.normal(0, noiseamp, noiselen) + 1j*np.random.normal(0, noiseamp, noiselen)
-			samples = np.concatenate( (samples, noise) )
-			center_f_array = np.concatenate( (center_f_array, np.zeros(noiselen)-1.0 ) )
-
+	samples, _ = make_samples2(sps_f=sps, bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=mod_idx, shaper_BT_prod=0.5, n_silence_start=n_silence_start, n_silence_end=n_silence_end)
+	samples = samples + radionoise(len(samples), sr=sr, W_per_Hz=0.2/baudrate)
 	nsamples = len(samples)
-	print("{} samples".format(nsamples))
-	assert len(center_f_array) == len(samples)
-	assert signal_total == np.sum( center_f_array > -0.5 )
+	demodmx0 = create_demod_statemx(lp_ntaps=lp_ntaps, lp_cutoff_coeff=lp_cutoff_coeff, sps_f=sps)
 
-	dmd_arr1 		= np.zeros(nsamples, dtype=np.float64)
-	dmd_arr2 		= np.zeros(nsamples, dtype=np.float64)
-	synch_arr1 		= np.zeros((nsamples,3), dtype=np.int64)
-	synch_arr2 		= np.zeros((nsamples,3), dtype=np.int64)
-	bitarr1 		= np.zeros(3*int(nsamples/sps))
-	bitarr2 		= np.zeros(3*int(nsamples/sps))
-	bitfarr1 		= np.zeros(3*int(nsamples/sps), dtype=np.float64)
-	bitfarr2 		= np.zeros(3*int(nsamples/sps), dtype=np.float64)
+	center_f_arr0 = np.zeros(nsamples) + f_offset
+	center_f_arr1 = np.zeros(nsamples) + f_offset + 0.1 * 8/sps
+	center_f_arr2 = np.zeros(nsamples) + f_offset + 0.2 * 8/sps
+	center_f_arr3 = np.zeros(nsamples) + f_offset + 0.3 * 8/sps
+	center_f_arr4 = np.zeros(nsamples) + f_offset - 0.4 * 8/sps
+	dmd_arr0 = np.zeros(nsamples)
+	dmd_arr1 = np.zeros(nsamples)
+	dmd_arr2 = np.zeros(nsamples)
+	dmd_arr3 = np.zeros(nsamples)
+	dmd_arr4 = np.zeros(nsamples)
 
-	JPLstatemx1 = create_classic_JPL_statemx(N_eps=sps, n_halflife=JPLdecay)
-	JPLstatemx2 = create_classic_JPL_statemx(N_eps=sps, n_halflife=JPLdecay)
-	DSD_statemx1 = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff_coeff=lp_cutoff_coeff, synch_delay_mpr_f=synch_delay_mpr, sps_f=sps)
-	DSD_statemx2 = create_DSD_statemx(lp_ntaps=lp_ntaps, lp_cutoff_coeff=lp_cutoff_coeff, synch_delay_mpr_f=synch_delay_mpr, sps_f=sps)
-
-	dmd_head1, bit_head1 = demodulation_sequence(rs_arr=samples, centerf_arr=center_f_array, i_rs0=0, nsamples=nsamples, dmd_arr=dmd_arr1,
-						  synch_arr=synch_arr1, dmdsynch_head0=0, JPLstatemx=JPLstatemx1, demodmx=DSD_statemx1, bitarr=bitarr1, bitfarr=bitfarr1, bit_head0=0)
-	assert dmd_head1 == signal_total, (dmd_head1, signal_total)
-
-	head2 = 0
-	bit_head2 = 0
-	dmd_head2 = 0
-	nchunks = 0
-	while head2 < nsamples:
-		n_process = np.random.randint(0,  2000)
-		n_process = min(n_process, nsamples - head2)
-		dmd_head2, bit_head2 = demodulation_sequence(rs_arr=samples, centerf_arr=center_f_array, i_rs0=head2, nsamples=n_process, dmd_arr=dmd_arr2,
-						  synch_arr=synch_arr2, dmdsynch_head0=dmd_head2, JPLstatemx=JPLstatemx2, demodmx=DSD_statemx2, bitarr=bitarr2, bitfarr=bitfarr2, bit_head0=bit_head2)
-		head2 += n_process
-		nchunks += 1
-	assert dmd_head2 == signal_total
-	assert dmd_head1 == dmd_head2
-
-	assert bit_head1 == bit_head2
-	assert np.all( abs(bitarr1[0:bit_head1]) > 0.5 )
-	assert np.allclose(bitarr1[0:bit_head1], bitarr2[0:bit_head2])
-	assert np.allclose(dmd_arr1[0:dmd_head1], dmd_arr2[0:dmd_head2])
-	assert np.allclose(synch_arr1[0:dmd_head1], synch_arr2[0:dmd_head2])
-
-	print("ALL CLEAR. 1 vs {} chunks".format(nchunks))
+	print("Demodulating.")
+	demodulate(sample_arr=samples, center_f_arr=center_f_arr0, sample_i0=0, demod_n_samples=nsamples, dmd_arr=dmd_arr0, demodmx=demodmx0.copy())
+	demodulate(sample_arr=samples, center_f_arr=center_f_arr1, sample_i0=0, demod_n_samples=nsamples, dmd_arr=dmd_arr1, demodmx=demodmx0.copy())
+	demodulate(sample_arr=samples, center_f_arr=center_f_arr2, sample_i0=0, demod_n_samples=nsamples, dmd_arr=dmd_arr2, demodmx=demodmx0.copy())
+	demodulate(sample_arr=samples, center_f_arr=center_f_arr3, sample_i0=0, demod_n_samples=nsamples, dmd_arr=dmd_arr3, demodmx=demodmx0.copy())
+	demodulate(sample_arr=samples, center_f_arr=center_f_arr4, sample_i0=0, demod_n_samples=nsamples, dmd_arr=dmd_arr4, demodmx=demodmx0.copy())
 	print("")
+
+	stdlen   = int(sps*8*8)
+	std_arr0 = np.array([np.std(dmd_arr0[i:i+stdlen]) for i in range(0, nsamples-stdlen)])
+	std_arr1 = np.array([np.std(dmd_arr1[i:i+stdlen]) for i in range(0, nsamples-stdlen)])
+	std_arr2 = np.array([np.std(dmd_arr2[i:i+stdlen]) for i in range(0, nsamples-stdlen)])
+	std_arr3 = np.array([np.std(dmd_arr3[i:i+stdlen]) for i in range(0, nsamples-stdlen)])
+	std_arr4 = np.array([np.std(dmd_arr4[i:i+stdlen]) for i in range(0, nsamples-stdlen)])
+
+	fig = plt.figure(figsize=(14,12))
+	fig.set_layout_engine("tight")
+	ax1 = fig.add_subplot(121)
+	ax2 = fig.add_subplot(122)
+	ax1.plot(np.arange(nsamples), dmd_arr0)
+	ax1.plot(np.arange(nsamples), dmd_arr1)
+	ax1.plot(np.arange(nsamples), dmd_arr2)
+	ax1.plot(np.arange(nsamples), dmd_arr3)
+	ax1.plot(np.arange(nsamples), dmd_arr4)
+	ax1.grid()
+
+	ax2.plot(np.arange(nsamples-stdlen), std_arr0)
+	ax2.plot(np.arange(nsamples-stdlen), std_arr1)
+	ax2.plot(np.arange(nsamples-stdlen), std_arr2)
+	ax2.plot(np.arange(nsamples-stdlen), std_arr3)
+	ax2.plot(np.arange(nsamples-stdlen), std_arr4)
+	ax2.grid()
+	plt.show()
+
+
+
 
 
 
@@ -100,8 +85,17 @@ def tst_demodulation_continuity():
 
 
 if __name__ == '__main__':
-	for _ in range(2000):
-		tst_demodulation_continuity()
+	tst_demodulation_continuity()
+
+
+
+
+
+
+
+
+
+
 
 
 

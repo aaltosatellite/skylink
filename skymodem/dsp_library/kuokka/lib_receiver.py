@@ -4,7 +4,7 @@ from .lib_demodulation import create_demod_statemx, create_DD_statemx, demodulat
 from .lib_symsynching import create_classic_JPL_statemx
 from .lib_fft_finder import create_fft_f_centerer_csense_statemx, fft_f_centerer_csense
 from .lib_framing import create_deframer, RS_MAX_ENCODED_LEN, frame_packet, RS_MAX_PL_LEN
-from .lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, radionoise, make_samples2, ints_to_bits, choose_fftlen, freq_shift_phased_precomp, create_freq_shifter_precomp
+from .lib_tools import FS1P_SYNCHWORD, FS1P_SYNCHWORD_LEN, radionoise, make_samples2, ints_to_bits, choose_fftlen, freq_shift_phased_precomp, create_freq_shifter_precomp
 from .lib_reedsolomon import get_default_rs
 from .lib_resampler import staged_resampler_execute_stream, create_staged_resampler, minimal_disc_halflen_for_staged_resampler, minimal_frac_halflen_for_staged_resampler
 from .lib_tools import get_frequency_search_map
@@ -49,6 +49,8 @@ class RXDSPConfig:
 		self.carrier_sense		= True
 		# --------------------------------------------------
 		# framing ------------------------------------------
+		self.synchword			= FS1P_SYNCHWORD
+		self.synchword_len		= FS1P_SYNCHWORD_LEN
 		self.use_scrambler 		= True
 		self.use_rs 			= True
 		self.synch_threshold 	= 3
@@ -90,6 +92,12 @@ class RXDSPConfig:
 		assert (self.lp_ntaps % 2) == 1
 		assert 0 < self.lp_cutoff_coeff < (0.5*self.sps)
 		assert 0 <= self.synch_delay_mpr <= 64.0
+		assert type(self.synchword) == int
+		assert self.synchword > 0
+		assert type(self.synchword_len) == int
+		assert self.synchword_len >= 16
+		assert self.synchword_len <= 64
+		assert self.synchword < (2**self.synchword_len)
 		assert type(self.use_scrambler) == bool
 		assert type(self.use_rs) == bool
 		assert type(self.synch_threshold) == int
@@ -216,7 +224,7 @@ class Receiver:
 		self.JPLstatemx = create_classic_JPL_statemx(N_eps=config.sps, n_halflife=config.JPL_halflife)
 		self.demodmx 	= create_demod_statemx(lp_ntaps=config.lp_ntaps, lp_cutoff_coeff=config.lp_cutoff_coeff, sps_f=config.sps)
 		self.sddmx 		= create_DD_statemx(synch_delay_mpr_f=config.synch_delay_mpr, sps_f=config.sps, Neps=int(config.sps))
-		self.deframermx = create_deframer(use_scrambler=config.use_scrambler, use_rs=config.use_rs, data_maxlen=config.data_maxlen, synchword=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, synch_threshold=config.synch_threshold)
+		self.deframermx = create_deframer(use_scrambler=config.use_scrambler, use_rs=config.use_rs, data_maxlen=config.data_maxlen, synchword=config.synchword, synchword_len=config.synchword_len, synch_threshold=config.synch_threshold)
 		a = int(config.batch_maxlen * config.get_r_rate() * 2)
 		b = self.fftlen * 3
 		self.buffer_roll_limit 	= self.bufferlen - (a + b)
@@ -402,7 +410,7 @@ def get_a_precompiling_sampleset(dsp_config:RXDSPConfig, do_print=False):
 	rs_mx, rs_cfg = get_default_rs()
 	pl = np.random.randint(0,255, RS_MAX_PL_LEN-2)
 	preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
-	frame_bits = frame_packet(pl=pl, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
+	frame_bits = frame_packet(pl=pl, synchword_int=dsp_config.synchword, synchword_len=dsp_config.synchword_len, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
 	bitstring = np.concatenate( (preamble_bits, frame_bits) )
 	transmission, _ = make_samples2(sps_f=sr0/dsp_config.baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=dsp_config.mod_index, shaper_BT_prod=dsp_config.BT_rx_match, n_silence_start=0, n_silence_end=0)
 

@@ -2,7 +2,7 @@ import queue
 import numpy as np
 from .lib_receiver import Receiver, RXDSPConfig, precompile_receiver
 from .lib_framing import frame_packet
-from .lib_tools import doppler_correction, ints_to_bits, DEFAULT_SYNCHWORD_LEN, DEFAULT_SYNCHWORD, make_samples2, snr_dB, DebugPrinter
+from .lib_tools import doppler_correction, ints_to_bits, FS1P_SYNCHWORD_LEN, FS1P_SYNCHWORD, make_samples2, snr_dB, DebugPrinter
 from .lib_reedsolomon import get_default_rs
 import threading
 from queue import Queue, Empty
@@ -32,6 +32,8 @@ class TXDSPConfig:
 		self.tx_mod_index		= 0.5
 		# --------------------------------------------------
 		self.tx_f_adjustment_halfband = 12e3
+		self.synchword			= FS1P_SYNCHWORD
+		self.synchword_len		= FS1P_SYNCHWORD_LEN
 
 	def check_validity(self):
 		assert 1e3 < self.tx_sr0 < 32e6
@@ -203,7 +205,7 @@ class DSPLoop:
 		f_use_offset = self._get_transmit_frequency(as_offset=True, ts_now_mono=ts_now_mono)
 		f_offset_nrm = f_use_offset / self.tx_dsp_config.tx_sr0
 		pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
-		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
+		bits = frame_packet(pl=pl_char_ints, synchword_int=self.tx_dsp_config.synchword, synchword_len=self.tx_dsp_config.synchword_len, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (self.preamble_bits, bits) )
 		sps = self.tx_dsp_config.tx_sr0 / baudrate
 		n_silence_start = int(self.tx_dsp_config.tx_sr0 * 1.0e-3) # TODO: this should be a setting?

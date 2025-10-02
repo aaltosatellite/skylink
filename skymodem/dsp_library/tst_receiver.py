@@ -1,7 +1,7 @@
 import numpy as np
 from kuokka.lib_framing import frame_packet
 from kuokka.lib_reedsolomon import get_default_rs, RS_MAX_ENCODED_LEN, RS_MAX_PL_LEN, RS_MIN_ENCODED_LEN
-from kuokka.lib_tools import DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_BITS, DEFAULT_SYNCHWORD_LEN, ints_to_bits
+from kuokka.lib_tools import FS1P_SYNCHWORD, FS1P_SYNCHWORD_LEN, ints_to_bits
 from kuokka.lib_receiver import Receiver, RXDSPConfig, precompile_receiver
 from mtools.tools_dsp import waterfall_mx
 from mtools.tools_system import mpr_set
@@ -35,7 +35,7 @@ def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payl
 	for i_pl in range(n_payloads):
 		pl = os.urandom(np.random.randint(1,RS_MAX_PL_LEN))
 		pl_char_ints = np.array(bytearray(pl), dtype=np.int64)
-		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
+		bits = frame_packet(pl=pl_char_ints, synchword_int=FS1P_SYNCHWORD, synchword_len=FS1P_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (preamble_bits, bits) )
 		tx_sps = sr0 / baudrate
 		pl_samples, _ = make_samples2(sps_f=tx_sps, bitstring=bits, f_offset=f_ofst_nrm, power=1.0, mod_index=mod_index, shaper_BT_prod=BT, n_silence_start=0, n_silence_end=0)

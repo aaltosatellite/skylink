@@ -26,7 +26,7 @@ def make_powertest_samples(sr, t_array, bw=0.1):
 
 
 def t1_connect_and_observe():
-	config = RadioConfig(mode="usrp", rx_sr=8e6, rx_f_tune=437.0e6, rx_f_center=437.0e6, tx_sr=2e6, tx_f_tune=170.0e6, tx_f_center=437.0e6)
+	config = RadioConfig(mode="usrp", rx_sr=8e6, rx_f_tune=437.0e6, tx_sr=2e6, tx_f_tune=170.0e6)
 	que_tx_samples_in = Queue(2)
 	que_rx_samples_out = Queue(100)
 	sinkt = threading.Thread(target=blind_sink, args=(que_rx_samples_out,), daemon=True)
@@ -52,7 +52,7 @@ def t2_continuous_transmit(mode, tx_gain):
 	assert mode in ("usrp", "soapy")
 	sr00 = 2e6
 	f00 = 437.000e6
-	config = RadioConfig(mode=mode, rx_sr=sr00, rx_f_tune=f00, rx_f_center=f00, tx_sr=sr00, tx_f_tune=f00, tx_f_center=f00)
+	config = RadioConfig(mode=mode, rx_sr=sr00, rx_f_tune=f00, tx_sr=sr00, tx_f_tune=f00)
 	que_tx_samples_in = Queue(2)
 	que_rx_samples_out = Queue(100)
 	sinkt = threading.Thread(target=blind_sink, args=(que_rx_samples_out,), daemon=True)

@@ -5,7 +5,7 @@ import uhd
 from queue import Queue, Empty
 from kuokka.lib_reedsolomon import get_default_rs
 from kuokka.lib_framing import frame_packet
-from kuokka.lib_tools import make_samples2, DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_LEN, ints_to_bits
+from kuokka.lib_tools import make_samples2, FS1P_SYNCHWORD, FS1P_SYNCHWORD_LEN, ints_to_bits
 import zmq
 
 
@@ -131,7 +131,7 @@ class UHFUsrpCharacterizer:
 		assert abs(f_offset_nrm) < (0.45 - f_baudrate_nrm*0.6)
 		assert abs(f_offset_nrm) > (f_baudrate_nrm*0.6)
 		pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
-		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=DEFAULT_SYNCHWORD_LEN, use_scrambler=True, use_rs=False, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
+		bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=FS1P_SYNCHWORD_LEN, use_scrambler=True, use_rs=False, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (self.preamble_bits, bits) )
 		sps = self.sr0_tx_actual / baudrate
 		n_silence_start = int(self.sr0_tx_actual * 2.0e-3)

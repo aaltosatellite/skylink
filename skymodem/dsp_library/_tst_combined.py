@@ -1,6 +1,6 @@
 import numpy as np
 from kuokka.lib_symsynching import create_classic_JPL_statemx
-from kuokka.lib_demodulation import create_DSD_statemx, demod_synch_decide
+from kuokka.lib_demodulation import create_DSD_statemx
 import time
 from mtools.tools_dsp import waterfall_mx
 from kuokka.lib_tools import radionoise

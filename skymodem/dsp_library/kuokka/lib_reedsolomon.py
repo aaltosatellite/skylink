@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit
 """
-(this)
+Foresail1, Foresail1p, and Suomi100 use this.
 const ReedSolomonConfig CCSDS_RS_255_223 = {  
 	.symbol_size = 8,
 	.primitive_polynomial = 0x187,  // x^8 + x^7 + x^2 + x + 1
@@ -28,7 +28,7 @@ RS_MAX_PL_LEN 			= 223
 RS_MAX_ENCODED_LEN 		= 223+32
 RS_MIN_ENCODED_LEN 		= 0+32
 
-def get_default_rs():
+def get_default_rs():  # Suomi100 also uses this
 	rs_mx, rs_cfg = ReedSolomonInit(symbol_size=8, primitive_polynomial=0x187, first_consecutive_root=112, generator_root_gap=11, coded_bytes=223, num_roots=32, pad=0)
 	return rs_mx, rs_cfg
 

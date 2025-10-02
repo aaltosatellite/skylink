@@ -3,10 +3,11 @@ from numba import njit, prange, objmode
 import time
 import sys
 
-#DEFAULT_SYNCHWORD = 0x930B51DE
-DEFAULT_SYNCHWORD = 0x1ACFFC1D
-DEFAULT_SYNCHWORD_BITS = np.array( [int(x) for x in ("0"*32+bin(DEFAULT_SYNCHWORD)[2:])[-32:]], dtype=np.int32)
-DEFAULT_SYNCHWORD_LEN = 32
+S100_CENTER_FREQUENCY = 437.7752e6
+S100_SYNCHWORD 		= 0x930B51DE   	# Suomi100
+S100_SYNCHWORD_LEN 	= 32
+FS1P_SYNCHWORD 		= 0x1ACFFC1D	# Same for original FS1
+FS1P_SYNCHWORD_LEN 	= 32
 
 # = USRP B200/B210 VALID SAMPLERATES =========================================================================================================================================================
 # = USRP B200/B210 VALID SAMPLERATES =========================================================================================================================================================
@@ -50,6 +51,7 @@ usrp_B200_valid_samplerates = np.array([
 
 # = CCSDS TM RANDOMIZER ======================================================================================================================================================================
 # = CCSDS TM RANDOMIZER ======================================================================================================================================================================
+# Suomi100 uses this
 ccsds_tm_whitening_bytes = np.array([
 0xff, 0x48, 0xe,  0xc0, 0x9a, 0xd,  0x70, 0xbc, 0x8e, 0x2c, 0x93, 0xad, 0xa7, 0xb7, 0x46, 0xce, 0x5a, 0x97, 0x7d, 0xcc, 0x32, 0xa2, 0xbf, 0x3e,
 0xa,  0x10, 0xf1, 0x88, 0x94, 0xcd, 0xea, 0xb1, 0xfe, 0x90, 0x1d, 0x81, 0x34, 0x1a, 0xe1, 0x79, 0x1c, 0x59, 0x27, 0x5b, 0x4f, 0x6e, 0x8d, 0x9c,
@@ -431,7 +433,7 @@ def ints_to_bits(int_arr, bits_per_int):
 	bits = np.zeros(len(int_arr)*bits_per_int, dtype=np.int64)
 	for i in range(len(int_arr)):
 		for j in range(bits_per_int):
-			bits[i*bits_per_int+j] = (int_arr[i]>>j) & 1
+			bits[i*bits_per_int+j] = (int_arr[i]>>(bits_per_int-(j+1))) & 1
 	return bits
 
 @njit(cache=True)

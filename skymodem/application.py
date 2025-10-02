@@ -36,7 +36,7 @@ def get_usrp_receiver_config(f_center, baudrate, max_signal_bw):
 		sr0 = [float(x) for x in sorted(usrp_B200_valid_samplerates) if x >= minimum_samplerate][0]
 	print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
 	print("Using usrp radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr0*1e-6, 3) ))
-	radio_config 	= RadioConfig(mode="usrp", rx_sr=sr0, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr=sr0, tx_f_tune=f_tune, tx_f_center=f_center)
+	radio_config 	= RadioConfig(mode="usrp", rx_sr=sr0, rx_f_tune=f_tune, tx_sr=sr0, tx_f_tune=f_tune)
 	rx_dsp_config 	= RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
 	tx_dsp_config 	= TXDSPConfig(tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate)
 	return rx_dsp_config, tx_dsp_config, radio_config
@@ -61,7 +61,7 @@ def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, m
 	print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
 	print("Calculated necessary samplerate at {} ks/s".format( round(1.0e-3 * sr_leecher, 1) ))
 	print("Using soapy-leecher radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr_leecher*1e-6, 3) ))
-	radio_config 	= RadioConfig(mode="soapy", rx_sr=sr_leecher, rx_f_tune=f_tune, rx_f_center=f_center, tx_sr=sr_leecher, tx_f_tune=f_tune, tx_f_center=f_center)
+	radio_config 	= RadioConfig(mode="soapy", rx_sr=sr_leecher, rx_f_tune=f_tune, tx_sr=sr_leecher, tx_f_tune=f_tune)
 	rx_dsp_config 	= RXDSPConfig(rx_sr0=sr_leecher, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
 	tx_dsp_config 	= TXDSPConfig(tx_sr0=sr_leecher, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate)
 	return rx_dsp_config, tx_dsp_config, radio_config
@@ -175,7 +175,7 @@ if __name__ == '__main__':
 	assert vc_base >= 1000
 	assert vc_base < 60000
 
-	if _args.mode == "soapy": 
+	if _args.mode == "soapy":
 		ftune_correction = 40e3
 		print(f"Using Soapy mode, center_freq={_args.center_freq} Hz, and ftune_correction={ftune_correction} Hz")
 		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2)

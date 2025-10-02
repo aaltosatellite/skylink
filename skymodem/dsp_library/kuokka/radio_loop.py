@@ -30,15 +30,13 @@ def DBGPRINT(*args, **kwargs):
 
 
 class RadioConfig:
-	def __init__(self, mode, rx_sr, rx_f_tune, rx_f_center, tx_sr, tx_f_tune, tx_f_center):
+	def __init__(self, mode, rx_sr, rx_f_tune, tx_sr, tx_f_tune):
 		assert mode in ("usrp", "soapy")
 		self.mode 			= mode
 		self.rx_sr0 		= rx_sr
 		self.rx_f_tune 		= rx_f_tune
-		self.rx_f_center 	= rx_f_center
 		self.tx_sr0 		= tx_sr
 		self.tx_f_tune 		= tx_f_tune
-		self.tx_f_center 	= tx_f_center
 
 
 
@@ -58,6 +56,7 @@ class RadioLoop:
 		self.DBGPRINT 			= self.dbgprinter.DBGPRINT
 		self.rx_gain0 			= 40
 		self.tx_gain0 			= 40
+		self.rx_print_interval	= 20.0
 
 	def is_ok(self):
 		if not self.on:
@@ -154,7 +153,6 @@ class RadioLoop:
 		n_rx_total 				= 0
 		avg_sr 					= 0.0
 		dt_amplitude_measure 	= 0.0
-		print_interval 			= 10.0
 		maxreset_interval 		= 30.0
 		t_next_print    		= time.monotonic()
 		t_next_maxreset 		= time.monotonic() + maxreset_interval
@@ -164,11 +162,11 @@ class RadioLoop:
 		while self.on:
 			ts_mono = time.monotonic()
 			if ts_mono >= t_next_print:
-				ampmax_int_time = round(ts_mono - (t_next_maxreset - print_interval), 1)
+				ampmax_int_time = round(ts_mono - (t_next_print - maxreset_interval), 1)
 				self.DBGPRINT("(sr~{} MS/s measured vs {} MS/s specced). component-max:{}, avg-amplitude:{} ({}s)".format( round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5), self.sample_maxamps[0], self.sample_maxamps[1], ampmax_int_time) )
 				#amp_measure_percentage = 100 * dt_amplitude_measure/(time.perf_counter()-t00)
 				#DBGPRINT("t_ampl_measure: {} ms.  ({} % of total).".format( round(dt_amplitude_measure*1e3,3), round(amp_measure_percentage, 3) ))
-				t_next_print = ts_mono + print_interval
+				t_next_print = ts_mono + self.rx_print_interval
 			if ts_mono >= t_next_maxreset:
 				self.sample_maxamps[0] = 0.0
 				t_next_maxreset = ts_mono + maxreset_interval
@@ -291,7 +289,6 @@ class RadioLoop:
 		n_rx_total 				= 0
 		avg_sr 					= 0.0
 		dt_amplitude_measure 	= 0.0
-		print_interval 			= 10.0
 		maxreset_interval 		= 30.0
 		t_next_print    		= time.monotonic()
 		t_next_maxreset 		= time.monotonic() + maxreset_interval
@@ -302,10 +299,10 @@ class RadioLoop:
 		while self.on:
 			ts_mono = time.monotonic()
 			if ts_mono >= t_next_print:
-				ampmax_int_time = round(ts_mono - (t_next_maxreset - print_interval), 1)
+				ampmax_int_time = round(ts_mono - (t_next_maxreset - maxreset_interval), 1)
 				#self.DBGPRINT("(rx-#{}) (sr~{} MS/s) (vs {} MS/s)".format(n_rx_loops, round(1e-6*avg_sr, 4), round(1e-6*self.radio_config.rx_sr0, 5)))
 				self.DBGPRINT("(sr~{} MS/s measured vs {} MS/s specced). component-max:{}, avg-amplitude:{} ({}s)".format( round(1e-6*avg_sr, 5), round(1e-6*self.radio_config.rx_sr0, 5), self.sample_maxamps[0], self.sample_maxamps[1], ampmax_int_time) )
-				t_next_print = ts_mono + print_interval
+				t_next_print = ts_mono + self.rx_print_interval
 			if ts_mono >= t_next_maxreset:
 				self.sample_maxamps[0] = 0.0
 				t_next_maxreset = ts_mono + maxreset_interval
@@ -396,8 +393,6 @@ class RadioLoop:
 		self.radio_config.tx_sr0 	= sr0
 		self.radio_config.rx_f_tune = 437e6
 		self.radio_config.tx_f_tune = 437e6
-		self.radio_config.rx_f_center = self.radio_config.rx_f_tune + 25e3
-		self.radio_config.tx_f_center = self.radio_config.tx_f_tune + 25e3
 		self.rx_thread 			= threading.Thread(target=self._recording_rx_loop,  args=(samples, sr0), daemon=True) #TODO bufferlen as setting?
 		self.tx_thread 			= threading.Thread(target=self._recording_tx_loop,  args=tuple(),        daemon=True) #TODO bufferlen as setting?
 		self.on = True
@@ -457,8 +452,6 @@ class RadioLoop:
 		#self.radio_config.tx_sr0 	= sr0
 		self.radio_config.rx_f_tune = 437e6
 		self.radio_config.tx_f_tune = 437e6
-		self.radio_config.rx_f_center = self.radio_config.rx_f_tune + 25e3
-		self.radio_config.tx_f_center = self.radio_config.tx_f_tune + 25e3
 		self.rx_thread = threading.Thread(target=self._sim_rx_loop,  args=(noiseSPD, ts_pl_list, rx_samplearr_que),  daemon=True) #TODO bufferlen as setting?
 		self.tx_thread = threading.Thread(target=self._sim_tx_loop,  args=(tx_sample_que,),  daemon=True) #TODO bufferlen as setting?
 		self.on = True

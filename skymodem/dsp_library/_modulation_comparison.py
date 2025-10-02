@@ -1,5 +1,5 @@
 import numpy as np
-from kuokka.lib_tools import make_samples2, DEFAULT_SYNCHWORD_BITS
+from kuokka.lib_tools import make_samples2, ints_to_bits, FS1P_SYNCHWORD
 from sdr_recorder import get_samples, fpaths
 from mtools.tools_dsp import waterfall_mx
 from scipy.signal import firwin
@@ -10,12 +10,14 @@ def compare_generated_to_recording():
 	rec_samples = get_samples(fpath)
 	rec_samples = rec_samples * np.exp(2j*np.pi*np.arange(len(rec_samples)) * (fshift0+200)/1e6 )
 	rec_samples = rec_samples[int(2.2e6):int(2.7e6)]
-	waterfall_mx(samples=rec_samples, fftlen=2048, fft_jump=1024, srate=1e6, plot_and_show=True, y_is_time=False)
+	waterfall_mx(samples=rec_samples, fftlen=2048, fft_jump=1024, fft_stack=1, srate=1e6, plot_and_show=True, y_is_time=False)
 
+	preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
 	bitstring = np.random.randint(0,2, 256)*2 - 1
-	bitstring[0:64] = [1,-1]*16*2
-	bitstring[64:64+32] = DEFAULT_SYNCHWORD_BITS*2 -1
-	bitstring[64+32:64+32+8] = [1,1,-1,-1,-1, 1,1,1]
+	#bitstring[0:64] = [1,-1]*16*2
+	bitstring[0:64] = preamble_bits
+	bitstring[64:64+32] = ints_to_bits([FS1P_SYNCHWORD,], 32) * 2 - 1
+	bitstring[64+32:64+32+8] = [-1,-1,-1,-1,-1, -1,-1,-1] #[1,1,-1,-1,-1, 1,1,1]
 	bitstring[64+32+8:64+32+8+12] = [-1,]*12
 	sr0 = 1e6
 	sps = sr0/9600

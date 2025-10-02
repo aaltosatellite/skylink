@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from kuokka.lib_tools import CC1125_symbolrate_for_M_E, CC1125_M_E_for_symbolrate
 from kuokka.lib_tools import CC1125_peak_deviation_for_M_E, CC1125_DEV_M_E_for_peak_deviation
-from kuokka.lib_tools import CCSDS_TM_whitener_sequence, DEFAULT_SYNCHWORD, DEFAULT_SYNCHWORD_BITS
+from kuokka.lib_tools import CCSDS_TM_whitener_sequence, FS1P_SYNCHWORD, ints_to_bits
 from kuokka.lib_reedsolomon import RS_decode, RS_encode, get_default_rs, RS_MAX_PL_LEN, RS_MIN_ENCODED_LEN, RS_MAX_ENCODED_LEN
 from kuokka.lib_framing import deframe, frame_packet, create_deframer, encode_golay24, decode_golay24, deframe_synchword
 
@@ -326,7 +326,7 @@ def utest_synchword_deframing():
 	synchbits0 = np.zeros(32, dtype=np.int32)
 	ib = 0
 	for i in range(32-1, -1, -1):
-		synchbits0[ib] = (DEFAULT_SYNCHWORD >> i) & 1
+		synchbits0[ib] = (FS1P_SYNCHWORD >> i) & 1
 		ib += 1
 	rint = np.random.randint
 	synch_len_mask = (2**32)-1
@@ -343,7 +343,7 @@ def utest_synchword_deframing():
 				ok = 0
 				n_errors = -1
 				for ib,b in enumerate(bits):
-					ok, latest_bits, bit_idx, n_errors = deframe_synchword(bit=b, latest_bits=latest_bits, synchword=DEFAULT_SYNCHWORD, synch_length_mask=synch_len_mask, synchword_len=32, synch_threshold=threshold)
+					ok, latest_bits, bit_idx, n_errors = deframe_synchword(bit=b, latest_bits=latest_bits, synchword=FS1P_SYNCHWORD, synch_length_mask=synch_len_mask, synchword_len=32, synch_threshold=threshold)
 					if ib < (len(bits) -1):
 						assert ok == 0, (ok, n_corrupt, threshold, "A")
 				assert n_errors == n_corrupt
@@ -359,7 +359,7 @@ def utest_synchword_deframing():
 		latest_bits = 0
 		threshold = 0
 		for ib,b in enumerate(noise):
-			ok, latest_bits, bit_idx, n_errors = deframe_synchword(bit=b, latest_bits=latest_bits, synchword=DEFAULT_SYNCHWORD, synch_length_mask=synch_len_mask, synchword_len=32, synch_threshold=threshold)
+			ok, latest_bits, bit_idx, n_errors = deframe_synchword(bit=b, latest_bits=latest_bits, synchword=FS1P_SYNCHWORD, synch_length_mask=synch_len_mask, synchword_len=32, synch_threshold=threshold)
 			min_error = min(min_error, n_errors)
 		print("\tsmallest error in a noise of {}M length: {}".format( round(1e-6 * nn, 3), min_error))
 	print("\t[Passes.]")
@@ -621,7 +621,7 @@ def utest_framing_basic_test_1():
 	print("\tand corrupted bit counts")
 	rint = np.random.randint
 	rs_mx, rs_cfg = get_default_rs()
-	synchword = DEFAULT_SYNCHWORD
+	synchword = FS1P_SYNCHWORD
 	noiseA = np.random.randint(0,2, 120)
 	for pl_len in range(0, RS_MAX_PL_LEN+1):
 		for n_corrupt in range(0, 16+1):
@@ -679,7 +679,7 @@ def utest_framing_basic_test_2():
 	fault_counts = np.zeros(2)
 	n_loops = 10000
 	for ii in range(n_loops):
-		synchword = DEFAULT_SYNCHWORD
+		synchword = FS1P_SYNCHWORD
 		pl_chars1 = np.random.randint(0,255, rint(0,223+1))
 		pl_chars2 = np.random.randint(0,255, rint(0,223+1))
 		bits1 = frame_packet(pl=pl_chars1, synchword_int=synchword, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
@@ -715,9 +715,8 @@ def utest_framing_basic_test_2():
 			assert np.all(pl_list[0] == pl_chars1)
 			assert np.all(pl_list[1] == pl_chars2)
 		else:
-			maxcorr1 = np.max(np.correlate(bits[0:len(noiseA)+16]*2-1, DEFAULT_SYNCHWORD_BITS*2 -1 ))
-			maxcorr2 = np.max(np.correlate(bits[len(noiseA)+32 : len(noiseA)+len(bits1)+len(noiseB)+16 ]*2-1, DEFAULT_SYNCHWORD_BITS*2 -1 ))
-			#noiseB_maxcorr = np.max(np.correlate(bits[len(noiseA)+len(bits1):len(noiseA)+len(bits1)+33 ]*2-1, DEFAULT_SYNCHWORD_BITS*2 -1 ))
+			maxcorr1 = np.max(np.correlate(bits[0:len(noiseA)+16] * 2 - 1, ints_to_bits([FS1P_SYNCHWORD,], 32) * 2 - 1))
+			maxcorr2 = np.max(np.correlate(bits[len(noiseA)+32 : len(noiseA)+len(bits1)+len(noiseB)+16 ] * 2 - 1, ints_to_bits([FS1P_SYNCHWORD,], 32) * 2 - 1))
 			assert maxcorr1 >= 26
 			n_missing_packets += 1
 			if len(pl_list) == 0:
@@ -747,7 +746,7 @@ def utest_framing_basic_test_3():
 	n_loops = 2000
 	n_success = 0
 	for ii in range(n_loops):
-		synchword = DEFAULT_SYNCHWORD
+		synchword = FS1P_SYNCHWORD
 		pl_chars1 = np.random.randint(0,255, rint(0,223+1))
 		bits1 = frame_packet(pl=pl_chars1, synchword_int=synchword, synchword_len=32, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
 
@@ -800,7 +799,7 @@ def speedbench_framing():
 	use_rs = True
 
 	rs_mx, rs_cfg = get_default_rs()
-	synchword = DEFAULT_SYNCHWORD
+	synchword = FS1P_SYNCHWORD
 	pl_chars = np.random.randint(0,255, 122)
 	bits = frame_packet(pl=pl_chars, synchword_int=synchword, synchword_len=32, use_scrambler=use_scrambler, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
 	_ = frame_packet(pl=pl_chars, synchword_int=synchword, synchword_len=32, use_scrambler=use_scrambler, use_rs=use_rs, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=False)
