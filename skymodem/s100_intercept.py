@@ -20,12 +20,14 @@ def signaldata_getter(que_signaldata:Queue):
 	while True:
 		try:
 			ts_unix, rx_f_absolute, power_tuple, baudrate, rx_pl = que_signaldata.get(timeout=1.0)  #self.que_signaldata_out.put((ts_unix, rx_f_absolute, power_tuple, self.rx_dsp_config.baudrate, rx_pl), timeout=1.0)
+			(pl_power, noise_power, power_bw) = power_tuple
 			ts = dtime.now().isoformat()
 			f.write(ts.encode("utf8"))
 			f.write(b"   f:")
 			f.write(str(float(rx_f_absolute / 1e6 )).encode("utf8") )
-			f.write(b" MHz.  payload(base32):")
+			f.write(b" MHz.   payload(base32):")
 			f.write(b32encode(rx_pl))
+			f.write(b"   P_pl:" + str(float(pl_power)).encode("utf8") + b"   P_noise:"+ str(float(noise_power)).encode("utf8"))
 			f.write(b"\n")
 			f.flush()
 		except Empty:
