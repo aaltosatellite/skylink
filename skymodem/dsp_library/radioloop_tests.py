@@ -96,7 +96,7 @@ def t3_single_burst(mode, tx_gain, burst_duration):
 
 
 #t1_connect_and_observe()
-t2_continuous_transmit(mode="usrp", tx_gain=4)
+#t2_continuous_transmit(mode="usrp", tx_gain=4)
 t3_single_burst(mode="usrp", tx_gain=0, burst_duration=2.0)
 
 
