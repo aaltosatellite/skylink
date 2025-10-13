@@ -7,13 +7,13 @@ import threading
 from scipy.signal import firwin
 
 def blind_sink(que:Queue):
-	while True:
-		try:
-			x = que.get(timeout=1.0)
-			if (x is "QUIT"):
-				return
-		except Empty:
-			continue
+    while True:
+        try:
+            x = que.get(timeout=1.0)
+            if (x == "QUIT"):
+                return
+        except Empty:
+            continue
 
 def make_powertest_samples(sr, t_array, offset=0.1):
 	assert abs(offset) < 0.5
@@ -21,8 +21,6 @@ def make_powertest_samples(sr, t_array, offset=0.1):
 	nsamples = int(sr*t_array)
 	arr = np.exp(2j*np.pi * (np.arange(nsamples)*offset) )
 	return arr
-
-
 
 
 
@@ -93,11 +91,27 @@ def t3_single_burst(mode, tx_gain, burst_duration):
 
 
 
+if __name__ == "__main__":
+    import sys
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--test", "-t", type=int, default=2, choices=[1,2,3],
+                        help="Test mode: 1 connect & observe, 2 continuous TX, 3 single burst TX")
+    parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy"),
+                        help="Run test by directly attaching to the USRP (default) or via SoapyShared.")
+    parser.add_argument("--tx_gain", "-g", type=float, default=70,
+                        help="TX Gain setting for the USRP: 0.0 - 89.75 [dB].")
+    _args = parser.parse_args(sys.argv[1:])
+    assert _args.tx_gain >= 0.0, f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
+    assert _args.tx_gain <= 89.75,  f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
 
-
-#t1_connect_and_observe()
-#t2_continuous_transmit(mode="usrp", tx_gain=4)
-t3_single_burst(mode="usrp", tx_gain=0, burst_duration=2.0)
+    match _args.test:
+        case 1:
+            t1_connect_and_observe()
+        case 2:
+            t2_continuous_transmit(mode=_args.mode, tx_gain=_args.tx_gain)
+        case 3:
+            t3_single_burst(mode=_args.mode, tx_gain=_args.tx_gain, burst_duration=2.0)
 
 
 
