@@ -169,7 +169,6 @@ def frame_packet(pl, synchword_int, synchword_len, use_scrambler, use_rs, rs_mx,
 	return bits
 
 
-
 @njit(cache=True)
 def deframe_synchword(bit, latest_bits, synchword, synch_length_mask, synchword_len, synch_threshold): # return: [ok, latest_bits, bit_idx, n_errors]
 	latest_bits = ((latest_bits<<1) | bit) & synch_length_mask

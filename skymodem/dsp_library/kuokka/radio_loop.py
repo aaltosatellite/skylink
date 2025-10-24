@@ -8,7 +8,8 @@ from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_TX, SOAPY_SDR_CF32
 #from kuokka.lib_tools import radionoise, make_samples2
 from .lib_tools import make_samples2, radionoise, DebugPrinter
 
-"""try:
+"""
+try:
 	from mtools.zmq_printout import ZMQPIn
 	ZMQP_PRINTER = ZMQPIn(port=11001, hostname="localhost")
 except:
@@ -24,19 +25,22 @@ def DBGPRINT(*args, **kwargs):
 	if not (ZMQP_PRINTER is None):
 		ZMQP_PRINTER.print(ts+str(first))
 	else:
-		print(ts+str(first), *args, **kwargs)"""
+		print(ts+str(first), *args, **kwargs)
+"""
 
 
 
 
 class RadioConfig:
-	def __init__(self, mode, rx_sr, rx_f_tune, tx_sr, tx_f_tune):
+	def __init__(self, mode, rx_sr, rx_f_tune, tx_sr, tx_f_tune, rx_gain, tx_gain):
 		assert mode in ("usrp", "soapy")
 		self.mode 			= mode
 		self.rx_sr0 		= rx_sr
 		self.rx_f_tune 		= rx_f_tune
 		self.tx_sr0 		= tx_sr
 		self.tx_f_tune 		= tx_f_tune
+		self.rx_gain		= rx_gain
+		self.tx_gain		= tx_gain
 
 
 
@@ -54,8 +58,6 @@ class RadioLoop:
 		self.sample_maxamps 	= np.zeros(3, np.float64)
 		self.dbgprinter 		= DebugPrinter(log_title="RadioLoop", stdprint=True, zmqprint_host_port=("localhost", 11001))
 		self.DBGPRINT 			= self.dbgprinter.DBGPRINT
-		self.rx_gain0 			= 40
-		self.tx_gain0 			= 40
 		self.rx_print_interval	= 20.0
 
 	def is_ok(self):
@@ -65,7 +67,6 @@ class RadioLoop:
 			if not thrd.is_alive():
 				return False
 		return True
-
 
 	def close(self):
 		self.on = False
@@ -94,8 +95,8 @@ class RadioLoop:
 		usrp.set_tx_rate(self.radio_config.tx_sr0, 0)
 		usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(self.radio_config.rx_f_tune), 0)
 		usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(self.radio_config.tx_f_tune), 0)
-		usrp.set_rx_gain(self.rx_gain0, 0)
-		usrp.set_tx_gain(self.tx_gain0, 0)
+		usrp.set_rx_gain(self.radio_config.rx_gain, 0)
+		usrp.set_tx_gain(self.radio_config.tx_gain, 0)
 		usrp.set_gpio_attr("FP0", "ATR_TX", 0x0100, 0x0100)
 		usrp.set_gpio_attr("FP0", "ATR_XX", 0x0100, 0x0100)
 		time.sleep(0.1)
@@ -268,8 +269,8 @@ class RadioLoop:
 		sdr.setSampleRate(SOAPY_SDR_TX, 0, self.radio_config.tx_sr0)
 		sdr.setFrequency(SOAPY_SDR_RX, 0, self.radio_config.rx_f_tune)
 		sdr.setFrequency(SOAPY_SDR_TX, 0, self.radio_config.tx_f_tune)
-		sdr.setGain(SOAPY_SDR_RX, 0, self.rx_gain0)
-		sdr.setGain(SOAPY_SDR_TX, 0, self.tx_gain0)
+		sdr.setGain(SOAPY_SDR_RX, 0, self.radio_config.rx_gain)
+		sdr.setGain(SOAPY_SDR_TX, 0, self.radio_config.tx_gain)
 		self.DBGPRINT("RX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_RX, 0) ))
 		self.DBGPRINT("TX gain range:      {}".format( sdr.getGainRange(SOAPY_SDR_TX, 0) ))
 		self.DBGPRINT("RX gain:            {}".format( sdr.getGain(SOAPY_SDR_RX, 0) ))

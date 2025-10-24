@@ -128,7 +128,6 @@ class DSPLoop:
 		self.tx_process_thread.start()
 
 
-
 	def set_tx_baudrate(self, baudrate):
 		with self.rlock:
 			self.tx_dsp_config.baudrate = baudrate
@@ -393,6 +392,8 @@ class DSPLoop:
 	# -- loops -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
+
+
 def _mpr_memfree_idxed(basename, suffixes):
 	n0 = len(suffixes)
 	n_ok = 0
@@ -482,9 +483,6 @@ def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm
 
 
 
-
-
-
 def _mpr_memfree(idd, buffer_shm_list, flag_ring_shm):
 	n0 = len(buffer_shm_list) + 1
 	n_ok = 0
@@ -500,10 +498,6 @@ def _mpr_memfree(idd, buffer_shm_list, flag_ring_shm):
 	except:
 		pass
 	DBGPRINT(1, "{}/{} of shared memories unlinked by mpr-thread-{}.".format(n_ok, n0, idd))
-
-
-
-
 
 
 

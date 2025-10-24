@@ -9,24 +9,9 @@ from dsp_library.kuokka.lib_tools import get_doppler_low_high, usrp_B200_valid_s
 from dsp_library.kuokka.lib_receiver import RXDSPConfig
 
 
-"""
-def fetch_hmac_key(fpath):
-	assert os.path.isfile(fpath)
-	f = open(fpath, "rb")
-	rd = f.read()
-	f.close()
-	key = json.loads(rd)
-	assert type(key) in (tuple, list)
-	for i in key:
-		assert type(i) == int
-		assert 0 <= i <= 255
-	assert len(key) == 32
-	return struct.pack("32b", *key), key
-"""
 
 
-
-def get_usrp_receiver_config(f_center, baudrate, max_signal_bw):
+def get_usrp_receiver_config(f_center, baudrate, max_signal_bw, rx_gain, tx_gain):
 	from dsp_library.kuokka.lib_tools import determine_ftune_and_min_sr
 	f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
 	f_tune, minimum_samplerate = determine_ftune_and_min_sr(f_center_min=f_center_min, f_center_max=f_center_max, max_signal_bandwidth=max_signal_bw)
@@ -36,14 +21,14 @@ def get_usrp_receiver_config(f_center, baudrate, max_signal_bw):
 		sr0 = [float(x) for x in sorted(usrp_B200_valid_samplerates) if x >= minimum_samplerate][0]
 	print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
 	print("Using usrp radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr0*1e-6, 3) ))
-	radio_config 	= RadioConfig(mode="usrp", rx_sr=sr0, rx_f_tune=f_tune, tx_sr=sr0, tx_f_tune=f_tune)
+	radio_config 	= RadioConfig(mode="usrp", rx_sr=sr0, rx_f_tune=f_tune, tx_sr=sr0, tx_f_tune=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
 	rx_dsp_config 	= RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
 	tx_dsp_config 	= TXDSPConfig(tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate)
 	return rx_dsp_config, tx_dsp_config, radio_config
 
 
 
-def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, max_signal_bw):
+def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, max_signal_bw, rx_gain, tx_gain):
 	f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
 	f_center_min = f_center_min - max_signal_bw * 0.6
 	f_center_max = f_center_max + max_signal_bw * 0.6
@@ -57,11 +42,10 @@ def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, m
 		if f_max_undisturbed >= plateu_minimum_halfwidth:
 			break
 		sr_leecher += int(100e3)
-
 	print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
 	print("Calculated necessary samplerate at {} ks/s".format( round(1.0e-3 * sr_leecher, 1) ))
 	print("Using soapy-leecher radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr_leecher*1e-6, 3) ))
-	radio_config 	= RadioConfig(mode="soapy", rx_sr=sr_leecher, rx_f_tune=f_tune, tx_sr=sr_leecher, tx_f_tune=f_tune)
+	radio_config 	= RadioConfig(mode="soapy", rx_sr=sr_leecher, rx_f_tune=f_tune, tx_sr=sr_leecher, tx_f_tune=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
 	rx_dsp_config 	= RXDSPConfig(rx_sr0=sr_leecher, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
 	tx_dsp_config 	= TXDSPConfig(tx_sr0=sr_leecher, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate)
 	return rx_dsp_config, tx_dsp_config, radio_config
@@ -170,6 +154,8 @@ if __name__ == '__main__':
 	parser.add_argument("--mode",    type=str, default="usrp", choices=("usrp", "soapy"), required=False)
 	parser.add_argument("--vc_base", type=int, default=7100,   required=False)
 	parser.add_argument("--center_freq", type=float, default=437.125e6, help="Center frequency used for communications [Hz]")
+	parser.add_argument("--rx_gain", type=float, default=40,  help="reception gain", required=False)
+	parser.add_argument("--tx_gain", type=float, default=80,  help="transmission gain", required=False)
 	_args = parser.parse_args(sys.argv[1:])
 	vc_base = _args.vc_base
 	assert vc_base >= 1000
@@ -178,10 +164,10 @@ if __name__ == '__main__':
 	if _args.mode == "soapy":
 		ftune_correction = 40e3
 		print(f"Using Soapy mode, center_freq={_args.center_freq} Hz, and ftune_correction={ftune_correction} Hz")
-		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2)
+		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain)
 	else:
 		assert _args.mode == "usrp"
-		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2)
+		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain)
 
 	#amqp_broker_addr_ = "amqp://guest:guest@localhost:5672"
 	amqp_broker_addr_ = "amqp://modem:fs1pmodem@192.168.10.2:5672"

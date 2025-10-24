@@ -27,15 +27,12 @@ def create_demod_statemx(lp_ntaps, lp_cutoff_coeff, sps_f):
 @njit(cache=True, parallel=False)
 def demodulate(sample_arr, center_f_arr, sample_i0, demod_n_samples, dmd_arr, demodmx):
 	assert np.iscomplexobj(demodmx)
-	#assert type(synch_arr[0,0]) is int64
-	#assert len(dmd_arr.shape) == 1
 	assert demodmx.shape[0] == demodmx.shape[1]+2
 	shift_phase 	= 1.0j * demodmx[0,0]
 	s_lpd_prev 		= demodmx[0,1]
 	lp_tap_phase 	= int(demodmx[0,2].real)
 	lp_taps 		= demodmx[2:,:]
 	ntaps 			= len(demodmx[0])
-	#dmd_head = dmd_head0
 	for i in range(demod_n_samples):
 		s_shifted = sample_arr[sample_i0+i] * np.exp(shift_phase)
 		shift_phase -= 2j*np.pi*center_f_arr[sample_i0+i]

@@ -1,6 +1,7 @@
 import numpy as np
 from numba import njit
 import scipy
+from scipy.signal import firwin
 
 RESAMP_STATE_BOUNDARY = 1.0
 RESAMP_STATE_INTERP   = 2.0
@@ -367,6 +368,143 @@ def staged_resampler_execute_stream(in_arr, ii0, nsamples, out_arr, io0, mx1, mx
 
 
 
+## === upsampler =============================================================================================================================================================================
+## ===========================================================================================================================================================================================
+@njit(cache=True)
+def cubic_interp(y, rate, x_minus1, y_minus1, y_minus2):
+	#assert rate > 1
+	len2_apprx = int((len(y)+1) * rate + 6)
+	intp = np.zeros(len2_apprx, dtype=y.dtype)
+	dx = 1/rate
+	i_out = 0
+	m_arr = np.zeros(len(y), dtype=y.dtype)
+	m_arr[1:len(y)-1] = (m_arr[2:] - m_arr[0:-2]) * 0.5  # m_i = (y[i+2] - y[i-1]) / 2  #todo: tabulate these first. If i repeats, we repeat the same calculation.
+	m_arr[0] = (y[1] - y_minus1) * 0.5
+	m_minus1 = (y[0] - y_minus2) * 0.5
+	#m_arr[-1] = 0.0   # OR just stop one shy...
+	x = x_minus1
+	lstop = len(y)-1
+	while x < 1:
+		t = x % 1
+		a = (2*t**3 - 3*t**2 + 1) * y_minus1
+		b = (t**3 - 2*t**2 + t) * m_minus1
+		c = (-2*t**3 + 3*t**2) * y[0]
+		d = (t**3 - t**2) * m_arr[0]
+		intp[i_out] = a+b+c+d
+		x += dx
+		i_out += 1
+	x = x - 1
+	while x < lstop:  # can be parallelized. (for i_out in range... xi = x0 + dx*i_out
+		t = x % 1
+		i = int(x)
+		a = (2*t**3 - 3*t**2 + 1) * y[i]
+		b = (t**3 - 2*t**2 + t) * m_arr[i]
+		c = (-2*t**3 + 3*t**2) * y[i+1]
+		d = (t**3 - t**2) * m_arr[i+1]
+		intp[i_out] = a+b+c+d
+		x += dx
+		i_out += 1
+	return intp[:i_out], x-lstop, y[-1], y[-2]
+
+
+@njit(cache=True)
+def linear_interp(y, rate, x_minus1, y_minus1):
+	#assert rate > 1
+	len2_apprx = int((len(y)+1) * rate + 6)
+	intp = np.zeros(len2_apprx, dtype=y.dtype)
+	dx = 1/rate
+	i_out = 0
+	x = x_minus1
+	lstop = len(y)-1
+	while x < 1:
+		t = x % 1
+		tp = 1 - t
+		a = tp * y_minus1
+		b = t * y[0]
+		intp[i_out] = a+b
+		x += dx
+		i_out += 1
+	x = x - 1
+	while x < lstop:  # can be parallelized. (for i_out in range... xi = x0 + dx*i_out
+		t = x % 1
+		tp = 1 - t
+		i = int(x)
+		a = tp * y[i]
+		b = t * y[i+1]
+		intp[i_out] = a+b
+		x += dx
+		i_out += 1
+	return intp[:i_out], x-lstop, y[-1]
+
+
+def create_upsample_taps(r_rate, dtype, m_halflen=9, L_limit=16, up_cutoff=0.499):
+	"""
+	m_halflen: 		Filter length. Larger values increase amplitude precision at the cost of computation time.
+					Values smaller than 8 will affect amplitude reconstruction severely.
+	L_limit:		Proper integer upsampling is done up to L_limit, and linearly interpolated beyond that.
+	"""
+	#assert r_rate > 1.0, "This is an upsampler. May break with downsampling, and is surely inefficient. Use linear_interp() instead"
+	#if r_rate < 4.0:
+	#	raise AssertionError("Ordinary resampler (create_resampler()) is faster and probably more optimal for rates less than ~16, certainly less than 4.")
+	assert dtype in (np.float64, np.float32, np.complex128, np.complex64)
+	L_up 		= max(min( int(np.ceil(r_rate)), L_limit), 6) ## smaller limit -> faster
+	r_fine 		= r_rate / L_up
+	n_taps 		= L_up*2*m_halflen+1
+	taps_up 	= firwin(numtaps=n_taps, cutoff=(1/L_up)*up_cutoff, fs=1, pass_zero=True) * (L_up+0)
+	window_ym1 		= np.zeros(int((n_taps-1-0)/L_up)+1  + 1, dtype=dtype)
+	window_head = 0
+	delay_estimate 		= ((n_taps+1)/L_up)/2 -1 		# todo: This is not exactly correct, but usually within 99%
+	scalar_arr = np.array([L_up, r_fine, window_head, 0.0], dtype=np.float64)
+	return scalar_arr, taps_up, window_ym1, delay_estimate
+
+
+@njit(cache=True)
+def upsample(samples, scalar_arr, taps_up, window_ym1):
+	"""
+	window = np.zeros(int((ntaps-1-0)/L_up)+1, dtype=samples.dtype)
+	"""
+	L_up = int(scalar_arr[0])
+	r_fine = scalar_arr[1]
+	window_head = int(scalar_arr[2])
+	xm1 = scalar_arr[3]
+	ym1 = window_ym1[-1]
+	y_up = np.zeros(len(samples)*L_up, dtype=samples.dtype)
+	window_len = len(window_ym1)-1
+	#for i in range(len(samples)):
+	#	y_up[i*L_up] = samples[i]
+	#y_up = np.convolve(y_up, taps_up, mode="same")
+	#a = 0
+	#b = 0
+	ntaps = len(taps_up)
+	for n in range(len(samples)):
+		window_head = (window_head+1)%window_len
+		window_ym1[window_head] = samples[n]
+		for j in range(L_up):
+			kloop = int((ntaps-1-j)/L_up)+1
+			#kmax = kloop-1
+			#imax = j+kmax*L_up
+			#inext = j+(kmax+1)*L_up
+			#if (imax < ntaps) and (inext >= ntaps):
+			#	a+= 1
+			#else:
+			#	b += 1
+			for k in range(kloop):
+				#y_up[n*L_up+j] += samples[n-k] * taps_up[j+k*L_up]
+				y_up[n*L_up+j] += window_ym1[(window_head-k)%window_len] * taps_up[j+k*L_up]  ## window[(window_head-k)%window_len] equals samples[n-k]
+	#print("a",a)
+	#print("b",b)
+	scalar_arr[2] = window_head
+	if r_fine <= 0:
+		return y_up
+	#return y_up, window, window_head, 0.0, 0.0, 0.0
+	interp, x_minus1, y_minus1 = linear_interp(y_up, rate=r_fine, x_minus1=xm1, y_minus1=ym1)
+	#interp, x_minus1, y_minus1, y_minus2 = cubic_interp(y_up, rate=r_fine, x_minus1=0.0, y_minus1=0.0, y_minus2=0.0)
+	scalar_arr[3] = x_minus1
+	window_ym1[-1] = y_minus1
+	return interp
+	#return interp, window, window_head, x_minus1, y_minus1, y_minus2
+## === upsampler =============================================================================================================================================================================
+## ===========================================================================================================================================================================================
 
 
 
