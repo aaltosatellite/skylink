@@ -199,8 +199,6 @@ class RadioLoop:
 		# stream_args.args = "spp=200" # Note this setting is not valid for all USRPs
 		tx_stream_args.channels = [0]
 		tx_streamer = usrp.get_tx_stream(tx_stream_args)
-		tx_metadata = uhd.types.TXMetadata()
-		tx_metadata.end_of_burst = False
 		while self.on:
 			try:
 				samplearr = self.que_tx_samples_in.get(timeout=0.20)
@@ -228,14 +226,15 @@ class RadioLoop:
 			idx = 0
 			t_end = time.perf_counter() + dtt
 			self.self_mute = True  # the 5ms initial silence in composed samples also ensures this will have effect.
+			tx_metadata = uhd.types.TXMetadata()
 			tx_metadata.start_of_burst = True
+			tx_metadata.end_of_burst = False
 			while idx < N:
 				if (N - idx) <= tx_batch_len:
 					tx_metadata.end_of_burst = True
 				tx_streamer.send(samplearr[0,idx:idx+tx_batch_len], tx_metadata)
 				tx_metadata.start_of_burst = False
 				idx += tx_batch_len
-			tx_metadata.end_of_burst = False
 			t_to_end = max(0, t_end - time.perf_counter())
 			time.sleep(t_to_end + 0.0e-3)
 			self.self_mute = False
