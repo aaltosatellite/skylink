@@ -75,12 +75,12 @@ def speedbench_packet_modulation(sr, baudrate, BT):
 
 	pl = os.urandom(200)
 
-	samples, _, _ = dsploop._compose_samples(payload=pl, usrp_reshape=False, as_c64=True)
-	_, _, _ = dsploop._compose_samples(payload=pl, usrp_reshape=False, as_c64=True)
-	_, _, (dt1,dt2,dt3) = dsploop._compose_samples(payload=pl, usrp_reshape=False, as_c64=True)
+	samples, _, _ = dsploop._compose_samples(payload=pl, ts_now_mono=1.0, usrp_reshape=False, as_c64=True)
+	_, _, _ = dsploop._compose_samples(payload=pl, ts_now_mono=1.0, usrp_reshape=False, as_c64=True)
+	_, _, (dt1,dt2,dt3) = dsploop._compose_samples(payload=pl, ts_now_mono=1.0, usrp_reshape=False, as_c64=True)
 	t0 = time.perf_counter()
 	for _ in range(100):
-		dsploop._compose_samples(payload=pl, usrp_reshape=False, as_c64=True)
+		dsploop._compose_samples(payload=pl, ts_now_mono=1.0, usrp_reshape=False, as_c64=True)
 	T_call = (time.perf_counter() - t0) / 100
 	speed_bytes 	= len(pl) / T_call
 	speed_bits 		= len(pl)*8 / T_call
@@ -139,15 +139,17 @@ def plot_modulation_comparison(sr, baudrate, BT):
 #speedbench_raw_modulation(sr=1e6, baudrate=2 * 9600, BT=-1)
 #speedbench_raw_modulation(sr=1e6, baudrate=4 * 9600, BT=-1)
 
-#speedbench_raw_modulation(sr=3e6, baudrate=9600 //2, BT=0.5)
-#speedbench_raw_modulation(sr=1e6, baudrate=9600 * 1, BT=0.5)
-#speedbench_raw_modulation(sr=1e6, baudrate=9600 * 2, BT=0.5)
-#speedbench_raw_modulation(sr=1e6, baudrate=9600 * 4, BT=0.5)
+speedbench_raw_modulation(sr=3.6e6, baudrate=9600 //2, BT=0.5)
+speedbench_raw_modulation(sr=3.6e6, baudrate=9600 * 1, BT=0.5)
+speedbench_raw_modulation(sr=3.6e6, baudrate=9600 * 2, BT=0.5)
+speedbench_raw_modulation(sr=3.6e6, baudrate=9600 * 4, BT=0.5)
 
-#speedbench_raw_modulation2(sr=3e6, baudrate=9600 //2, BT=0.5)
-#speedbench_raw_modulation2(sr=1e6, baudrate=9600 * 1, BT=0.5)
-#speedbench_raw_modulation2(sr=1e6, baudrate=9600 * 2, BT=0.5)
-#speedbench_raw_modulation2(sr=1e6, baudrate=9600 * 4, BT=0.5)
+print("########################################################################")
+
+speedbench_raw_modulation2(sr=3.6e6, baudrate=9600 //2, BT=0.5)
+speedbench_raw_modulation2(sr=3.6e6, baudrate=9600 * 1, BT=0.5)
+speedbench_raw_modulation2(sr=3.6e6, baudrate=9600 * 2, BT=0.5)
+speedbench_raw_modulation2(sr=3.6e6, baudrate=9600 * 4, BT=0.5)
 
 
 plot_modulation_comparison(sr=1.0e6, baudrate=9600*2, BT=0.5)

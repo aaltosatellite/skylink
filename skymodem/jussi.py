@@ -531,7 +531,7 @@ class JussiSrvr:
 
 
 
-class JussiRXStream:
+class JussiRXStreamSrvr:
 	def __init__(self, cli_idx, sdr_rx_sr, cli_rx_sr, rx_que, rx_ringlen, output_samplering_shm_name, output_lenring_shm_name, output_trigger_socket, jussi_idx):
 		assert 0 <= int(cli_idx) < 8
 		assert cli_rx_sr / sdr_rx_sr <= 1.0
@@ -544,7 +544,7 @@ class JussiRXStream:
 		self.do_rx_resampling 		= False
 		self.rx_ringlen 			= rx_ringlen
 		self.j0_rx_ring, shm0		= shm_array_from_name(name=SHM_NAME_PREFIX+"-rbr-"+str(jussi_idx), shape=(self.rx_ringlen, 1024*256), dtype=np.complex64)  #todo ensure the arrays here and in L0 are the same length.
-		self.output_sampleing, shm1	= shm_array_from_name(name=output_samplering_shm_name, shape=(self.rx_ringlen, 1024*256), dtype=np.complex64)  #todo ensure the array is the correct size
+		self.output_samplering, shm1= shm_array_from_name(name=output_samplering_shm_name, shape=(self.rx_ringlen, 1024*256), dtype=np.complex64)  #todo ensure the array is the correct size
 		self.output_lenring, shm2	= shm_array_from_name(name=output_lenring_shm_name, shape=(self.rx_ringlen, ), dtype=np.int64)  #todo ensure the array is the correct size
 		self.output_ring_head		= 0
 		self.output_trigger_socket	= output_trigger_socket
@@ -559,28 +559,31 @@ class JussiRXStream:
 			halflen_disc = minimal_disc_halflen_for_staged_resampler(r_rate=self.rx_resampling_ratio, f_cutoff=f_cutoff, min_f_undisturbed=min_f_undisturbed, minimum_value=16, require_total_sampling=True)
 			halflen_frac = minimal_frac_halflen_for_staged_resampler(halflen_div=halflen_disc, r_rate=self.rx_resampling_ratio, f_cutoff=f_cutoff, minimum_value=8)
 			self.rx_rs_mx1, self.rx_rs_mx2 = create_staged_resampler(halflen_div=halflen_disc, halflen_f=halflen_frac, r_rate=self.rx_resampling_ratio, n_banks=64, f_cutoff=f_cutoff, allow_aliasing=False)
+		self.loop_thread = threading.Thread(target=self._rx_loop, args=tuple(), daemon=True)
 
-
-	def rx_loop(self):
+	def _rx_loop(self):
 		out_arr = np.zeros(1024*512, dtype=np.complex64)
 		while self.rx_on:
 			try:
-				ring_idx, n_samples = self.rx_que.get(timeout=0.25) # todo check the ring_idx is +1 from last one.
+				ring_idx, n_samples = self.rx_que.get(timeout=0.50) # todo check the ring_idx is +1 from last one.
 			except Empty:
-				continue
-			#io2 = staged_resampler_execute_stream(in_arr=self.j0_rx_ring[ring_idx], ii0=0, nsamples=n_samples, out_arr=self.output_sampleing[self.output_ring_head], io0=0, mx1=self.rx_rs_mx1, mx2=self.rx_rs_mx2)
-			#self.output_lenring[self.output_ring_head] = io2
-			#self.output_trigger_socket.send(struct.pack("B", self.output_ring_head))
-			#self.output_ring_head = (self.output_ring_head + 1) % self.rx_ringlen
-			samples0 = self.j0_rx_ring[ring_idx, 0:n_samples] # todo .copy()?  could change during resampler execution...
-			if self.do_rx_resampling:
-				io2 = staged_resampler_execute_stream(in_arr=samples0, ii0=0, nsamples=len(samples0), out_arr=out_arr, io0=0, mx1=self.rx_rs_mx1, mx2=self.rx_rs_mx2) # todo resample DIRECTLY into tgt_rx_ring!
-				samples = out_arr[0:io2]
+				ring_idx, n_samples = -1, 0
+			if ring_idx >= 0:
+				#io2 = staged_resampler_execute_stream(in_arr=self.j0_rx_ring[ring_idx], ii0=0, nsamples=n_samples, out_arr=self.output_sampleing[self.output_ring_head], io0=0, mx1=self.rx_rs_mx1, mx2=self.rx_rs_mx2)
+				#self.output_lenring[self.output_ring_head] = io2
+				#self.output_trigger_socket.send(struct.pack("B", self.output_ring_head))
+				#self.output_ring_head = (self.output_ring_head + 1) % self.rx_ringlen
+				samples0 = self.j0_rx_ring[ring_idx, 0:n_samples] # todo .copy()?  could change during resampler execution...
+				if self.do_rx_resampling:
+					io2 = staged_resampler_execute_stream(in_arr=samples0, ii0=0, nsamples=len(samples0), out_arr=out_arr, io0=0, mx1=self.rx_rs_mx1, mx2=self.rx_rs_mx2) # todo resample DIRECTLY into tgt_rx_ring!
+					samples = out_arr[0:io2]
+				else:
+					samples = samples0
 			else:
-				samples = samples0
-			self.output_sampleing[self.output_ring_head, 0:len(samples)] = samples
+				samples = np.zeros(0, dtype=np.complex64)
+			self.output_samplering[self.output_ring_head, 0:len(samples)] = samples
 			self.output_lenring[self.output_ring_head] = len(samples)
-			self.output_trigger_socket.send(struct.pack("B", self.output_ring_head))
+			self.output_trigger_socket.send(struct.pack("B", self.output_ring_head))  # faster than bytes([self.output_ring_head,])
 			self.output_ring_head = (self.output_ring_head + 1) % self.rx_ringlen
 		for shm in self.shm_list:
 			try:
@@ -596,7 +599,89 @@ class JussiRXStream:
 
 
 
-class JussiTXStream:
+class JussiRXStream:
+	def __init__(self, output_trigger_socket:socket.socket, rx_ringlen:int, rx_ringwidth:int, output_samplering_shm_name:str, output_lenring_shm_name:str):
+		assert 1 < rx_ringlen < 256
+		assert 8*1024 <= rx_ringwidth <= 8*1024*1024
+		self.on = True
+		self.rx_on = False
+		self.do_rx_resampling 		= False
+		self.rx_ringlen 			= rx_ringlen
+		self.rx_ringwidth 			= rx_ringwidth
+		self.output_samplering, shm0= shm_array_from_name(name=output_samplering_shm_name, shape=(self.rx_ringlen, self.rx_ringwidth), dtype=np.complex64)  #todo ensure the array is the correct size
+		self.output_lenring, shm1	= shm_array_from_name(name=output_lenring_shm_name, shape=(self.rx_ringlen, ), dtype=np.int64)  #todo ensure the array is the correct size
+		self.output_ring_head		= 0
+		self.output_trigger_socket	= output_trigger_socket
+		self.rx_que 				= Queue(128)
+		self.shm_list 				= [shm0, shm1]
+		self._loop_thread 			= threading.Thread(target=self._rx_loop, args=tuple(), daemon=True)
+		self._loop_thread.start()
+
+
+	def _rx_loop(self):
+		self.output_trigger_socket.settimeout(0.25)
+		previous_head = -1
+		OF_reported = False
+		last_rx = time.monotonic()
+		while self.rx_on:
+			try:
+				ring_head = self.output_trigger_socket.recv(1)
+			except socket.timeout:
+				if (time.monotonic() - last_rx) > 3.0:
+					print("ERROR: RX-stream socket silent.")
+					self.rx_on = False
+					break
+				continue
+			last_rx = time.monotonic()
+			if ring_head == b"": # todo throw error?
+				print("ERROR: RX-stream socket closed.")
+				self.rx_on = False
+				break
+			ring_head = ring_head[0]
+			if ring_head >= self.rx_ringlen: # todo: throw error?
+				print("ERROR: RX-stream received ring_head invalid.")
+				self.rx_on = False
+				break
+			if (ring_head != ((previous_head+1)%self.rx_ringlen)) and (previous_head != -1):
+				print("WARNING: RX-stream fell out of synch. Resynching.")
+			l_batch = self.output_lenring[ring_head]
+			if (l_batch > self.rx_ringwidth) or (l_batch < 0): #todo throw error?
+				print("ERROR: RX-stream received batch length ({}) invalid.".format(l_batch))
+				self.rx_on = False
+				break
+			batch = self.output_samplering[0:l_batch]
+			if l_batch > 0:
+				if not self.rx_que.full():
+					self.rx_que.put_nowait(batch)
+					OF_reported = False
+				elif not OF_reported:
+					print("WARNING: RX-stream reception queue overflow.")
+					OF_reported = True
+			previous_head = ring_head
+		for shm in self.shm_list:
+			try:
+				shm.close()
+			except:
+				pass
+
+
+	def receive(self, timeout):
+		return self.rx_que.get(timeout=timeout)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class JussiTXStreamSrvr:
 	def __init__(self, cli_idx, sdr_tx_sr, cli_tx_sr, tx_trig_event, tx_ringlen, tx_batch_maxlen, input_shm_name, input_ringlen, tx_trigger_socket, jussi_idx):
 		assert 0 <= int(cli_idx) < 8
 		assert sdr_tx_sr / cli_tx_sr >= 1.0
@@ -628,7 +713,6 @@ class JussiTXStream:
 			self.upsplr_scalars = scalar_arr # i
 			self.upsplr_taps = taps_up # f/cf
 			self.upsplr_window = window # f
-
 
 
 	def tx_loop(self):
