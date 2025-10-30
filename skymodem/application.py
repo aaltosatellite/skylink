@@ -91,7 +91,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy"), help="Operation mode: attach directly to the USRP (default) or via SoapyShared.", required=False)
 	parser.add_argument("--vc_base", "-vc", type=int, default=7100, help="Virtual Channel base. Default 7100.", required=False)
-	parser.add_argument("--center_freq", "-cf", "-f", type=float, default=437.125e6, help="Center frequency used for communications [Hz]. Default 437.125 MHz.")
+	parser.add_argument("--center_freq", "-cf", "-f", type=float, default=437.025e6, help="Center frequency used for communications [Hz]. Default 437.025 MHz (dev frequency).")
 	parser.add_argument("--rx_gain", "-rg", type=float, default=40, help="Reception Gain setting for the USRP: 0 - 76 [dB]. Default is 40.", required=False)
 	parser.add_argument("--tx_gain", "-tg", type=float, default=80, help="TX Gain setting for the USRP: 0.0 - 89.75 [dB]. Default is 80.", required=False)
 	parser.add_argument("--auth", "-a", type=str, default="dev", choices=("dev", "spare", "fm"), help="Authentication key choices: 'dev' development (default), 'spare' Flight Model Spare, and 'fm' Flight Model.", required=False)
