@@ -52,7 +52,7 @@ def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, m
 
 
 
-def read_key_from_header(file_path: str, key_name: str):
+def read_keys_from_header(file_path: str):
 	"""
 	Function for reading the HMAC key from a header file.
 	Uses regular expressions to extract the key from a C-style array definition.
@@ -63,35 +63,55 @@ def read_key_from_header(file_path: str, key_name: str):
 	Returns:
 		byte_array: The HMAC key as a bytearray.
 	"""
-	with open(file_path, 'r') as file:
-		content = file.read()
-		# Regex to match the byte array in the .h file, allowing for line breaks and spaces
-		import re
-		match = re.search(key_name + r'\s*\[\d+\]\s*=\s*\{([^}]+)\};', content, re.DOTALL)
-		if not match:
-			raise ValueError(f"Key not found in the header file{file_path}")
-		# Extract the bytes and convert them to a byte array
-		byte_values = match.group(1).replace('\n', '').split(',')
-		byte_array = bytes(int(b.strip(), 16) for b in byte_values if b.strip())
-		if len(byte_array) != 32:
-			raise ValueError("Key is not 32 bytes long.")
-		return byte_array
+	keys = []
+	for keylabel in ["uplink_key", "downlink_key", "service_key"]:
+		with open(file_path, 'r') as file:
+			content = file.read()
+			# Regex to match the byte array in the .h file, allowing for line breaks and spaces
+			import re
+			match = re.search(keylabel + r'\s*\[\d+\]\s*=\s*\{([^}]+)\};', content, re.DOTALL)
+			if not match:
+				raise ValueError(f"Key not found in the header file{file_path}")
+			# Extract the bytes and convert them to a byte array
+			byte_values = match.group(1).replace('\n', '').split(',')
+			byte_array = bytes(int(b.strip(), 16) for b in byte_values if b.strip())
+			if len(byte_array) != 32:
+				raise ValueError("Key is not 32 bytes long.")
+			keys.append(byte_array)
+	return keys
+
 
 
 
 
 if __name__ == '__main__':
-	if os.path.isfile("secret.h"):
-		uplink_key = read_key_from_header("secret.h", "uplink_key")
-		downlink_key = read_key_from_header("secret.h", "downlink_key")
-		service_key = read_key_from_header("secret.h", "service_key")
-	elif os.path.isfile("sparesecret.h"):
-		uplink_key = read_key_from_header("sparesecret.h", "uplink_key")
-		downlink_key = read_key_from_header("sparesecret.h", "downlink_key")
-		service_key = read_key_from_header("sparesecret.h", "service_key")
+	rx_dsp_config_, tx_dsp_config_, radio_config_ = None, None, None
+	import sys
+	import argparse
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy"), help="Operation mode: attach directly to the USRP (default) or via SoapyShared.", required=False)
+	parser.add_argument("--vc_base", "-vc", type=int, default=7100, help="Virtual Channel base. Default 7100.", required=False)
+	parser.add_argument("--center_freq", "-cf", "-f", type=float, default=437.125e6, help="Center frequency used for communications [Hz]. Default 437.125 MHz.")
+	parser.add_argument("--rx_gain", "-rg", type=float, default=40, help="Reception Gain setting for the USRP: 0 - 76 [dB]. Default is 40.", required=False)
+	parser.add_argument("--tx_gain", "-tg", type=float, default=80, help="TX Gain setting for the USRP: 0.0 - 89.75 [dB]. Default is 80.", required=False)
+	parser.add_argument("--auth", "-a", type=str, default="dev", choices=("dev", "spare", "fm"), help="Authentication key choices: 'dev' development (default), 'spare' Flight Model Spare, and 'fm' Flight Model.", required=False)
+	_args = parser.parse_args(sys.argv[1:])
+	vc_base = _args.vc_base
+	assert vc_base >= 1000
+	assert vc_base < 60000
+	assert _args.rx_gain >= 0, f"rx_gain must be between 0 and 76 [dB]. Was {_args.rx_gain}"
+	assert _args.rx_gain <= 76, f"rx_gain must be between 0 and 76 [dB]. Was {_args.rx_gain}"
+	assert _args.tx_gain >= 0.0, f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
+	assert _args.tx_gain <= 89.75, f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
+
+	if os.path.isfile("secret.h") and _args.auth == "fm":
+		print("[AUTH] Using FM authentication keys.")
+		uplink_key, downlink_key, service_key = read_keys_from_header("secret.h")
+	elif os.path.isfile("sparesecret.h") and _args.auth == "spare":
+		print("[AUTH] Using FM Spare authentication keys.")
+		uplink_key, downlink_key, service_key = read_keys_from_header("sparesecret.h")
 	else:
-		print("No external secret available, using development keys.")
-		#key0 = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
+		print("[AUTH] External secret not available or selected, using development keys.")
 		# FS1p Development keys. Downlink, uplink, and service in order.
 		uplink_key = bytes([
 			0xc2, 0x54, 0x70, 0x55, 0x64, 0xa1, 0xba, 0x34,
@@ -116,7 +136,7 @@ if __name__ == '__main__':
 		exit()
 	# Different keys for uplink, downlink, and service channel
 	hmac_keys = [uplink_key, downlink_key, service_key]
-	###print(f"HMAC keys: \n{uplink_key.hex()},\n{downlink_key.hex()},\n{service_key.hex()}") #DEBUG!!
+	###print(f"[AUTH] HMAC keys: \n{uplink_key.hex()},\n{downlink_key.hex()},\n{service_key.hex()}") #DEBUG!!
 
 	skylink_config_ = SkyConfiguration(identity=b"PyGS")
 
@@ -147,19 +167,6 @@ if __name__ == '__main__':
 	skylink_config_.vc[3].tx_key = 0
 	#* DO NOT MODIFY ABOVE CONFIGURATIONS IN ANY SITUATION!!! *#
 
-	rx_dsp_config_, tx_dsp_config_, radio_config_ = None, None, None
-	import sys
-	import argparse
-	parser = argparse.ArgumentParser()
-	parser.add_argument("--mode",    type=str, default="usrp", choices=("usrp", "soapy"), required=False)
-	parser.add_argument("--vc_base", type=int, default=7100,   required=False)
-	parser.add_argument("--center_freq", type=float, default=437.125e6, help="Center frequency used for communications [Hz]")
-	parser.add_argument("--rx_gain", type=float, default=40,  help="reception gain", required=False)
-	parser.add_argument("--tx_gain", type=float, default=80,  help="transmission gain", required=False)
-	_args = parser.parse_args(sys.argv[1:])
-	vc_base = _args.vc_base
-	assert vc_base >= 1000
-	assert vc_base < 60000
 
 	if _args.mode == "soapy":
 		ftune_correction = 40e3

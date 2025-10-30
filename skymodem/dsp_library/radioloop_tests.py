@@ -50,8 +50,8 @@ def t2_continuous_transmit(mode, tx_gain):
 	sinkt.start()
 	radioloop = RadioLoop(radio_config=config, que_tx_samples_in=que_tx_samples_in, que_rx_samples_out=que_rx_samples_out)
 	radioloop.start()
-	print("Waiting for radio to start (6s)")
-	time.sleep(6.0)
+	print("Waiting for radio to start (5s)")
+	time.sleep(5.0)
 	tx_samples = make_powertest_samples(sr=sr00, t_array=0.5, offset=0.1)
 	tx_samples = np.complex64(tx_samples)
 	tx_samples = np.reshape(tx_samples, (1, len(tx_samples)))
@@ -75,8 +75,8 @@ def t3_single_burst(mode, tx_gain, burst_duration):
 	sinkt.start()
 	radioloop = RadioLoop(radio_config=config, que_tx_samples_in=que_tx_samples_in, que_rx_samples_out=que_rx_samples_out)
 	radioloop.start()
-	print("Waiting for radio to start (6s)")
-	time.sleep(6.0)
+	print("Waiting for radio to start (2s)")
+	time.sleep(2.0)
 	tx_samples = make_powertest_samples(sr=sr00, t_array=burst_duration, offset=0.1)
 	tx_samples = np.complex64(tx_samples)
 	tx_samples = np.reshape(tx_samples, (1, len(tx_samples)))
@@ -90,14 +90,13 @@ def t3_single_burst(mode, tx_gain, burst_duration):
 if __name__ == "__main__":
 	import sys
 	import argparse
-
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--test", "-t", type=int, default=2, choices=[1, 2, 3],
-						help="Test mode: 1 connect & observe, 2 continuous TX, 3 single burst TX")
+						help="Test mode: 1 connect & observe, 2 continuous TX (default), 3 single burst TX")
 	parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy"),
 						help="Run test by directly attaching to the USRP (default) or via SoapyShared.")
 	parser.add_argument("--tx_gain", "-g", type=float, default=70,
-						help="TX Gain setting for the USRP: 0.0 - 89.75 [dB].")
+						help="TX Gain setting for the USRP: 0.0 - 89.75 [dB]. Default is 70.")
 	_args = parser.parse_args(sys.argv[1:])
 	assert _args.tx_gain >= 0.0, f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
 	assert _args.tx_gain <= 89.75, f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
