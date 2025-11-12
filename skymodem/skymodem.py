@@ -82,7 +82,7 @@ class SkyModem:
 		self.radio_loop 	= RadioLoop(radio_config=radio_config, que_tx_samples_in=self.que_samples_dsp_to_radio, que_rx_samples_out=self.que_samples_radio_to_dsp)
 		self.dsp_loop 		= DSPLoop(rx_dsp_config=rx_dsp_config, tx_dsp_config=tx_dsp_config, que_rx_samples_in=self.que_samples_radio_to_dsp, que_rx_payloads_out=self.que_payloads_dsp_to_sky,
 									   que_tx_payloads_in=self.que_payloads_sky_to_dsp, que_tx_samples_out=self.que_samples_dsp_to_radio, que_signaldata_out=self.que_signaldata_out)
-		self.skylink_loop 	= SkyLinkLoop(config=skylink_config, key_list=hmac_key_list, que_payloads_in=self.que_payloads_dsp_to_sky, que_payloads_out=self.que_payloads_sky_to_dsp)
+		self.skylink_loop 	= SkyLinkLoop(config=skylink_config, key_list=hmac_key_list, que_payloads_in=self.que_payloads_dsp_to_sky, que_payloads_out=self.que_payloads_sky_to_dsp, radio_tx_sample_que=self.que_samples_dsp_to_radio, radio_ready_ev=self.radio_loop.tx_ready)
 		self.sub_que_process_thread 	= threading.Thread(target=None, args=tuple())
 		self.skylink_reception_thread 	= threading.Thread(target=None, args=tuple())
 		pub_sockets, sub_sockets, signaldata_pub_sock, context = bind_vc_sockets(vc_port_base=vc_port_base, num_channels=num_virtual_channels)
@@ -319,7 +319,13 @@ class SkyModem:
 
 	def _reset_skylink_config(self):
 		new_config = SkyConfiguration(b"PyGS")
-		new_skylink_loop  = SkyLinkLoop(config=new_config, key_list=self.hmac_key_list, que_payloads_in=self.que_payloads_dsp_to_sky, que_payloads_out=self.que_payloads_sky_to_dsp)
+		new_skylink_loop = SkyLinkLoop(config=new_config,
+										key_list=self.hmac_key_list,
+										que_payloads_in=self.que_payloads_dsp_to_sky,
+										que_payloads_out=self.que_payloads_sky_to_dsp,
+										radio_tx_sample_que=self.que_samples_dsp_to_radio,
+										radio_ready_ev=self.radio_loop.tx_ready
+		)
 		self.skylink_loop.close()
 		self.skylink_loop = new_skylink_loop
 		self.skylink_loop.start()

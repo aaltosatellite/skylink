@@ -19,7 +19,7 @@ def DBGPRINT(*args, **kwargs):
 
 
 class SkyLinkLoop(threading.Thread):
-	def __init__(self, config:SkyConfiguration, key_list:list, que_payloads_in, que_payloads_out):
+	def __init__(self, config:SkyConfiguration, key_list:list, que_payloads_in, que_payloads_out, radio_tx_sample_que:Queue, radio_ready_ev:threading.Event):
 		super(SkyLinkLoop, self).__init__()
 		self.daemon = True
 		self.config = config
@@ -30,6 +30,8 @@ class SkyLinkLoop(threading.Thread):
 		self.on = True
 		self.que_payloads_from_dsp = que_payloads_in
 		self.que_payloads_to_dsp = que_payloads_out
+		self.radio_tx_sample_que = radio_tx_sample_que
+		self.radio_ready = radio_ready_ev
 		self.que_received_messages = Queue(1000)
 		self.session_id_list = [(0,arq_state_off),] * num_virtual_channels
 		self.lock = thrd.RLock()
@@ -110,7 +112,7 @@ class SkyLinkLoop(threading.Thread):
 						sleeptime = 0.0
 
 				while True:
-					if not self.que_payloads_to_dsp.empty():  # We want to feed the radio only as fast as it transmits. Maybe [.full()] instead of [not .empty()] ?
+					if not (self.que_payloads_to_dsp.empty() and self.radio_tx_sample_que.empty() and self.radio_ready.is_set()):  # We want to feed the radio only as fast as it transmits. Maybe [.full()] instead of [not .empty()] ?
 						break
 					tx_i, frame_bytes = self.skylink.sky_tx()
 					if tx_i == 0:
