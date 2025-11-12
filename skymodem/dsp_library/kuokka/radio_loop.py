@@ -52,9 +52,9 @@ class RadioLoop:
 		self.que_tx_samples_in 		= que_tx_samples_in # samples of packets
 		self.que_rx_samples_out 	= que_rx_samples_out
 		self.on 				= True
+		self.tx_ready			= threading.Event()
 		self.rx_thread 			= threading.Thread(target=None, args=tuple())
 		self.tx_thread 			= threading.Thread(target=None, args=tuple())
-		self.self_mute 			= False
 		self.sample_maxamps 	= np.zeros(3, np.float64)
 		self.dbgprinter 		= DebugPrinter(log_title="RadioLoop", stdprint=True, zmqprint_host_port=("localhost", 11001))
 		self.DBGPRINT 			= self.dbgprinter.DBGPRINT
@@ -179,8 +179,6 @@ class RadioLoop:
 			if rx_ret != rx_buffer_len:
 				self.DBGPRINT("WARNING: RECV RETURNED NON-FULL BUFFER WITH RET VALUE "+str(rx_ret))
 				#assert rx_ret == rx_buffer_len
-			#if self.self_mute:
-			#	continue
 			buff_ = recv_buffer[0, :rx_ret].copy()
 			t00_ = time.perf_counter()
 			self.sample_maxamps[0] = np.max( (self.sample_maxamps[0], np.max(np.abs(buff_.real))) )
@@ -200,6 +198,7 @@ class RadioLoop:
 		tx_stream_args.channels = [0]
 		tx_streamer = usrp.get_tx_stream(tx_stream_args)
 		while self.on:
+			self.tx_ready.set()
 			try:
 				samplearr = self.que_tx_samples_in.get(timeout=0.20)
 			except Empty:
@@ -220,12 +219,11 @@ class RadioLoop:
 			if not (samplearr.shape[0] == 1) and (len(samplearr.shape) == 2):
 				self.DBGPRINT("TX SAMPLES IN WRONG SHAPE: {}. SHOULD BE (1,n). No transmission.".format( str(samplearr.shape) ) )
 				continue
-
+			self.tx_ready.clear()
 			N = samplearr.shape[1]
 			dtt = N / self.radio_config.tx_sr0
 			idx = 0
 			t_end = time.perf_counter() + dtt
-			self.self_mute = True  # the 5ms initial silence in composed samples also ensures this will have effect.
 			tx_metadata = uhd.types.TXMetadata()
 			tx_metadata.start_of_burst = True
 			tx_metadata.end_of_burst = False
@@ -235,9 +233,8 @@ class RadioLoop:
 				tx_streamer.send(samplearr[0,idx:idx+tx_batch_len], tx_metadata)
 				tx_metadata.start_of_burst = False
 				idx += tx_batch_len
-			t_to_end = max(0, t_end - time.perf_counter())
-			time.sleep(t_to_end + 0.0e-3)
-			self.self_mute = False
+			t_to_end = max(0, t_end -time.perf_counter() -10e-3)
+			time.sleep(t_to_end)
 			self.DBGPRINT("tx end. sleep of {}/{} ms.".format( round(t_to_end*1e3, 2), round(dtt*1e3, 2) ))
 	# === USRP ===============================================================================================================================================================================
 	# === USRP ===============================================================================================================================================================================
@@ -324,8 +321,6 @@ class RadioLoop:
 			#if rx_ret != bufferlen:
 				#DBGPRINT("RECV RETURNED NON-FULL BUFFER WITH RET VALUE "+str(rx_ret))
 				#assert rx_ret == rx_buffer_len
-			#if self.self_mute:
-			#	continue
 			if not self.que_rx_samples_out.full():
 				self.que_rx_samples_out.put_nowait((recv_buffer[:rx_ret].copy(), ts_s0_mono, ts_s0_unix))
 			else:
@@ -340,6 +335,7 @@ class RadioLoop:
 		txStream = sdr.setupStream(SOAPY_SDR_TX, SOAPY_SDR_CF32)
 		sdr.activateStream(txStream)
 		while self.on:
+			self.tx_ready.set()
 			try:
 				samplearr = self.que_tx_samples_in.get(timeout=0.20)
 			except Empty:
@@ -348,16 +344,17 @@ class RadioLoop:
 				self.DBGPRINT("Queue.get() exception (tx-thread):", e)
 				self.on = False
 				break
+			self.tx_ready.clear()
 			N = samplearr.shape[1]
 			samplearr = samplearr[0]
 			assert len(samplearr) == N
+			assert N > 1
 			dtt = N / self.radio_config.tx_sr0
 			idx = 0
 			t_end = time.perf_counter() + dtt
-			self.self_mute = True  # the 5ms initial silence in composed samples also ensures this will have effect.
 			while idx < N:
-				blen = min(batchlen, len(samplearr) - idx)
-				if idx < (len(samplearr)-batchlen):
+				blen = min(batchlen, N - idx)
+				if idx < (N-batchlen):
 					sdr.writeStream(txStream, [samplearr[idx:idx+blen]], blen, timeoutUs=1000000)
 				else:
 					sdr.writeStream(txStream, [samplearr[idx:idx+blen]], blen, timeoutUs=1000000, flags=SoapySDR.SOAPY_SDR_END_BURST)
@@ -365,9 +362,8 @@ class RadioLoop:
 			#sdr.deactivateStream(txStream)
 			#sdr.closeStream(txStream)
 			#sdr.closeStream()
-			t_to_end = max(0, t_end - time.perf_counter())
-			time.sleep(t_to_end + 0.0e-3)
-			self.self_mute = False
+			t_to_end = max(0, t_end -time.perf_counter() -10e-3)
+			time.sleep(t_to_end)
 			self.DBGPRINT("tx end. sleep of {}/{} ms.".format( round(t_to_end*1e3, 2), round(dtt*1e3, 2) ))
 	# === Soapy ==============================================================================================================================================================================
 	# === Soapy ==============================================================================================================================================================================
