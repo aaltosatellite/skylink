@@ -331,9 +331,8 @@ class DSPLoop:
 			with self.rlock:
 				while not que_mpr_processes_out.empty():
 					rcode, p_idd, tup = que_mpr_processes_out.get_nowait()
-					ts_mono, ts_unix = tup[:2]
-					tx_interference = self._tx_on(t_mono=ts_mono)
-					if (rcode == "cs") and (not tx_interference) and ((ts_mono - ts_last_cs) > 20e-3):
+					if (rcode == "cs") and (not self._tx_on(t_mono=tup[0])) and ((ts_mono - ts_last_cs) > 20e-3):
+						ts_mono, ts_unix = tup[:2]
 						self.que_rx_payloads_out.put(("cs", None, ts_mono), timeout=1.0)
 						ts_last_cs = ts_mono
 					elif rcode == "pl":   #ts_mono, ts_unix, rx_pl, rx_f_absolute, power_tuple, rx_dsp_config.baudrate
