@@ -3,7 +3,6 @@ import os
 import time
 import numpy as np
 import pickle
-from mtools.tools_dsp import waterfall_mx
 from scipy.signal import firwin
 from matplotlib import pyplot as plt
 from datetime import datetime as dtime
@@ -64,9 +63,10 @@ def get_samples(fpath):
 
 
 def show_demod(samples, sr0, baudrate, fshift, x_axis="samples"):
+	from mtools.tools_dsp import waterfall_mx
 	assert x_axis in ("samples", "time", "symbols")
 	samples = samples * np.exp(2j*np.pi * np.arange(len(samples)) * fshift/sr0)
-	waterfall_mx(samples=samples, fftlen=2048, fft_jump=1024, srate=sr0, plot_and_show=True, y_is_time=True)
+	waterfall_mx(samples=samples, fftlen=2048, fft_jump=1024, fft_stack=1, srate=sr0, plot_and_show=True, y_is_time=True)
 
 	lp_cutoff = 0.625 * baudrate / sr0
 	lpfilter = firwin(numtaps=201, cutoff=lp_cutoff, pass_zero=True)
@@ -96,6 +96,7 @@ def show_demod(samples, sr0, baudrate, fshift, x_axis="samples"):
 
 
 def usrp_record(f_tune, sr, t_total, gain=55, show=False):
+	from mtools.tools_dsp import waterfall_mx
 	"""TX samples based on input arguments"""
 	n_record = int(t_total * sr) # number of samples received
 
@@ -142,7 +143,7 @@ def usrp_record(f_tune, sr, t_total, gain=55, show=False):
 	stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
 	streamer.issue_stream_cmd(stream_cmd)
 	if show:
-		waterfall_mx(samples=samples, fftlen=2048, fft_jump=1024, srate=sr, plot_and_show=True, y_is_time=True)
+		waterfall_mx(samples=samples, fftlen=2048, fft_jump=1024, fft_stack=1, srate=sr, plot_and_show=True, y_is_time=True)
 	return samples
 
 
@@ -193,6 +194,59 @@ def usrp_transmit(samples, f_tune, sr, tx_gain, loop=False):
 
 
 
+def soapy_record(n_samples, sr_ask, f_tune=None, rx_gain=None):
+	import SoapySDR
+	from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
+	print("SoapySDR start")
+	args = dict(device="uhd")
+	sdr = SoapySDR.Device(args)
+	SoapySDR.setLogLevel(SoapySDR.SOAPY_SDR_FATAL)
+	if type(sdr) == tuple:
+		sdr = sdr[0]
+	print(sdr)
+	print("SoapySDR driver key:   ", sdr.getDriverKey())
+	print("SoapySDR hardware key: ", sdr.getHardwareKey())
+	sdr.setSampleRate(SOAPY_SDR_RX, 0, sr_ask)
+	if not (f_tune is None):
+		sdr.setFrequency(SOAPY_SDR_RX, 0, f_tune)
+	if not (rx_gain is None):
+		sdr.setGain(SOAPY_SDR_RX, 0, rx_gain)
+
+	rxStream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
+	storage_buffer = np.zeros(n_samples, np.complex64)
+	storage_idx = 0
+	recv_buffer = np.zeros(int(2**22), np.complex64)
+	rx_call_timeout = int(1e6 * 1024*16 * 0.8 / sr_ask)
+	absolute_bufflen = len(recv_buffer)
+	n_rx_total = 0
+	got_all = False
+	t00 = time.perf_counter()
+	sdr.activateStream(rxStream)
+	t00 = (t00+time.perf_counter())/2.0
+	t_timeout = t00 + 1.0 + 2.0*(n_samples / sr_ask)
+	while time.perf_counter() < t_timeout:
+		ret = sdr.readStream(rxStream, [recv_buffer], numElems=absolute_bufflen, timeoutUs=rx_call_timeout)
+		rx_ret = ret.ret
+		n_rx_total += rx_ret
+		n_store_ = min(rx_ret, n_samples-storage_idx)
+		storage_buffer[storage_idx:storage_idx+n_store_] = recv_buffer[0:n_store_]
+		storage_idx += n_store_
+		if storage_idx >= n_samples:
+			got_all = True
+			break
+	avg_sr = n_rx_total / (time.perf_counter() - t00)
+	print("Recording complete.")
+	if got_all:
+		print("Designated number of samples received.")
+		print("Got {} samples.".format(storage_idx))
+		print("Average sr {} MS/s.".format(round(1e-6*avg_sr, 3)))
+	else:
+		print("Recording timed out before all samples received.")
+		print("Got {} samples.".format(storage_idx))
+		print("Average sr {} MS/s.".format(round(1e-6*avg_sr, 3)))
+	sdr.deactivateStream(rxStream) #stop streaming
+	sdr.closeStream(rxStream)
+	return storage_buffer[0:storage_idx], avg_sr
 
 
 
@@ -250,14 +304,14 @@ def load_samples(fpath):
 
 
 if __name__ == '__main__':
-	default_dpath = "/home/elmore/datasetit/radiotallenteet/"
 
+	default_dpath = "/home/elmore/datasetit/radiotallenteet/"
 	f_tune_ = 437.10e6
 	sr_ = 1.0e6
 	smpls = usrp_record(f_tune=f_tune_,  sr=sr_, t_total=20.0, gain=55, show=False)
 	print("samples max amp:", np.max(np.abs(smpls)) )
-
 	store_samples(samples=smpls, dpath=default_dpath, fname_base="Tallinna_".format(int(time.time())), f_tune=f_tune_, sr=sr_)
+
 	#waterfall_mx(samples=smpls, fftlen=2048, fft_jump=1024, srate=sr_, plot_and_show=True, y_is_time=True)
 	#smpls, f_tune_, sr_ = load_samples(fpath=default_dpath + "Clio-B.pkl")
 	#print("Loaded {} samples".format(len(smpls)))
