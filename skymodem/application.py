@@ -95,6 +95,7 @@ if __name__ == '__main__':
 	parser.add_argument("--rx_gain", "-rg", type=float, default=40, help="Reception Gain setting for the USRP: 0 - 76 [dB]. Default is 40.", required=False)
 	parser.add_argument("--tx_gain", "-tg", type=float, default=80, help="TX Gain setting for the USRP: 0.0 - 89.75 [dB]. Default is 80.", required=False)
 	parser.add_argument("--auth", "-a", type=str, default="dev", choices=("dev", "spare", "fm"), help="Authentication key choices: 'dev' development (default), 'spare' Flight Model Spare, and 'fm' Flight Model.", required=False)
+	parser.add_argument("--multimode", "-mm", action="store_true", help="Run modem in 'multimode', which means that all baudrates (9600, 19200, 38400) are being received.")
 	_args = parser.parse_args(sys.argv[1:])
 	vc_base = _args.vc_base
 	assert vc_base >= 1000
@@ -180,7 +181,7 @@ if __name__ == '__main__':
 	amqp_broker_addr_ = "amqp://modem:fs1pmodem@192.168.10.2:5672"
 	#amqp_broker_addr_ = None
 	modem = SkyModem(rx_dsp_config=rx_dsp_config_, tx_dsp_config=tx_dsp_config_, radio_config=radio_config_, skylink_config=skylink_config_, hmac_key_list=hmac_keys, vc_port_base=vc_base, amqp_broker_addr=amqp_broker_addr_)
-	modem.start()
+	modem.start(multimode=_args.multimode)
 	#modem.dsp_loop.set_doppler_correction(True)
 	try:
 		while True:
