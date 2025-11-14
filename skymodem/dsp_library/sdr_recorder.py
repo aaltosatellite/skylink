@@ -304,13 +304,17 @@ def load_samples(fpath):
 
 
 if __name__ == '__main__':
+	#default_dpath = "/home/elmore/datasetit/radiotallenteet/"
+	#f_tune_ = 437.10e6
+	#sr_ = 1.0e6
+	#smpls = usrp_record(f_tune=f_tune_,  sr=sr_, t_total=20.0, gain=55, show=False)
+	#print("samples max amp:", np.max(np.abs(smpls)) )
+	#store_samples(samples=smpls, dpath=default_dpath, fname_base="Tallinna_".format(int(time.time())), f_tune=f_tune_, sr=sr_)
 
-	default_dpath = "/home/elmore/datasetit/radiotallenteet/"
-	f_tune_ = 437.10e6
-	sr_ = 1.0e6
-	smpls = usrp_record(f_tune=f_tune_,  sr=sr_, t_total=20.0, gain=55, show=False)
-	print("samples max amp:", np.max(np.abs(smpls)) )
-	store_samples(samples=smpls, dpath=default_dpath, fname_base="Tallinna_".format(int(time.time())), f_tune=f_tune_, sr=sr_)
+	default_dpath = "/home/aalto/samplesets/"
+	samples, measured_sr = soapy_record(n_samples=int(8e6*6.0), sr_ask=8e6)
+	comment = "measured average samplerate was {}".format( str(measured_sr) )
+	store_samples(samples=samples, dpath=default_dpath, fname_base="gs-full-spectrum-snap", f_tune=436e6, sr=8e6, comments=comment)
 
 	#waterfall_mx(samples=smpls, fftlen=2048, fft_jump=1024, srate=sr_, plot_and_show=True, y_is_time=True)
 	#smpls, f_tune_, sr_ = load_samples(fpath=default_dpath + "Clio-B.pkl")
