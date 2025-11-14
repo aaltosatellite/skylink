@@ -11,7 +11,7 @@ import multiprocessing as mpr
 from multiprocessing import shared_memory
 from copy import copy
 
-SHM_MEM_BASENAME = "QHXTSGLGANV-"
+SHM_MEM_BASENAME = "skymodem-dsp-multimode-shm-"
 
 _dbgprinter = DebugPrinter(log_title="DSPLoop", stdprint=True, zmqprint_host_port=("localhost", 11001))
 DBGPRINT = _dbgprinter.DBGPRINT_toggled
@@ -207,7 +207,7 @@ class DSPLoop:
 		bits = frame_packet(pl=pl_char_ints, synchword_int=self.tx_dsp_config.synchword, synchword_len=self.tx_dsp_config.synchword_len, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
 		bits = np.concatenate( (self.preamble_bits, bits) )
 		sps = self.tx_dsp_config.tx_sr0 / baudrate
-		n_silence_start = int(self.tx_dsp_config.tx_sr0 * 1.0e-3) # TODO: this should be a setting?
+		n_silence_start = int(self.tx_dsp_config.tx_sr0 * 10.0e-3) # Accounts for PA ramp up. TODO: this should be a setting?
 		dt1 = time.perf_counter() - t00
 		t00 = time.perf_counter()
 		samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.tx_dsp_config.tx_mod_index, shaper_BT_prod=self.tx_dsp_config.tx_BT, n_silence_start=n_silence_start, n_silence_end=0)
