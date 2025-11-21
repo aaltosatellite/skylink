@@ -33,7 +33,7 @@ def DBGPRINT(*args, **kwargs):
 
 class RadioConfig:
 	def __init__(self, mode, rx_sr, rx_f_tune, tx_sr, tx_f_tune, rx_gain, tx_gain):
-		assert mode in ("usrp", "soapy")
+		assert mode in ("usrp", "soapy", "soapy-buu")
 		self.mode 			= mode
 		self.rx_sr0 		= rx_sr
 		self.rx_f_tune 		= rx_f_tune
@@ -74,11 +74,11 @@ class RadioLoop:
 		self.tx_thread.join(timeout=1.0)
 
 	def start(self):
-		assert self.radio_config.mode in ("usrp", "soapy")
+		assert self.radio_config.mode in ("usrp", "soapy", "soapy-buu")
 		if self.radio_config.mode == "usrp":
 			self._usrp_start()
 		else:
-			self._soapy_start()
+			self._soapy_start(soapy_selection=self.radio_config.mode)
 
 	def sim_start(self, noiseSPD, ts_pl_list, rx_samplearr_que, tx_sample_que):
 		self._sim_start(noiseSPD=noiseSPD, ts_pl_list=ts_pl_list, rx_samplearr_que=rx_samplearr_que, tx_sample_que=tx_sample_que)
@@ -243,20 +243,30 @@ class RadioLoop:
 
 	# === Soapy ==============================================================================================================================================================================
 	# === Soapy ==============================================================================================================================================================================
-	def _soapy_start(self):
+	def _soapy_start(self, soapy_selection: str):
 		"""
 		This start method will be called when used on the ground station machine.
 		The Soapy-code is incomplete, and will certainly not work yet. You will need to attach to a 'leecher' device created by the soapy-shared library.
 		"""
-		self.DBGPRINT("SoapySDR start")
-		args = dict(device="uhd")
-		sdr = SoapySDR.Device(args) #args
+		self.DBGPRINT("SoapySDR start: list devices")
+        # enumerate devices
+		devices = SoapySDR.Device.enumerate()
+		sdr = None
+		# in lab 314FC5A (ganymede) or 31119ED.
+        # in GS 32723DA (Backup UHF), 314FC56 (UHF), or 34A03D7 (S-Band).
+		#serial = "314FC5A" if "buu" not in soapy_selection else "31119ED"  # for lab usrp use
+		serial = "32723DA" if "buu" not in soapy_selection else "314FC56" # For GS: primary is 314FC56.
+		for device in devices:
+			self.DBGPRINT(device)
+			if serial in device["label"]:
+				sdr = SoapySDR.Device(device)
 		SoapySDR.setLogLevel(SoapySDR.SOAPY_SDR_FATAL)
-		if type(sdr) == tuple:
-			sdr = sdr[0]
-		print(sdr)
+		if sdr == None:
+			self.DBGPRINT("WARNING: Soapy device with correct serial number (label) was not found! Exiting...")
+			exit()
+		self.DBGPRINT("Selecting ", sdr)
 		self.DBGPRINT("SoapySDR driver key: ", sdr.getDriverKey())
-		self.DBGPRINT("SoapySDR driver key: ", sdr.getHardwareKey())
+		self.DBGPRINT("SoapySDR Hardware key: ", sdr.getHardwareKey())
 		self.DBGPRINT("Assuming we are on a SoapyShared leecher device.")
 		self.DBGPRINT("Radio parameters can not be changed, instead we config to what we believe they are.")
 		self.DBGPRINT("Assuming:  f-tune = {} MHz".format(self.radio_config.rx_f_tune))

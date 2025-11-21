@@ -28,7 +28,7 @@ def get_usrp_receiver_config(f_center, baudrate, max_signal_bw, rx_gain, tx_gain
 
 
 
-def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, max_signal_bw, rx_gain, tx_gain):
+def get_soapy_leecher_receiver_config(soapy_selection, f_center, baudrate, f_tune, sr_hardware, max_signal_bw, rx_gain, tx_gain):
 	f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
 	f_center_min = f_center_min - max_signal_bw * 0.6
 	f_center_max = f_center_max + max_signal_bw * 0.6
@@ -45,7 +45,7 @@ def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, m
 	print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
 	print("Calculated necessary samplerate at {} ks/s".format( round(1.0e-3 * sr_leecher, 1) ))
 	print("Using soapy-leecher radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr_leecher*1e-6, 3) ))
-	radio_config 	= RadioConfig(mode="soapy", rx_sr=sr_leecher, rx_f_tune=f_tune, tx_sr=sr_leecher, tx_f_tune=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
+	radio_config 	= RadioConfig(mode=soapy_selection, rx_sr=sr_leecher, rx_f_tune=f_tune, tx_sr=sr_leecher, tx_f_tune=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
 	rx_dsp_config 	= RXDSPConfig(rx_sr0=sr_leecher, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
 	tx_dsp_config 	= TXDSPConfig(tx_sr0=sr_leecher, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate)
 	return rx_dsp_config, tx_dsp_config, radio_config
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 	import sys
 	import argparse
 	parser = argparse.ArgumentParser()
-	parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy"), help="Operation mode: attach directly to the USRP (default) or via SoapyShared.", required=False)
+	parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy", "soapy-buu"), help="Operation mode: attach directly to the USRP (default) or via SoapyShared: 'soapy' for main UHF and 'soapy-buu' for backup.", required=False)
 	parser.add_argument("--vc_base", "-vc", type=int, default=7100, help="Virtual Channel base. Default 7100.", required=False)
 	parser.add_argument("--center_freq", "-cf", "-f", type=float, default=437.025e6, help="Center frequency used for communications [Hz]. Default 437.025 MHz (dev frequency).")
 	parser.add_argument("--rx_gain", "-rg", type=float, default=40, help="Reception Gain setting for the USRP: 0 - 76 [dB]. Default is 40.", required=False)
@@ -169,10 +169,10 @@ if __name__ == '__main__':
 	#* DO NOT MODIFY ABOVE CONFIGURATIONS IN ANY SITUATION!!! *#
 
 
-	if _args.mode == "soapy":
+	if "soapy" in _args.mode:
 		ftune_correction = 40e3
 		print(f"Using Soapy mode, center_freq={_args.center_freq} Hz, and ftune_correction={ftune_correction} Hz")
-		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain)
+		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(soapy_selection=_args.mode, f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain)
 	else:
 		assert _args.mode == "usrp"
 		rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain)
