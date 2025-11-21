@@ -255,7 +255,7 @@ class RadioLoop:
 		# in lab 314FC5A (ganymede) or 31119ED.
         # in GS 32723DA (Backup UHF), 314FC56 (UHF), or 34A03D7 (S-Band).
 		#serial = "314FC5A" if "buu" not in soapy_selection else "31119ED"  # for lab usrp use
-		serial = "32723DA" if "buu" not in soapy_selection else "314FC56" # For GS: primary is 314FC56.
+		serial = "32723DA" if "buu" in soapy_selection else "314FC56" # For GS: primary is 314FC56.
 		for device in devices:
 			self.DBGPRINT(device)
 			if serial in device["label"]:
