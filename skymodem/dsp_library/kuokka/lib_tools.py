@@ -98,17 +98,17 @@ ccsds_tm_whitening_bytes = np.array([
 0x19, 0x51, 0x5f, 0x9f, 0x5,  0x8,  0x78, 0xc4, 0x4a, 0x66, 0xf5, 0x58, 0xff, 0x48, 0xe,  0xc0, ],dtype=np.int32)
 
 def CCSDS_TM_whitener_sequence(n):
-	state = 0xff
-	outp = 0
-	bitarr = []
-	bytearr = []
-	for ii in range(n):
-		outp = ((outp<<1) + (state & 1)) & 0xff
-		if (ii%8) == 7:
-			bytearr.append(outp)
-		bitarr.append(state & 1)
-		state = (state>>1) + ((((state >> 7) & 1) ^ ((state >> 5) & 1) ^ ((state >> 3) & 1) ^ (state & 1)) << 7)
-	return np.array(bytearr, dtype=np.int32), np.array(bitarr, dtype=np.int8)
+    state = 0xff
+    outp = 0
+    bitarr = []
+    bytearr = []
+    for ii in range(n):
+        outp = ((outp<<1) + (state & 1)) & 0xff
+        if (ii%8) == 7:
+            bytearr.append(outp)
+        bitarr.append(state & 1)
+        state = (state>>1) + ((((state >> 7) & 1) ^ ((state >> 5) & 1) ^ ((state >> 3) & 1) ^ (state & 1)) << 7)
+    return np.array(bytearr, dtype=np.int32), np.array(bitarr, dtype=np.int8)
 # = CCSDS TM RANDOMIZER ======================================================================================================================================================================
 # = CCSDS TM RANDOMIZER ======================================================================================================================================================================
 
@@ -117,47 +117,47 @@ def CCSDS_TM_whitener_sequence(n):
 ## PN9 SEQUENCE ==============================================================================================================================================================================
 ## PN9 SEQUENCE ==============================================================================================================================================================================
 PN9_bytes = np.array([255, 225, 29, 154, 237, 133, 51, 36, 234, 122, 210, 57, 112, 151, 87, 10, 84, 125, 45, 216, 109, 13, 186, 143, 103, 89, 199, 162, 191, 52,
-			 202, 24, 48, 83, 147, 223, 146, 236, 167, 21, 138, 220, 244, 134, 85, 78, 24, 33, 64, 196, 196, 213, 198, 145, 138, 205, 231, 209, 78, 9, 50,
-			 23, 223, 131, 255, 240, 14, 205, 246, 194, 25, 18, 117, 61, 233, 28, 184, 203, 43, 5, 170, 190, 22, 236, 182, 6, 221, 199, 179, 172, 99, 209,
-			 95, 26, 101, 12, 152, 169, 201, 111, 73, 246, 211, 10, 69, 110, 122, 195, 42, 39, 140, 16, 32, 98, 226, 106, 227, 72, 197, 230, 243, 104, 167,
-			 4, 153, 139, 239, 193, 127, 120, 135, 102, 123, 225, 12, 137, 186, 158, 116, 14, 220, 229, 149, 2, 85, 95, 11, 118, 91, 131, 238, 227, 89, 214,
-			 177, 232, 47, 141, 50, 6, 204, 212, 228, 183, 36, 251, 105, 133, 34, 55, 189, 97, 149, 19, 70, 8, 16, 49, 113, 181, 113, 164, 98, 243, 121, 180,
-			 83, 130, 204, 197, 247, 224, 63, 188, 67, 179, 189, 112, 134, 68, 93, 79, 58, 7, 238, 242, 74, 129, 170, 175, 5, 187, 173, 65, 247, 241, 44, 235,
-			 88, 244, 151, 70, 25, 3, 102, 106, 242, 91, 146, 253, 180, 66, 145, 155, 222, 176, 202, 9, 35, 4, 136, 152, 184, 218, 56, 82, 177, 249, 60, 218,
-			 41, 65, 230, 226, 123, 240, 31, 222, 161, 217, 94, 56, 67, 162, 174, 39, 157, 3, 119, 121, 165, 64, 213, 215, 130, 221, 214, 160, 251, 120, 150,
-			 117, 44, 250, 75, 163, 140, 1, 51, 53, 249, 45, 201, 126, 90, 161, 200, 77, 111, 88, 229, 132, 17, 2, 68, 76, 92, 109, 28, 169, 216, 124, 30, 237,
-			 148, 32, 115, 241, 61, 248, 15, 239, 208, 108, 47, 156, 33, 81, 215, 147, 206, 129, 187, 188, 82, 160, 234, 107, 193, 110, 107, 208, 125, 60, 203,
-			 58, 22, 253, 165, 81, 198, 128, 153, 154, 252, 150, 100, 63, 173, 80, 228, 166, 55, 172, 114, 194, 8, 1, 34, 38, 174, 54, 142, 84, 108, 62, 143,
-			 118, 74, 144, 185, 248, 30, 252, 135, 119, 104, 182, 23, 206, 144, 168, 235, 73, 231, 192, 93, 94, 41, 80, 245, 181, 96, 183, 53, 232, 62, 158, 101,
-			 29, 139, 254, 210, 40, 99, 192, 76, 77, 126, 75, 178, 159, 86, 40, 114, 211, 27, 86, 57, 97, 132, 0, 17, 19, 87, 27, 71, 42, 54, 159, 71, 59, 37,
-			 200, 92, 124, 15, 254, 195, 59, 52, 219, 11, 103, 72, 212, 245, 164, 115, 224, 46, 175, 20, 168, 250, 90, 176, 219, 26, 116, 31, 207, 178, 142, 69,
-			 127, 105, 148, 49, 96, 166, 38, 191, 37, 217, 79, 43, 20, 185, 233, 13, 171, 156, 48, 66, 128, 136, 137, 171, 141, 35, 21, 155, 207, 163, 157, 18,
-			 100, 46, 190, 7, 255, 225, 29, 154, 237, 133, 51, 36, 234, 122, 210, 57, 112, 151, 87, 10, 84, 125, 45, 216, 109, 13, 186, 143, 103, 89, 199, 162,
-			 191, 52, 202, 24, 48, 83, 147, 223, 146, 236, 167, 21, 138, 220, 244, 134, 85, 78, 24, 33, 64, 196, 196, 213, 198, 145, 138, 205, 231, 209, 78, 9,
-			 50, 23, 223, 131, 255, 240, 14, 205, 246, 194, 25, 18, 117, 61, 233, 28, 184, 203, 43, 5, 170, 190, 22, 236, 182, 6, 221, 199, 179, 172, 99, 209,
-			 95, 26, 101, 12, 152, 169, 201, 111, 73, 246, 211, 10, 69, 110, 122, 195, 42, 39, 140, 16, 32, 98, 226, 106, 227, 72, 197, 230, 243, 104, 167, 4,
-			 153, 139, 239, 193, 127, 120, 135, 102, 123, 225, 12, 137, 186, 158, 116, 14, 220, 229, 149, 2, 85, 95, 11, 118, 91, 131, 238, 227, 89, 214, 177,
-			 232, 47, 141, 50, 6, 204, 212, 228, 183, 36, 251, 105, 133, 34, 55, 189, 97, 149, 19, 70, 8, 16, 49, 113, 181, 113, 164, 98, 243, 121, 180, 83, 130,
-			 204, 197, 247, 224, 63, 188, 67, 179, 189, 112, 134, 68, 93, 79, 58, 7, 238, 242, 74, 129, 170, 175, 5, 187, 173, 65, 247, 241, 44, 235, 88, 244, 151,
-			 70, 25, 3, 102, 106, 242, 91, 146, 253, 180, 66, 145, 155, 222, 176, 202, 9, 35, 4, 136, 152, 184, 218, 56, 82, 177, 249, 60, 218, 41, 65, 230, 226, 123,
-			 240, 31, 222, 161, 217, 94, 56, 67, 162, 174, 39, 157, 3, 119, 121, 165, 64, 213, 215, 130, 221, 214, 160, 251, 120, 150, 117, 44, 250, 75, 163, 140, 1,
-			 51, 53, 249, 45, 201, 126, 90, 161, 200, 77, 111, 88, 229, 132, 17, 2, 68, 76, 92, 109, 28, 169, 216, 124, 30, 237, 148, 32, 115, 241, 61, 248, 15, 239,
-			 208, 108, 47, 156, 33, 81, 215, 147, 206, 129, 187, 188, 82, 160, 234, 107, 193, 110, 107, 208, 125, 60, 203, 58, 22, 253, 165, 81, 198, 128, 153, 154,
-			 252, 150, 100, 63, 173, 80, 228, 166, 55, 172, 114, 194, 8, 1, 34, 38, 174, 54, 142, 84, 108, 62, 143, 118, 74, 144, 185, 248, 30, 252, 135, 119, 104,
-			 182, 23, 206, 144, 168, 235, 73, 231, 192, 93, 94, 41, 80, 245, 181, 96, 183, 53, 232, 62, 158, 101, 29, 139, 254, 210, 40, 99, 192, 76, 77, 126, 75,
-			 178, 159, 86, 40, 114, 211, 27, 86, 57, 97, 132, 0, 17, 19, 87, 27, 71, 42, 54, 159, 71, 59, 37, 200, 92, 124, 15, 254, 195, 59, 52, 219, 11, 103, 72,
-			 212, 245, 164, 115, 224, 46, 175, 20, 168, 250, 90, 176, 219, 26, 116, 31, 207, 178, 142, 69, 127, 105, 148, 49, 96, 166, 38, 191, 37, 217, 79, 43, 20,
-			 185, 233, 13, 171, 156, 48, 66, 128, 136, 137, 171, 141, 35, 21, 155, 207, 163, 157, 18, 100, 46, 190, 7, 255, 225, 29], dtype=np.uint8)
+                         202, 24, 48, 83, 147, 223, 146, 236, 167, 21, 138, 220, 244, 134, 85, 78, 24, 33, 64, 196, 196, 213, 198, 145, 138, 205, 231, 209, 78, 9, 50,
+                         23, 223, 131, 255, 240, 14, 205, 246, 194, 25, 18, 117, 61, 233, 28, 184, 203, 43, 5, 170, 190, 22, 236, 182, 6, 221, 199, 179, 172, 99, 209,
+                         95, 26, 101, 12, 152, 169, 201, 111, 73, 246, 211, 10, 69, 110, 122, 195, 42, 39, 140, 16, 32, 98, 226, 106, 227, 72, 197, 230, 243, 104, 167,
+                         4, 153, 139, 239, 193, 127, 120, 135, 102, 123, 225, 12, 137, 186, 158, 116, 14, 220, 229, 149, 2, 85, 95, 11, 118, 91, 131, 238, 227, 89, 214,
+                         177, 232, 47, 141, 50, 6, 204, 212, 228, 183, 36, 251, 105, 133, 34, 55, 189, 97, 149, 19, 70, 8, 16, 49, 113, 181, 113, 164, 98, 243, 121, 180,
+                         83, 130, 204, 197, 247, 224, 63, 188, 67, 179, 189, 112, 134, 68, 93, 79, 58, 7, 238, 242, 74, 129, 170, 175, 5, 187, 173, 65, 247, 241, 44, 235,
+                         88, 244, 151, 70, 25, 3, 102, 106, 242, 91, 146, 253, 180, 66, 145, 155, 222, 176, 202, 9, 35, 4, 136, 152, 184, 218, 56, 82, 177, 249, 60, 218,
+                         41, 65, 230, 226, 123, 240, 31, 222, 161, 217, 94, 56, 67, 162, 174, 39, 157, 3, 119, 121, 165, 64, 213, 215, 130, 221, 214, 160, 251, 120, 150,
+                         117, 44, 250, 75, 163, 140, 1, 51, 53, 249, 45, 201, 126, 90, 161, 200, 77, 111, 88, 229, 132, 17, 2, 68, 76, 92, 109, 28, 169, 216, 124, 30, 237,
+                         148, 32, 115, 241, 61, 248, 15, 239, 208, 108, 47, 156, 33, 81, 215, 147, 206, 129, 187, 188, 82, 160, 234, 107, 193, 110, 107, 208, 125, 60, 203,
+                         58, 22, 253, 165, 81, 198, 128, 153, 154, 252, 150, 100, 63, 173, 80, 228, 166, 55, 172, 114, 194, 8, 1, 34, 38, 174, 54, 142, 84, 108, 62, 143,
+                         118, 74, 144, 185, 248, 30, 252, 135, 119, 104, 182, 23, 206, 144, 168, 235, 73, 231, 192, 93, 94, 41, 80, 245, 181, 96, 183, 53, 232, 62, 158, 101,
+                         29, 139, 254, 210, 40, 99, 192, 76, 77, 126, 75, 178, 159, 86, 40, 114, 211, 27, 86, 57, 97, 132, 0, 17, 19, 87, 27, 71, 42, 54, 159, 71, 59, 37,
+                         200, 92, 124, 15, 254, 195, 59, 52, 219, 11, 103, 72, 212, 245, 164, 115, 224, 46, 175, 20, 168, 250, 90, 176, 219, 26, 116, 31, 207, 178, 142, 69,
+                         127, 105, 148, 49, 96, 166, 38, 191, 37, 217, 79, 43, 20, 185, 233, 13, 171, 156, 48, 66, 128, 136, 137, 171, 141, 35, 21, 155, 207, 163, 157, 18,
+                         100, 46, 190, 7, 255, 225, 29, 154, 237, 133, 51, 36, 234, 122, 210, 57, 112, 151, 87, 10, 84, 125, 45, 216, 109, 13, 186, 143, 103, 89, 199, 162,
+                         191, 52, 202, 24, 48, 83, 147, 223, 146, 236, 167, 21, 138, 220, 244, 134, 85, 78, 24, 33, 64, 196, 196, 213, 198, 145, 138, 205, 231, 209, 78, 9,
+                         50, 23, 223, 131, 255, 240, 14, 205, 246, 194, 25, 18, 117, 61, 233, 28, 184, 203, 43, 5, 170, 190, 22, 236, 182, 6, 221, 199, 179, 172, 99, 209,
+                         95, 26, 101, 12, 152, 169, 201, 111, 73, 246, 211, 10, 69, 110, 122, 195, 42, 39, 140, 16, 32, 98, 226, 106, 227, 72, 197, 230, 243, 104, 167, 4,
+                         153, 139, 239, 193, 127, 120, 135, 102, 123, 225, 12, 137, 186, 158, 116, 14, 220, 229, 149, 2, 85, 95, 11, 118, 91, 131, 238, 227, 89, 214, 177,
+                         232, 47, 141, 50, 6, 204, 212, 228, 183, 36, 251, 105, 133, 34, 55, 189, 97, 149, 19, 70, 8, 16, 49, 113, 181, 113, 164, 98, 243, 121, 180, 83, 130,
+                         204, 197, 247, 224, 63, 188, 67, 179, 189, 112, 134, 68, 93, 79, 58, 7, 238, 242, 74, 129, 170, 175, 5, 187, 173, 65, 247, 241, 44, 235, 88, 244, 151,
+                         70, 25, 3, 102, 106, 242, 91, 146, 253, 180, 66, 145, 155, 222, 176, 202, 9, 35, 4, 136, 152, 184, 218, 56, 82, 177, 249, 60, 218, 41, 65, 230, 226, 123,
+                         240, 31, 222, 161, 217, 94, 56, 67, 162, 174, 39, 157, 3, 119, 121, 165, 64, 213, 215, 130, 221, 214, 160, 251, 120, 150, 117, 44, 250, 75, 163, 140, 1,
+                         51, 53, 249, 45, 201, 126, 90, 161, 200, 77, 111, 88, 229, 132, 17, 2, 68, 76, 92, 109, 28, 169, 216, 124, 30, 237, 148, 32, 115, 241, 61, 248, 15, 239,
+                         208, 108, 47, 156, 33, 81, 215, 147, 206, 129, 187, 188, 82, 160, 234, 107, 193, 110, 107, 208, 125, 60, 203, 58, 22, 253, 165, 81, 198, 128, 153, 154,
+                         252, 150, 100, 63, 173, 80, 228, 166, 55, 172, 114, 194, 8, 1, 34, 38, 174, 54, 142, 84, 108, 62, 143, 118, 74, 144, 185, 248, 30, 252, 135, 119, 104,
+                         182, 23, 206, 144, 168, 235, 73, 231, 192, 93, 94, 41, 80, 245, 181, 96, 183, 53, 232, 62, 158, 101, 29, 139, 254, 210, 40, 99, 192, 76, 77, 126, 75,
+                         178, 159, 86, 40, 114, 211, 27, 86, 57, 97, 132, 0, 17, 19, 87, 27, 71, 42, 54, 159, 71, 59, 37, 200, 92, 124, 15, 254, 195, 59, 52, 219, 11, 103, 72,
+                         212, 245, 164, 115, 224, 46, 175, 20, 168, 250, 90, 176, 219, 26, 116, 31, 207, 178, 142, 69, 127, 105, 148, 49, 96, 166, 38, 191, 37, 217, 79, 43, 20,
+                         185, 233, 13, 171, 156, 48, 66, 128, 136, 137, 171, 141, 35, 21, 155, 207, 163, 157, 18, 100, 46, 190, 7, 255, 225, 29], dtype=np.uint8)
 
 
 def PN9_whitener_byte_sequence(n):
-	PN9 = 0xff
-	bytearr = [PN9,]
-	for ii in range(n):
-		if (ii%8) == 7:
-			bytearr.append(PN9 & 0xff)
-		PN9 = (PN9>>1) + ((((PN9 >> 5) & 1) ^ (PN9 & 1)) << 8)
-	return np.array(bytearr, dtype=np.int32)
+    PN9 = 0xff
+    bytearr = [PN9,]
+    for ii in range(n):
+        if (ii%8) == 7:
+            bytearr.append(PN9 & 0xff)
+        PN9 = (PN9>>1) + ((((PN9 >> 5) & 1) ^ (PN9 & 1)) << 8)
+    return np.array(bytearr, dtype=np.int32)
 ## PN9 SEQUENCE ==============================================================================================================================================================================
 ## PN9 SEQUENCE ==============================================================================================================================================================================
 
@@ -191,56 +191,56 @@ SRATE_E_0k150 = 0x00
 
 
 def CC1125_symbolrate_for_M_E(SRATE_M, SRATE_E):  # maxdf = 2.384185791015625
-	assert 0 <= SRATE_E < 16
-	assert 0 <= SRATE_M < (2**20)
-	if SRATE_E == 0:
-		return 40e6 * SRATE_M / 2**38
-	return 40e6 * (2**20 + SRATE_M) * (2**SRATE_E) / (2**39)
+    assert 0 <= SRATE_E < 16
+    assert 0 <= SRATE_M < (2**20)
+    if SRATE_E == 0:
+        return 40e6 * SRATE_M / 2**38
+    return 40e6 * (2**20 + SRATE_M) * (2**SRATE_E) / (2**39)
 
 def CC1125_M_E_for_symbolrate(symbolrate):
-	assert 0 < symbolrate <= 4999997.615814209
-	if symbolrate <= CC1125_symbolrate_for_M_E(SRATE_M=0x0fffff, SRATE_E=0):
-		return int(symbolrate * (2**38) / 40e6), 0
-	E = int(np.log2( symbolrate * 2**39 / 40e6 ) - 20)
-	M = int((symbolrate * 2**39 / (40e6 * 2**E)) - 2**20)
-	return M, E
+    assert 0 < symbolrate <= 4999997.615814209
+    if symbolrate <= CC1125_symbolrate_for_M_E(SRATE_M=0x0fffff, SRATE_E=0):
+        return int(symbolrate * (2**38) / 40e6), 0
+    E = int(np.log2( symbolrate * 2**39 / 40e6 ) - 20)
+    M = int((symbolrate * 2**39 / (40e6 * 2**E)) - 2**20)
+    return M, E
 
 #    (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
 def CC1125_peak_deviation_for_M_E(DEV_M, DEV_E):
-	assert 0 <= DEV_E <= (2**3 -1)
-	assert 0 <= DEV_M <= (2**8 -1)
-	if DEV_E == 0:
-		return (40e6/(2**23)) * DEV_M
-	return (40e6/(2**24)) * (256+DEV_M) * 2**DEV_E
+    assert 0 <= DEV_E <= (2**3 -1)
+    assert 0 <= DEV_M <= (2**8 -1)
+    if DEV_E == 0:
+        return (40e6/(2**23)) * DEV_M
+    return (40e6/(2**24)) * (256+DEV_M) * 2**DEV_E
 
 def CC1125_DEV_M_E_for_peak_deviation(f_dev):
-	if f_dev < 256 * 40e6 / (2**23):
-		E = 0
-		M = int(f_dev * 2**23 / 40e6)
-		assert M < 256
-		return M, E
-	E = int(np.log( f_dev * 2**24 /(40e6 * 256) ) / np.log(2))
-	M = int((f_dev * 2**24 / ((2**E) * 40e6)) - 256)
-	assert E < 8
-	assert M < 256
-	return M, E
+    if f_dev < 256 * 40e6 / (2**23):
+        E = 0
+        M = int(f_dev * 2**23 / 40e6)
+        assert M < 256
+        return M, E
+    E = int(np.log( f_dev * 2**24 /(40e6 * 256) ) / np.log(2))
+    M = int((f_dev * 2**24 / ((2**E) * 40e6)) - 256)
+    assert E < 8
+    assert M < 256
+    return M, E
 
 def CC1125_DEV_M_E_config_for_peak_deviation(f_dev, BT_on):
-	assert BT_on in (0,1)
-	if f_dev < 256 * 40e6 / (2**23):
-		E = 0
-		M = int(f_dev * 2**23 / 40e6)
-		assert M < 256
-		if BT_on == 1:
-			E = E | 0x8
-		return M, E
-	E = int(np.log( f_dev * 2**24 /(40e6 * 256) ) / np.log(2))
-	M = int((f_dev * 2**24 / ((2**E) * 40e6)) - 256)
-	assert E < 8
-	assert M < 256
-	if BT_on == 1:
-		E = E | 0x8
-	return M, E
+    assert BT_on in (0,1)
+    if f_dev < 256 * 40e6 / (2**23):
+        E = 0
+        M = int(f_dev * 2**23 / 40e6)
+        assert M < 256
+        if BT_on == 1:
+            E = E | 0x8
+        return M, E
+    E = int(np.log( f_dev * 2**24 /(40e6 * 256) ) / np.log(2))
+    M = int((f_dev * 2**24 / ((2**E) * 40e6)) - 256)
+    assert E < 8
+    assert M < 256
+    if BT_on == 1:
+        E = E | 0x8
+    return M, E
 ## CC1125 SETTINGS ===========================================================================================================================================================================
 ## CC1125 SETTINGS ===========================================================================================================================================================================
 
@@ -254,15 +254,15 @@ def CC1125_DEV_M_E_config_for_peak_deviation(f_dev, BT_on):
 GAUSS_STD_PER_HALFPOINTS = 1 / (2*np.sqrt(2*np.log(2)))
 @njit(cache=True)
 def gauss_curve(std, x):
-	a = 1/(std*np.sqrt(2*np.pi))
-	return a * np.exp(-0.5 * ((x/std)**2))  # x = (x-mu)
+    a = 1/(std*np.sqrt(2*np.pi))
+    return a * np.exp(-0.5 * ((x/std)**2))  # x = (x-mu)
 
 @njit(cache=True)
 def gauss_curve_sps(sps_f, BT, n_taps):
-	std = sps_f * GAUSS_STD_PER_HALFPOINTS / (2*BT)
-	x = np.linspace(-1.0, 1.0, n_taps) * (n_taps-1)
-	curve = gauss_curve(std, x)
-	return curve / np.sum(curve)
+    std = sps_f * GAUSS_STD_PER_HALFPOINTS / (2*BT)
+    x = np.linspace(-1.0, 1.0, n_taps) * (n_taps-1)
+    curve = gauss_curve(std, x)
+    return curve / np.sum(curve)
 
 #@njit(cache=True)
 #def sinc_curve(BT, sps_f, n_taps):
@@ -272,101 +272,101 @@ def gauss_curve_sps(sps_f, BT, n_taps):
 
 @njit(cache=True)
 def make_squarewave(binary_symbols, sps_f, i_sample_of_sym0_f, nsamples, npad):
-	#assert np.all(np.abs(np.abs(binary_symbols)-1) < 0.0001)
-	if nsamples < 0:
-		nsamples = int(len(binary_symbols) * sps_f + i_sample_of_sym0_f)
-	samples = np.zeros(nsamples)
-	for i in range(nsamples):
-		isym = int((i-i_sample_of_sym0_f) / sps_f)
-		if isym < 0:
-			continue
-		if isym < len(binary_symbols):
-			samples[i] = binary_symbols[isym]
-	if npad > 0:
-		pad = np.zeros(npad, dtype=np.float64)
-		samples = np.concatenate( (pad, samples, pad) )
-	return samples
+    #assert np.all(np.abs(np.abs(binary_symbols)-1) < 0.0001)
+    if nsamples < 0:
+        nsamples = int(len(binary_symbols) * sps_f + i_sample_of_sym0_f)
+    samples = np.zeros(nsamples)
+    for i in range(nsamples):
+        isym = int((i-i_sample_of_sym0_f) / sps_f)
+        if isym < 0:
+            continue
+        if isym < len(binary_symbols):
+            samples[i] = binary_symbols[isym]
+    if npad > 0:
+        pad = np.zeros(npad, dtype=np.float64)
+        samples = np.concatenate( (pad, samples, pad) )
+    return samples
 
 
 @njit(cache=True, parallel=True)
 def make_f_modulating_waveform_parallel(binary_symbols, sps_f, shaper_BT_prod, shaper_n_taps):
-	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
-	if shaper_BT_prod > 0:
-		pulse = gauss_curve_sps(sps_f=sps_f, BT=shaper_BT_prod, n_taps=shaper_n_taps)
-		assert len(pulse) == shaper_n_taps
-	else:
-		pulse = np.ones(1, dtype=np.float64)
-	npulse = len(pulse)
-	modulator0 = make_squarewave(binary_symbols=binary_symbols, sps_f=sps_f, i_sample_of_sym0_f=0.0, nsamples=-1, npad=npulse//2)
-	if npulse > 1:
-		#modulator1 = np.correlate(modulator0, pulse)
-		modulator1 = np.zeros(len(modulator0)-npulse+1, dtype=np.float64)
-		for i in prange(len(modulator1)):
-			modulator1[i] = np.sum(pulse * modulator0[i:i+npulse])
-	else:
-		modulator1 = modulator0
-	#print("np.max(np.abs(modulator1)), len(modulator1)", np.max(np.abs(modulator1)),  len(modulator1), npulse )
-	modulator1 = modulator1 / np.max(np.abs(modulator1))
-	return modulator1
+    assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+    if shaper_BT_prod > 0:
+        pulse = gauss_curve_sps(sps_f=sps_f, BT=shaper_BT_prod, n_taps=shaper_n_taps)
+        assert len(pulse) == shaper_n_taps
+    else:
+        pulse = np.ones(1, dtype=np.float64)
+    npulse = len(pulse)
+    modulator0 = make_squarewave(binary_symbols=binary_symbols, sps_f=sps_f, i_sample_of_sym0_f=0.0, nsamples=-1, npad=npulse//2)
+    if npulse > 1:
+        #modulator1 = np.correlate(modulator0, pulse)
+        modulator1 = np.zeros(len(modulator0)-npulse+1, dtype=np.float64)
+        for i in prange(len(modulator1)):
+            modulator1[i] = np.sum(pulse * modulator0[i:i+npulse])
+    else:
+        modulator1 = modulator0
+    #print("np.max(np.abs(modulator1)), len(modulator1)", np.max(np.abs(modulator1)),  len(modulator1), npulse )
+    modulator1 = modulator1 / np.max(np.abs(modulator1))
+    return modulator1
 
 @njit(cache=True, parallel=False)
 def make_f_modulating_waveform_simple(binary_symbols, sps_f, shaper_BT_prod, shaper_n_taps):
-	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
-	if shaper_BT_prod > 0:
-		pulse = gauss_curve_sps(sps_f=sps_f, BT=shaper_BT_prod, n_taps=shaper_n_taps)
-		assert len(pulse) == shaper_n_taps
-	else:
-		pulse = np.ones(1, dtype=np.float64)
-	npulse = len(pulse)
-	modulator0 = make_squarewave(binary_symbols=binary_symbols, sps_f=sps_f, i_sample_of_sym0_f=0.0, nsamples=-1, npad=npulse//2)
-	if npulse > 1:
-		modulator1 = np.correlate(modulator0, pulse)
-		#modulator1 = np.zeros(len(modulator0)-npulse+1, dtype=np.float64)
-		#for i in prange(len(modulator1)):
-		#	modulator1[i] = np.sum(pulse * modulator0[i:i+npulse])
-	else:
-		modulator1 = modulator0
-	modulator1 = modulator1 / np.max(np.abs(modulator1))
-	return modulator1
+    assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+    if shaper_BT_prod > 0:
+        pulse = gauss_curve_sps(sps_f=sps_f, BT=shaper_BT_prod, n_taps=shaper_n_taps)
+        assert len(pulse) == shaper_n_taps
+    else:
+        pulse = np.ones(1, dtype=np.float64)
+    npulse = len(pulse)
+    modulator0 = make_squarewave(binary_symbols=binary_symbols, sps_f=sps_f, i_sample_of_sym0_f=0.0, nsamples=-1, npad=npulse//2)
+    if npulse > 1:
+        modulator1 = np.correlate(modulator0, pulse)
+        #modulator1 = np.zeros(len(modulator0)-npulse+1, dtype=np.float64)
+        #for i in prange(len(modulator1)):
+        #	modulator1[i] = np.sum(pulse * modulator0[i:i+npulse])
+    else:
+        modulator1 = modulator0
+    modulator1 = modulator1 / np.max(np.abs(modulator1))
+    return modulator1
 
 
 if int(sys.version.split(" ")[0].split(".")[1]) >= 11:
-	make_f_modulating_waveform = make_f_modulating_waveform_parallel
+    make_f_modulating_waveform = make_f_modulating_waveform_parallel
 else:
-	make_f_modulating_waveform = make_f_modulating_waveform_simple
+    make_f_modulating_waveform = make_f_modulating_waveform_simple
 
 
 @njit(cache=True)
 def fm_mod(f_signal_offset, peak_deviation, modulator):
-	assert np.min(modulator) >= -1.0
-	assert np.max(modulator) <=  1.0
-	assert abs(f_signal_offset) < 0.5
-	nn = len(modulator)
+    assert np.min(modulator) >= -1.0
+    assert np.max(modulator) <=  1.0
+    assert abs(f_signal_offset) < 0.5
+    nn = len(modulator)
 
-	#cs_mod = np.cumsum(modulator)
+    #cs_mod = np.cumsum(modulator)
 
-	cs_mod = np.zeros(nn, dtype=np.float64)
-	cs_mod[0] = modulator[0]
-	for i in range(1,nn):
-		cs_mod[i] = modulator[i] + cs_mod[i-1]
+    cs_mod = np.zeros(nn, dtype=np.float64)
+    cs_mod[0] = modulator[0]
+    for i in range(1,nn):
+        cs_mod[i] = modulator[i] + cs_mod[i-1]
 
-	signal = np.exp((2j*np.pi) * (f_signal_offset * np.arange(nn) + cs_mod * peak_deviation)) # TODO: make the frequency offset it's own exp-multiplication. Math would be cleaner.
-	return signal
+    signal = np.exp((2j*np.pi) * (f_signal_offset * np.arange(nn) + cs_mod * peak_deviation)) # TODO: make the frequency offset it's own exp-multiplication. Math would be cleaner.
+    return signal
 
 
 @njit(cache=True)
 def fm_mod_expanding(f_signal_offset, peak_deviation, modulator, nsamples):
-	assert np.min(modulator) >= -1.0
-	assert np.max(modulator) <=  1.0
-	assert abs(f_signal_offset) < 0.5
-	ratio = float(len(modulator)) / nsamples
-	cs_mod = np.zeros(nsamples, dtype=np.float64)
-	cs_mod[0] = modulator[0]
-	for i in range(1,nsamples):
-		im = int(ratio * i)
-		cs_mod[i] = modulator[im] + cs_mod[i-1]
-	signal = np.exp((2j*np.pi) * (f_signal_offset * np.arange(nsamples) + cs_mod * peak_deviation)) # TODO: make the frequency offset it's own exp-multiplication. Math would be cleaner.
-	return signal
+    assert np.min(modulator) >= -1.0
+    assert np.max(modulator) <=  1.0
+    assert abs(f_signal_offset) < 0.5
+    ratio = float(len(modulator)) / nsamples
+    cs_mod = np.zeros(nsamples, dtype=np.float64)
+    cs_mod[0] = modulator[0]
+    for i in range(1,nsamples):
+        im = int(ratio * i)
+        cs_mod[i] = modulator[im] + cs_mod[i-1]
+    signal = np.exp((2j*np.pi) * (f_signal_offset * np.arange(nsamples) + cs_mod * peak_deviation)) # TODO: make the frequency offset it's own exp-multiplication. Math would be cleaner.
+    return signal
 
 
 
@@ -374,44 +374,44 @@ def fm_mod_expanding(f_signal_offset, peak_deviation, modulator, nsamples):
 
 #@njit(cache=True)
 def make_samples1(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0):
-	"""
-	# Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
-	# 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0
-	# peak_dev = mod_index / (2*symboltime).                          peak_dev_physical = peak_dev * sr. accords to CC1125 (CC112X/CC1175) User's guide on page 26.
-	"""
-	assert abs(f_offset) < 0.5, f_offset
-	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
-	assert np.all(np.isclose(np.abs(bitstring[0:34]), 1))
-	peak_dev	= mod_index / (sps_f*2.0)
-	modulator 	= make_f_modulating_waveform(bitstring, sps_f, shaper_BT_prod, shaper_n_taps)
-	samples 	= fm_mod(f_offset, peak_dev, modulator)
-	if power != 1:
-		samples 	= samples * (power**0.5)
-	if (n_silence_start > 0) or (n_silence_end > 0):
-		samples 	= np.concatenate( (np.zeros(n_silence_start, dtype=np.complex128), samples, np.zeros(n_silence_end, dtype=np.complex128)) )
-	return samples, modulator
+    """
+    # Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
+    # 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0
+    # peak_dev = mod_index / (2*symboltime).                          peak_dev_physical = peak_dev * sr. accords to CC1125 (CC112X/CC1175) User's guide on page 26.
+    """
+    assert abs(f_offset) < 0.5, f_offset
+    assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+    assert np.all(np.isclose(np.abs(bitstring[0:34]), 1))
+    peak_dev	= mod_index / (sps_f*2.0)
+    modulator 	= make_f_modulating_waveform(bitstring, sps_f, shaper_BT_prod, shaper_n_taps)
+    samples 	= fm_mod(f_offset, peak_dev, modulator)
+    if power != 1:
+        samples 	= samples * (power**0.5)
+    if (n_silence_start > 0) or (n_silence_end > 0):
+        samples 	= np.concatenate( (np.zeros(n_silence_start, dtype=np.complex128), samples, np.zeros(n_silence_end, dtype=np.complex128)) )
+    return samples, modulator
 
 
 def make_samples2(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_BT_prod=0.5, n_silence_start=0, n_silence_end=0):
-	"""
-	# Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
-	# 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0
-	# peak_dev = mod_index / (2*symboltime).                          peak_dev_physical = peak_dev * sr. accords to CC1125 (CC112X/CC1175) User's guide on page 26.
-	"""
-	assert abs(f_offset) < 0.5, f_offset
-	assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
-	assert np.all(np.isclose(np.abs(bitstring[0:34]), 1))
-	peak_dev	= mod_index / (sps_f*2.0)
-	i_sample_of_sym0_f = 0.0
-	sps_mod		= 14.0
-	nsamples 	= int(len(bitstring) * sps_f + i_sample_of_sym0_f)
-	modulator 	= make_f_modulating_waveform(bitstring, sps_mod, shaper_BT_prod, int(sps_mod)*4+1)
-	samples 	= fm_mod_expanding(f_offset, peak_dev, modulator, nsamples)
-	if power != 1:
-		samples 	= samples * (power**0.5)
-	if (n_silence_start > 0) or (n_silence_end > 0):
-		samples 	= np.concatenate( (np.zeros(n_silence_start, dtype=np.complex128), samples, np.zeros(n_silence_end, dtype=np.complex128)) )
-	return samples, modulator
+    """
+    # Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
+    # 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0
+    # peak_dev = mod_index / (2*symboltime).                          peak_dev_physical = peak_dev * sr. accords to CC1125 (CC112X/CC1175) User's guide on page 26.
+    """
+    assert abs(f_offset) < 0.5, f_offset
+    assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+    assert np.all(np.isclose(np.abs(bitstring[0:34]), 1))
+    peak_dev	= mod_index / (sps_f*2.0)
+    i_sample_of_sym0_f = 0.0
+    sps_mod		= 14.0
+    nsamples 	= int(len(bitstring) * sps_f + i_sample_of_sym0_f)
+    modulator 	= make_f_modulating_waveform(bitstring, sps_mod, shaper_BT_prod, int(sps_mod)*4+1)
+    samples 	= fm_mod_expanding(f_offset, peak_dev, modulator, nsamples)
+    if power != 1:
+        samples 	= samples * (power**0.5)
+    if (n_silence_start > 0) or (n_silence_end > 0):
+        samples 	= np.concatenate( (np.zeros(n_silence_start, dtype=np.complex128), samples, np.zeros(n_silence_end, dtype=np.complex128)) )
+    return samples, modulator
 
 
 
@@ -421,55 +421,55 @@ def make_samples2(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_BT_pr
 
 @njit(cache=True)
 def bytes_to_bits(data):
-	bits = np.zeros(len(data)*8, dtype=np.int64)
-	for i in range(len(data)):
-		for j in range(8):
-			bits[i*8+j] = (data[i]>>j) & 1
-	return bits
+    bits = np.zeros(len(data)*8, dtype=np.int64)
+    for i in range(len(data)):
+        for j in range(8):
+            bits[i*8+j] = (data[i]>>j) & 1
+    return bits
 
 
 @njit(cache=True)
 def ints_to_bits(int_arr, bits_per_int):
-	bits = np.zeros(len(int_arr)*bits_per_int, dtype=np.int64)
-	for i in range(len(int_arr)):
-		for j in range(bits_per_int):
-			bits[i*bits_per_int+j] = (int_arr[i]>>(bits_per_int-(j+1))) & 1
-	return bits
+    bits = np.zeros(len(int_arr)*bits_per_int, dtype=np.int64)
+    for i in range(len(int_arr)):
+        for j in range(bits_per_int):
+            bits[i*bits_per_int+j] = (int_arr[i]>>(bits_per_int-(j+1))) & 1
+    return bits
 
 @njit(cache=True)
 def radionoise(n, sr, W_per_Hz):
-	"""
-	:param n: number of samples
-	:param sr: samplerate
-	:param W_per_Hz: spectral power density (Watts per Hertz)
-	:return: n samples of gaussian IQ noise
-	To verify signal energy, and spectral power density:
-		with df = sr/n
-		n * absfft**2 * (sr/n)**2  = W_per_Hz * sr
-		absfft * sqrt(n) * (sr/n) = sqrt(W_per_Hz * sr)
-		absfft = sqrt(W_per_Hz * sr) * sqrt(n)/sr
-		absfft = sqrt(W_per_Hz * n / sr)
-		absfft * sqrt(sr/n) = sqrt(W_per_Hz)
-		W_per_Hz = absfft**2 * (sr/n)
-		W_per_Hz * n2*df = W =  absfft**2 * (sr/n)**2 * n2
-		sum((fft(samples)*df)**2) ≈ W_per_Hz * sr
-		- Each fft-bin is (2*f_Nyquist) / n  Hertz wide.
-		- fft bins represent amplitudes of constituent component frquencies.
-	"""
-	cc = (0.5*W_per_Hz*sr)**0.5
-	return cc * (np.random.normal(0,1.0, n) + 1j*np.random.normal(0, 1.0, n))
+    """
+    :param n: number of samples
+    :param sr: samplerate
+    :param W_per_Hz: spectral power density (Watts per Hertz)
+    :return: n samples of gaussian IQ noise
+    To verify signal energy, and spectral power density:
+            with df = sr/n
+            n * absfft**2 * (sr/n)**2  = W_per_Hz * sr
+            absfft * sqrt(n) * (sr/n) = sqrt(W_per_Hz * sr)
+            absfft = sqrt(W_per_Hz * sr) * sqrt(n)/sr
+            absfft = sqrt(W_per_Hz * n / sr)
+            absfft * sqrt(sr/n) = sqrt(W_per_Hz)
+            W_per_Hz = absfft**2 * (sr/n)
+            W_per_Hz * n2*df = W =  absfft**2 * (sr/n)**2 * n2
+            sum((fft(samples)*df)**2) ≈ W_per_Hz * sr
+            - Each fft-bin is (2*f_Nyquist) / n  Hertz wide.
+            - fft bins represent amplitudes of constituent component frquencies.
+    """
+    cc = (0.5*W_per_Hz*sr)**0.5
+    return cc * (np.random.normal(0,1.0, n) + 1j*np.random.normal(0, 1.0, n))
 
 def signal_energy(samples, sr):
-	# returns exactly the same value as:   np.sum(np.abs(samples)**2 * dt)     | dt = 1/sr
-	# == np.sum(np.abs(np.fft.fft(samples))**2) * df / (sr**2)                 | df = sr/len(samples)   (valid for even and odd samplecounts)
-	# 			E = P*t,    t = n/sr = len(samples)/sr.
-	#		=> 	P = E/t = E * sr/n    = sumabsp2 * (1 / (len(samples) * sr))   * sr/len(samples)
-	#		=>	P = sumabsp2 * 1 / len(samples)**2
-	return np.sum(np.abs(np.fft.fft(samples))**2) / (len(samples) * sr)
+    # returns exactly the same value as:   np.sum(np.abs(samples)**2 * dt)     | dt = 1/sr
+    # == np.sum(np.abs(np.fft.fft(samples))**2) * df / (sr**2)                 | df = sr/len(samples)   (valid for even and odd samplecounts)
+    # 			E = P*t,    t = n/sr = len(samples)/sr.
+    #		=> 	P = E/t = E * sr/n    = sumabsp2 * (1 / (len(samples) * sr))   * sr/len(samples)
+    #		=>	P = sumabsp2 * 1 / len(samples)**2
+    return np.sum(np.abs(np.fft.fft(samples))**2) / (len(samples) * sr)
 
 def signal_power(samples):
-	# returns exactly the same value as:   np.sum(np.abs(samples)**2) * dt / (dt*len(samples))     | dt = 1/sr
-	return np.sum(np.abs(np.fft.fft(samples))**2) / (len(samples)**2)
+    # returns exactly the same value as:   np.sum(np.abs(samples)**2) * dt / (dt*len(samples))     | dt = 1/sr
+    return np.sum(np.abs(np.fft.fft(samples))**2) / (len(samples)**2)
 # SAMPLE GENERATION ==========================================================================================================================================================================
 # SAMPLE GENERATION ==========================================================================================================================================================================
 
@@ -484,37 +484,37 @@ def signal_power(samples):
 # FFT ========================================================================================================================================================================================
 @njit(cache=True)
 def njit_objmode_fft(x):
-	#y = np.zeros_like(x, dtype=np.complex128)
-	with objmode(y='complex128[:]'):
-		y = np.complex128(np.fft.fftshift(np.fft.fft(x)))
-	return y
+    #y = np.zeros_like(x, dtype=np.complex128)
+    with objmode(y='complex128[:]'):
+        y = np.complex128(np.fft.fftshift(np.fft.fft(x)))
+    return y
 
 
 def time_fft_n(fftlen, nrep):
-	s = np.random.normal(0,1, fftlen) + np.random.normal(0,1,fftlen)*1j
-	njit_objmode_fft(s)
-	njit_objmode_fft(s)
-	t0 = time.perf_counter()
-	for _ in range(nrep):
-		_ = njit_objmode_fft(s)
-	dt = (time.perf_counter() - t0) / nrep
-	return dt
+    s = np.random.normal(0,1, fftlen) + np.random.normal(0,1,fftlen)*1j
+    njit_objmode_fft(s)
+    njit_objmode_fft(s)
+    t0 = time.perf_counter()
+    for _ in range(nrep):
+        _ = njit_objmode_fft(s)
+    dt = (time.perf_counter() - t0) / nrep
+    return dt
 
 
 def choose_fftlen(len_ideal, window_halfwid):
-	assert len_ideal > 12
-	assert window_halfwid >= 1
-	assert window_halfwid < len_ideal
-	candidates = [x for x in range(int(len_ideal-window_halfwid), int(len_ideal+window_halfwid)) if (x%2)==0]
-	best_speed = 0.0
-	best_len = int(len_ideal)
-	for l in candidates:
-		dt = time_fft_n(fftlen=l, nrep=80)
-		speed = l/dt
-		if speed > best_speed:
-			best_speed = speed
-			best_len = l
-	return best_len, best_speed
+    assert len_ideal > 12
+    assert window_halfwid >= 1
+    assert window_halfwid < len_ideal
+    candidates = [x for x in range(int(len_ideal-window_halfwid), int(len_ideal+window_halfwid)) if (x%2)==0]
+    best_speed = 0.0
+    best_len = int(len_ideal)
+    for l in candidates:
+        dt = time_fft_n(fftlen=l, nrep=80)
+        speed = l/dt
+        if speed > best_speed:
+            best_speed = speed
+            best_len = l
+    return best_len, best_speed
 # FFT ========================================================================================================================================================================================
 # FFT ========================================================================================================================================================================================
 
@@ -530,152 +530,152 @@ def choose_fftlen(len_ideal, window_halfwid):
 # ============================================================================================================================================================================================
 #@njit(cache=True)
 def create_freq_shifter_precomp(sr, fdelta, max_batchlen, fdelta_threshold):  # fdelta_threshold can be something like (1e-6 * sr).
-	#print("CREATING FREQ SHIFTER: ",sr, fdelta, max_batchlen, fdelta_threshold)
-	assert sr > 0.0
-	assert abs(fdelta) < sr*0.5
-	assert max_batchlen > 1
-	assert 0.0 < fdelta_threshold < (0.5*sr)
-	m = 4
-	while True:
-		m += 1
-		assert m < 1e6
-		n = int(round(fdelta / (sr/m)))
-		fdelta_actual = n * (sr/m)
-		err = abs(fdelta_actual - fdelta)
-		if err >= fdelta_threshold:
-			continue
-		assert abs(fdelta-fdelta_actual) < fdelta_threshold
-		shifter = np.exp(2j*np.pi * (n/m) * np.arange(max_batchlen + m + 2))   # (n/m) === (fdelta_actual/sr)
-		# np.angle(arr[i]) === np.angle(arr[i+m]) === np.angle(arr[i%m])
-		for _ in range(32):
-			i = np.random.randint(len(shifter) - (m+1))
-			d1 = (np.angle(shifter[i]) - np.angle(shifter[i+m])) % (np.pi*2)
-			d2 = (np.angle(shifter[i]) - np.angle(shifter[i%m])) % (np.pi*2)
-			b1 = np.isclose(d1, 0.0) or np.isclose(d1, np.pi*2)
-			b2 = np.isclose(d2, 0.0) or np.isclose(d2, np.pi*2)
-			assert b1, d1
-			assert b2, d2
-		return shifter, m, fdelta_actual
+    #print("CREATING FREQ SHIFTER: ",sr, fdelta, max_batchlen, fdelta_threshold)
+    assert sr > 0.0
+    assert abs(fdelta) < sr*0.5
+    assert max_batchlen > 1
+    assert 0.0 < fdelta_threshold < (0.5*sr)
+    m = 4
+    while True:
+        m += 1
+        assert m < 1e6
+        n = int(round(fdelta / (sr/m)))
+        fdelta_actual = n * (sr/m)
+        err = abs(fdelta_actual - fdelta)
+        if err >= fdelta_threshold:
+            continue
+        assert abs(fdelta-fdelta_actual) < fdelta_threshold
+        shifter = np.exp(2j*np.pi * (n/m) * np.arange(max_batchlen + m + 2))   # (n/m) === (fdelta_actual/sr)
+        # np.angle(arr[i]) === np.angle(arr[i+m]) === np.angle(arr[i%m])
+        for _ in range(32):
+            i = np.random.randint(len(shifter) - (m+1))
+            d1 = (np.angle(shifter[i]) - np.angle(shifter[i+m])) % (np.pi*2)
+            d2 = (np.angle(shifter[i]) - np.angle(shifter[i%m])) % (np.pi*2)
+            b1 = np.isclose(d1, 0.0) or np.isclose(d1, np.pi*2)
+            b2 = np.isclose(d2, 0.0) or np.isclose(d2, np.pi*2)
+            assert b1, d1
+            assert b2, d2
+        return shifter, m, fdelta_actual
 
 
 @njit(cache=True)
 def freq_shift_phased_precomp(batch, shifter_arr, phase_idx0, phase_mod):
-	#shifted = batch * shifter_arr[phase_idx0:phase_idx0+len(batch)]
-	shifted = np.zeros_like(batch)  # opening the vector multiplication above into a for-loop makes the numba-accelerated version ~10% faster.
-	for i in range(len(shifted)):
-		shifted[i] = batch[i] * shifter_arr[i + phase_idx0]
-	phase_idx1 = (phase_idx0 + len(batch)) % phase_mod
-	return shifted, phase_idx1
+    #shifted = batch * shifter_arr[phase_idx0:phase_idx0+len(batch)]
+    shifted = np.zeros_like(batch)  # opening the vector multiplication above into a for-loop makes the numba-accelerated version ~10% faster.
+    for i in range(len(shifted)):
+        shifted[i] = batch[i] * shifter_arr[i + phase_idx0]
+    phase_idx1 = (phase_idx0 + len(batch)) % phase_mod
+    return shifted, phase_idx1
 # ============================================================================================================================================================================================
 
 
 @njit(cache=True)
 def freq_shift_phased(batch, sr, fdelta, phase0):
-	shifted = batch * np.exp(2j*np.pi*(fdelta/sr)*np.arange(len(batch)) + phase0*1j)
-	phase1 = (phase0 + 2*np.pi*(fdelta/sr)*len(batch)) % (2*np.pi)
-	return shifted, phase1
+    shifted = batch * np.exp(2j*np.pi*(fdelta/sr)*np.arange(len(batch)) + phase0*1j)
+    phase1 = (phase0 + 2*np.pi*(fdelta/sr)*len(batch)) % (2*np.pi)
+    return shifted, phase1
 
 
 def get_doppler_low_high(f_center, v_relative):
-	c = 299792458.0
-	df_doppler = f_center * (((c+abs(v_relative))/c) - 1)
-	f_center_min = f_center - df_doppler
-	f_center_max = f_center + df_doppler
-	return f_center_min, f_center_max
+    c = 299792458.0
+    df_doppler = f_center * (((c+abs(v_relative))/c) - 1)
+    f_center_min = f_center - df_doppler
+    f_center_max = f_center + df_doppler
+    return f_center_min, f_center_max
 
 
 def doppler_correction(f_rx_received, f_rx_original, f_tx_at_target):
-	c = 299792458.0
-	#f_received = f_original * c/(c+v_src)
-	v_src = c * (f_rx_original/f_rx_received - 1)
-	f_send = f_tx_at_target * (c+v_src)/c
-	return f_send, v_src # v_src is the derivative of separating distance. (negative if satellite is approaching)
+    c = 299792458.0
+    #f_received = f_original * c/(c+v_src)
+    v_src = c * (f_rx_original/f_rx_received - 1)
+    f_send = f_tx_at_target * (c+v_src)/c
+    return f_send, v_src # v_src is the derivative of separating distance. (negative if satellite is approaching)
 
 
 def determine_ftune_and_min_sr(f_center_min, f_center_max, max_signal_bandwidth):
-	assert f_center_max >= f_center_min
-	assert f_center_min > 0.5
-	f_center_mid = (f_center_min + f_center_max) / 2
-	f_center_span = f_center_max - f_center_min
-	side_band = (max_signal_bandwidth/2 + f_center_span/2) * 1.1 + 25e3
-	f_tune = f_center_mid - side_band
-	minimum_samplerate = (f_center_mid + side_band - f_tune) * 2  # == side_band * 4
-	return f_tune, minimum_samplerate
+    assert f_center_max >= f_center_min
+    assert f_center_min > 0.5
+    f_center_mid = (f_center_min + f_center_max) / 2
+    f_center_span = f_center_max - f_center_min
+    side_band = (max_signal_bandwidth/2 + f_center_span/2) * 1.1 + 25e3
+    f_tune = f_center_mid - side_band
+    minimum_samplerate = (f_center_mid + side_band - f_tune) * 2  # == side_band * 4
+    return f_tune, minimum_samplerate
 
 
 def get_frequency_search_map(fftlen, f_min_nrm, f_max_nrm, assert_in_window=True):
-	assert f_min_nrm <= f_max_nrm
-	assert abs(f_max_nrm) < 1.0e3 #asserts the frequencies given were indeed normalized, not absolute.
-	if assert_in_window:
-		assert abs(f_min_nrm) <= 0.5
-		assert abs(f_max_nrm) <= 0.5
-	freqs = np.fft.fftshift( np.fft.fftfreq(fftlen, d=1.0) )
-	df = freqs[1] - freqs[0]
-	assert f_max_nrm > f_min_nrm
-	mapping = np.zeros(fftlen, dtype=np.int64)
-	for i,f in enumerate(freqs):
-		if (f >= (f_min_nrm-df)) and (f <= (f_max_nrm+df)):
-			mapping[i] = 1
-	assert np.sum(mapping) > 0, mapping
-	return mapping
+    assert f_min_nrm <= f_max_nrm
+    assert abs(f_max_nrm) < 1.0e3 #asserts the frequencies given were indeed normalized, not absolute.
+    if assert_in_window:
+        assert abs(f_min_nrm) <= 0.5
+        assert abs(f_max_nrm) <= 0.5
+    freqs = np.fft.fftshift( np.fft.fftfreq(fftlen, d=1.0) )
+    df = freqs[1] - freqs[0]
+    assert f_max_nrm > f_min_nrm
+    mapping = np.zeros(fftlen, dtype=np.int64)
+    for i,f in enumerate(freqs):
+        if (f >= (f_min_nrm-df)) and (f <= (f_max_nrm+df)):
+            mapping[i] = 1
+    assert np.sum(mapping) > 0, mapping
+    return mapping
 
 
 def fractional_resampler_f_max_undisturbed(sr0, sr1, halflen, f_cutoff_coeff):
-	f_slope_center = f_cutoff_coeff * (sr1/sr0) * sr0
-	halfwidth      = 0.94 * sr0 / halflen
-	return f_slope_center - halfwidth
+    f_slope_center = f_cutoff_coeff * (sr1/sr0) * sr0
+    halfwidth      = 0.94 * sr0 / halflen
+    return f_slope_center - halfwidth
 # FREQUENCY MANAGEMENT =======================================================================================================================================================================
 # FREQUENCY MANAGEMENT =======================================================================================================================================================================
 
 
 
 def snr_dB(pl_power, noise_power):
-	snr_lin = (pl_power-noise_power) / noise_power
-	snr_dB_ = 10*np.log10( max(1e-6, snr_lin) )
-	return snr_dB_
+    snr_lin = (pl_power-noise_power) / noise_power
+    snr_dB_ = 10*np.log10( max(1e-6, snr_lin) )
+    return snr_dB_
 
 
 # DEBUG PRINTING =============================================================================================================================================================================
 from datetime import datetime as dtime
 try:
-	from mtools.zmq_printout import ZMQPIn
-	#ZMQP_PRINTER = ZMQPIn(port=11001, hostname="localhost")
+    from mtools.zmq_printout import ZMQPIn
+    #ZMQP_PRINTER = ZMQPIn(port=11001, hostname="localhost")
 except:
-	ZMQPIn = None
+    ZMQPIn = None
 
 class DebugPrinter:
-	def __init__(self, log_title:str, stdprint:bool=True, zmqprint_host_port=None):
-		self.title = "[{}]".format(log_title)
-		self.stdprint = stdprint
-		self.zmqp = None
-		self.zmqp_host = None
-		self.zmqp_port = None
-		if zmqprint_host_port:
-			self.zmqp_host = zmqprint_host_port[0]
-			self.zmqp_port = zmqprint_host_port[1]
-			assert type(self.zmqp_host) == str
-			assert type(self.zmqp_port) == int
-			assert 1000 < self.zmqp_port < (2**16)
-			if ZMQPIn:
-				self.zmqp = ZMQPIn(port=self.zmqp_port, hostname=self.zmqp_host)
-			else:
-				print("Warning: ZMQPrint host configured, but no ZMQPrint library imported.")
+    def __init__(self, log_title:str, stdprint:bool=True, zmqprint_host_port=None):
+        self.title = "[{}]".format(log_title)
+        self.stdprint = stdprint
+        self.zmqp = None
+        self.zmqp_host = None
+        self.zmqp_port = None
+        if zmqprint_host_port:
+            self.zmqp_host = zmqprint_host_port[0]
+            self.zmqp_port = zmqprint_host_port[1]
+            assert type(self.zmqp_host) == str
+            assert type(self.zmqp_port) == int
+            assert 1000 < self.zmqp_port < (2**16)
+            if ZMQPIn:
+                self.zmqp = ZMQPIn(port=self.zmqp_port, hostname=self.zmqp_host)
+            else:
+                print("Warning: ZMQPrint host configured, but no ZMQPrint library imported.")
 
-	def DBGPRINT(self, first, *args):
-		ts = "[{}]".format( dtime.now().isoformat()[11:] )
-		ts += " "*(17-len(ts)) + self.title + " "
-		ts += " "*(30-len(ts))
-		#first, args = args[0], args[1:]
-		if self.zmqp:
-			self.zmqp.print(ts+str(first))
-		if self.stdprint:
-			print(ts+str(first), *args)
+    def DBGPRINT(self, first, *args):
+        ts = "[{}]".format( dtime.now().isoformat()[11:] )
+        ts += " "*(17-len(ts)) + self.title + " "
+        ts += " "*(30-len(ts))
+        #first, args = args[0], args[1:]
+        if self.zmqp:
+            self.zmqp.print(ts+str(first))
+        if self.stdprint:
+            print(ts+str(first), *args)
 
 
-	def DBGPRINT_toggled(self, toggle, first, *args):
-		if not toggle:
-			return
-		self.DBGPRINT(first, *args)
+    def DBGPRINT_toggled(self, toggle, first, *args):
+        if not toggle:
+            return
+        self.DBGPRINT(first, *args)
 # DEBUG PRINTING =============================================================================================================================================================================
 
 
@@ -692,50 +692,43 @@ class DebugPrinter:
 
 
 def pll_df_std0_polyfit(c_freq, c_limit):
-	"""
-	This estimates pll-df-std0: the standard deviation of the first derivative of the frequency correction term of a nco-pll with pure noise input.
-	This term can be used as an exceedinly sensitive transmission detector, with the following rules:
-		- start of a transmission is indicated by the standard deviation (when measured on a sliding window) falling below C * pll-df-std0.
-		- end of a transmission is indicated by the standard deviation returning back to >= pll-df-std0.
-	"""
-	coeffs = [ -6.588834003638643e-10, -2.5411768833287384e-09, 4.981408860432077e-08, 1.868537663753007e-07,
-			   -1.6876213332527186e-06, -6.0927590116583276e-06, 3.381339596106427e-05, 0.00011601629871765534,
-			   -0.0004452159771682212, -0.001429960454287664, 0.0040467863424894085, 0.011952688145626354,
-			   -0.025947547880166965, -0.06904834881024477, 0.11779091026188404, 0.2760086678268451,
-			   -0.37435257361191565, -0.7542160313297891, 0.8113440477869422, 1.3790490653091885,
-			   -1.1482083879741865, -1.6614950216935542, 0.9964447101954652, 1.4083888509528601,
-			   -0.4914604337344185, -1.3722975909449475, 1.033787593289162, ]
-	x = np.log10(c_freq/c_limit)
-	y = 0
-	for ip in range(27):
-		y += coeffs[ip] * x**(27-(ip+1))
-	y = 1.813*(x < np.log10(0.003)) + y*(np.log10(0.003) <= x)*(x < 3) + 0.0*(3 <= x)
-	return y
+    """
+    This estimates pll-df-std0: the standard deviation of the first derivative of the frequency correction term of a nco-pll with pure noise input.
+    This term can be used as an exceedinly sensitive transmission detector, with the following rules:
+            - start of a transmission is indicated by the standard deviation (when measured on a sliding window) falling below C * pll-df-std0.
+            - end of a transmission is indicated by the standard deviation returning back to >= pll-df-std0.
+    """
+    coeffs = [ -6.588834003638643e-10, -2.5411768833287384e-09, 4.981408860432077e-08, 1.868537663753007e-07,
+                       -1.6876213332527186e-06, -6.0927590116583276e-06, 3.381339596106427e-05, 0.00011601629871765534,
+                       -0.0004452159771682212, -0.001429960454287664, 0.0040467863424894085, 0.011952688145626354,
+                       -0.025947547880166965, -0.06904834881024477, 0.11779091026188404, 0.2760086678268451,
+                       -0.37435257361191565, -0.7542160313297891, 0.8113440477869422, 1.3790490653091885,
+                       -1.1482083879741865, -1.6614950216935542, 0.9964447101954652, 1.4083888509528601,
+                       -0.4914604337344185, -1.3722975909449475, 1.033787593289162, ]
+    x = np.log10(c_freq/c_limit)
+    y = 0
+    for ip in range(27):
+        y += coeffs[ip] * x**(27-(ip+1))
+    y = 1.813*(x < np.log10(0.003)) + y*(np.log10(0.003) <= x)*(x < 3) + 0.0*(3 <= x)
+    return y
 
 
 
 def dt_array_report(dt_array, nsamples, sr0, dt_array_names):
-	dt_total = np.sum(dt_array)
-	speed = nsamples / dt_total
-	overmatch = speed / sr0
-	budget_fraction	= (1/overmatch) / 0.5
-	cpu_fraction	= (1/overmatch) / 1.0
-	S = "="*50
-	S += "\n" + "speed:          {} Ms/s".format( round(1e-6 * speed, 2) )
-	S += "\n" + "overmatch:      {}".format( round(overmatch, 2) )
-	S += "\n" + "budget use:     {} %".format( round( 100*budget_fraction , 2) )
-	S += "\n" + "cpu core use:   {} %".format( round( 100*cpu_fraction , 2) )
-	for i_dt in range(len(dt_array)):
-		txt1 = "  part {: ^{width1}} ({}):".format(i_dt, dt_array_names[i_dt], width1=2)
-		txt2 = "{}{}".format(" "*(max(0, 27-len(txt1))), round( 100*dt_array[i_dt]/np.sum(dt_array) , 2))
-		S += "\n" + txt1 + txt2
-	S += "\n" + "parts of total:    {} %".format( round( 100*np.sum(dt_array)/dt_total , 2) )
-	S += "\n" + "="*50
-	return S
-
-
-
-
-
-
-
+    dt_total = np.sum(dt_array)
+    speed = nsamples / dt_total
+    overmatch = speed / sr0
+    budget_fraction	= (1/overmatch) / 0.5
+    cpu_fraction	= (1/overmatch) / 1.0
+    S = "="*50
+    S += "\n" + "speed:          {} Ms/s".format( round(1e-6 * speed, 2) )
+    S += "\n" + "overmatch:      {}".format( round(overmatch, 2) )
+    S += "\n" + "budget use:     {} %".format( round( 100*budget_fraction , 2) )
+    S += "\n" + "cpu core use:   {} %".format( round( 100*cpu_fraction , 2) )
+    for i_dt in range(len(dt_array)):
+        txt1 = "  part {: ^{width1}} ({}):".format(i_dt, dt_array_names[i_dt], width1=2)
+        txt2 = "{}{}".format(" "*(max(0, 27-len(txt1))), round( 100*dt_array[i_dt]/np.sum(dt_array) , 2))
+        S += "\n" + txt1 + txt2
+    S += "\n" + "parts of total:    {} %".format( round( 100*np.sum(dt_array)/dt_total , 2) )
+    S += "\n" + "="*50
+    return S

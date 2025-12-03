@@ -18,12 +18,12 @@ assert os.path.isdir(LIBFEC_PATH)
 assert os.path.isdir(PLATFORMS_PATH)
 
 include_paths = [
-	SRC_PATH,
-	SKYLINK_INCL_PATH,
-	BLAKE3_PATH,
-	GR_SATELLITES_PATH,
-	LIBFEC_PATH,
-	PLATFORMS_PATH,
+        SRC_PATH,
+        SKYLINK_INCL_PATH,
+        BLAKE3_PATH,
+        GR_SATELLITES_PATH,
+        LIBFEC_PATH,
+        PLATFORMS_PATH,
 ]
 
 
@@ -41,15 +41,15 @@ source_paths = [
     SRC_PATH + "/skylink_tx.c",
     SRC_PATH + "/utilities.c",
 
-	BLAKE3_PATH + "blake3.c",
-	BLAKE3_PATH + "blake3_dispatch.c",
-	BLAKE3_PATH + "blake3_portable.c",
+        BLAKE3_PATH + "blake3.c",
+        BLAKE3_PATH + "blake3_dispatch.c",
+        BLAKE3_PATH + "blake3_portable.c",
 
-	GR_SATELLITES_PATH + "golay24.c",
+        GR_SATELLITES_PATH + "golay24.c",
 
-	LIBFEC_PATH + "ccsds_tab.c",
-	LIBFEC_PATH + "decode_rs_8.c",
-	LIBFEC_PATH + "encode_rs_8.c",
+        LIBFEC_PATH + "ccsds_tab.c",
+        LIBFEC_PATH + "decode_rs_8.c",
+        LIBFEC_PATH + "encode_rs_8.c",
 ]
 
 
@@ -60,14 +60,12 @@ sourcefiles.extend(source_paths)
 
 compile_args = ["-O3", "-fPIC"] #"-Wall" ?
 for icd in include_paths:
-	compile_args.append( "-I"+icd )
+    compile_args.append( "-I"+icd )
 
 extensions = [Extension("c_skylink", sourcefiles, extra_compile_args=compile_args)]
 
 setup(
-	name='SkyLink',
-	ext_modules=cythonize(extensions, compiler_directives={"language_level":"3"}),
-	zip_safe=False,
+        name='SkyLink',
+        ext_modules=cythonize(extensions, compiler_directives={"language_level":"3"}),
+        zip_safe=False,
 )
-
-
