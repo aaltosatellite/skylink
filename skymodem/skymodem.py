@@ -62,6 +62,7 @@ def bind_vc_sockets(vc_port_base, num_channels):
 def connect_amqp_pub_socket(broker_addr):
     amqp_url = urlparse(broker_addr)
     amqp_conn = amqp.Connection(host=amqp_url.hostname, userid=amqp_url.username, password=amqp_url.password)
+    amqp_conn.connect_timeout = 3
     amqp_conn.connect()
     ch = amqp_conn.channel()
     #ch.basic_publish(amqp.Message('Hello World'), routing_key='test')
