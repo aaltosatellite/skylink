@@ -34,7 +34,7 @@ def receive_a_recording():
     samples = samples * np.exp(2j*np.pi * np.arange(nsamples) * (1/sr0) * (fshift0+(f_center-f_tune)))
 
 
-    rx_config = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=2000000, batch_maxlen=batch_maxlen)
+    rx_config = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=2000000, batch_maxlen=batch_maxlen)
     #rx_config.sps 					= sps
     rx_config.mod_index				= mod_index
     rx_config.BT_rx_match			= BT_rx_match

@@ -46,9 +46,9 @@ def main():
     f_tune 		= 436.000e6
     f_center 	= S100_CENTER_FREQUENCY
     #sr0 = abs(f_center-f_tune)
-    #radio_config = RadioConfig(mode="soapy", rx_sr=sr0, rx_f_tune=f_tune, tx_sr=sr0, tx_f_tune=f_tune)
-    #rx_dsp_config = RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16)
-    #tx_dsp_config = TXDSPConfig(tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=9600)
+    #radio_config = RadioConfig(mode="soapy", rx_samplerate=sr0, rx_tune_frequency=f_tune, tx_samplerate=sr0, tx_tune_frequency=f_tune)
+    #rx_dsp_config = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024*16)
+    #tx_dsp_config = TXDSPConfig(tx_samplerate=sr0, tx_tune_frequency=f_tune, tx_f_center=f_center, baudrate=9600)
     rx_dsp_config, tx_dsp_config, radio_config = get_soapy_leecher_receiver_config(f_center=f_center, baudrate=9600, f_tune=f_tune, sr_hardware=8e6, max_signal_bw=9600*4.0, rx_gain=40, tx_gain=80)
 
     rx_dsp_config.synchword = S100_SYNCHWORD
@@ -58,7 +58,7 @@ def main():
     q_tx_payloads_to_dsp 		= Queue(256) # unused
     q_samples_dsp_to_radio 		= Queue(256) # unused
     q_signaldata_out 			= Queue(256)
-    radioloop = RadioLoop(radio_config=radio_config, que_tx_samples_in=q_samples_dsp_to_radio, que_rx_samples_out=q_samples_radio_to_dsp)
+    radioloop = RadioLoop(radio_config=radio_config, queue_tx_samples_from_dsp=q_samples_dsp_to_radio, queue_rx_samples_to_dsp=q_samples_radio_to_dsp)
     dsploop = DSPLoop(rx_dsp_config=rx_dsp_config, tx_dsp_config=tx_dsp_config, que_rx_samples_in=q_samples_radio_to_dsp, que_rx_payloads_out=q_payloads_out,
                                       que_tx_payloads_in=q_tx_payloads_to_dsp, que_tx_samples_out=q_samples_dsp_to_radio, que_signaldata_out=q_signaldata_out)
 

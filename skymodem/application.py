@@ -21,9 +21,9 @@ def get_usrp_receiver_config(f_center, baudrate, max_signal_bw, rx_gain, tx_gain
         sr0 = [float(x) for x in sorted(usrp_B200_valid_samplerates) if x >= minimum_samplerate][0]
     print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
     print("Using usrp radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr0*1e-6, 3) ))
-    radio_config 	= RadioConfig(mode="usrp", rx_sr=sr0, rx_f_tune=f_tune, tx_sr=sr0, tx_f_tune=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
-    rx_dsp_config 	= RXDSPConfig(rx_sr0=sr0, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
-    tx_dsp_config 	= TXDSPConfig(tx_sr0=sr0, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate)
+    radio_config 	= RadioConfig(mode="usrp", rx_samplerate=sr0, rx_tune_frequency=f_tune, tx_samplerate=sr0, tx_tune_frequency=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
+    rx_dsp_config 	= RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
+    tx_dsp_config 	= TXDSPConfig(tx_samplerate=sr0, tx_tune_frequency=f_tune, tx_f_center=f_center, baudrate=baudrate)
     return rx_dsp_config, tx_dsp_config, radio_config
 
 
@@ -45,9 +45,9 @@ def get_soapy_leecher_receiver_config(soapy_selection, f_center, baudrate, f_tun
     print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
     print("Calculated necessary samplerate at {} ks/s".format( round(1.0e-3 * sr_leecher, 1) ))
     print("Using soapy-leecher radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr_leecher*1e-6, 3) ))
-    radio_config 	= RadioConfig(mode=soapy_selection, rx_sr=sr_leecher, rx_f_tune=f_tune, tx_sr=sr_leecher, tx_f_tune=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
-    rx_dsp_config 	= RXDSPConfig(rx_sr0=sr_leecher, rx_f_tune=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
-    tx_dsp_config 	= TXDSPConfig(tx_sr0=sr_leecher, tx_f_tune=f_tune, tx_f_center=f_center, baudrate=baudrate)
+    radio_config 	= RadioConfig(mode=soapy_selection, rx_samplerate=sr_leecher, rx_tune_frequency=f_tune, tx_samplerate=sr_leecher, tx_tune_frequency=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
+    rx_dsp_config 	= RXDSPConfig(rx_samplerate=sr_leecher, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
+    tx_dsp_config 	= TXDSPConfig(tx_samplerate=sr_leecher, tx_tune_frequency=f_tune, tx_f_center=f_center, baudrate=baudrate)
     return rx_dsp_config, tx_dsp_config, radio_config
 
 

@@ -13,12 +13,12 @@ from .lib_symsynching import classic_JPL_synch_strm
 
 
 class RXDSPConfig:
-    def __init__(self, rx_sr0, rx_f_tune, rx_f_center, baudrate, bufferlen, batch_maxlen):
+    def __init__(self, rx_samplerate, rx_tune_frequency, rx_f_center, baudrate, bufferlen, batch_maxlen):
         self.bufferlen			= bufferlen
         self.batch_maxlen		= batch_maxlen
         # radio device -------------------------------------
-        self.rx_sr0 			= rx_sr0		# Raw samplerate of the radio. Will be downsampled with a rate of baudrate*sps/sr0
-        self.rx_f_tune 			= rx_f_tune		# Tuned frequency of the radio in absolute Hz (for example 350.0e6)
+        self.rx_samplerate 			= rx_samplerate		# Raw samplerate of the radio. Will be downsampled with a rate of baudrate*sps/sr0
+        self.rx_tune_frequency 			= rx_tune_frequency		# Tuned frequency of the radio in absolute Hz (for example 350.0e6)
         # --------------------------------------------------
         # signal properties --------------------------------
         self.rx_f_center 		= rx_f_center	# The (absolute) frequency of the transmissions in absolute Hz (for example 350.12e6)
@@ -62,24 +62,24 @@ class RXDSPConfig:
         assert type(self.bufferlen) == int
         assert 100 < self.batch_maxlen < (0.05*self.bufferlen)
         assert type(self.batch_maxlen) == int
-        assert 1e3 < self.rx_sr0 < 32e6
-        assert self.rx_f_tune > 1.0
+        assert 1e3 < self.rx_samplerate < 32e6
+        assert self.rx_tune_frequency > 1.0
         assert self.rx_f_center > 1.0
-        assert 0 < self.baudrate < (self.rx_sr0/2)
-        assert (abs(self.rx_f_tune - self.rx_f_center) + self.search_halfband + self.baudrate * 0.6) < (0.5 * self.rx_sr0), "Radio tuned to this frequency with this samplerate cannot see the entire band."
+        assert 0 < self.baudrate < (self.rx_samplerate/2)
+        assert (abs(self.rx_tune_frequency - self.rx_f_center) + self.search_halfband + self.baudrate * 0.6) < (0.5 * self.rx_samplerate), "Radio tuned to this frequency with this samplerate cannot see the entire band."
         assert ((self.search_halfband + self.baudrate*0.6) / (self.baudrate * self.sps)) < 0.5, "Resampling down to this sps at this baudrate cannot see the entire search band."
-        sign1 = np.sign(self.rx_f_center+(self.search_halfband+self.baudrate*0.6) - self.rx_f_tune )
-        sign2 = np.sign(self.rx_f_center-(self.search_halfband+self.baudrate*0.6) - self.rx_f_tune )
+        sign1 = np.sign(self.rx_f_center+(self.search_halfband+self.baudrate*0.6) - self.rx_tune_frequency )
+        sign2 = np.sign(self.rx_f_center-(self.search_halfband+self.baudrate*0.6) - self.rx_tune_frequency )
         assert sign1 == sign2, "The search band stretches across tuning frequency. DC-spike will potentially interfere with reception. With very high bandwidths this in inevitable, and this assertion should be commented out."
         assert 2 < self.sps <= 100
         assert type(self.sps) == int
         #assert 4 < self.d_halflen < 42
-        #assert (self.d_halflen*2) > int(self.rx_sr0 / (self.baudrate * self.sps)),  (self.d_halflen*2, int(self.rx_sr0 / (self.baudrate * self.sps)))
+        #assert (self.d_halflen*2) > int(self.rx_samplerate / (self.baudrate * self.sps)),  (self.d_halflen*2, int(self.rx_samplerate / (self.baudrate * self.sps)))
         #assert type(self.d_halflen) == int
         assert 24 < self.n_banks < 240
         assert type(self.n_banks) == int
         assert 0 < self.rs_f_cutoff_coeff < 0.5
-        assert (self.rs_f_cutoff_coeff * (self.sps * self.baudrate / self.rx_sr0)) > ((self.search_halfband + self.baudrate*0.6) / self.rx_sr0)
+        assert (self.rs_f_cutoff_coeff * (self.sps * self.baudrate / self.rx_samplerate)) > ((self.search_halfband + self.baudrate*0.6) / self.rx_samplerate)
         assert type(self.fftlen_mpr) == int
         assert 3 < self.fftlen_mpr < 150
         assert 0.5 <= self.mod_index < 10.0
@@ -108,7 +108,7 @@ class RXDSPConfig:
             assert self.data_maxlen == RS_MAX_ENCODED_LEN
 
     def get_r_rate(self):
-        r_rate = self.sps * self.baudrate / self.rx_sr0
+        r_rate = self.sps * self.baudrate / self.rx_samplerate
         return r_rate
 
     def get_f_center_search_map(self, fftlen, is_precentered:bool):
@@ -116,8 +116,8 @@ class RXDSPConfig:
             f_center_min_nrm = -self.search_halfband / (self.baudrate * self.sps)
             f_center_max_nrm = self.search_halfband / (self.baudrate * self.sps)
         else:
-            f_center_min_nrm = (self.rx_f_center - self.search_halfband - self.rx_f_tune) / (self.baudrate * self.sps)
-            f_center_max_nrm = (self.rx_f_center + self.search_halfband - self.rx_f_tune) / (self.baudrate * self.sps)
+            f_center_min_nrm = (self.rx_f_center - self.search_halfband - self.rx_tune_frequency) / (self.baudrate * self.sps)
+            f_center_max_nrm = (self.rx_f_center + self.search_halfband - self.rx_tune_frequency) / (self.baudrate * self.sps)
         f_center_search_map = get_frequency_search_map(fftlen=fftlen, f_min_nrm=f_center_min_nrm, f_max_nrm=f_center_max_nrm, assert_in_window=True)
         return f_center_search_map
 
@@ -204,7 +204,7 @@ class Receiver:
         self.fftlen, _ = choose_fftlen(config.fftlen_mpr*config.sps, window_halfwid=int(0.06*config.fftlen_mpr*config.sps))
         f_cutoff = config.get_r_rate() * config.rs_f_cutoff_coeff
         f_center_search_map = config.get_f_center_search_map(fftlen=self.fftlen, is_precentered=True)
-        min_f_undisturbed = (config.search_halfband + config.baudrate*0.6) / config.rx_sr0
+        min_f_undisturbed = (config.search_halfband + config.baudrate*0.6) / config.rx_samplerate
         min_f_undisturbed = min_f_undisturbed + 0.2*(f_cutoff - min_f_undisturbed)
         #print("f_cutoff: ",f_cutoff)
         #print("min_f_undisturbed: ",min_f_undisturbed)
@@ -212,9 +212,9 @@ class Receiver:
         halflen_frac = minimal_frac_halflen_for_staged_resampler(halflen_div=halflen_disc, r_rate=config.get_r_rate(), f_cutoff=f_cutoff, minimum_value=8)
         #print("[derived discrete halflen of   {}]".format(halflen_disc))
         #print("[derived fractional halflen of {}]".format(halflen_frac))
-        self.centering_fdelta_nrm = -(config.rx_f_center - config.rx_f_tune) / config.rx_sr0
-        shifter, m, fdelta_actual = create_freq_shifter_precomp(sr=config.rx_sr0, fdelta=-(config.rx_f_center - config.rx_f_tune), max_batchlen=config.batch_maxlen, fdelta_threshold=config.rx_sr0*1e-6)
-        #print("fdelta - fdelta_actual: {} Hz (m:{}, fd_a:{})".format( abs(fdelta_actual - -(config.rx_f_center - config.rx_f_tune)), m, fdelta_actual ))
+        self.centering_fdelta_nrm = -(config.rx_f_center - config.rx_tune_frequency) / config.rx_samplerate
+        shifter, m, fdelta_actual = create_freq_shifter_precomp(sr=config.rx_samplerate, fdelta=-(config.rx_f_center - config.rx_tune_frequency), max_batchlen=config.batch_maxlen, fdelta_threshold=config.rx_samplerate*1e-6)
+        #print("fdelta - fdelta_actual: {} Hz (m:{}, fd_a:{})".format( abs(fdelta_actual - -(config.rx_f_center - config.rx_tune_frequency)), m, fdelta_actual ))
         self.freq_shifter_arr = shifter
         self.freq_shifter_mod = m
         rsmpl_mx1, rsmpl_mx2 = create_staged_resampler(halflen_div=halflen_disc, halflen_f=halflen_frac, r_rate=config.get_r_rate(), n_banks=config.n_banks, f_cutoff=f_cutoff, allow_aliasing=False)
@@ -405,8 +405,8 @@ class Receiver:
 
 # PRECOMPILE RECEIVER ====================================================================================================
 def get_a_precompiling_sampleset(dsp_config:RXDSPConfig, do_print=False):
-    sr0 = dsp_config.rx_sr0
-    rel_offset_raw = (dsp_config.rx_f_center-dsp_config.rx_f_tune) / sr0  #0.1 * (sps*baudrate/sr0)
+    sr0 = dsp_config.rx_samplerate
+    rel_offset_raw = (dsp_config.rx_f_center-dsp_config.rx_tune_frequency) / sr0  #0.1 * (sps*baudrate/sr0)
     rs_mx, rs_cfg = get_default_rs()
     pl = np.random.randint(0,255, RS_MAX_PL_LEN-2)
     preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1

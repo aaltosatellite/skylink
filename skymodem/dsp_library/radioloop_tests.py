@@ -26,12 +26,12 @@ def make_powertest_samples(sr, t_array, offset=0.1):
 
 
 def t1_connect_and_observe():
-    config = RadioConfig(mode="usrp", rx_sr=8e6, rx_f_tune=437.0e6, tx_sr=2e6, tx_f_tune=170.0e6, rx_gain=40, tx_gain=0)
-    que_tx_samples_in = Queue(2)
-    que_rx_samples_out = Queue(100)
-    sinkt = threading.Thread(target=blind_sink, args=(que_rx_samples_out,), daemon=True)
+    config = RadioConfig(mode="usrp", rx_samplerate=8e6, rx_tune_frequency=437.0e6, tx_samplerate=2e6, tx_tune_frequency=170.0e6, rx_gain=40, tx_gain=0)
+    queue_tx_samples_from_dsp = Queue(2)
+    queue_rx_samples_to_dsp = Queue(100)
+    sinkt = threading.Thread(target=blind_sink, args=(queue_rx_samples_to_dsp,), daemon=True)
     sinkt.start()
-    radioloop = RadioLoop(radio_config=config, que_tx_samples_in=que_tx_samples_in, que_rx_samples_out=que_rx_samples_out)
+    radioloop = RadioLoop(radio_config=config, queue_tx_samples_from_dsp=queue_tx_samples_from_dsp, queue_rx_samples_to_dsp=queue_rx_samples_to_dsp)
     radioloop.start()
     time.sleep(40)
     print("Closing.")
@@ -43,12 +43,12 @@ def t2_continuous_transmit(mode, tx_gain):
     assert mode in ("usrp", "soapy")
     sr00 = 2e6
     f00 = 437.000e6
-    config = RadioConfig(mode=mode, rx_sr=sr00, rx_f_tune=f00, tx_sr=sr00, tx_f_tune=f00, rx_gain=40, tx_gain=tx_gain)
-    que_tx_samples_in = Queue(2)
-    que_rx_samples_out = Queue(100)
-    sinkt = threading.Thread(target=blind_sink, args=(que_rx_samples_out,), daemon=True)
+    config = RadioConfig(mode=mode, rx_samplerate=sr00, rx_tune_frequency=f00, tx_samplerate=sr00, tx_tune_frequency=f00, rx_gain=40, tx_gain=tx_gain)
+    queue_tx_samples_from_dsp = Queue(2)
+    queue_rx_samples_to_dsp = Queue(100)
+    sinkt = threading.Thread(target=blind_sink, args=(queue_rx_samples_to_dsp,), daemon=True)
     sinkt.start()
-    radioloop = RadioLoop(radio_config=config, que_tx_samples_in=que_tx_samples_in, que_rx_samples_out=que_rx_samples_out)
+    radioloop = RadioLoop(radio_config=config, queue_tx_samples_from_dsp=queue_tx_samples_from_dsp, queue_rx_samples_to_dsp=queue_rx_samples_to_dsp)
     radioloop.start()
     print("Waiting for radio to start (5s)")
     time.sleep(5.0)
@@ -57,7 +57,7 @@ def t2_continuous_transmit(mode, tx_gain):
     tx_samples = np.reshape(tx_samples, (1, len(tx_samples)))
     i = 0
     while True:
-        que_tx_samples_in.put(tx_samples.copy(), timeout=2.0)
+        queue_tx_samples_from_dsp.put(tx_samples.copy(), timeout=2.0)
         if i == 0:
             print("tx...")
         i = (i + 1) % 10
@@ -68,19 +68,19 @@ def t3_single_burst(mode, tx_gain, burst_duration):
     assert mode in ("usrp", "soapy")
     sr00 = 2e6
     f00 = 437.000e6
-    config = RadioConfig(mode=mode, rx_sr=sr00, rx_f_tune=f00, tx_sr=sr00, tx_f_tune=f00, rx_gain=40, tx_gain=tx_gain)
-    que_tx_samples_in = Queue(2)
-    que_rx_samples_out = Queue(100)
-    sinkt = threading.Thread(target=blind_sink, args=(que_rx_samples_out,), daemon=True)
+    config = RadioConfig(mode=mode, rx_samplerate=sr00, rx_tune_frequency=f00, tx_samplerate=sr00, tx_tune_frequency=f00, rx_gain=40, tx_gain=tx_gain)
+    queue_tx_samples_from_dsp = Queue(2)
+    queue_rx_samples_to_dsp = Queue(100)
+    sinkt = threading.Thread(target=blind_sink, args=(queue_rx_samples_to_dsp,), daemon=True)
     sinkt.start()
-    radioloop = RadioLoop(radio_config=config, que_tx_samples_in=que_tx_samples_in, que_rx_samples_out=que_rx_samples_out)
+    radioloop = RadioLoop(radio_config=config, queue_tx_samples_from_dsp=queue_tx_samples_from_dsp, queue_rx_samples_to_dsp=queue_rx_samples_to_dsp)
     radioloop.start()
     print("Waiting for radio to start (2s)")
     time.sleep(2.0)
     tx_samples = make_powertest_samples(sr=sr00, t_array=burst_duration, offset=0.1)
     tx_samples = np.complex64(tx_samples)
     tx_samples = np.reshape(tx_samples, (1, len(tx_samples)))
-    que_tx_samples_in.put(tx_samples.copy(), timeout=2.0)
+    queue_tx_samples_from_dsp.put(tx_samples.copy(), timeout=2.0)
     time.sleep(burst_duration + 0.2)
     print("Closing.")
     radioloop.close()

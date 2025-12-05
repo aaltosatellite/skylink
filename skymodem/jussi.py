@@ -84,21 +84,21 @@ def create_shm_array(name, shape, dtype):
 
 
 class JussiL0:
-    def __init__(self, rx_sr0, tx_sr0, rx_f_tune, tx_f_tune, rx_gain, tx_gain, tx_ringlen, tx_batch_maxlen, jussi_idx):
+    def __init__(self, rx_samplerate, tx_samplerate, rx_tune_frequency, tx_tune_frequency, rx_gain, tx_gain, tx_ringlen, tx_batch_maxlen, jussi_idx):
         assert type(jussi_idx) == int
         assert 1 <= jussi_idx < 16
         self.dbgprinter 			= DebugPrinter(log_title="Jussi", stdprint=True, zmqprint_host_port=("localhost", 11001))
         self.DBGPRINT 				= self.dbgprinter.DBGPRINT
-        self.rx_sr0_tgt 			= rx_sr0
-        self.tx_sr0_tgt 			= tx_sr0
-        self.rx_f_tune 				= rx_f_tune
-        self.tx_f_tune 				= tx_f_tune
+        self.rx_samplerate_tgt 			= rx_samplerate
+        self.tx_samplerate_tgt 			= tx_samplerate
+        self.rx_tune_frequency 				= rx_tune_frequency
+        self.tx_tune_frequency 				= tx_tune_frequency
         self.rx_gain 				= rx_gain
         self.tx_gain 				= tx_gain
         self.tx_ringlen				= tx_ringlen
         self.tx_batch_maxlen		= tx_batch_maxlen
-        self.rx_sr0_actual 			= None
-        self.tx_sr0_actual 			= None
+        self.rx_samplerate_actual 			= None
+        self.tx_samplerate_actual 			= None
         self.rx_print_ival_init 	= 1.0
         self.rx_print_ival_max 		= 30.0
         self.rx_print_ival_incr 	= 2.0
@@ -132,21 +132,21 @@ class JussiL0:
     def usrp_start(self):
         self.DBGPRINT("USRP INIT")
         usrp = uhd.usrp.MultiUSRP("num_recv_frames=1000")
-        usrp.set_rx_rate(self.rx_sr0_tgt, 0)
-        usrp.set_tx_rate(self.tx_sr0_tgt, 0)
-        usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(self.rx_f_tune), 0)
-        usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(self.tx_f_tune), 0)
+        usrp.set_rx_rate(self.rx_samplerate_tgt, 0)
+        usrp.set_tx_rate(self.tx_samplerate_tgt, 0)
+        usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(self.rx_tune_frequency), 0)
+        usrp.set_tx_freq(uhd.libpyuhd.types.tune_request(self.tx_tune_frequency), 0)
         usrp.set_rx_gain(self.rx_gain, 0)
         usrp.set_tx_gain(self.tx_gain, 0)
         usrp.set_gpio_attr("FP0", "ATR_TX", 0x0100, 0x0100)
         usrp.set_gpio_attr("FP0", "ATR_XX", 0x0100, 0x0100)
         time.sleep(0.1)
-        self.rx_sr0_actual = float(usrp.get_rx_freq(0))
-        self.tx_sr0_actual = float(usrp.get_tx_freq(0))
-        if not np.isclose(self.rx_sr0_tgt, self.rx_sr0_actual):
-            self.DBGPRINT("WARNING: Actual RX-samplerate differs from specified: {} MS/s specified -vs- {} MS/s obtained.".format(round(1e-6*self.rx_sr0_tgt), round(1e-6*self.rx_sr0_actual)))
-        if not np.isclose(self.tx_sr0_tgt, self.tx_sr0_actual):
-            self.DBGPRINT("WARNING: Actual TX-samplerate differs from specified: {} MS/s specified -vs- {} MS/s obtained.".format(round(1e-6*self.tx_sr0_tgt,3), round(1e-6*self.tx_sr0_actual)))
+        self.rx_samplerate_actual = float(usrp.get_rx_freq(0))
+        self.tx_samplerate_actual = float(usrp.get_tx_freq(0))
+        if not np.isclose(self.rx_samplerate_tgt, self.rx_samplerate_actual):
+            self.DBGPRINT("WARNING: Actual RX-samplerate differs from specified: {} MS/s specified -vs- {} MS/s obtained.".format(round(1e-6*self.rx_samplerate_tgt), round(1e-6*self.rx_samplerate_actual)))
+        if not np.isclose(self.tx_samplerate_tgt, self.tx_samplerate_actual):
+            self.DBGPRINT("WARNING: Actual TX-samplerate differs from specified: {} MS/s specified -vs- {} MS/s obtained.".format(round(1e-6*self.tx_samplerate_tgt,3), round(1e-6*self.tx_samplerate_actual)))
 
         #print("bank 0:", usrp.get_gpio_banks(0)) #['FP0', 'RXA', 'TXA']  (No further banks in B210)
         #print("FP0 CTRL", usrp.get_gpio_attr("FP0", "CTRL"))
@@ -200,7 +200,7 @@ class JussiL0:
 
     # === USRP ===============================================================================================================================================================================
     def _usrp_rx_loop(self, usrp:uhd.usrp.MultiUSRP):
-        rx_bufferlen 			= int(self.rx_sr0_actual * 2e-3) # todo batch time parameter
+        rx_bufferlen 			= int(self.rx_samplerate_actual * 2e-3) # todo batch time parameter
         recv_buffer 			= np.zeros((1, rx_bufferlen), dtype=np.complex64)
         n_rx_loops 				= 0
         n_rx_total 				= 0
@@ -247,7 +247,7 @@ class JussiL0:
 
             if ts_mono >= t_next_print:
                 ampmax_int_time = round(ts_mono - (t_next_print - self.maxreset_interval), 1)
-                report_str = "(sr~{} MS/s measured vs {} MS/s specced). component-max:{}, avg-amplitude:{} ({}s)".format( round(1e-6*avg_sr, 5), round(1e-6*self.rx_sr0_tgt, 5), sample_maxamps[0], sample_maxamps[1], ampmax_int_time)
+                report_str = "(sr~{} MS/s measured vs {} MS/s specced). component-max:{}, avg-amplitude:{} ({}s)".format( round(1e-6*avg_sr, 5), round(1e-6*self.rx_samplerate_tgt, 5), sample_maxamps[0], sample_maxamps[1], ampmax_int_time)
                 self.DBGPRINT(report_str)
                 t_next_print = ts_mono + rx_print_interval
                 rx_print_interval = min(self.rx_print_ival_max, rx_print_interval+self.rx_print_ival_incr)
@@ -264,7 +264,7 @@ class JussiL0:
         tx_stream_args.channels = [0]
         tx_streamer = usrp.get_tx_stream(tx_stream_args)
         tx_metadata = uhd.types.TXMetadata()
-        tx_batchlen = int(self.tx_sr0_actual * 1e-3) # todo batch time parameter
+        tx_batchlen = int(self.tx_samplerate_actual * 1e-3) # todo batch time parameter
         while self.on:
             trig = self.tx_trigger_event.wait(timeout=0.25)
             if not trig:
@@ -284,7 +284,7 @@ class JussiL0:
                     tx_streamer.send(samplearr[idx:idx+tx_batchlen], tx_metadata)
                     tx_metadata.start_of_burst = False
                     idx = min(idx+tx_batchlen, nsamples)
-                    t_end = t0_arr + idx / self.tx_sr0_actual
+                    t_end = t0_arr + idx / self.tx_samplerate_actual
                     time.sleep(max(0, t_end-time.perf_counter()-2.0e-3)) 	# We sleep until 2 ms before the pushed batch run out. The size is not critical.
                                                                                                                                     # The function of this waittime is to limit the speed at which the queue is emptied to the SDR buffer,
                                                                                                                                     # in case the SDR buffer is very large.
@@ -532,15 +532,15 @@ class JussiSrvr:
 
 
 class JussiRXStreamSrvr:
-    def __init__(self, cli_idx, sdr_rx_sr, cli_rx_sr, rx_que, rx_ringlen, output_samplering_shm_name, output_lenring_shm_name, output_trigger_socket, jussi_idx):
+    def __init__(self, cli_idx, sdr_rx_samplerate, cli_rx_samplerate, rx_que, rx_ringlen, output_samplering_shm_name, output_lenring_shm_name, output_trigger_socket, jussi_idx):
         assert 0 <= int(cli_idx) < 8
-        assert cli_rx_sr / sdr_rx_sr <= 1.0
+        assert cli_rx_samplerate / sdr_rx_samplerate <= 1.0
         assert type(jussi_idx) == int
         assert 1 <= jussi_idx < 16
         self.on = True
         self.rx_on = False
         self.idx 					= int(cli_idx)
-        self.rx_resampling_ratio 	= cli_rx_sr / sdr_rx_sr
+        self.rx_resampling_ratio 	= cli_rx_samplerate / sdr_rx_samplerate
         self.do_rx_resampling 		= False
         self.rx_ringlen 			= rx_ringlen
         self.j0_rx_ring, shm0		= shm_array_from_name(name=SHM_NAME_PREFIX+"-rbr-"+str(jussi_idx), shape=(self.rx_ringlen, 1024*256), dtype=np.complex64)  #todo ensure the arrays here and in L0 are the same length.
@@ -682,14 +682,14 @@ class JussiRXStream:
 
 
 class JussiTXStreamSrvr:
-    def __init__(self, cli_idx, sdr_tx_sr, cli_tx_sr, tx_trig_event, tx_ringlen, tx_batch_maxlen, input_shm_name, input_ringlen, tx_trigger_socket, jussi_idx):
+    def __init__(self, cli_idx, sdr_tx_samplerate, cli_tx_samplerate, tx_trig_event, tx_ringlen, tx_batch_maxlen, input_shm_name, input_ringlen, tx_trigger_socket, jussi_idx):
         assert 0 <= int(cli_idx) < 8
-        assert sdr_tx_sr / cli_tx_sr >= 1.0
+        assert sdr_tx_samplerate / cli_tx_samplerate >= 1.0
         assert type(jussi_idx) == int
         assert 1 <= jussi_idx < 16
         self.tx_on = False
         self.idx = int(cli_idx)
-        self.tx_resampling_ratio 	= sdr_tx_sr / cli_tx_sr
+        self.tx_resampling_ratio 	= sdr_tx_samplerate / cli_tx_samplerate
         self.do_tx_resampling 		= False
         self.tx_ringlen 			= tx_ringlen
         self.tx_batch_maxlen		= tx_batch_maxlen

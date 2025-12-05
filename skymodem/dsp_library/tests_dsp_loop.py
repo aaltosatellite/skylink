@@ -27,8 +27,8 @@ def t1_multimode_reception_rx(rx_baudrates):
         print("DSPLoop test 1: Multimode reception.")
     f_center 	= 437.000e6
     base_sr 	= 2e6
-    rx_config = RXDSPConfig(rx_sr0=base_sr, rx_f_tune=436.700e6, rx_f_center=f_center, baudrate=rx_baudrates[0], bufferlen=800000, batch_maxlen=16*1024)
-    tx_config = TXDSPConfig(tx_sr0=base_sr, tx_f_tune=436.700e6, tx_f_center=f_center, baudrate=rx_baudrates[0])
+    rx_config = RXDSPConfig(rx_samplerate=base_sr, rx_tune_frequency=436.700e6, rx_f_center=f_center, baudrate=rx_baudrates[0], bufferlen=800000, batch_maxlen=16*1024)
+    tx_config = TXDSPConfig(tx_samplerate=base_sr, tx_tune_frequency=436.700e6, tx_f_center=f_center, baudrate=rx_baudrates[0])
     que_rx_samples_in1 		= Queue(100)
     que_rx_payloads_out1 	= Queue(256)
     que_tx_payloads_in1 	= Queue(100)
@@ -201,7 +201,7 @@ def t1_multimode_reception_rx(rx_baudrates):
 		time.sleep(2.0)
 		for idd in sorted(list(dsploop1.dsp_perf_stats_mpr.keys())):
 			dt_array, n_processed = dsploop1.dsp_perf_stats_mpr[idd]
-			S = dt_array_report(dt_array=dt_array, nsamples=n_processed, sr0=dsploop1.rx_dsp_config.rx_sr0, dt_array_names=dsploop1.rx.dt_array_names)
+			S = dt_array_report(dt_array=dt_array, nsamples=n_processed, sr0=dsploop1.rx_dsp_config.rx_samplerate, dt_array_names=dsploop1.rx.dt_array_names)
 			print("\tmpr-process-{}:".format(idd))
 			S = "\t" + S
 			S = S.replace("\n", "\n\t")
@@ -209,7 +209,7 @@ def t1_multimode_reception_rx(rx_baudrates):
 			print(S)
 			print("")
 	else:
-		S = dt_array_report(dt_array=dsploop1.rx.dt_array, nsamples=dsploop1.rx.n_processed, sr0=dsploop1.rx_dsp_config.rx_sr0, dt_array_names=dsploop1.rx.dt_array_names)
+		S = dt_array_report(dt_array=dsploop1.rx.dt_array, nsamples=dsploop1.rx.n_processed, sr0=dsploop1.rx_dsp_config.rx_samplerate, dt_array_names=dsploop1.rx.dt_array_names)
 		print("\tReceiver:")
 		S = "\t" + S
 		S = S.replace("\n", "\n\t")
@@ -249,8 +249,8 @@ def t2_speedbench_multimode_rx():
     t_unix 			= t_mono + 194645646.3452
     t_slept 		= 0
 
-    rx_config = RXDSPConfig(rx_sr0=base_sr, rx_f_tune=436.700e6, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=16*1024)
-    tx_config = TXDSPConfig(tx_sr0=base_sr, tx_f_tune=436.700e6, tx_f_center=f_center, baudrate=9600)
+    rx_config = RXDSPConfig(rx_samplerate=base_sr, rx_tune_frequency=436.700e6, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=16*1024)
+    tx_config = TXDSPConfig(tx_samplerate=base_sr, tx_tune_frequency=436.700e6, tx_f_center=f_center, baudrate=9600)
     que_rx_samples_in1 		= Queue(100)
     que_rx_payloads_out1 	= Queue(256)
     que_tx_payloads_in1 	= Queue(100)

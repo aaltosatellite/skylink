@@ -18,10 +18,10 @@ DBGPRINT = _dbgprinter.DBGPRINT_toggled
 
 
 class TXDSPConfig:
-    def __init__(self, tx_sr0, tx_f_tune, tx_f_center, baudrate):
+    def __init__(self, tx_samplerate, tx_tune_frequency, tx_f_center, baudrate):
         # radio device -------------------------------------
-        self.tx_sr0				= tx_sr0
-        self.tx_f_tune			= tx_f_tune
+        self.tx_samplerate				= tx_samplerate
+        self.tx_tune_frequency			= tx_tune_frequency
         # --------------------------------------------------
         # signal properties --------------------------------
         self.tx_f_center 		= tx_f_center
@@ -36,11 +36,11 @@ class TXDSPConfig:
         self.synchword_len		= FS1P_SYNCHWORD_LEN
 
     def check_validity(self):
-        assert 1e3 < self.tx_sr0 < 32e6
-        assert self.tx_f_tune > 1.0e3
+        assert 1e3 < self.tx_samplerate < 32e6
+        assert self.tx_tune_frequency > 1.0e3
         assert self.tx_f_center > 1.0e3
-        assert 0 < self.baudrate < (self.tx_sr0/2)
-        assert (abs(self.tx_f_tune - self.tx_f_center) + self.tx_f_adjustment_halfband + self.baudrate * 0.6) < (0.5 * self.tx_sr0), "Radio tuned to this frequency with this samplerate cannot see the entire band."
+        assert 0 < self.baudrate < (self.tx_samplerate/2)
+        assert (abs(self.tx_tune_frequency - self.tx_f_center) + self.tx_f_adjustment_halfband + self.baudrate * 0.6) < (0.5 * self.tx_samplerate), "Radio tuned to this frequency with this samplerate cannot see the entire band."
         assert (self.tx_BT >= 0.4) or (self.tx_BT == -1)
         assert 0.5 <= self.tx_mod_index < 10.0
         if not (self.tx_mod_index in (0.5, 0.75)):
@@ -188,7 +188,7 @@ class DSPLoop:
         else:
             f_use_abs = self.tx_dsp_config.tx_f_center
         if as_offset:
-            return f_use_abs - self.tx_dsp_config.tx_f_tune
+            return f_use_abs - self.tx_dsp_config.tx_tune_frequency
         return f_use_abs
 
 
@@ -202,12 +202,12 @@ class DSPLoop:
         t00 = time.perf_counter()
         baudrate = self._get_transmit_baudrate()
         f_use_offset = self._get_transmit_frequency(as_offset=True, ts_now_mono=ts_now_mono)
-        f_offset_nrm = f_use_offset / self.tx_dsp_config.tx_sr0
+        f_offset_nrm = f_use_offset / self.tx_dsp_config.tx_samplerate
         pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
         bits = frame_packet(pl=pl_char_ints, synchword_int=self.tx_dsp_config.synchword, synchword_len=self.tx_dsp_config.synchword_len, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
         bits = np.concatenate( (self.preamble_bits, bits) )
-        sps = self.tx_dsp_config.tx_sr0 / baudrate
-        n_silence_start = int(self.tx_dsp_config.tx_sr0 * 10.0e-3) # Accounts for PA ramp up. TODO: this should be a setting?
+        sps = self.tx_dsp_config.tx_samplerate / baudrate
+        n_silence_start = int(self.tx_dsp_config.tx_samplerate * 10.0e-3) # Accounts for PA ramp up. TODO: this should be a setting?
         dt1 = time.perf_counter() - t00
         t00 = time.perf_counter()
         samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.tx_dsp_config.tx_mod_index, shaper_BT_prod=self.tx_dsp_config.tx_BT, n_silence_start=n_silence_start, n_silence_end=0)
@@ -219,14 +219,14 @@ class DSPLoop:
         if as_c64:
             samples = np.array(samples, dtype=np.complex64)
         dt3 = time.perf_counter() - t00
-        return samples, f_use_offset+self.tx_dsp_config.tx_f_tune, (dt1, dt2, dt3)
+        return samples, f_use_offset+self.tx_dsp_config.tx_tune_frequency, (dt1, dt2, dt3)
 
 
 
     # -- loops -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def _rx_loop(self):
         default_batchlen = self.rx_dsp_config.batch_maxlen // 2
-        T_sample = 1.0 / self.rx_dsp_config.rx_sr0
+        T_sample = 1.0 / self.rx_dsp_config.rx_samplerate
         ts_last_cs = 0.0
         while self.on:
             try:
@@ -281,7 +281,7 @@ class DSPLoop:
                 self.own_recently_sent[payload] = t_start_mono
                 samplearr, f_use_abs, _ = self._compose_samples(payload=payload, ts_now_mono=self.t_now_mono, usrp_reshape=True, as_c64=True)
                 DBGPRINT(self.dbgprint_mask&self.DBGP_TX, "TX Start at {} MHz".format( f_use_abs * 1e-6, 3))
-                t_end_mono = t_start_mono + (samplearr.shape[1] / self.tx_dsp_config.tx_sr0)
+                t_end_mono = t_start_mono + (samplearr.shape[1] / self.tx_dsp_config.tx_samplerate)
                 self._schedule_tx(t_start_mono=t_start_mono -5e-3, t_end_mono=t_end_mono +5e-3)
             self.que_tx_samples_out.put(samplearr, timeout=4.0)
 
@@ -413,7 +413,7 @@ def _mpr_memfree_idxed(basename, suffixes):
 
 def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm_names, flag_ring_shm_name, que_out, que_rdy_rprt, idle_timeout, dbgprint_mask):
     default_batchlen = rx_dsp_config.batch_maxlen // 2
-    T_sample = 1.0 / rx_dsp_config.rx_sr0
+    T_sample = 1.0 / rx_dsp_config.rx_samplerate
     rx = Receiver(config=rx_dsp_config)
     buffer_ring = list()
     buffer_shm_list = list()

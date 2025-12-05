@@ -80,7 +80,7 @@ class SkyModem:
         self.que_payloads_sky_to_dsp 	= Queue(1)
         self.que_samples_dsp_to_radio 	= Queue(1)
         self.que_signaldata_out 		= Queue(100)
-        self.radio_loop 	= RadioLoop(radio_config=radio_config, que_tx_samples_in=self.que_samples_dsp_to_radio, que_rx_samples_out=self.que_samples_radio_to_dsp)
+        self.radio_loop 	= RadioLoop(radio_config=radio_config, queue_tx_samples_from_dsp=self.que_samples_dsp_to_radio, queue_rx_samples_to_dsp=self.que_samples_radio_to_dsp)
         self.dsp_loop 		= DSPLoop(rx_dsp_config=rx_dsp_config, tx_dsp_config=tx_dsp_config, que_rx_samples_in=self.que_samples_radio_to_dsp, que_rx_payloads_out=self.que_payloads_dsp_to_sky,
                                                                    que_tx_payloads_in=self.que_payloads_sky_to_dsp, que_tx_samples_out=self.que_samples_dsp_to_radio, que_signaldata_out=self.que_signaldata_out)
         self.skylink_loop 	= SkyLinkLoop(config=skylink_config, key_list=hmac_key_list, que_payloads_in=self.que_payloads_dsp_to_sky, que_payloads_out=self.que_payloads_sky_to_dsp, radio_tx_sample_que=self.que_samples_dsp_to_radio, radio_ready_ev=self.radio_loop.tx_ready)
