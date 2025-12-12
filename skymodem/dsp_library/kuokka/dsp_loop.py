@@ -66,6 +66,15 @@ class DSPLoop:
     DBGP_RX 		= 1<<2
     DBGP_TX 		= 1<<3
     def __init__(self, rx_dsp_config:RXDSPConfig, tx_dsp_config:TXDSPConfig, que_rx_samples_in:Queue, que_rx_payloads_out:queue.Queue, que_tx_payloads_in:Queue, que_tx_samples_out:Queue, que_signaldata_out:Queue):
+        """
+        Create a DSP Loop for handling modulation and demodulation.
+        Includes separate threads for transmission and reception.
+        There are two different modes for reception: single-mode and multi-mode.
+        Single-mode processes one baudrate at a time, while multi-mode can process multiple baudrates in parallel.
+        Needs to be started by calling start() or start_multimode().
+
+        Also includes precompilation of the DSP chain to improve performance.
+        """
         DBGPRINT(1, "Precompile DSP")
         precompile_receiver(rx_dsp_config, do_print=False)
         self.rx_dsp_config 			= rx_dsp_config
@@ -101,6 +110,11 @@ class DSPLoop:
 
 
     def is_ok(self):
+        """
+        Checks if DSPLoop hasn't had any fatal errors and makes sure all threads are still alive.
+
+        Used together with is_ok functions for other loops to determine if the whole modem is still functioning properly.
+        """
         if not self.on:
             return False
         if not self.rx_process_thread.is_alive():
@@ -111,12 +125,20 @@ class DSPLoop:
 
 
     def close(self):
+        """
+        Terminate the DSP Loop and its threads.
+        """
         self.on = False
         self.rx_process_thread.join(timeout=1.0)
         self.tx_process_thread.join(timeout=1.0)
 
 
     def start(self):
+        """
+        Start the DSP loop in normal mode
+
+        This mode processes only a single baudrate for reception.
+        """
         self.rx_process_thread = threading.Thread(target=self._rx_loop, args=tuple(), daemon=True)
         self.rx_process_thread.start()
         self.tx_process_thread = threading.Thread(target=self._tx_loop, args=tuple(), daemon=True)
@@ -124,6 +146,11 @@ class DSPLoop:
 
 
     def start_multimode(self, baudrates, mem_index):
+        """
+        Start the DSP loop in multi-mode.
+
+        This means that multiple baudrates are processed in parallel for reception.
+        """
         rx_dsp_config_list = []
         ring_length = 42
         for baudrate in baudrates:
@@ -138,11 +165,17 @@ class DSPLoop:
 
 
     def set_tx_baudrate(self, baudrate):
+        """
+        Set currently used baudrate for transmission only.
+        """
         with self.rlock:
             self.tx_dsp_config.baudrate = baudrate
 
 
     def set_baudrate(self, baudrate):
+        """
+        Set currently used baudrate for both transmission and reception.
+        """
         with self.rlock:
             self.tx_dsp_config.baudrate = baudrate
             self.rx_dsp_config.baudrate = baudrate
@@ -150,10 +183,16 @@ class DSPLoop:
 
 
     def set_doppler_correction(self, toggle:bool):
+        """
+        Enable or disable Doppler correction based on received packets.
+        """
         with self.rlock:
             self.do_doppler_correction = bool(toggle)
 
     def set_tle_doppler_correction(self, toggle:bool):
+        """
+        Enable or disable TLE based Doppler correction for transmission.
+        """
         with self.rlock:
             self.do_tle_doppler_correction = bool(toggle)
 
@@ -186,12 +225,22 @@ class DSPLoop:
 
 
     def _clean_own_sent(self, ts_now_mono):
+        """
+        Clean up recently sent packets that are too old to be sensed by self.
+        """
         for key in list(self.own_recently_sent):
             if (ts_now_mono - self.own_recently_sent[key]) > 3.0:  # real time to parametric todo: 3.0 should be a parameter
                 del self.own_recently_sent[key]
 
 
     def _get_transmit_frequency(self, as_offset:bool, ts_now_mono):
+        """
+        Get frequency to use for transmission.
+
+        Can be either the nominal configured frequency, a frequency set to match last rx frequency, a doppler correction based on last received frequency, or a TLE based doppler correction.
+        
+        Returns either absolute frequency or frequency offset from tx_tune_frequency.
+        """
         if self.do_frequency_following and ((ts_now_mono - self.last_verified_freq[1]) < 60.0) and (self.last_verified_freq[1] > 0): # real time to parametric todo: 60.0 should be a parameter
             f_recv_abs = self.last_verified_freq[0]
             if self.do_doppler_correction:
@@ -208,12 +257,20 @@ class DSPLoop:
 
 
     def _get_transmit_baudrate(self):
+        """
+        Get baudrate to use for transmission based on last reception.
+
+        If nothing has been received recently, use configured baudrate.
+        """
         if (not self.do_baudrate_following) or (not self.last_verified_baudrate):
             return self.tx_dsp_config.baudrate
         return self.last_verified_baudrate
 
 
     def _compose_samples(self, payload, ts_now_mono, usrp_reshape, as_c64):
+        """
+        Compose samples that will be sent to RadioLoop for transmission.
+        """
         baudrate = self._get_transmit_baudrate()
         f_use_offset = self._get_transmit_frequency(as_offset=True, ts_now_mono=ts_now_mono)
         f_offset_nrm = f_use_offset / self.tx_dsp_config.tx_samplerate
@@ -234,6 +291,11 @@ class DSPLoop:
 
     # -- loops -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def _rx_loop(self):
+        """
+        Main demodulation loop for single-mode reception.
+
+        Receives samples from RadioLoop, processes them, and outputs received payloads to SkyLinkLoop.
+        """
         default_batchlen = self.rx_dsp_config.batch_maxlen // 2
         T_sample = 1.0 / self.rx_dsp_config.rx_samplerate
         ts_last_cs = 0.0
@@ -287,6 +349,11 @@ class DSPLoop:
 
 
     def _tx_loop(self):
+        """
+        Main modulation loop for transmission.
+
+        Receives payloads from SkyLinkLoop, processes them into samples, and outputs samples to RadioLoop.
+        """
         while self.on:
             if not self.que_tx_samples_out.empty():
                 time.sleep(0.002)
@@ -310,6 +377,11 @@ class DSPLoop:
 
 
     def _rx_loop_mpr(self, dsp_config_list, ring_len, mem_idx):
+        """
+        Demodulation loop for multi-mode reception (Multiple baudrates in parallel).
+
+        Receives samples from RadioLoop, distributes them to multiple processes for parallel processing, and outputs received payloads to SkyLinkLoop.
+        """
         base_name = SHM_MEM_BASENAME + str(mem_idx) + "-"
         _mpr_memfree_idxed(base_name, [str(i) for i in range(ring_len+10)]+["A"])
         idle_timeout 			= 10.0 # todo: a parameter?
@@ -435,6 +507,9 @@ def _mpr_memfree_idxed(basename, suffixes):
 
 
 def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm_names, flag_ring_shm_name, que_out, que_rdy_rprt, idle_timeout, dbgprint_mask):
+    """
+    Process used for each baudrate in multi-mode reception.
+    """
     default_batchlen = rx_dsp_config.batch_maxlen // 2
     T_sample = 1.0 / rx_dsp_config.rx_samplerate
     rx = Receiver(config=rx_dsp_config)
