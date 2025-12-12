@@ -2,6 +2,23 @@ import numpy as np
 from numba import njit, prange, objmode
 import time
 import sys
+from skyfield.api import EarthSatellite, wgs84
+import skyfield.api
+
+skyfield_timescale = skyfield.api.load.timescale()
+
+# Temporary TLE and GS data for testing purposes, replace with a file loading logic later
+TLE_LINE1 = "1 99999U 25000XX  25343.38819229  .00004178  00000-0  34972-4 0  9990"
+TLE_LINE2 = "2 99999  97.4424  55.2170 0003820  61.6496  14.5061 15.16321950 59107"
+SATELLITE_NAME = "Foresail1p"
+GS_LATITUDE_DEGREES = 60.1871545
+GS_LONGITUDE_DEGREES = 24.8181605
+GS_ELEVATION = 30
+
+# Utilities for Doppler correction
+c = 299792458.0
+satellite = EarthSatellite(TLE_LINE1, TLE_LINE2, SATELLITE_NAME, skyfield_timescale)
+groundstation = wgs84.latlon(GS_LATITUDE_DEGREES, GS_LONGITUDE_DEGREES, elevation_m=GS_ELEVATION)
 
 S100_CENTER_FREQUENCY = 437.7752e6
 S100_SYNCHWORD 		= 0x930B51DE   	# Suomi100
@@ -585,19 +602,25 @@ def get_doppler_low_high(f_center, v_relative):
 
 
 def doppler_correction(f_rx_received, f_rx_original, f_tx_at_target):
-    c = 299792458.0
     #f_received = f_original * c/(c+v_src)
     v_src = c * (f_rx_original/f_rx_received - 1)
     f_send = f_tx_at_target * (c+v_src)/c
     return f_send, v_src # v_src is the derivative of separating distance. (negative if satellite is approaching)
 
-def doppler_correction_tle():
+def doppler_correction_tle(uncorrected_tx_frequency):
     """
     Perform doppler correction based on current position based on TLE.
-    
-    TODO: implement this function.
+
+    Source: https://github.com/daniestevez/gr-satellites/blob/main/examples/doppler_correction/tle_to_doppler_file.py
     """
-    pass
+    current_time = skyfield_timescale.now()
+    difference = satellite - groundstation
+    topocentric = difference.at(current_time)
+    range_rate = topocentric.frame_latlon_and_rates(groundstation)[5].km_per_s * 1e3
+    doppler = range_rate / c * uncorrected_tx_frequency
+    f_send = uncorrected_tx_frequency + doppler
+    print(f"Sending frequency corrected for doppler: {f_send/1e6:.6f} MHz (range rate: {range_rate:.2f} m/s)")
+    return f_send
 
 
 def determine_ftune_and_min_sr(f_center_min, f_center_max, max_signal_bandwidth):

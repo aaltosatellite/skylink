@@ -2,7 +2,7 @@ import queue
 import numpy as np
 from .lib_receiver import Receiver, RXDSPConfig, precompile_receiver
 from .lib_framing import frame_packet
-from .lib_tools import doppler_correction, ints_to_bits, FS1P_SYNCHWORD_LEN, FS1P_SYNCHWORD, make_samples2, snr_dB, DebugPrinter
+from .lib_tools import doppler_correction, doppler_correction_tle, ints_to_bits, FS1P_SYNCHWORD_LEN, FS1P_SYNCHWORD, make_samples2, snr_dB, DebugPrinter
 from .lib_reedsolomon import get_default_rs
 import threading
 from queue import Queue, Empty
@@ -73,6 +73,7 @@ class DSPLoop:
         self.do_frequency_following = True
         self.do_baudrate_following 	= False
         self.do_doppler_correction  = False
+        self.do_tle_doppler_correction = False
         self.preamble_bits 			= ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
         rs_mx, rs_cfg 				= get_default_rs()
         self.rs_mx 					= rs_mx
@@ -152,6 +153,10 @@ class DSPLoop:
         with self.rlock:
             self.do_doppler_correction = bool(toggle)
 
+    def set_tle_doppler_correction(self, toggle:bool):
+        with self.rlock:
+            self.do_tle_doppler_correction = bool(toggle)
+
 
 
     # == private functions ===================================================================================================================================================================
@@ -190,7 +195,9 @@ class DSPLoop:
         if self.do_frequency_following and ((ts_now_mono - self.last_verified_freq[1]) < 60.0) and (self.last_verified_freq[1] > 0): # real time to parametric todo: 60.0 should be a parameter
             f_recv_abs = self.last_verified_freq[0]
             if self.do_doppler_correction:
-                f_use_abs, _ = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_center_frequency, f_tx_at_target=self.tx_dsp_config.tx_center_frequency)
+                f_use_abs = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_center_frequency, f_tx_at_target=self.tx_dsp_config.tx_center_frequency)
+            if self.do_tle_doppler_correction:
+                f_use_abs = doppler_correction_tle(uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency)
             else:
                 f_use_abs = f_recv_abs
         else:
@@ -267,7 +274,8 @@ class DSPLoop:
                             continue
 
                         # This is a quick patch for problem of correcting doppler to own transmission. Need to improve later.
-                        if snr > 50.0:
+                        # Doppler only on GS so this allows lab usage with high SNR.
+                        if snr > 50.0 and (self.do_doppler_correction or self.do_tle_doppler_correction):
                             DBGPRINT(self.dbgprint_mask&self.DBGP_RX, f"High SNR but not recognized as self reception: {snr} dB. Discarded.")
                             continue
 
