@@ -105,6 +105,10 @@ if __name__ == '__main__':
     assert _args.rx_gain <= 76, f"rx_gain must be between 0 and 76 [dB]. Was {_args.rx_gain}"
     assert _args.tx_gain >= 0.0, f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
     assert _args.tx_gain <= 89.75, f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
+    if _args.auth == "fm":
+        # Safeguards for GS hardware: especially switch.
+        assert _args.center_freq >= 436e6, f"center_freq must be between 436 and 438 MHz. Was {_args.center_freq}"
+        assert _args.center_freq <= 438e6, f"center_freq must be between 436 and 438 MHz. Was {_args.center_freq}"
 
     if os.path.isfile("secret.h") and _args.auth == "fm":
         print("[AUTH] Using FM authentication keys.")
@@ -134,7 +138,7 @@ if __name__ == '__main__':
                 0x51, 0xf2, 0xed, 0xe4, 0x45, 0x65, 0x56, 0x6b
         ])
     if uplink_key == b"":
-        print("Check HMAC Key!")
+        print("[EXIT] Check HMAC Key!")
         exit()
     # Different keys for uplink, downlink, and service channel
     hmac_keys = [uplink_key, downlink_key, service_key]
@@ -172,10 +176,11 @@ if __name__ == '__main__':
 
     if "soapy" in _args.mode:
         ftune_correction = 40e3
-        print(f"Using Soapy mode, center_freq={_args.center_freq} Hz, and ftune_correction={ftune_correction} Hz")
+        print(f"[INIT] Using SoapyShared mode, center_freq={_args.center_freq} Hz, and 'ftune_correction'={ftune_correction} Hz")
         rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(soapy_selection=_args.mode, f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain)
     else:
         assert _args.mode == "usrp"
+        print(f"[INIT] Using USRP mode, center_freq={_args.center_freq} Hz, and no 'ftune_correction'.")
         rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain)
 
     #amqp_broker_addr_ = "amqp://guest:guest@localhost:5672"
@@ -191,7 +196,7 @@ if __name__ == '__main__':
             #print(threading.active_count(), "threads active")
             time.sleep(0.5)
             if not modem.is_ok():
-                print("Modem is_ok() failed. Exiting.")
+                print("[EXIT] Modem is_ok() failed. Exiting.")
                 break
     except KeyboardInterrupt:
         pass
