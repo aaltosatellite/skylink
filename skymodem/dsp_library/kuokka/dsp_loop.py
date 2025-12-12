@@ -190,7 +190,7 @@ class DSPLoop:
         if self.do_frequency_following and ((ts_now_mono - self.last_verified_freq[1]) < 60.0) and (self.last_verified_freq[1] > 0): # real time to parametric todo: 60.0 should be a parameter
             f_recv_abs = self.last_verified_freq[0]
             if self.do_doppler_correction:
-                f_use_abs, _ = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_f_center, f_tx_at_target=self.tx_dsp_config.tx_center_frequency)
+                f_use_abs, _ = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_center_frequency, f_tx_at_target=self.tx_dsp_config.tx_center_frequency)
             else:
                 f_use_abs = f_recv_abs
         else:

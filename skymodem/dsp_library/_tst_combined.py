@@ -42,7 +42,7 @@ def draw(draw_time_series=False):
     fshifter = np.exp(2j*np.pi * np.arange(0,i1-i0) * (0.12))
     samples[i0:i1] = samples[i0:i1] * fshifter
 
-    config = RXDSPConfig(rx_samplerate=1e6, rx_tune_frequency=437.066e6, rx_f_center=437.125e6, baudrate=9600, bufferlen=int(len(samples) * 0.3), batch_maxlen=1024 * 16)
+    config = RXDSPConfig(rx_samplerate=1e6, rx_tune_frequency=437.066e6, rx_center_frequency=437.125e6, baudrate=9600, bufferlen=int(len(samples) * 0.3), batch_maxlen=1024 * 16)
     config.centerf_halflife = 12
     r_rate = config.get_r_rate()
     rx = Receiver(config=config)

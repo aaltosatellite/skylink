@@ -68,9 +68,9 @@ def speedbench_raw_modulation2(sr, baudrate, BT):
 
 
 def speedbench_packet_modulation(sr, baudrate, BT):
-    rx_dsp_config = RXDSPConfig(rx_samplerate=sr, rx_tune_frequency=437.06e6, rx_f_center=437.125e6, baudrate=baudrate, bufferlen=800000, batch_maxlen=16000)
+    rx_dsp_config = RXDSPConfig(rx_samplerate=sr, rx_tune_frequency=437.06e6, rx_center_frequency=437.125e6, baudrate=baudrate, bufferlen=800000, batch_maxlen=16000)
     rx_dsp_config.tx_BT = BT
-    tx_dsp_config = TXDSPConfig(tx_samplerate=sr, tx_tune_frequency=rx_dsp_config.rx_tune_frequency, tx_f_center=rx_dsp_config.rx_f_center, baudrate=baudrate)
+    tx_dsp_config = TXDSPConfig(tx_samplerate=sr, tx_tune_frequency=rx_dsp_config.rx_tune_frequency, tx_center_frequency=rx_dsp_config.rx_center_frequency, baudrate=baudrate)
     dsploop = DSPLoop(rx_dsp_config=rx_dsp_config, tx_dsp_config=tx_dsp_config, que_tx_samples_out=Queue(10), que_tx_payloads_in=Queue(10), que_rx_payloads_out=Queue(10), que_rx_samples_in=Queue(10), que_signaldata_out=Queue(10))
 
     pl = os.urandom(200)

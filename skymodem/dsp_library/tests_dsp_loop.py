@@ -27,8 +27,8 @@ def t1_multimode_reception_rx(rx_baudrates):
         print("DSPLoop test 1: Multimode reception.")
     f_center 	= 437.000e6
     base_sr 	= 2e6
-    rx_config = RXDSPConfig(rx_samplerate=base_sr, rx_tune_frequency=436.700e6, rx_f_center=f_center, baudrate=rx_baudrates[0], bufferlen=800000, batch_maxlen=16*1024)
-    tx_config = TXDSPConfig(tx_samplerate=base_sr, tx_tune_frequency=436.700e6, tx_f_center=f_center, baudrate=rx_baudrates[0])
+    rx_config = RXDSPConfig(rx_samplerate=base_sr, rx_tune_frequency=436.700e6, rx_center_frequency=f_center, baudrate=rx_baudrates[0], bufferlen=800000, batch_maxlen=16*1024)
+    tx_config = TXDSPConfig(tx_samplerate=base_sr, tx_tune_frequency=436.700e6, tx_center_frequency=f_center, baudrate=rx_baudrates[0])
     que_rx_samples_in1 		= Queue(100)
     que_rx_payloads_out1 	= Queue(256)
     que_tx_payloads_in1 	= Queue(100)
@@ -249,8 +249,8 @@ def t2_speedbench_multimode_rx():
     t_unix 			= t_mono + 194645646.3452
     t_slept 		= 0
 
-    rx_config = RXDSPConfig(rx_samplerate=base_sr, rx_tune_frequency=436.700e6, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=16*1024)
-    tx_config = TXDSPConfig(tx_samplerate=base_sr, tx_tune_frequency=436.700e6, tx_f_center=f_center, baudrate=9600)
+    rx_config = RXDSPConfig(rx_samplerate=base_sr, rx_tune_frequency=436.700e6, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=16*1024)
+    tx_config = TXDSPConfig(tx_samplerate=base_sr, tx_tune_frequency=436.700e6, tx_center_frequency=f_center, baudrate=9600)
     que_rx_samples_in1 		= Queue(100)
     que_rx_payloads_out1 	= Queue(256)
     que_tx_payloads_in1 	= Queue(100)

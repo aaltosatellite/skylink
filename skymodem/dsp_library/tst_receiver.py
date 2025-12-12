@@ -93,7 +93,7 @@ def tgt_loop(ii, noisePpHz, dsp_config:RXDSPConfig, n_payloads, f_center_error, 
     n_rcvd = 0
     avg_delay_t = -1
     for n_pl_run in nn:
-        samples, payload_istart_iend_list = generate_test_samples(f_tune=dsp_config.rx_tune_frequency, f_center=dsp_config.rx_f_center + f_center_error, sr0=dsp_config.rx_samplerate,
+        samples, payload_istart_iend_list = generate_test_samples(f_tune=dsp_config.rx_tune_frequency, f_center=dsp_config.rx_center_frequency + f_center_error, sr0=dsp_config.rx_samplerate,
                                                                                                                           baudrate=dsp_config.baudrate * (1 + rel_baudrate_error), mod_index=tx_mod_index,
                                                                                                                           BT=dsp_config.BT_rx_match, n_payloads=n_pl_run, noisePpHz=noisePpHz, T_init_silence=T_init_silence,
                                                                                                                           T_interval_array=(T_interval,)*(n_pl_run-1), T_end_silence=T_end_silence)
@@ -134,7 +134,7 @@ def measure_execution_speed(rx_config:RXDSPConfig):
     assert T_end_silence_minim < 0.5
     T_end_silence = 0.5
     T_interval = 5e-3
-    samples, payload_istart_iend_list = generate_test_samples(f_tune=rx_config.rx_tune_frequency, f_center=rx_config.rx_f_center + 1e3, sr0=rx_config.rx_samplerate,
+    samples, payload_istart_iend_list = generate_test_samples(f_tune=rx_config.rx_tune_frequency, f_center=rx_config.rx_center_frequency + 1e3, sr0=rx_config.rx_samplerate,
                                                                                                                       baudrate=rx_config.baudrate*(1+1.5e-5), mod_index=rx_config.mod_index,
                                                                                                                       BT=rx_config.BT_rx_match, n_payloads=12, noisePpHz=0.02/rx_config.baudrate, T_init_silence=T_init_silence,
                                                                                                                       T_interval_array=(T_interval,)*(8-1), T_end_silence=T_end_silence)
@@ -251,7 +251,7 @@ def load_results(dpath, minimum_version, fname_contains, mandatory_d_keys):
 
 
 def load_top_configs(dpath, minimum_version, fname_contains, mandatory_d_keys, top_n):
-    default_config = RXDSPConfig(rx_samplerate=1e6, rx_tune_frequency=437.1e6, rx_f_center=437.125e6, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
+    default_config = RXDSPConfig(rx_samplerate=1e6, rx_tune_frequency=437.1e6, rx_center_frequency=437.125e6, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
     results = load_results(dpath=dpath, minimum_version=minimum_version, fname_contains=fname_contains, mandatory_d_keys=mandatory_d_keys)
     results = sorted(results, key=lambda x: x["A"], reverse=True)
     configs_dicts = list()
@@ -293,7 +293,7 @@ def test_precompilation_success_rate(N):
     f_center 	= 437.125e6
     sr0 		= 1e6
     baudrate	= 9600
-    basic_config = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 8)
+    basic_config = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 8)
     basic_config.sps 					= 21
     basic_config.centering_delay_mpr 	= 5.0
     basic_config.lp_cutoff_coeff 		= 0.63
@@ -319,7 +319,7 @@ def basic_test_A():
     sr0 		= 3.6e6
     baudrate	= 9600 * 4
     n_payloads	= 12
-    rx_config = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=baudrate, bufferlen=400000, batch_maxlen=1024 * 8)
+    rx_config = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=baudrate, bufferlen=400000, batch_maxlen=1024 * 8)
     #rx_config.mod_index = 0.7
     #rx_config.BT_rx_match = -1
     noisePpHz = 0.001/baudrate
@@ -347,14 +347,14 @@ def compare_default_optimod_4800():
     f_center 	= 437.125e6
     sr0 		= 1e6
     n_payloads	= 64*3
-    rx_config1 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600 // 2, bufferlen=800000, batch_maxlen=1024 * 8)
-    rx_config2 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600 * 1, bufferlen=800000, batch_maxlen=1024 * 8)
-    rx_config3 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600 * 2, bufferlen=800000, batch_maxlen=1024 * 8)
-    rx_config4 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600 * 4, bufferlen=800000, batch_maxlen=1024 * 8)
-    rx_config5 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+    rx_config1 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600 // 2, bufferlen=800000, batch_maxlen=1024 * 8)
+    rx_config2 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600 * 1, bufferlen=800000, batch_maxlen=1024 * 8)
+    rx_config3 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600 * 2, bufferlen=800000, batch_maxlen=1024 * 8)
+    rx_config4 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600 * 4, bufferlen=800000, batch_maxlen=1024 * 8)
+    rx_config5 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
     rx_config5.mod_index = 0.7
     rx_config5.BT_rx_match = 0.5
-    rx_config6 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+    rx_config6 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
     rx_config6.mod_index = 0.75
     rx_config6.BT_rx_match = 0.5
     rx_config6.lp_cutoff_coeff = 0.575
@@ -416,8 +416,8 @@ def mod_index_matrix_comparison():
     f_center 	= 437.125e6
     sr0 		= 1e6
     n_payloads	= 64*3
-    rx_config1 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
-    rx_config2 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+    rx_config1 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+    rx_config2 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
     rx_config1.mod_index = 0.5
     rx_config2.mod_index = 0.75
 
@@ -472,8 +472,8 @@ def compare_fftlens():
     f_center 	= 437.125e6
     sr0 		= 1e6
     n_payloads	= 32
-    rx_config1 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
-    rx_config2 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+    rx_config1 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+    rx_config2 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
     rx_config2.fftlen = 512 + 256
 
     rel_noiseP_array = np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.26]) # , 0.28
@@ -511,7 +511,7 @@ def compare_timings():
     f_tune 		= 437.1e6
     f_center 	= 437.125e6
     sr0 		= 1e6
-    rx_config_default = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
+    rx_config_default = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
     config_optim_1 = deepcopy(rx_config_default)
     config_optim_1.sps = 19
     config_optim_1.lp_cutoff_coeff = 0.583
@@ -544,7 +544,7 @@ def optimizer_A(t_run_min):
     rel_noiseP_array 	= np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28])   #,0.28
     noiseP_array 		= rel_noiseP_array / 9600
 
-    rx_config_basis = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_f_center=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
+    rx_config_basis = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
     rx_config_basis.mod_index = 0.75
     #rx_config_basis.BT_rx_match = BT_rx_match
     #rx_config_basis.BT_rx_match = -1
