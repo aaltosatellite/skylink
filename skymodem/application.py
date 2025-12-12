@@ -96,6 +96,7 @@ if __name__ == '__main__':
     parser.add_argument("--tx_gain", "-tg", type=float, default=80, help="TX Gain setting for the USRP: 0.0 - 89.75 [dB]. Default is 80.", required=False)
     parser.add_argument("--auth", "-a", type=str, default="dev", choices=("dev", "spare", "fm"), help="Authentication key choices: 'dev' development (default), 'spare' Flight Model Spare, and 'fm' Flight Model.", required=False)
     parser.add_argument("--multimode", "-mm", action="store_true", help="Run modem in 'multimode', which means that all baudrates (9600, 19200, 38400) are being received.")
+    parser.add_argument("--doppler", "-d", action="store_true", help="Run modem with Doppler compensation; the implementation varies.")
     _args = parser.parse_args(sys.argv[1:])
     vc_base = _args.vc_base
     assert vc_base >= 1000
@@ -182,7 +183,9 @@ if __name__ == '__main__':
     #amqp_broker_addr_ = None
     modem = SkyModem(rx_dsp_config=rx_dsp_config_, tx_dsp_config=tx_dsp_config_, radio_config=radio_config_, skylink_config=skylink_config_, hmac_key_list=hmac_keys, vc_port_base=vc_base, amqp_broker_addr=amqp_broker_addr_)
     modem.start(multimode=_args.multimode)
-    #modem.dsp_loop.set_doppler_correction(True)
+    if _args.doppler:
+        modem.dsp_loop.set_doppler_correction(True)
+        print("[INIT] Doppler correction enabled")
     try:
         while True:
             #print(threading.active_count(), "threads active")
