@@ -268,7 +268,7 @@ class DSPLoop:
 
                         # This is a quick patch for problem of correcting doppler to own transmission. Need to improve later.
                         if snr > 50.0:
-                            DBGPRINT(f"High SNR but not recognized as self reception: {snr} dB. Discarded.")
+                            DBGPRINT(self.dbgprint_mask&self.DBGP_RX, f"High SNR but not recognized as self reception: {snr} dB. Discarded.")
                             continue
 
                         DBGPRINT(self.dbgprint_mask&self.DBGP_RX, f"RX-PL: {len(rx_pl)} bytes, {round(rx_f_absolute*1e-6, 3)} MHz, {round(snr, 2)} SNR")
