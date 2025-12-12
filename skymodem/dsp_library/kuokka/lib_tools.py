@@ -618,9 +618,12 @@ def doppler_correction_tle(uncorrected_tx_frequency):
     topocentric = difference.at(current_time)
     range_rate = topocentric.frame_latlon_and_rates(groundstation)[5].km_per_s * 1e3
     doppler = range_rate / c * uncorrected_tx_frequency
-    f_send = uncorrected_tx_frequency + doppler
-    print(f"Sending frequency corrected for doppler: {f_send/1e6:.6f} MHz (range rate: {range_rate:.2f} m/s)")
-    return f_send
+    return doppler
+
+def calculate_assumed_carrier_frequency(absolute_rx_frequency, uncorrected_tx_frequency):
+    doppler = doppler_correction_tle(uncorrected_tx_frequency)
+    assumed_carrier_frequency = absolute_rx_frequency - doppler
+    return assumed_carrier_frequency
 
 
 def determine_ftune_and_min_sr(f_center_min, f_center_max, max_signal_bandwidth):

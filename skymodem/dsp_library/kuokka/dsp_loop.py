@@ -2,7 +2,7 @@ import queue
 import numpy as np
 from .lib_receiver import Receiver, RXDSPConfig, precompile_receiver
 from .lib_framing import frame_packet
-from .lib_tools import doppler_correction, doppler_correction_tle, ints_to_bits, FS1P_SYNCHWORD_LEN, FS1P_SYNCHWORD, make_samples2, snr_dB, DebugPrinter
+from .lib_tools import doppler_correction, doppler_correction_tle, calculate_assumed_carrier_frequency, ints_to_bits, FS1P_SYNCHWORD_LEN, FS1P_SYNCHWORD, make_samples2, snr_dB, DebugPrinter
 from .lib_reedsolomon import get_default_rs
 import threading
 from queue import Queue, Empty
@@ -197,7 +197,7 @@ class DSPLoop:
             if self.do_doppler_correction:
                 f_use_abs = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_center_frequency, f_tx_at_target=self.tx_dsp_config.tx_center_frequency)
             if self.do_tle_doppler_correction:
-                f_use_abs = doppler_correction_tle(uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency)
+                f_use_abs = self.tx_dsp_config.tx_center_frequency + doppler_correction_tle(uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency)
             else:
                 f_use_abs = f_recv_abs
         else:
@@ -280,6 +280,10 @@ class DSPLoop:
                             continue
 
                         DBGPRINT(self.dbgprint_mask&self.DBGP_RX, f"RX-PL: {len(rx_pl)} bytes, {round(rx_f_absolute*1e-6, 3)} MHz, {round(snr, 2)} SNR")
+                        # Calculate assumed carrier frequency based on doppler correction
+                        if self.do_tle_doppler_correction:
+                            self.rx_dsp_config.rx_center_frequency = calculate_assumed_carrier_frequency(absolute_rx_frequency=rx_f_absolute, uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency)
+                            self.tx_dsp_config.tx_center_frequency = self.rx_dsp_config.rx_center_frequency
                         self.last_verified_freq = (rx_f_absolute, ts_mono)
                         self.last_verified_baudrate = self.rx_dsp_config.baudrate
                         self.que_rx_payloads_out.put(("pl", rx_pl, ts_mono), timeout=1.0)
