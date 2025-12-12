@@ -591,6 +591,14 @@ def doppler_correction(f_rx_received, f_rx_original, f_tx_at_target):
     f_send = f_tx_at_target * (c+v_src)/c
     return f_send, v_src # v_src is the derivative of separating distance. (negative if satellite is approaching)
 
+def doppler_correction_tle():
+    """
+    Perform doppler correction based on current position based on TLE.
+    
+    TODO: implement this function.
+    """
+    pass
+
 
 def determine_ftune_and_min_sr(f_center_min, f_center_max, max_signal_bandwidth):
     assert f_center_max >= f_center_min

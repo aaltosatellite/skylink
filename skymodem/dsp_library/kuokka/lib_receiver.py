@@ -13,16 +13,16 @@ from .lib_symsynching import classic_JPL_synch_strm
 
 
 class RXDSPConfig:
-    def __init__(self, rx_samplerate, rx_tune_frequency, rx_f_center, baudrate, bufferlen, batch_maxlen):
-        self.bufferlen			= bufferlen
-        self.batch_maxlen		= batch_maxlen
+    def __init__(self, rx_samplerate, rx_tune_frequency, rx_center_frequency, baudrate, bufferlen, batch_maxlen):
+        self.bufferlen			    = bufferlen
+        self.batch_maxlen		    = batch_maxlen
         # radio device -------------------------------------
-        self.rx_samplerate 			= rx_samplerate		# Raw samplerate of the radio. Will be downsampled with a rate of baudrate*sps/sr0
-        self.rx_tune_frequency 			= rx_tune_frequency		# Tuned frequency of the radio in absolute Hz (for example 350.0e6)
+        self.rx_samplerate 	        = rx_samplerate		# Raw samplerate of the radio. Will be downsampled with a rate of baudrate*sps/sr0
+        self.rx_tune_frequency 	    = rx_tune_frequency		# Tuned frequency of the radio in absolute Hz (for example 350.0e6)
         # --------------------------------------------------
         # signal properties --------------------------------
-        self.rx_f_center 		= rx_f_center	# The (absolute) frequency of the transmissions in absolute Hz (for example 350.12e6)
-        self.baudrate			= baudrate		# Baudrate of the transmission. Has a definite effect on performance. More so if resampling rate is not adjusted.
+        self.rx_center_frequency    = rx_center_frequency	# The (absolute) frequency of the transmissions in absolute Hz (for example 350.12e6)
+        self.baudrate			    = baudrate		# Baudrate of the transmission. Has a definite effect on performance. More so if resampling rate is not adjusted.
         # --------------------------------------------------
         # resampling ---------------------------------------
         self.sps 				= 12 			# ! sps (samples-per-symbol) for the signal processing pipeline. Determines resampling rate. Has a _minor_ effect on performance. (See tests_resamples.py)
@@ -64,12 +64,12 @@ class RXDSPConfig:
         assert type(self.batch_maxlen) == int
         assert 1e3 < self.rx_samplerate < 32e6
         assert self.rx_tune_frequency > 1.0
-        assert self.rx_f_center > 1.0
+        assert self.rx_center_frequency > 1.0
         assert 0 < self.baudrate < (self.rx_samplerate/2)
-        assert (abs(self.rx_tune_frequency - self.rx_f_center) + self.search_halfband + self.baudrate * 0.6) < (0.5 * self.rx_samplerate), "Radio tuned to this frequency with this samplerate cannot see the entire band."
+        assert (abs(self.rx_tune_frequency - self.rx_center_frequency) + self.search_halfband + self.baudrate * 0.6) < (0.5 * self.rx_samplerate), "Radio tuned to this frequency with this samplerate cannot see the entire band."
         assert ((self.search_halfband + self.baudrate*0.6) / (self.baudrate * self.sps)) < 0.5, "Resampling down to this sps at this baudrate cannot see the entire search band."
-        sign1 = np.sign(self.rx_f_center+(self.search_halfband+self.baudrate*0.6) - self.rx_tune_frequency )
-        sign2 = np.sign(self.rx_f_center-(self.search_halfband+self.baudrate*0.6) - self.rx_tune_frequency )
+        sign1 = np.sign(self.rx_center_frequency+(self.search_halfband+self.baudrate*0.6) - self.rx_tune_frequency )
+        sign2 = np.sign(self.rx_center_frequency-(self.search_halfband+self.baudrate*0.6) - self.rx_tune_frequency )
         assert sign1 == sign2, "The search band stretches across tuning frequency. DC-spike will potentially interfere with reception. With very high bandwidths this in inevitable, and this assertion should be commented out."
         assert 2 < self.sps <= 100
         assert type(self.sps) == int
@@ -116,8 +116,8 @@ class RXDSPConfig:
             f_center_min_nrm = -self.search_halfband / (self.baudrate * self.sps)
             f_center_max_nrm = self.search_halfband / (self.baudrate * self.sps)
         else:
-            f_center_min_nrm = (self.rx_f_center - self.search_halfband - self.rx_tune_frequency) / (self.baudrate * self.sps)
-            f_center_max_nrm = (self.rx_f_center + self.search_halfband - self.rx_tune_frequency) / (self.baudrate * self.sps)
+            f_center_min_nrm = (self.rx_center_frequency - self.search_halfband - self.rx_tune_frequency) / (self.baudrate * self.sps)
+            f_center_max_nrm = (self.rx_center_frequency + self.search_halfband - self.rx_tune_frequency) / (self.baudrate * self.sps)
         f_center_search_map = get_frequency_search_map(fftlen=fftlen, f_min_nrm=f_center_min_nrm, f_max_nrm=f_center_max_nrm, assert_in_window=True)
         return f_center_search_map
 
@@ -212,9 +212,9 @@ class Receiver:
         halflen_frac = minimal_frac_halflen_for_staged_resampler(halflen_div=halflen_disc, r_rate=config.get_r_rate(), f_cutoff=f_cutoff, minimum_value=8)
         #print("[derived discrete halflen of   {}]".format(halflen_disc))
         #print("[derived fractional halflen of {}]".format(halflen_frac))
-        self.centering_fdelta_nrm = -(config.rx_f_center - config.rx_tune_frequency) / config.rx_samplerate
-        shifter, m, fdelta_actual = create_freq_shifter_precomp(sr=config.rx_samplerate, fdelta=-(config.rx_f_center - config.rx_tune_frequency), max_batchlen=config.batch_maxlen, fdelta_threshold=config.rx_samplerate*1e-6)
-        #print("fdelta - fdelta_actual: {} Hz (m:{}, fd_a:{})".format( abs(fdelta_actual - -(config.rx_f_center - config.rx_tune_frequency)), m, fdelta_actual ))
+        self.centering_fdelta_nrm = -(config.rx_center_frequency - config.rx_tune_frequency) / config.rx_samplerate
+        shifter, m, fdelta_actual = create_freq_shifter_precomp(sr=config.rx_samplerate, fdelta=-(config.rx_center_frequency - config.rx_tune_frequency), max_batchlen=config.batch_maxlen, fdelta_threshold=config.rx_samplerate*1e-6)
+        #print("fdelta - fdelta_actual: {} Hz (m:{}, fd_a:{})".format( abs(fdelta_actual - -(config.rx_center_frequency - config.rx_tune_frequency)), m, fdelta_actual ))
         self.freq_shifter_arr = shifter
         self.freq_shifter_mod = m
         rsmpl_mx1, rsmpl_mx2 = create_staged_resampler(halflen_div=halflen_disc, halflen_f=halflen_frac, r_rate=config.get_r_rate(), n_banks=config.n_banks, f_cutoff=f_cutoff, allow_aliasing=False)
@@ -374,7 +374,7 @@ class Receiver:
         pl_list = list()
         for i_pl, (i0,i1) in enumerate(delimits):
             #f_offset_nrm = nrm_offset_frequencies[i_pl] + self.centering_fdelta_nrm
-            f_absolute = (nrm_offset_frequencies[i_pl] * self.config.sps * self.config.baudrate) + self.config.rx_f_center
+            f_absolute = (nrm_offset_frequencies[i_pl] * self.config.sps * self.config.baudrate) + self.config.rx_center_frequency
             pl_power, noise_power, power_summation_len = payload_powertuples[i_pl]
             power_bw = (power_summation_len / self.fftlen) * self.config.sps * self.config.baudrate
             pl_list.append((bytes(payloads[i0:i1]), f_absolute, (pl_power, noise_power, power_bw)))
@@ -406,7 +406,7 @@ class Receiver:
 # PRECOMPILE RECEIVER ====================================================================================================
 def get_a_precompiling_sampleset(dsp_config:RXDSPConfig, do_print=False):
     sr0 = dsp_config.rx_samplerate
-    rel_offset_raw = (dsp_config.rx_f_center-dsp_config.rx_tune_frequency) / sr0  #0.1 * (sps*baudrate/sr0)
+    rel_offset_raw = (dsp_config.rx_center_frequency-dsp_config.rx_tune_frequency) / sr0  #0.1 * (sps*baudrate/sr0)
     rs_mx, rs_cfg = get_default_rs()
     pl = np.random.randint(0,255, RS_MAX_PL_LEN-2)
     preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
@@ -430,6 +430,11 @@ def get_a_precompiling_sampleset(dsp_config:RXDSPConfig, do_print=False):
 
 
 def precompile_receiver(dsp_config:RXDSPConfig, do_print=False):
+    """
+    Precompilation is done the first time code paths which use numba JIT-compiled functions are executed.
+    
+    This function runs the receiver through a generated sampleset to make sure no precompilation is needed during real reception.
+    """
     if do_print:
         print("[Precompiling]")
     t0 = time.perf_counter()
@@ -455,24 +460,8 @@ def precompile_receiver(dsp_config:RXDSPConfig, do_print=False):
         ret_pls2.extend(ret2)
         c = c2
     t2 = time.perf_counter()
-    #if not ((len(ret_pls1) == 1) and (len(ret_pls2) == 1)):
-    #	import pickle
-    #	dd = {
-    #		"noiseless":noiseless,
-    #		"config":rx_config.__dict__,
-    #		"noisePpHz":noisePpHz,
-    #		"only_noise":noise
-    #	}
-    #	letters = "".join([chr(x) for x in np.random.randint(ord("A"), ord("Z")+1, 3)])
-    #	f = open("precompile_fail_samples_and_config_{}.pkl".format(letters), "wb")
-    #	f.write(pickle.dumps(dd))
-    #	f.close()
-    #	print("Repro data written for ",letters)
-
-    #assert len(ret_pls1) == 1, len(ret_pls1)
-    #assert len(ret_pls2) == 1, len(ret_pls2)
 
     if do_print:
-        print("\t[Precompiled in {} s.  ({} s for sample generation)]".format( round(t2-t0, 3), round(t1-t0, 3)  ))
+        print(f"\t[Precompiled in {round(t2-t0, 3)} s.  ({round(t1-t0, 3)} s for sample generation)]")
 # PRECOMPILE RECEIVER ====================================================================================================
 # @:374

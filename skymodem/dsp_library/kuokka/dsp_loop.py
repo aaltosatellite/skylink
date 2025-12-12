@@ -18,13 +18,18 @@ DBGPRINT = _dbgprinter.DBGPRINT_toggled
 
 
 class TXDSPConfig:
-    def __init__(self, tx_samplerate, tx_tune_frequency, tx_f_center, baudrate):
+    """
+    Configurations used by the DSP Loop for transmission processing.
+
+    RXDSPConfig used for reception can be found in lib_receiver.py
+    """
+    def __init__(self, tx_samplerate, tx_tune_frequency, tx_center_frequency, baudrate):
         # radio device -------------------------------------
         self.tx_samplerate				= tx_samplerate
         self.tx_tune_frequency			= tx_tune_frequency
         # --------------------------------------------------
         # signal properties --------------------------------
-        self.tx_f_center 		= tx_f_center
+        self.tx_center_frequency 		= tx_center_frequency
         self.baudrate			= baudrate		# Baudrate of the transmission. Has a definite effect on performance. More so if resampling rate is not adjusted.
         # --------------------------------------------------
         # --------------------------------------------------
@@ -36,11 +41,14 @@ class TXDSPConfig:
         self.synchword_len		= FS1P_SYNCHWORD_LEN
 
     def check_validity(self):
+        """
+        Make sure that configuration parameters are within reasonable limits.
+        """
         assert 1e3 < self.tx_samplerate < 32e6
         assert self.tx_tune_frequency > 1.0e3
-        assert self.tx_f_center > 1.0e3
+        assert self.tx_center_frequency > 1.0e3
         assert 0 < self.baudrate < (self.tx_samplerate/2)
-        assert (abs(self.tx_tune_frequency - self.tx_f_center) + self.tx_f_adjustment_halfband + self.baudrate * 0.6) < (0.5 * self.tx_samplerate), "Radio tuned to this frequency with this samplerate cannot see the entire band."
+        assert (abs(self.tx_tune_frequency - self.tx_center_frequency) + self.tx_f_adjustment_halfband + self.baudrate * 0.6) < (0.5 * self.tx_samplerate), "Radio tuned to this frequency with this samplerate cannot see the entire band."
         assert (self.tx_BT >= 0.4) or (self.tx_BT == -1)
         assert 0.5 <= self.tx_mod_index < 10.0
         if not (self.tx_mod_index in (0.5, 0.75)):
@@ -182,11 +190,11 @@ class DSPLoop:
         if self.do_frequency_following and ((ts_now_mono - self.last_verified_freq[1]) < 60.0) and (self.last_verified_freq[1] > 0): # real time to parametric todo: 60.0 should be a parameter
             f_recv_abs = self.last_verified_freq[0]
             if self.do_doppler_correction:
-                f_use_abs, _ = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_f_center, f_tx_at_target=self.tx_dsp_config.tx_f_center)
+                f_use_abs, _ = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_f_center, f_tx_at_target=self.tx_dsp_config.tx_center_frequency)
             else:
                 f_use_abs = f_recv_abs
         else:
-            f_use_abs = self.tx_dsp_config.tx_f_center
+            f_use_abs = self.tx_dsp_config.tx_center_frequency
         if as_offset:
             return f_use_abs - self.tx_dsp_config.tx_tune_frequency
         return f_use_abs
@@ -251,10 +259,19 @@ class DSPLoop:
                         ts_last_cs = ts_mono
                     for rx_pl, rx_f_absolute, power_tuple in rx_pls:
                         self._clean_own_sent(ts_now_mono=self.t_now_mono)
+                        snr = snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1])
+
+                        # Discard self receptions, also ignore if SNR is too high (indicates likely self reception)
                         if rx_pl in self.own_recently_sent:
                             DBGPRINT(self.dbgprint_mask&self.DBGP_RX, "Discarded self reception.")
                             continue
-                        DBGPRINT(self.dbgprint_mask&self.DBGP_RX, "RX-PL: {} bytes,   {} MHz,   {} SNR".format(len(rx_pl), round(rx_f_absolute*1e-6, 3), round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)))
+
+                        # This is a quick patch for problem of correcting doppler to own transmission. Need to improve later.
+                        if snr > 50.0:
+                            DBGPRINT(f"High SNR but not recognized as self reception: {snr} dB. Discarded.")
+                            continue
+
+                        DBGPRINT(self.dbgprint_mask&self.DBGP_RX, f"RX-PL: {len(rx_pl)} bytes, {round(rx_f_absolute*1e-6, 3)} MHz, {round(snr, 2)} SNR")
                         self.last_verified_freq = (rx_f_absolute, ts_mono)
                         self.last_verified_baudrate = self.rx_dsp_config.baudrate
                         self.que_rx_payloads_out.put(("pl", rx_pl, ts_mono), timeout=1.0)
