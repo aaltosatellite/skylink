@@ -214,7 +214,6 @@ class DSPLoop:
 
 
     def _compose_samples(self, payload, ts_now_mono, usrp_reshape, as_c64):
-        t00 = time.perf_counter()
         baudrate = self._get_transmit_baudrate()
         f_use_offset = self._get_transmit_frequency(as_offset=True, ts_now_mono=ts_now_mono)
         f_offset_nrm = f_use_offset / self.tx_dsp_config.tx_samplerate
@@ -223,18 +222,13 @@ class DSPLoop:
         bits = np.concatenate( (self.preamble_bits, bits) )
         sps = self.tx_dsp_config.tx_samplerate / baudrate
         n_silence_start = int(self.tx_dsp_config.tx_samplerate * 10.0e-3) # Accounts for PA ramp up. TODO: this should be a setting?
-        dt1 = time.perf_counter() - t00
-        t00 = time.perf_counter()
         samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.tx_dsp_config.tx_mod_index, shaper_BT_prod=self.tx_dsp_config.tx_BT, n_silence_start=n_silence_start, n_silence_end=0)
         #samples = np.exp(2j*np.pi*np.arange(len(samples)) * 0.005 )
-        dt2 = time.perf_counter() - t00
-        t00 = time.perf_counter()
         if usrp_reshape:
             samples = np.reshape(samples, (1, len(samples)))
         if as_c64:
             samples = np.array(samples, dtype=np.complex64)
-        dt3 = time.perf_counter() - t00
-        return samples, f_use_offset+self.tx_dsp_config.tx_tune_frequency, (dt1, dt2, dt3)
+        return samples, f_use_offset+self.tx_dsp_config.tx_tune_frequency
 
 
 
@@ -279,7 +273,7 @@ class DSPLoop:
                             DBGPRINT(self.dbgprint_mask&self.DBGP_RX, f"High SNR but not recognized as self reception: {snr} dB. Discarded.")
                             continue
 
-                        DBGPRINT(self.dbgprint_mask&self.DBGP_RX, f"RX-PL: {len(rx_pl)} bytes, {round(rx_f_absolute*1e-6, 3)} MHz, {round(snr, 2)} SNR")
+                        DBGPRINT(self.dbgprint_mask&self.DBGP_RX, f"Received a Payload: {len(rx_pl)} bytes\n\t Absolute Frequency: {round(rx_f_absolute*1e-6, 3)} MHz, SNR: {round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)}")
                         # Calculate assumed carrier frequency based on doppler correction
                         if self.do_tle_doppler_correction:
                             self.rx_dsp_config.rx_center_frequency = calculate_assumed_carrier_frequency(absolute_rx_frequency=rx_f_absolute, uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency)
@@ -308,8 +302,8 @@ class DSPLoop:
             with self.rlock:
                 assert type(payload) in (bytes, bytearray)
                 self.own_recently_sent[payload] = t_start_mono
-                samplearr, f_use_abs, _ = self._compose_samples(payload=payload, ts_now_mono=self.t_now_mono, usrp_reshape=True, as_c64=True)
-                DBGPRINT(self.dbgprint_mask&self.DBGP_TX, "TX Start at {} MHz".format( f_use_abs * 1e-6, 3))
+                samplearr, f_use_abs = self._compose_samples(payload=payload, ts_now_mono=self.t_now_mono, usrp_reshape=True, as_c64=True)
+                DBGPRINT(self.dbgprint_mask&self.DBGP_TX, f"TX Start at {f_use_abs * 1e-6} MHz")
                 t_end_mono = t_start_mono + (samplearr.shape[1] / self.tx_dsp_config.tx_samplerate)
                 self._schedule_tx(t_start_mono=t_start_mono -5e-3, t_end_mono=t_end_mono +5e-3)
             self.que_tx_samples_out.put(samplearr, timeout=4.0)
@@ -370,7 +364,7 @@ class DSPLoop:
                         if rx_pl in self.own_recently_sent:
                             DBGPRINT(self.dbgprint_mask&self.DBGP_RX, "Discarded self reception.")
                             continue
-                        DBGPRINT(self.dbgprint_mask&self.DBGP_RX, "RX-PL: {} bytes,   {} MHz, br: {}, SNR: {}".format(len(rx_pl), round(rx_f_absolute*1e-6, 3), baudrate, round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)))
+                        DBGPRINT(self.dbgprint_mask&self.DBGP_RX, f"Received a Payload: {len(rx_pl)} bytes\n\t Absolute Frequency: {round(rx_f_absolute*1e-6, 3)} MHz, Baudrate: {baudrate}, SNR: {round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)}")
                         self.last_verified_baudrate = baudrate
                         self.last_verified_freq = (rx_f_absolute, ts_mono)
                         self.que_rx_payloads_out.put(("pl", rx_pl, ts_mono), timeout=1.0)
@@ -389,7 +383,7 @@ class DSPLoop:
             if a_process_is_behind:
                 wait_sleep_streak += 1
                 if wait_sleep_streak > 1000:
-                    DBGPRINT(self.dbgprint_mask&self.DBGP_ERRORS, "ERROR: Processing thread {} stalled in _rx_loop_mpr().".format( rdy_batch_indexes.index(min_rdy_index) ))
+                    DBGPRINT(self.dbgprint_mask&self.DBGP_ERRORS, f"ERROR: Processing thread {rdy_batch_indexes.index(min_rdy_index)} stalled in _rx_loop_mpr().")
                     self.on = False
                     return
                 time.sleep(0.0025)
@@ -433,7 +427,7 @@ def _mpr_memfree_idxed(basename, suffixes):
             n_ok += 1
         except:
             pass
-    DBGPRINT(1, "{}/{} shared memories unlinked by main-thread.".format(n_ok, n0))
+    DBGPRINT(1, f"{n_ok}/{n0} shared memories unlinked by main-thread.")
 
 
 
@@ -458,16 +452,16 @@ def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm
     last_batch_index = -1
     t_timeout = time.monotonic() + idle_timeout
     t_next_stats = time.monotonic()
-    DBGPRINT(dbgprint_mask&DSPLoop.DBGP_INITSTOP, "mpr-thread-{} LOOP START".format(idd))
+    DBGPRINT(dbgprint_mask&DSPLoop.DBGP_INITSTOP, f"mpr-thread-{idd} LOOP START")
     while True:
         trig = trig_ev.wait(timeout=0.25)
         if not trig:
             if ring_flag_arr[0,0] < -1:
-                DBGPRINT(dbgprint_mask&DSPLoop.DBGP_INITSTOP,"\tmpr-thread-{} exits: Flag ring < -1. Benign.".format(idd))
+                DBGPRINT(dbgprint_mask&DSPLoop.DBGP_INITSTOP,f"\tmpr-thread-{idd} exits: Flag ring < -1. Benign.")
                 _mpr_memfree(idd, buffer_shm_list=buffer_shm_list, flag_ring_shm=flag_ring_shm)
                 return
             if time.monotonic() > t_timeout:
-                DBGPRINT(dbgprint_mask&(DSPLoop.DBGP_INITSTOP | DSPLoop.DBGP_ERRORS),"\tmpr-thread-{} exits: Timeout. Benign or Malign.".format(idd))
+                DBGPRINT(dbgprint_mask&(DSPLoop.DBGP_INITSTOP | DSPLoop.DBGP_ERRORS),f"\tmpr-thread-{idd} exits: Timeout. Benign or Malign.")
                 _mpr_memfree(idd, buffer_shm_list=buffer_shm_list, flag_ring_shm=flag_ring_shm)
                 return
             continue
@@ -476,7 +470,7 @@ def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm
             t_timeout = time.monotonic() + idle_timeout
             r0,r1,r2,r3 = ring_flag_arr[ring_head]  # (batch_counter, nsamples, ts_s0_mono_ns, ts_s0_unix_ns)
             if r0 < -1:
-                DBGPRINT(dbgprint_mask&DSPLoop.DBGP_INITSTOP,"\tmpr-thread-{} exits: Flag ring[i,0] < -1. Benign.".format(idd))
+                DBGPRINT(dbgprint_mask&DSPLoop.DBGP_INITSTOP, f"\tmpr-thread-{idd} exits: Flag ring[i,0] < -1. Benign.")
                 _mpr_memfree(idd, buffer_shm_list=buffer_shm_list, flag_ring_shm=flag_ring_shm)
                 return
             if (r0 == (last_batch_index - ring_len + 1)) or (r0 == -1): # last entry from previous loop, or unused slot during the first loop.
@@ -485,7 +479,7 @@ def _rx_mpr_process(rx_dsp_config:RXDSPConfig, idd, trig_ev, shm_buffer_ring_shm
                     que_out.put( ("-1", idd, (rx.dt_array, rx.n_processed)) )
                 break
             if (last_batch_index != -1) and (r0 != (last_batch_index + 1)): # either the first batch, or batch index is next in order from the last one.
-                DBGPRINT(dbgprint_mask&(DSPLoop.DBGP_INITSTOP | DSPLoop.DBGP_ERRORS),"\tmpr-thread-{} exits: Out of synch ({} vs {}). Malign.".format(idd, last_batch_index, r0 ))
+                DBGPRINT(dbgprint_mask&(DSPLoop.DBGP_INITSTOP | DSPLoop.DBGP_ERRORS), f"\tmpr-thread-{idd} exits: Out of synch ({last_batch_index} vs {r0}). Malign.")
                 _mpr_memfree(idd, buffer_shm_list=buffer_shm_list, flag_ring_shm=flag_ring_shm)
                 return
             last_batch_index = r0
@@ -525,4 +519,4 @@ def _mpr_memfree(idd, buffer_shm_list, flag_ring_shm):
         n_ok += 1
     except:
         pass
-    DBGPRINT(1, "{}/{} of shared memories unlinked by mpr-thread-{}.".format(n_ok, n0, idd))
+    DBGPRINT(1, f"{n_ok}/{n0} of shared memories unlinked by mpr-thread-{idd}.")
