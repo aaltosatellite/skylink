@@ -626,8 +626,8 @@ def calculate_assumed_carrier_frequency(absolute_rx_frequency, uncorrected_tx_fr
     global _debug_center_frequency
     doppler = doppler_correction_tle(uncorrected_tx_frequency)
     doppler_debug = doppler_correction_tle(_debug_center_frequency)
-    assumed_carrier_frequency = absolute_rx_frequency - doppler
-    assumed_carrier_frequency_debug = absolute_rx_frequency - doppler_debug
+    assumed_carrier_frequency = absolute_rx_frequency + doppler
+    assumed_carrier_frequency_debug = absolute_rx_frequency + doppler_debug
     print("")
     print("Doppler correction calculation:")
     print(f"Using current values: absolute_rx_frequency={absolute_rx_frequency/1e6:.6f} MHz, uncorrected_tx_frequency={uncorrected_tx_frequency/1e6:.6f} MHz")
@@ -637,7 +637,7 @@ def calculate_assumed_carrier_frequency(absolute_rx_frequency, uncorrected_tx_fr
     print(f"Using frequency: {_debug_center_frequency/1e6:.6f} MHz")
     print(f"Calculated doppler: {doppler_debug/1e3:.3f} kHz, resulting in assumed carrier frequency: {assumed_carrier_frequency_debug/1e6:.6f} MHz")
     print("")
-    _debug_center_frequency = assumed_carrier_frequency_debug - doppler_debug
+    _debug_center_frequency = assumed_carrier_frequency_debug
     return assumed_carrier_frequency
 
 
