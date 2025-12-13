@@ -620,9 +620,10 @@ def doppler_correction_tle(uncorrected_tx_frequency):
     doppler = range_rate / c * uncorrected_tx_frequency
     return doppler
 
-# For testing purposes: This will be changed and changes will be logged so that this function can be tested during an overpass.
 def calculate_assumed_carrier_frequency(absolute_rx_frequency, uncorrected_tx_frequency):
-    global _debug_center_frequency
+    """
+    WIP: Calculate the assumed carrier frequency based on absolute frequency of received signal and TLE based doppler correction.
+    """
     doppler = doppler_correction_tle(uncorrected_tx_frequency)
     assumed_carrier_frequency = absolute_rx_frequency + doppler
     print("")
