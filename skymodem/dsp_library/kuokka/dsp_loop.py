@@ -336,11 +336,11 @@ class DSPLoop:
                             continue
 
                         DBGPRINT(self.dbgprint_mask&self.DBGP_RX, f"Received a Payload: {len(rx_pl)} bytes\n\t Absolute Frequency: {round(rx_f_absolute*1e-6, 3)} MHz, SNR: {round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)}")
-                        
                         # Calculate assumed carrier frequency based on doppler correction
-                        if self.do_tle_doppler_correction: # Currently just debug prints for analysis of what is wrong.
-                            calculate_assumed_carrier_frequency(absolute_rx_frequency=rx_f_absolute, uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency)
-                       
+                        if self.do_tle_doppler_correction:
+                            self.rx_dsp_config.rx_center_frequency = calculate_assumed_carrier_frequency(absolute_rx_frequency=rx_f_absolute, uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency)
+                            self.tx_dsp_config.tx_center_frequency = self.rx_dsp_config.rx_center_frequency
+
                         self.last_verified_freq = (rx_f_absolute, ts_mono)
                         self.last_verified_baudrate = self.rx_dsp_config.baudrate
                         self.que_rx_payloads_out.put(("pl", rx_pl, ts_mono), timeout=1.0)

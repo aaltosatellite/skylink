@@ -621,23 +621,15 @@ def doppler_correction_tle(uncorrected_tx_frequency):
     return doppler
 
 # For testing purposes: This will be changed and changes will be logged so that this function can be tested during an overpass.
-_debug_center_frequency = 437.1233e6
 def calculate_assumed_carrier_frequency(absolute_rx_frequency, uncorrected_tx_frequency):
     global _debug_center_frequency
     doppler = doppler_correction_tle(uncorrected_tx_frequency)
-    doppler_debug = doppler_correction_tle(_debug_center_frequency)
     assumed_carrier_frequency = absolute_rx_frequency + doppler
-    assumed_carrier_frequency_debug = absolute_rx_frequency + doppler_debug
     print("")
     print("Doppler correction calculation:")
     print(f"Using current values: absolute_rx_frequency={absolute_rx_frequency/1e6:.6f} MHz, uncorrected_tx_frequency={uncorrected_tx_frequency/1e6:.6f} MHz")
     print(f"Calculated doppler: {doppler/1e3:.3f} kHz, resulting in assumed carrier frequency: {assumed_carrier_frequency/1e6:.6f} MHz")
     print("")
-    print(f"If would have been updated:")
-    print(f"Using frequency: {_debug_center_frequency/1e6:.6f} MHz")
-    print(f"Calculated doppler: {doppler_debug/1e3:.3f} kHz, resulting in assumed carrier frequency: {assumed_carrier_frequency_debug/1e6:.6f} MHz")
-    print("")
-    _debug_center_frequency = assumed_carrier_frequency_debug
     return assumed_carrier_frequency
 
 
