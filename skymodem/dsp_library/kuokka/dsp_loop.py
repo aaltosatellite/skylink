@@ -196,6 +196,13 @@ class DSPLoop:
         with self.rlock:
             self.do_tle_doppler_correction = bool(toggle)
 
+    def set_do_frequency_following(self, toggle:bool):
+        """
+        Enable or disable TLE based Doppler correction for transmission.
+        """
+        with self.rlock:
+            self.do_frequency_following = bool(toggle)
+
 
 
     # == private functions ===================================================================================================================================================================
