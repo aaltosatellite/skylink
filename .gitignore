@@ -30,7 +30,6 @@ skymodem/skylink_wrapper/cython_skylink/build
 skymodem/skylink_wrapper/cython_skylink/build/*
 
 skymodem/dsp_library/*.dat
-skymodem/tle_cache/*
 
 
 /.idea/
