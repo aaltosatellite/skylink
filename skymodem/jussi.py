@@ -8,7 +8,7 @@ from multiprocessing import shared_memory
 import time
 import os
 import uhd
-from dsp_library.kuokka.lib_tools import make_samples2, radionoise, DebugPrinter
+from dsp_library.kuokka.lib_tools import make_samples, radionoise, DebugPrinter
 from queue import Queue, Empty, Full
 from numba import njit
 from dsp_library.kuokka.lib_resampler import create_staged_resampler, staged_resampler_execute_stream, minimal_disc_halflen_for_staged_resampler, minimal_frac_halflen_for_staged_resampler

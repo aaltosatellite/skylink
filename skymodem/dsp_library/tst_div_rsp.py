@@ -12,7 +12,7 @@ def test_1():
     samples = radionoise(n=int(1e6), sr=1e6, W_per_Hz=0.000001)
 
     bits = np.random.randint(0,2,8*32)*2 -1
-    signal = make_samples(sps_f=1e6/9600, bitstring=bits, f_offset=0.05, power=1.0, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
+    signal = make_samples(samples_per_symbol=1e6/9600, bitstring=bits, frequency_offset=0.05, power=1.0, modulation_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
 
     samples[100000:100000+len(signal)] += signal
 

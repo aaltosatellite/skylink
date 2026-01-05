@@ -1,8 +1,9 @@
+import os
 import queue
 import numpy as np
 from .lib_receiver import Receiver, RXDSPConfig, precompile_receiver
 from .lib_framing import frame_packet
-from .lib_tools import doppler_correction, doppler_correction_tle, calculate_assumed_carrier_frequency, ints_to_bits, FS1P_SYNCHWORD_LEN, FS1P_SYNCHWORD, make_samples2, snr_dB, DebugPrinter
+from .lib_tools import doppler_correction, doppler_correction_tle, calculate_assumed_carrier_frequency, ints_to_bits, FS1P_SYNCHWORD_LEN, FS1P_SYNCHWORD, make_samples, snr_dB, DebugPrinter, load_satellite_and_gs_configs
 from .lib_reedsolomon import get_default_rs
 import threading
 from queue import Queue, Empty
@@ -30,15 +31,15 @@ class TXDSPConfig:
         # --------------------------------------------------
         # signal properties --------------------------------
         self.tx_center_frequency 		= tx_center_frequency
-        self.baudrate			= baudrate		# Baudrate of the transmission. Has a definite effect on performance. More so if resampling rate is not adjusted.
+        self.baudrate			        = baudrate		# Baudrate of the transmission. Has a definite effect on performance. More so if resampling rate is not adjusted.
         # --------------------------------------------------
         # --------------------------------------------------
-        self.tx_BT				= 0.5
-        self.tx_mod_index		= 0.5
+        self.tx_BT				        = 0.5
+        self.tx_modulation_index		= 0.5
         # --------------------------------------------------
-        self.tx_f_adjustment_halfband = 12e3
-        self.synchword			= FS1P_SYNCHWORD
-        self.synchword_len		= FS1P_SYNCHWORD_LEN
+        self.tx_f_adjustment_halfband   = 12e3
+        self.synchword			        = FS1P_SYNCHWORD
+        self.synchword_len		        = FS1P_SYNCHWORD_LEN
 
     def check_validity(self):
         """
@@ -50,9 +51,9 @@ class TXDSPConfig:
         assert 0 < self.baudrate < (self.tx_samplerate/2)
         assert (abs(self.tx_tune_frequency - self.tx_center_frequency) + self.tx_f_adjustment_halfband + self.baudrate * 0.6) < (0.5 * self.tx_samplerate), "Radio tuned to this frequency with this samplerate cannot see the entire band."
         assert (self.tx_BT >= 0.4) or (self.tx_BT == -1)
-        assert 0.5 <= self.tx_mod_index < 10.0
-        if not (self.tx_mod_index in (0.5, 0.75)):
-            raise Warning("Non standard transmission modulation index of", self.tx_mod_index)
+        assert 0.5 <= self.tx_modulation_index < 10.0
+        if not (self.tx_modulation_index in (0.5, 0.75)):
+            raise Warning("Non standard transmission modulation index of", self.tx_modulation_index)
 
 
 
@@ -107,6 +108,9 @@ class DSPLoop:
         self.dsp_perf_stats			= None
         self.dsp_perf_stats_mpr		= dict()
         self.dbgprint_mask			= self.DBGP_ERRORS | self.DBGP_INITSTOP | self.DBGP_RX | self.DBGP_TX
+        # TODO: Make file path configurable. This is only loaded here because TLE based doppler is not set to true before.
+        # Currently it is Foresail1p + OH2AGS
+        self.tle_doppler_config     = os.path.join(os.path.dirname(__file__), '..', '..', 'TLE_doppler_configs', 'default_TLE_doppler_config.json')
 
 
     def is_ok(self):
@@ -139,6 +143,10 @@ class DSPLoop:
 
         This mode processes only a single baudrate for reception.
         """
+
+        if self.do_tle_doppler_correction:
+            load_satellite_and_gs_configs(self.tle_doppler_config)
+
         self.rx_process_thread = threading.Thread(target=self._rx_loop, args=tuple(), daemon=True)
         self.rx_process_thread.start()
         self.tx_process_thread = threading.Thread(target=self._tx_loop, args=tuple(), daemon=True)
@@ -223,12 +231,12 @@ class DSPLoop:
         return False
 
 
-    def _schedule_tx(self, t_start_mono, t_end_mono):
+    def _schedule_tx(self, start_time_monotonic, end_time_monotonic):
         for i in range(len(self.tx_schedule)):
-            if self.tx_schedule[i][0] > t_start_mono:
-                self.tx_schedule.insert(i, (t_start_mono, t_end_mono))
+            if self.tx_schedule[i][0] > start_time_monotonic:
+                self.tx_schedule.insert(i, (start_time_monotonic, end_time_monotonic))
                 return
-        self.tx_schedule.append((t_start_mono, t_end_mono))
+        self.tx_schedule.append((start_time_monotonic, end_time_monotonic))
 
 
     def _clean_own_sent(self, ts_now_mono):
@@ -248,16 +256,29 @@ class DSPLoop:
         
         Returns either absolute frequency or frequency offset from tx_tune_frequency.
         """
-        if self.do_frequency_following and ((ts_now_mono - self.last_verified_freq[1]) < 60.0) and (self.last_verified_freq[1] > 0): # real time to parametric todo: 60.0 should be a parameter
+
+        # TLE based Doppler correction. Relies on the accuracy of current TLE.
+        # However, this allows for corrections before beacon has been received.
+        if self.do_tle_doppler_correction:
+            f_use_abs = self.tx_dsp_config.tx_center_frequency + doppler_correction_tle(uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency)
+
+        # Corrections based on received packets.
+        elif (self.do_frequency_following or self.do_doppler_correction) and ((ts_now_mono - self.last_verified_freq[1]) < 60.0) and (self.last_verified_freq[1] > 0): # real time to parametric todo: 60.0 should be a parameter
             f_recv_abs = self.last_verified_freq[0]
+            # Doppler correction based on last received frequency done by calculating speed of the target.
+            # Uses configured tx center frequency so if that is inaccurate, correction will be off.
             if self.do_doppler_correction:
-                f_use_abs, _ = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_center_frequency, f_tx_at_target=self.tx_dsp_config.tx_center_frequency)
-            elif self.do_tle_doppler_correction:
-                f_use_abs = self.tx_dsp_config.tx_center_frequency + doppler_correction_tle(uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency)
+                f_use_abs = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_center_frequency, f_tx_at_target=self.tx_dsp_config.tx_center_frequency)
+
+            # Just follow frequency based on last received packet. Useful in ground testing.
             else:
                 f_use_abs = f_recv_abs
+
+        # No frequency following, just use configured frequency.
         else:
             f_use_abs = self.tx_dsp_config.tx_center_frequency
+
+        # Return frequency either as an offset from the frequency tuned to or as an absolute value.
         if as_offset:
             return f_use_abs - self.tx_dsp_config.tx_tune_frequency
         return f_use_abs
@@ -268,6 +289,8 @@ class DSPLoop:
         Get baudrate to use for transmission based on last reception.
 
         If nothing has been received recently, use configured baudrate.
+
+        In general baudrate following requires MPR mode, since otherwise other baudrates are not even received.
         """
         if (not self.do_baudrate_following) or (not self.last_verified_baudrate):
             return self.tx_dsp_config.baudrate
@@ -278,21 +301,46 @@ class DSPLoop:
         """
         Compose samples that will be sent to RadioLoop for transmission.
         """
+        # Get configured baudrate or follow last received baudrate.
         baudrate = self._get_transmit_baudrate()
-        f_use_offset = self._get_transmit_frequency(as_offset=True, ts_now_mono=ts_now_mono)
-        f_offset_nrm = f_use_offset / self.tx_dsp_config.tx_samplerate
-        pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
-        bits = frame_packet(pl=pl_char_ints, synchword_int=self.tx_dsp_config.synchword, synchword_len=self.tx_dsp_config.synchword_len, use_scrambler=True, use_rs=True, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
-        bits = np.concatenate( (self.preamble_bits, bits) )
-        sps = self.tx_dsp_config.tx_samplerate / baudrate
-        n_silence_start = int(self.tx_dsp_config.tx_samplerate * 10.0e-3) # Accounts for PA ramp up. TODO: this should be a setting?
-        samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=self.tx_dsp_config.tx_mod_index, shaper_BT_prod=self.tx_dsp_config.tx_BT, n_silence_start=n_silence_start, n_silence_end=0)
-        #samples = np.exp(2j*np.pi*np.arange(len(samples)) * 0.005 )
+
+        # Frequency for transmission. Can be based on doppler correction, following received frequency, or the configured frequency.
+        frequency_offset_from_tuned = self._get_transmit_frequency(as_offset=True, ts_now_mono=ts_now_mono)
+        normalized_frequency_offset = frequency_offset_from_tuned / self.tx_dsp_config.tx_samplerate
+
+        # Add Golay24, Reed-Solomon, Scrambling/Whitening and Preamble to payload and have this as an array of bits.
+        # TODO: Is there any reason for bytes to be int64 here? Should be able to use uint8. Or is this compatability with complex64 samples?
+        payload_chars = np.array(bytearray(payload), dtype=np.int64)
+        payload_bits = frame_packet(pl=payload_chars,
+                                    synchword_int=self.tx_dsp_config.synchword,
+                                    synchword_len=self.tx_dsp_config.synchword_len,
+                                    use_scrambler=True,
+                                    use_rs=True,
+                                    rs_mx=self.rs_mx,
+                                    rs_cfg=self.rs_cfg,
+                                    nrz_shift=True)
+        payload_bits = np.concatenate( (self.preamble_bits, payload_bits) )
+
+
+        # Accounts for PA ramp up. TODO: this should be a setting?
+        samples_before_transmission = int(self.tx_dsp_config.tx_samplerate * 10.0e-3)
+
+        # Generate samples from bit array.
+        samples_per_symbol = self.tx_dsp_config.tx_samplerate / baudrate
+        samples, _ = make_samples(samples_per_symbol = samples_per_symbol,
+                                  bitstring = payload_bits,
+                                  frequency_offset = normalized_frequency_offset,
+                                  power = 1.0, modulation_index = self.tx_dsp_config.tx_modulation_index,
+                                  shaper_BT_prod = self.tx_dsp_config.tx_BT,
+                                  n_silence_start = samples_before_transmission,
+                                  n_silence_end = 0)
+
+        
         if usrp_reshape:
             samples = np.reshape(samples, (1, len(samples)))
         if as_c64:
             samples = np.array(samples, dtype=np.complex64)
-        return samples, f_use_offset+self.tx_dsp_config.tx_tune_frequency
+        return samples, frequency_offset_from_tuned + self.tx_dsp_config.tx_tune_frequency
 
 
 
@@ -303,6 +351,7 @@ class DSPLoop:
 
         Receives samples from RadioLoop, processes them, and outputs received payloads to SkyLinkLoop.
         """
+        
         default_batchlen = self.rx_dsp_config.batch_maxlen // 2
         T_sample = 1.0 / self.rx_dsp_config.rx_samplerate
         ts_last_cs = 0.0
@@ -343,8 +392,8 @@ class DSPLoop:
                             continue
 
                         DBGPRINT(self.dbgprint_mask&self.DBGP_RX, f"Received a Payload: {len(rx_pl)} bytes\n\t Absolute Frequency: {round(rx_f_absolute*1e-6, 3)} MHz, SNR: {round(snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1]), 2)}")
+                        
                         # Calculate assumed carrier frequency based on doppler correction
-                        # Seems to drift so just log for now
                         if self.do_tle_doppler_correction:
                             self.tx_dsp_config.tx_center_frequency = calculate_assumed_carrier_frequency(absolute_rx_frequency=rx_f_absolute, uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency)
 
@@ -367,9 +416,10 @@ class DSPLoop:
             if not self.que_tx_samples_out.empty():
                 time.sleep(0.002)
                 continue
-            try:
-                payload, t_start_mono = self.que_tx_payloads_in.get(timeout=0.20)
-            except Empty:
+
+            try: # Get payload from SkyLinkLoop
+                payload, start_time_monotonic = self.que_tx_payloads_in.get(timeout=0.20)
+            except Empty: # Nothing to transmit
                 continue
             except Exception as e:
                 DBGPRINT(self.dbgprint_mask&self.DBGP_ERRORS, "Queue.get() exception in _tx_loop():", e)
@@ -377,11 +427,18 @@ class DSPLoop:
                 return
             with self.rlock:
                 assert type(payload) in (bytes, bytearray)
-                self.own_recently_sent[payload] = t_start_mono
+                # Store payload so that we ignore our own packets in reception.
+                self.own_recently_sent[payload] = start_time_monotonic
+
+                # Compose samples from the payload.
                 samplearr, f_use_abs = self._compose_samples(payload=payload, ts_now_mono=self.t_now_mono, usrp_reshape=True, as_c64=True)
                 DBGPRINT(self.dbgprint_mask&self.DBGP_TX, f"TX Start at {f_use_abs * 1e-6} MHz")
-                t_end_mono = t_start_mono + (samplearr.shape[1] / self.tx_dsp_config.tx_samplerate)
-                self._schedule_tx(t_start_mono=t_start_mono -5e-3, t_end_mono=t_end_mono +5e-3)
+                end_time_monotonic = start_time_monotonic + (samplearr.shape[1] / self.tx_dsp_config.tx_samplerate)
+
+                # Schedule transmission. RX loop will check this to avoid reporting carrier sense during our own transmission.
+                self._schedule_tx(start_time_monotonic=start_time_monotonic - 5e-3, end_time_monotonic=end_time_monotonic + 5e-3)
+            
+            # Output samples to RadioLoop for transmission.
             self.que_tx_samples_out.put(samplearr, timeout=4.0)
 
 

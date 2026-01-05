@@ -23,7 +23,7 @@ def compare():
 
     bits = np.random.randint(0,2, 8*120) * 2 -1
     bits[0:32*1] = [-1,1]*16*1
-    tx_samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_rel, power=1.0, mod_index=mod_idx, shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
+    tx_samples = make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=f_offset_rel, power=1.0, modulation_index=mod_idx, shaper_mode=1, shaper_BT_prod=BT, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
     noise = radionoise(n=nsamples, sr=sr, W_per_Hz=noise_power)
     samples = noise.copy()
     i_tx_begin 		= int(0.75 * nsamples)
@@ -55,7 +55,7 @@ def compare():
     mask_mode = 1
     fftlen = 1024
     fft_statemx = create_fft_centering_statemx(fftlen=fftlen, sps=sps, f_center_search_map=np.ones(fftlen)*1.0,
-                                                                                       mod_index=mod_idx, BT=BT, c_stat_update=1/700, centering_delay_mpr=5.0,
+                                                                                       modulation_index=mod_idx, BT=BT, c_stat_update=1/700, centering_delay_mpr=5.0,
                                                                                        fft_trigger_on_level=5.5, fft_trigger_off_level=2.0, avg0=0.0, var0=1.0,
                                                                                        mask_mode=mask_mode, start_margin_mpr=4.0, end_margin_mpr=1.5)
 
@@ -148,8 +148,8 @@ def center_acquisition():
 
     bits = np.random.randint(0,2, 8*120) * 2 -1
     bits[0:32*1] = [-1,1]*16*1
-    tx_samples = make_samples(sps_f=sps, bitstring=bits, f_offset=f_offset_rel, power=1.0, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
-    corr_samples = make_samples(sps_f=sps, bitstring=bits[0:32], f_offset=f_offset_rel*0, power=1.0, mod_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
+    tx_samples = make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=f_offset_rel, power=1.0, modulation_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
+    corr_samples = make_samples(samples_per_symbol=sps, bitstring=bits[0:32], frequency_offset=f_offset_rel*0, power=1.0, modulation_index=0.5, shaper_mode=1, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0)
     noise = radionoise(n=nsamples, sr=sr, W_per_Hz=noise_power)
     samples = noise.copy()
     samples[i_tx_begin:i_tx_begin + len(tx_samples)] += tx_samples

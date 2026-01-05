@@ -5,7 +5,7 @@ import uhd
 from queue import Queue, Empty
 from kuokka.lib_reedsolomon import get_default_rs
 from kuokka.lib_framing import frame_packet
-from kuokka.lib_tools import make_samples2, FS1P_SYNCHWORD, FS1P_SYNCHWORD_LEN, ints_to_bits
+from kuokka.lib_tools import make_samples, FS1P_SYNCHWORD, FS1P_SYNCHWORD_LEN, ints_to_bits
 import zmq
 
 
@@ -49,7 +49,7 @@ def bind_vc_sockets(vc_port_base, num_channels):
 
 
 class UHFUsrpCharacterizer:
-    def __init__(self, f_center_abs, baudrate, mod_index, BT, usrp_tx_gain, zmq_port_base):
+    def __init__(self, f_center_abs, baudrate, modulation_index, BT, usrp_tx_gain, zmq_port_base):
         rs_mx, rs_cfg 				= get_default_rs()
         self.preamble_bits 			= ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
         self.rs_mx					= rs_mx
@@ -60,7 +60,7 @@ class UHFUsrpCharacterizer:
         self.sr0_tx 				= 1e6
         self.sr0_tx_actual 			= 1e6
         self.baudrate				= baudrate
-        self.mod_index				= mod_index
+        self.modulation_index				= modulation_index
         self.BT						= BT
         self.on 					= True
         self.que_tx_samples			= Queue(32)
@@ -125,17 +125,17 @@ class UHFUsrpCharacterizer:
         self.zmq_in_thread.start()
 
 
-    def _compose_samples(self, payload, f_tx_abs, baudrate, mod_index, BT, usrp_reshape, as_c64):
+    def _compose_samples(self, payload, f_tx_abs, baudrate, modulation_index, BT, usrp_reshape, as_c64):
         f_offset_nrm = (f_tx_abs - self.f_tune_abs) / self.sr0_tx_actual
         f_baudrate_nrm = baudrate / self.sr0_tx_actual
         assert abs(f_offset_nrm) < (0.45 - f_baudrate_nrm*0.6)
         assert abs(f_offset_nrm) > (f_baudrate_nrm*0.6)
         pl_char_ints = np.array(bytearray(payload), dtype=np.int64)
-        bits = frame_packet(pl=pl_char_ints, synchword_int=DEFAULT_SYNCHWORD, synchword_len=FS1P_SYNCHWORD_LEN, use_scrambler=True, use_rs=False, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
+        bits = frame_packet(pl=pl_char_ints, synchword_int=FS1P_SYNCHWORD, synchword_len=FS1P_SYNCHWORD_LEN, use_scrambler=True, use_rs=False, rs_mx=self.rs_mx, rs_cfg=self.rs_cfg, nrz_shift=True)
         bits = np.concatenate( (self.preamble_bits, bits) )
         sps = self.sr0_tx_actual / baudrate
         n_silence_start = int(self.sr0_tx_actual * 2.0e-3)
-        samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_nrm, power=1.0, mod_index=mod_index,
+        samples, _ = make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=f_offset_nrm, power=1.0, modulation_index=modulation_index,
                                                    shaper_BT_prod=BT, n_silence_start=n_silence_start, n_silence_end=0)
         if usrp_reshape:
             samples = np.reshape(samples, (1, len(samples)))
@@ -213,11 +213,11 @@ class UHFUsrpCharacterizer:
                 break
             pl = rcv_msg
             print("Transmitting {} bytes: {}".format(len(pl), pl))
-            samples = self._compose_samples(payload=pl, f_tx_abs=self.f_center_abs, baudrate=self.baudrate, mod_index=self.mod_index, BT=self.BT, usrp_reshape=True, as_c64=True)
+            samples = self._compose_samples(payload=pl, f_tx_abs=self.f_center_abs, baudrate=self.baudrate, modulation_index=self.modulation_index, BT=self.BT, usrp_reshape=True, as_c64=True)
             self.que_tx_samples.put_nowait(samples)
 
 
-# f_center_abs, baudrate, mod_index, BT, usrp_tx_gain, zmq_port_base=7200
+# f_center_abs, baudrate, modulation_index, BT, usrp_tx_gain, zmq_port_base=7200
 
 if __name__ == '__main__':
     import sys
@@ -225,24 +225,24 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--f_center", type=float, required=True)
     parser.add_argument("--baudrate", type=int, required=True, choices=[9600, 9600*2, 9600*4])
-    parser.add_argument("--mod_index", type=float, required=True)
+    parser.add_argument("--modulation_index", type=float, required=True)
     parser.add_argument("--BT", type=float, required=True)
     args = parser.parse_args(sys.argv[1:])
 
     f_center = args.f_center
     baudrate = args.baudrate
-    mod_index = args.mod_index
+    modulation_index = args.modulation_index
     BT = args.BT
 
     assert type(f_center) == float
     assert f_center > 400e6
     assert f_center < 500e6
     assert baudrate in (9600, 9600*2, 9600*4)
-    assert 0.4 <= mod_index <= 10.0
+    assert 0.4 <= modulation_index <= 10.0
     assert (BT >= 0.5) or (BT == -1)
-    print("Args: ", f_center, baudrate, mod_index, BT)
+    print("Args: ", f_center, baudrate, modulation_index, BT)
 
-    characterizer = UHFUsrpCharacterizer(f_center_abs=f_center, baudrate=baudrate, mod_index=mod_index, BT=BT, usrp_tx_gain=40, zmq_port_base=7200)
+    characterizer = UHFUsrpCharacterizer(f_center_abs=f_center, baudrate=baudrate, modulation_index=modulation_index, BT=BT, usrp_tx_gain=40, zmq_port_base=7200)
     characterizer.start()
     while True:
         time.sleep(1.0)

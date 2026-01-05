@@ -1,7 +1,7 @@
 import time
 import numpy as np
 from kuokka.dsp_loop import DSPLoop, TXDSPConfig, RXDSPConfig
-from kuokka.lib_tools import make_samples2, radionoise, bytes_to_bits, dt_array_report
+from kuokka.lib_tools import make_samples, radionoise, bytes_to_bits, dt_array_report
 from queue import Queue
 import os
 from matplotlib import pyplot as plt

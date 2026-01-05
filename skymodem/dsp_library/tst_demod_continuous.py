@@ -2,7 +2,7 @@ import numpy as np
 from kuokka.lib_demodulation import create_DD_statemx, create_demod_statemx, demodulate
 from kuokka.lib_symsynching import create_classic_JPL_statemx
 from matplotlib import pyplot as plt
-from kuokka.lib_tools import radionoise, make_samples2
+from kuokka.lib_tools import radionoise, make_samples
 
 
 
@@ -22,7 +22,7 @@ def tst_demodulation_continuity():
 
     bitstring = np.random.randint(0, 2, 256*8)*2 -1
 
-    samples, _ = make_samples2(sps_f=sps, bitstring=bitstring, f_offset=f_offset, power=1.0, mod_index=mod_idx, shaper_BT_prod=0.5, n_silence_start=n_silence_start, n_silence_end=n_silence_end)
+    samples, _ = make_samples(samples_per_symbol=sps, bitstring=bitstring, frequency_offset=f_offset, power=1.0, modulation_index=mod_idx, shaper_BT_prod=0.5, n_silence_start=n_silence_start, n_silence_end=n_silence_end)
     samples = samples + radionoise(len(samples), sr=sr, W_per_Hz=0.2/baudrate)
     nsamples = len(samples)
     demodmx0 = create_demod_statemx(lp_ntaps=lp_ntaps, lp_cutoff_coeff=lp_cutoff_coeff, sps_f=sps)

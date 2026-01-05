@@ -4,7 +4,7 @@ from kuokka.lib_symsynching import create_classic_JPL_statemx, classic_JPL_synch
 from kuokka.lib_symsynching import general_JPL_synch_run_2, create_general_JPL_statemx_2, general_JPL_synch_step_2
 from kuokka.lib_symsynching import general_JPL_synch_run_1, general_JPL_synch_step_1, create_general_JPL_statemx_1
 from kuokka.lib_symsynching import create_traveling_phase_JPL_statemx, traveling_phase_JPL_synch_strm, traveling_phase_JPL_synch_run
-from kuokka.lib_tools import radionoise, make_samples2, make_squarewave
+from kuokka.lib_tools import radionoise, make_samples, make_squarewave
 from kuokka.lib_decider import symbol_decision, symbol_decision_f
 from scipy.signal import firwin
 from matplotlib import pyplot as plt
@@ -136,7 +136,7 @@ def make_fmdemod_samples(sps_f, baudrate, f_offset_in_br, n_symbols, mod_idx, BT
     bits = np.random.randint(0,2, n_symbols)*2 - 1
     bits[0:32+6] = np.array( [1,0]*16 + [1,]*6 )*2 - 1
     f_offset = f_offset_in_br * baudrate / (sps_f*baudrate)
-    samples, _ = make_samples2(sps_f=sps_f, bitstring=bits, f_offset=f_offset, power=1.0, mod_index=mod_idx, shaper_BT_prod=BT, n_silence_start=i_tx_start, n_silence_end=0)
+    samples, _ = make_samples(samples_per_symbol=sps_f, bitstring=bits, frequency_offset=f_offset, power=1.0, modulation_index=mod_idx, shaper_BT_prod=BT, n_silence_start=i_tx_start, n_silence_end=0)
     samples = np.concatenate( (samples, np.zeros(nsamples-len(samples), dtype=samples.dtype)))
     samples = np.concatenate( (np.zeros(200, dtype=samples.dtype), samples, np.zeros(200, dtype=samples.dtype)))
     samples = samples + radionoise(n=len(samples), sr=sps_f*baudrate, W_per_Hz=noise_W_per_Hz)

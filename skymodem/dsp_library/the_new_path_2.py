@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from kuokka.lib_tools import radionoise, make_samples2, gauss_curve_sps
+from kuokka.lib_tools import radionoise, make_samples, gauss_curve_sps
 from kuokka.lib_fft_finder import construct_fft_mask
 from kuokka.lib_demodulation import demodulate, create_demod_statemx
 from mtools.tools_dsp import waterfall_mx, fft_usual
@@ -31,11 +31,11 @@ def surf_integral(x_arr, y_arr):
 
 
 
-def filter_demodulation_experiment(nbits, sps, baudrate, mod_index, noiseSPD, filters, classic_demod_specs, waterfall=False, do_print=True):
+def filter_demodulation_experiment(nbits, sps, baudrate, modulation_index, noiseSPD, filters, classic_demod_specs, waterfall=False, do_print=True):
     assert [(filters is None) and (classic_demod_specs is None)].count(True) == 1
     sr = baudrate * sps
     bits = np.random.randint(0,2, nbits)*2 -1
-    signal_samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_BT_prod=0.5)
+    signal_samples, _ = make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=0.0, power=1.0, modulation_index=modulation_index, shaper_BT_prod=0.5)
     nsignal = len(signal_samples)
     nnoise = nsignal//2 + int(sps*0.333)
     noise_samples = np.zeros(nnoise, dtype=np.complex128)
@@ -94,18 +94,18 @@ def filter_demodulation_experiment(nbits, sps, baudrate, mod_index, noiseSPD, fi
         print("match sum:   {} / {}".format(match_sum, nbits))
         print("        ==   {} %".format(round(100*match_sum/nbits,2)))
 
-    ret_A = (correlation, match_sum, nbits, sps, baudrate, mod_index, noiseSPD, nsamples, dt)
+    ret_A = (correlation, match_sum, nbits, sps, baudrate, modulation_index, noiseSPD, nsamples, dt)
     ret_B = (bits, samples, filtred1, filtred2, difference, difference_sign, measure_centers, measured_symbols)
     return ret_A, ret_B
 
 
 
 
-def measure_A(sps, baudrate, mod_index, noise_arr, n_rep, filters):
+def measure_A(sps, baudrate, modulation_index, noise_arr, n_rep, filters):
     rateio_arr = noise_arr*0.0
     for i_noise in range(len(noise_arr)):
         for _ in range(n_rep):
-            retA,retB = filter_demodulation_experiment(nbits=1000, sps=sps, baudrate=baudrate, mod_index=mod_index, noiseSPD=noise_arr[i_noise], filters=filters, waterfall=False, do_print=False)
+            retA,retB = filter_demodulation_experiment(nbits=1000, sps=sps, baudrate=baudrate, modulation_index=modulation_index, noiseSPD=noise_arr[i_noise], filters=filters, waterfall=False, do_print=False)
             correlation, match_sum, nbits = retA[0:3]
             rateio_arr[i_noise] += ((match_sum / nbits) * 2 - 1.0)**2
         rateio_arr[i_noise] = rateio_arr[i_noise] / n_rep

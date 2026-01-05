@@ -4,7 +4,7 @@ from .lib_demodulation import create_demod_statemx, create_DD_statemx, demodulat
 from .lib_symsynching import create_classic_JPL_statemx
 from .lib_fft_finder import create_fft_f_centerer_csense_statemx, fft_f_centerer_csense
 from .lib_framing import create_deframer, RS_MAX_ENCODED_LEN, frame_packet, RS_MAX_PL_LEN
-from .lib_tools import FS1P_SYNCHWORD, FS1P_SYNCHWORD_LEN, radionoise, make_samples2, ints_to_bits, choose_fftlen, freq_shift_phased_precomp, create_freq_shifter_precomp
+from .lib_tools import FS1P_SYNCHWORD, FS1P_SYNCHWORD_LEN, radionoise, make_samples, ints_to_bits, choose_fftlen, freq_shift_phased_precomp, create_freq_shifter_precomp
 from .lib_reedsolomon import get_default_rs
 from .lib_resampler import staged_resampler_execute_stream, create_staged_resampler, minimal_disc_halflen_for_staged_resampler, minimal_frac_halflen_for_staged_resampler
 from .lib_tools import get_frequency_search_map
@@ -31,7 +31,7 @@ class RXDSPConfig:
         # --------------------------------------------------
         # fft detection ------------------------------------
         self.fftlen_mpr 		= 52			# ! Length of the fft window in multiples of sps in center frequency detector. Larger number increases frequency resolution, but also induces decoding delay.
-        self.mod_index 			= 0.5			# S Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
+        self.modulation_index 			= 0.5			# S Modulation index. A core FM-modulation parameter. Determines the frequency deviation from center.
         self.BT_rx_match 		= 0.425			# S Bandwidth-Time product of an optional gaussian filter on modulating squarewave. set to -1 for no gaussian filtering. TODO: best match for 0.5 at UHF-firmware is 0.425 here
         self.centering_delay_mpr= 2.0 			# ! Center frequency estimate is collected for (centering_delay_mpr*fftlen) samples ahead of demodulation. TODO should be in symbols?
         self.centerf_halflife	= 12.0 			# ! Exponential decay factor of the center frequency correlation sum. c_centerf = 0.5**(1/centerf_halflife)
@@ -82,7 +82,7 @@ class RXDSPConfig:
         assert (self.rs_f_cutoff_coeff * (self.sps * self.baudrate / self.rx_samplerate)) > ((self.search_halfband + self.baudrate*0.6) / self.rx_samplerate)
         assert type(self.fftlen_mpr) == int
         assert 3 < self.fftlen_mpr < 150
-        assert 0.5 <= self.mod_index < 10.0
+        assert 0.5 <= self.modulation_index < 10.0
         assert (self.BT_rx_match >= 0.4) or (self.BT_rx_match == -1)  # Canonically BT should never be under 0.5. However, using 0.425 when generating samples produces best match to recordings from UHF with CC1125 chip.
         assert 1 <= self.centering_delay_mpr < 20
         assert 1.0 <= self.centerf_halflife < 50.0
@@ -201,7 +201,7 @@ class Receiver:
         carrier_sense_threshold = 5.0
         self.config.check_validity()
         config = self.config
-        self.fftlen, _ = choose_fftlen(config.fftlen_mpr*config.sps, window_halfwid=int(0.06*config.fftlen_mpr*config.sps))
+        self.fftlen, _ = choose_fftlen(config.fftlen_mpr*config.sps, window_halfwidth=int(0.06*config.fftlen_mpr*config.sps))
         f_cutoff = config.get_r_rate() * config.rs_f_cutoff_coeff
         f_center_search_map = config.get_f_center_search_map(fftlen=self.fftlen, is_precentered=True)
         min_f_undisturbed = (config.search_halfband + config.baudrate*0.6) / config.rx_samplerate
@@ -220,7 +220,7 @@ class Receiver:
         rsmpl_mx1, rsmpl_mx2 = create_staged_resampler(halflen_div=halflen_disc, halflen_f=halflen_frac, r_rate=config.get_r_rate(), n_banks=config.n_banks, f_cutoff=f_cutoff, allow_aliasing=False)
         self.rsmpl_mx1 = rsmpl_mx1
         self.rsmpl_mx2 = rsmpl_mx2
-        self.FFTstatemx	= create_fft_f_centerer_csense_statemx(fftlen=self.fftlen, sps=config.sps, baudrate=config.baudrate, f_center_search_map=f_center_search_map, mod_index=config.mod_index, BT_rx_match=config.BT_rx_match, centering_delay_mpr=config.centering_delay_mpr, centerf_halflife=config.centerf_halflife, c_stat_update=c_stat_update, carrier_sense_threshold=carrier_sense_threshold)
+        self.FFTstatemx	= create_fft_f_centerer_csense_statemx(fftlen=self.fftlen, sps=config.sps, baudrate=config.baudrate, f_center_search_map=f_center_search_map, modulation_index=config.modulation_index, BT_rx_match=config.BT_rx_match, centering_delay_mpr=config.centering_delay_mpr, centerf_halflife=config.centerf_halflife, c_stat_update=c_stat_update, carrier_sense_threshold=carrier_sense_threshold)
         self.JPLstatemx = create_classic_JPL_statemx(N_eps=config.sps, n_halflife=config.JPL_halflife)
         self.demodmx 	= create_demod_statemx(lp_ntaps=config.lp_ntaps, lp_cutoff_coeff=config.lp_cutoff_coeff, sps_f=config.sps)
         self.sddmx 		= create_DD_statemx(synch_delay_mpr_f=config.synch_delay_mpr, sps_f=config.sps, Neps=int(config.sps))
@@ -412,7 +412,7 @@ def get_a_precompiling_sampleset(dsp_config:RXDSPConfig, do_print=False):
     preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
     frame_bits = frame_packet(pl=pl, synchword_int=dsp_config.synchword, synchword_len=dsp_config.synchword_len, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
     bitstring = np.concatenate( (preamble_bits, frame_bits) )
-    transmission, _ = make_samples2(sps_f=sr0/dsp_config.baudrate, bitstring=bitstring, f_offset=rel_offset_raw, power=1.0, mod_index=dsp_config.mod_index, shaper_BT_prod=dsp_config.BT_rx_match, n_silence_start=0, n_silence_end=0)
+    transmission, _ = make_samples(samples_per_symbol=sr0/dsp_config.baudrate, bitstring=bitstring, frequency_offset=rel_offset_raw, power=1.0, modulation_index=dsp_config.modulation_index, shaper_BT_prod=dsp_config.BT_rx_match, n_silence_start=0, n_silence_end=0)
 
     n_fft_calibration = int( (sr0/(dsp_config.baudrate*dsp_config.sps)) * 2*dsp_config.fftlen_mpr*dsp_config.sps )
     nsamples = int(n_fft_calibration + len(transmission) + 1.0*sr0)

@@ -8,7 +8,7 @@ from kuokka.lib_fft_finder import create_fft_f_centerer_csense_statemx, fft_f_ce
 #from kuokka.lib_fft_detector import create_fft_centering_statemx, fft_detect_and_freq_determ
 from kuokka.lib_pll_detector import create_frequency_mapper_statev, pll_detect_and_freq_determ
 from mtools.tools_dsp import create_pll_statevector, create_trigger_statevector, create_winstd_statemx
-from kuokka.lib_tools import radionoise, make_samples2, get_frequency_search_map
+from kuokka.lib_tools import radionoise, make_samples, get_frequency_search_map
 from mtools.tools_math import rollsmooth
 from mtools.tools_system import mpr_set
 
@@ -31,11 +31,11 @@ def tst_fft_center_detect_1():
     f_offset_rel3 	= f_offset / sr
 
     f_offset_rel	= 0.0
-    mod_index 		= 0.707
+    modulation_index 		= 0.707
     bits 			= np.random.randint(0,2, 600)*2-1
-    sig_samples1,_ 	= make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_rel1, power=1.0, mod_index=mod_index, shaper_BT_prod=0.5)
-    sig_samples2,_ 	= make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_rel2, power=1.0, mod_index=mod_index, shaper_BT_prod=0.5)
-    sig_samples3,_ 	= make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_rel3, power=1.0, mod_index=mod_index, shaper_BT_prod=0.5)
+    sig_samples1,_ 	= make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=f_offset_rel1, power=1.0, modulation_index=modulation_index, shaper_BT_prod=0.5)
+    sig_samples2,_ 	= make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=f_offset_rel2, power=1.0, modulation_index=modulation_index, shaper_BT_prod=0.5)
+    sig_samples3,_ 	= make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=f_offset_rel3, power=1.0, modulation_index=modulation_index, shaper_BT_prod=0.5)
     nsignal			= len(sig_samples1)
     noise1 			= np.zeros(nnoise_init, dtype=np.complex128)
     noise2 			= np.zeros(nnoise_mid, dtype=np.complex128)
@@ -92,7 +92,7 @@ def tst_fft_center_detect_1():
 
     print("Creating statemx.")
     statemx0 = create_fft_f_centerer_csense_statemx(fftlen=fftlen, sps=sps, baudrate=baudrate, f_center_search_map=f_center_search_map,
-                                                                                    mod_index=mod_index, BT_rx_match=BT, c_stat_update=c_stat_update, centering_delay_mpr=centering_delay_mpr,
+                                                                                    modulation_index=modulation_index, BT_rx_match=BT, c_stat_update=c_stat_update, centering_delay_mpr=centering_delay_mpr,
                                                                                     centerf_halflife=centerf_halflife, carrier_sense_threshold=carrier_sense_threshold)
 
     print("Runnign fft centering and detection in one go")
@@ -213,7 +213,7 @@ def tst_fft_centering_versions(check_batchwise=False):
     f_offset 		= f_signal - f_tune
     sps				= 12
     baudrate		= 9600
-    mod_index 		= 0.750
+    modulation_index 		= 0.750
     nbits 			= 1760
     noise_SPD		= 0.10 / baudrate
     sr 				= sps*baudrate
@@ -226,9 +226,9 @@ def tst_fft_centering_versions(check_batchwise=False):
     f_offset_rel3 	= f_offset / sr
 
     bits 			= np.random.randint(0,2, nbits)*2-1
-    sig_samples1,_ 	= make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_rel1, power=1.0, mod_index=mod_index, shaper_BT_prod=0.5)
-    sig_samples2,_ 	= make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_rel2, power=1.0, mod_index=mod_index, shaper_BT_prod=0.5)
-    sig_samples3,_ 	= make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_rel3, power=1.0, mod_index=mod_index, shaper_BT_prod=0.5)
+    sig_samples1,_ 	= make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=f_offset_rel1, power=1.0, modulation_index=modulation_index, shaper_BT_prod=0.5)
+    sig_samples2,_ 	= make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=f_offset_rel2, power=1.0, modulation_index=modulation_index, shaper_BT_prod=0.5)
+    sig_samples3,_ 	= make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=f_offset_rel3, power=1.0, modulation_index=modulation_index, shaper_BT_prod=0.5)
     nsignal1		= len(sig_samples1)
     nsignal2		= len(sig_samples2)
     nsignal3		= len(sig_samples3)
@@ -279,7 +279,7 @@ def tst_fft_centering_versions(check_batchwise=False):
 
     print("Creating statemx.")
     statemx00 = create_fft_f_centerer_csense_statemx(fftlen=fftlen, sps=sps, baudrate=baudrate, f_center_search_map=f_center_search_map,
-                                                                                    mod_index=mod_index, BT_rx_match=BT, c_stat_update=c_stat_update, centering_delay_mpr=centering_delay_mpr,
+                                                                                    modulation_index=modulation_index, BT_rx_match=BT, c_stat_update=c_stat_update, centering_delay_mpr=centering_delay_mpr,
                                                                                     centerf_halflife=centerf_halflife, carrier_sense_threshold=carrier_sense_threshold)
     if check_batchwise:
         print("Checking one go equals batched.")

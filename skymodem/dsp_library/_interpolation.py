@@ -2,7 +2,7 @@ import numpy as np
 from numba import njit
 from matplotlib import pyplot as plt
 import time
-from kuokka.lib_tools import make_samples2, radionoise
+from kuokka.lib_tools import make_samples, radionoise
 from kuokka.lib_resampler import resampler_execute, create_resampler, create_upsample_taps, upsample, linear_interp, cubic_interp
 from scipy.signal import firwin
 

@@ -4,27 +4,70 @@ import time
 import sys
 from skyfield.api import EarthSatellite, wgs84
 import skyfield.api
+import urllib.request
+import os
+import json
+
 
 skyfield_timescale = skyfield.api.load.timescale()
 
-# Temporary TLE and GS data for testing purposes, replace with a file loading logic later
-TLE_LINE1 = "1 99999U 25000XX  25343.38819229  .00004178  00000-0  34972-4 0  9990"
-TLE_LINE2 = "2 99999  97.4424  55.2170 0003820  61.6496  14.5061 15.16321950 59107"
-SATELLITE_NAME = "Foresail1p"
-GS_LATITUDE_DEGREES = 60.1871545
-GS_LONGITUDE_DEGREES = 24.8181605
-GS_ELEVATION = 30
 
-# Utilities for Doppler correction
+
+
+# Speed of light for doppler calculations
 c = 299792458.0
-satellite = EarthSatellite(TLE_LINE1, TLE_LINE2, SATELLITE_NAME, skyfield_timescale)
-groundstation = wgs84.latlon(GS_LATITUDE_DEGREES, GS_LONGITUDE_DEGREES, elevation_m=GS_ELEVATION)
+
+# Global satellite and groundstation objects (initialized by load_tle_by_norad_id)
+satellite = None
+groundstation = None
+
 
 S100_CENTER_FREQUENCY = 437.7752e6
 S100_SYNCHWORD 		= 0x930B51DE   	# Suomi100
 S100_SYNCHWORD_LEN 	= 32
 FS1P_SYNCHWORD 		= 0x1ACFFC1D	# Same for original FS1
 FS1P_SYNCHWORD_LEN 	= 32
+
+
+
+def load_satellite_and_gs_configs(config_path):
+    """
+    Load satellite and ground station configurations from a file into the globals `satellite` and `groundstation`.
+    
+    Args:
+        config_path: Path to configuration file. (JSON)
+    
+    """
+
+    print(f"Loading satellite and ground station configs from {config_path}...")
+    global satellite
+    global groundstation
+
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+        norad_id = config['norad_id']
+        satellite_name = config["satellite_name"]
+
+        # Load TLE:
+        request = urllib.request.urlopen(f"https://celestrak.com/NORAD/elements/gp.php?CATNR={norad_id}&FORMAT=tle")
+        tle_lines = request.read().decode('utf-8').strip().split('\n')
+        satellite = EarthSatellite(tle_lines[1], tle_lines[2], satellite_name, skyfield_timescale)
+
+        # Write TLE to a file, Current path + satellite name_tle.txt:
+        cache_file = os.path.join(os.path.dirname(__file__), '..', '..', 'tle_cache', f"{satellite_name.replace(' ', '_')}_tle.txt")
+        with open(cache_file, 'w') as f:
+            f.write('\n'.join(tle_lines))
+
+        # Load Ground Station info
+        gs_latitude = config["gs_latitude"]
+        gs_longitude = config["gs_longitude"]
+        gs_elevation = config["gs_elevation"]
+        groundstation = wgs84.latlon(gs_latitude, gs_longitude, elevation_m=gs_elevation)
+
+        print(f"Loaded TLE for {satellite_name} (NORAD ID: {norad_id})")
+        print(f"Ground Station location: lat {gs_latitude} deg, lon {gs_longitude} deg, elev {gs_elevation} m")
+        print(f"Got TLE lines: \n{tle_lines[0]}\n{tle_lines[1]}\n{tle_lines[2]}")
+
 
 # = USRP B200/B210 VALID SAMPLERATES =========================================================================================================================================================
 # = USRP B200/B210 VALID SAMPLERATES =========================================================================================================================================================
@@ -268,33 +311,42 @@ def CC1125_DEV_M_E_config_for_peak_deviation(f_dev, BT_on):
 
 # SAMPLE GENERATION ==========================================================================================================================================================================
 # SAMPLE GENERATION ==========================================================================================================================================================================
-GAUSS_STD_PER_HALFPOINTS = 1 / (2*np.sqrt(2*np.log(2)))
+
+# 1 / (2 * √ (2 ln(2))) 
+GAUSS_STANDARD_DEVIATION_PER_HALFPOINTS = 1 / (2 * np.sqrt(2 * np.log(2)))
+
 @njit(cache=True)
-def gauss_curve(std, x):
-    a = 1/(std*np.sqrt(2*np.pi))
-    return a * np.exp(-0.5 * ((x/std)**2))  # x = (x-mu)
+def gauss_curve(standard_deviation, sample_offsets):
+    """
+    Generate Gaussian curve values for given standard deviation and sample offsets.
+    """
+    a = 1/(standard_deviation * np.sqrt(2 * np.pi))
+    return a * np.exp(-0.5 * ((sample_offsets / standard_deviation) ** 2))
 
 @njit(cache=True)
 def gauss_curve_sps(sps_f, BT, n_taps):
-    std = sps_f * GAUSS_STD_PER_HALFPOINTS / (2*BT)
-    x = np.linspace(-1.0, 1.0, n_taps) * (n_taps-1)
-    curve = gauss_curve(std, x)
+    standard_deviation = sps_f * GAUSS_STANDARD_DEVIATION_PER_HALFPOINTS / (2*BT)
+
+    # Offsets centered around zero
+    sample_offsets = np.linspace(-1.0, 1.0, n_taps) * (n_taps-1)
+
+    # Generate Gaussian curve
+    curve = gauss_curve(standard_deviation, sample_offsets)
+    
+    # Set area under curve to 1.0
     return curve / np.sum(curve)
 
-#@njit(cache=True)
-#def sinc_curve(BT, sps_f, n_taps):
-#	tperT = np.linspace(-1.0, 1.0, n_taps) * (n_taps-1)
-#	pulse = np.sinc(tperT * BT / sps_f)
-#	return pulse / np.sum(pulse)
 
 @njit(cache=True)
 def make_squarewave(binary_symbols, sps_f, i_sample_of_sym0_f, nsamples, npad):
-    #assert np.all(np.abs(np.abs(binary_symbols)-1) < 0.0001)
+    """
+
+    """
     if nsamples < 0:
         nsamples = int(len(binary_symbols) * sps_f + i_sample_of_sym0_f)
     samples = np.zeros(nsamples)
     for i in range(nsamples):
-        isym = int((i-i_sample_of_sym0_f) / sps_f)
+        isym = int((i - i_sample_of_sym0_f) / sps_f)
         if isym < 0:
             continue
         if isym < len(binary_symbols):
@@ -306,61 +358,77 @@ def make_squarewave(binary_symbols, sps_f, i_sample_of_sym0_f, nsamples, npad):
 
 
 @njit(cache=True, parallel=True)
-def make_f_modulating_waveform_parallel(binary_symbols, sps_f, shaper_BT_prod, shaper_n_taps):
+def make_frequency_modulating_waveform_parallel(binary_symbols, sps_f, shaper_BT_prod, shaper_n_taps):
+    """
+    Make frequency modulating waveform utilizing Numba parallelization.
+
+    Requires Python 3.11+
+    """
     assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+
+    # Create pulse shaping filter
     if shaper_BT_prod > 0:
         pulse = gauss_curve_sps(sps_f=sps_f, BT=shaper_BT_prod, n_taps=shaper_n_taps)
         assert len(pulse) == shaper_n_taps
-    else:
+    else: # No gaussian pulse shaping
         pulse = np.ones(1, dtype=np.float64)
+
     npulse = len(pulse)
     modulator0 = make_squarewave(binary_symbols=binary_symbols, sps_f=sps_f, i_sample_of_sym0_f=0.0, nsamples=-1, npad=npulse//2)
+
     if npulse > 1:
-        #modulator1 = np.correlate(modulator0, pulse)
         modulator1 = np.zeros(len(modulator0)-npulse+1, dtype=np.float64)
         for i in prange(len(modulator1)):
             modulator1[i] = np.sum(pulse * modulator0[i:i+npulse])
     else:
         modulator1 = modulator0
-    #print("np.max(np.abs(modulator1)), len(modulator1)", np.max(np.abs(modulator1)),  len(modulator1), npulse )
+
     modulator1 = modulator1 / np.max(np.abs(modulator1))
     return modulator1
 
 @njit(cache=True, parallel=False)
-def make_f_modulating_waveform_simple(binary_symbols, sps_f, shaper_BT_prod, shaper_n_taps):
+def make_frequency_modulating_waveform_simple(binary_symbols, sps_f, shaper_BT_prod, shaper_n_taps):
+    """
+    Make frequency modulating waveform without parallelization.
+
+    This will be used on Python versions older than 3.11
+    """
     assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+
     if shaper_BT_prod > 0:
         pulse = gauss_curve_sps(sps_f=sps_f, BT=shaper_BT_prod, n_taps=shaper_n_taps)
         assert len(pulse) == shaper_n_taps
     else:
         pulse = np.ones(1, dtype=np.float64)
+
     npulse = len(pulse)
     modulator0 = make_squarewave(binary_symbols=binary_symbols, sps_f=sps_f, i_sample_of_sym0_f=0.0, nsamples=-1, npad=npulse//2)
     if npulse > 1:
         modulator1 = np.correlate(modulator0, pulse)
-        #modulator1 = np.zeros(len(modulator0)-npulse+1, dtype=np.float64)
-        #for i in prange(len(modulator1)):
-        #	modulator1[i] = np.sum(pulse * modulator0[i:i+npulse])
     else:
         modulator1 = modulator0
+
     modulator1 = modulator1 / np.max(np.abs(modulator1))
     return modulator1
 
 
+# Determine which version to use based on Python version.
 if int(sys.version.split(" ")[0].split(".")[1]) >= 11:
-    make_f_modulating_waveform = make_f_modulating_waveform_parallel
+    make_f_modulating_waveform = make_frequency_modulating_waveform_parallel
 else:
-    make_f_modulating_waveform = make_f_modulating_waveform_simple
+    make_f_modulating_waveform = make_frequency_modulating_waveform_simple
 
 
 @njit(cache=True)
 def fm_mod(f_signal_offset, peak_deviation, modulator):
+    """
+
+
+    """
     assert np.min(modulator) >= -1.0
     assert np.max(modulator) <=  1.0
     assert abs(f_signal_offset) < 0.5
     nn = len(modulator)
-
-    #cs_mod = np.cumsum(modulator)
 
     cs_mod = np.zeros(nn, dtype=np.float64)
     cs_mod[0] = modulator[0]
@@ -373,6 +441,13 @@ def fm_mod(f_signal_offset, peak_deviation, modulator):
 
 @njit(cache=True)
 def fm_mod_expanding(f_signal_offset, peak_deviation, modulator, nsamples):
+    """
+    Expanding FM modulator. 
+
+    params:
+        f_signal_offset: Normalized frequency offset to apply to the signal.
+        peak_deviation:  Peak frequency deviation
+    """
     assert np.min(modulator) >= -1.0
     assert np.max(modulator) <=  1.0
     assert abs(f_signal_offset) < 0.5
@@ -387,50 +462,81 @@ def fm_mod_expanding(f_signal_offset, peak_deviation, modulator, nsamples):
 
 
 
-
+"""
+# Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
+# 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0
+# peak_dev = modulation_index / (2*symboltime).                          peak_dev_physical = peak_dev * sr. accords to CC1125 (CC112X/CC1175) User's guide on page 26.
+"""
 
 #@njit(cache=True)
-def make_samples1(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0):
+def make_samples(samples_per_symbol, bitstring, frequency_offset, power, modulation_index=0.5, shaper_BT_prod=0.5, n_silence_start=0, n_silence_end=0):
     """
-    # Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
-    # 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0
-    # peak_dev = mod_index / (2*symboltime).                          peak_dev_physical = peak_dev * sr. accords to CC1125 (CC112X/CC1175) User's guide on page 26.
+    Main sample generation function used in the modem.
+
+    The main difference between this and make_samples_alternative() is that this function uses an expanding FM modulator.
+
+    params:
+        samples_per_symbol: Output samples per symbol.
+        bitstring: Array of +/- 1 values representing the bits to be modulated.
+        frequency_offset: Normalized frequency offset (to sample rate) to apply to the modulated signal.
+        power: Output power scaling factor.
+        modulation_index:   Used modulation index or in other words the maximum frequency deviation relative to the symbol rate.
+                            If this is not 0.5, the modulation is not minimum shift keying (MSK).
+                            However, a value of 0.7 has been found to give better performance and can be used on the satellite.
+        shaper_BT_prod: Gaussian filter BT product. Product of bandwidth and symbol time.
+                        Lower values give narrower bandwidth, which is harder to demodulate.
+                        There can also be inter-symbol interference if the value is too low.
+                        Higher values give wider bandwidth, which is easier to demodulate. 0.5 is a commonly used balanced value.
+        n_silence_start: Number of samples of silence to add to the start of the signal to account for hardware ramp-up times.
+        n_silence_end: Number of samples of silence to add to the end of the signal to account for hardware ramp-down times.
     """
-    assert abs(f_offset) < 0.5, f_offset
+    # Make sure that frequency offset is normalized to sample rate.
+    assert abs(frequency_offset) < 0.5, frequency_offset
+    assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
+    
+    # Bits need to be +/- 1 not 0/1.
+    assert np.all(np.isclose(np.abs(bitstring[0:34]), 1))
+
+    # Modulation index (h) = 2 * peak_frequency_deviation * symbol_time.
+    # This is also normalized to the sample rate like the frequency offset.
+    # Since samples_per_symbol = symbol_time * sample_rate, we have:
+    peak_frequency_deviation	= modulation_index / (samples_per_symbol * 2.0)
+
+    # Always use 14 samples per symbol.
+    modulation_samples_per_symbol = 14.0
+    nsamples 	= int(len(bitstring) * samples_per_symbol)
+
+    # Different function called based on whether parallel modulator can be used. The parallel version requires Python 3.11+.
+    modulator 	= make_f_modulating_waveform(bitstring, modulation_samples_per_symbol, shaper_BT_prod, int(modulation_samples_per_symbol) * 4 + 1)
+    
+    # Use expanding FM modulator to get desired number of samples.
+    samples 	= fm_mod_expanding(frequency_offset, peak_frequency_deviation, modulator, nsamples)
+    
+    # Scale to desired power.
+    if power != 1:
+        samples = samples * (power**0.5)
+
+    # Add silence to start or end. This is used to workaround hardware limitations such as PA ramp-up times.
+    if (n_silence_start > 0) or (n_silence_end > 0):
+        samples = np.concatenate( (np.zeros(n_silence_start, dtype=np.complex128), samples, np.zeros(n_silence_end, dtype=np.complex128)) )
+    return samples, modulator
+
+
+def make_samples_alternative(samples_per_symbol, bitstring, frequency_offset, power, modulation_index=0.5, shaper_BT_prod=0.5, shaper_n_taps=301, n_silence_start=0, n_silence_end=0):
+    """
+    Alternative sample generation function. make_samples() is currently used in the modem.
+    """
+    assert abs(frequency_offset) < 0.5, frequency_offset
     assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
     assert np.all(np.isclose(np.abs(bitstring[0:34]), 1))
-    peak_dev	= mod_index / (sps_f*2.0)
-    modulator 	= make_f_modulating_waveform(bitstring, sps_f, shaper_BT_prod, shaper_n_taps)
-    samples 	= fm_mod(f_offset, peak_dev, modulator)
+    peak_dev	= modulation_index / (samples_per_symbol*2.0)
+    modulator 	= make_f_modulating_waveform(bitstring, samples_per_symbol, shaper_BT_prod, shaper_n_taps)
+    samples 	= fm_mod(frequency_offset, peak_dev, modulator)
     if power != 1:
         samples 	= samples * (power**0.5)
     if (n_silence_start > 0) or (n_silence_end > 0):
         samples 	= np.concatenate( (np.zeros(n_silence_start, dtype=np.complex128), samples, np.zeros(n_silence_end, dtype=np.complex128)) )
     return samples, modulator
-
-
-def make_samples2(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_BT_prod=0.5, n_silence_start=0, n_silence_end=0):
-    """
-    # Apparently max deviation of CC1125 is about 155.9 kHz.          (40e6 / 2**24) * (256 + DEV_M) * 2**DEV_E     	|| where DEV_M is int8 and DEV_E is int3
-    # 															 or   (40e6 / 2**23) * DEV_M  						|| if DEV_E = 0
-    # peak_dev = mod_index / (2*symboltime).                          peak_dev_physical = peak_dev * sr. accords to CC1125 (CC112X/CC1175) User's guide on page 26.
-    """
-    assert abs(f_offset) < 0.5, f_offset
-    assert (shaper_BT_prod > 0) or (shaper_BT_prod == -1)
-    assert np.all(np.isclose(np.abs(bitstring[0:34]), 1))
-    peak_dev	= mod_index / (sps_f*2.0)
-    i_sample_of_sym0_f = 0.0
-    sps_mod		= 14.0
-    nsamples 	= int(len(bitstring) * sps_f + i_sample_of_sym0_f)
-    modulator 	= make_f_modulating_waveform(bitstring, sps_mod, shaper_BT_prod, int(sps_mod)*4+1)
-    samples 	= fm_mod_expanding(f_offset, peak_dev, modulator, nsamples)
-    if power != 1:
-        samples 	= samples * (power**0.5)
-    if (n_silence_start > 0) or (n_silence_end > 0):
-        samples 	= np.concatenate( (np.zeros(n_silence_start, dtype=np.complex128), samples, np.zeros(n_silence_end, dtype=np.complex128)) )
-    return samples, modulator
-
-
 
 
 
@@ -438,6 +544,11 @@ def make_samples2(sps_f, bitstring, f_offset, power, mod_index=0.5, shaper_BT_pr
 
 @njit(cache=True)
 def bytes_to_bits(data):
+    """
+    Creates a int64 array of bits from a byte array.
+
+    TODO: Why int64?
+    """
     bits = np.zeros(len(data)*8, dtype=np.int64)
     for i in range(len(data)):
         for j in range(8):
@@ -447,6 +558,11 @@ def bytes_to_bits(data):
 
 @njit(cache=True)
 def ints_to_bits(int_arr, bits_per_int):
+    """
+    Creates a int64 array of bits from an integer array.
+    
+    TODO: Why int64?
+    """
     bits = np.zeros(len(int_arr)*bits_per_int, dtype=np.int64)
     for i in range(len(int_arr)):
         for j in range(bits_per_int):
@@ -477,16 +593,19 @@ def radionoise(n, sr, W_per_Hz):
     return cc * (np.random.normal(0,1.0, n) + 1j*np.random.normal(0, 1.0, n))
 
 def signal_energy(samples, sr):
-    # returns exactly the same value as:   np.sum(np.abs(samples)**2 * dt)     | dt = 1/sr
-    # == np.sum(np.abs(np.fft.fft(samples))**2) * df / (sr**2)                 | df = sr/len(samples)   (valid for even and odd samplecounts)
-    # 			E = P*t,    t = n/sr = len(samples)/sr.
-    #		=> 	P = E/t = E * sr/n    = sumabsp2 * (1 / (len(samples) * sr))   * sr/len(samples)
-    #		=>	P = sumabsp2 * 1 / len(samples)**2
+    """
+    returns exactly the same value as:   np.sum(np.abs(samples)**2 * dt)     | dt = 1/sr
+        == np.sum(np.abs(np.fft.fft(samples))**2) * df / (sr**2)                 | df = sr/len(samples)   (valid for even and odd samplecounts)
+            E = P*t,    t = n/sr = len(samples)/sr.
+        => 	P = E/t = E * sr/n    = sumabsp2 * (1 / (len(samples) * sr))   * sr/len(samples)
+        =>	P = sumabsp2 * 1 / len(samples)**2
+    """
     return np.sum(np.abs(np.fft.fft(samples))**2) / (len(samples) * sr)
 
 def signal_power(samples):
     # returns exactly the same value as:   np.sum(np.abs(samples)**2) * dt / (dt*len(samples))     | dt = 1/sr
     return np.sum(np.abs(np.fft.fft(samples))**2) / (len(samples)**2)
+
 # SAMPLE GENERATION ==========================================================================================================================================================================
 # SAMPLE GENERATION ==========================================================================================================================================================================
 
@@ -499,15 +618,21 @@ def signal_power(samples):
 
 # FFT ========================================================================================================================================================================================
 # FFT ========================================================================================================================================================================================
+
 @njit(cache=True)
 def njit_objmode_fft(x):
-    #y = np.zeros_like(x, dtype=np.complex128)
+    """
+    
+    """
     with objmode(y='complex128[:]'):
         y = np.complex128(np.fft.fftshift(np.fft.fft(x)))
     return y
 
 
 def time_fft_n(fftlen, nrep):
+    """
+    Times the FFT of length fftlen, nrep times, returning average time per FFT.
+    """
     s = np.random.normal(0,1, fftlen) + np.random.normal(0,1,fftlen)*1j
     njit_objmode_fft(s)
     njit_objmode_fft(s)
@@ -518,11 +643,16 @@ def time_fft_n(fftlen, nrep):
     return dt
 
 
-def choose_fftlen(len_ideal, window_halfwid):
+def choose_fftlen(len_ideal, window_halfwidth):
+    """
+    Chooses the fastest FFT length near len_ideal.
+
+    Candidates are chosen from the ideal length +/- window_halfwidth.
+    """
     assert len_ideal > 12
-    assert window_halfwid >= 1
-    assert window_halfwid < len_ideal
-    candidates = [x for x in range(int(len_ideal-window_halfwid), int(len_ideal+window_halfwid)) if (x%2)==0]
+    assert window_halfwidth >= 1
+    assert window_halfwidth < len_ideal
+    candidates = [x for x in range(int(len_ideal-window_halfwidth), int(len_ideal+window_halfwidth)) if (x%2)==0]
     best_speed = 0.0
     best_len = int(len_ideal)
     for l in candidates:
@@ -547,7 +677,9 @@ def choose_fftlen(len_ideal, window_halfwid):
 # ============================================================================================================================================================================================
 #@njit(cache=True)
 def create_freq_shifter_precomp(sr, fdelta, max_batchlen, fdelta_threshold):  # fdelta_threshold can be something like (1e-6 * sr).
-    #print("CREATING FREQ SHIFTER: ",sr, fdelta, max_batchlen, fdelta_threshold)
+    """
+    
+    """
     assert sr > 0.0
     assert abs(fdelta) < sr*0.5
     assert max_batchlen > 1
@@ -577,7 +709,9 @@ def create_freq_shifter_precomp(sr, fdelta, max_batchlen, fdelta_threshold):  # 
 
 @njit(cache=True)
 def freq_shift_phased_precomp(batch, shifter_arr, phase_idx0, phase_mod):
-    #shifted = batch * shifter_arr[phase_idx0:phase_idx0+len(batch)]
+    """
+    Precompiled frequency shifter.
+    """
     shifted = np.zeros_like(batch)  # opening the vector multiplication above into a for-loop makes the numba-accelerated version ~10% faster.
     for i in range(len(shifted)):
         shifted[i] = batch[i] * shifter_arr[i + phase_idx0]
@@ -594,6 +728,9 @@ def freq_shift_phased(batch, sr, fdelta, phase0):
 
 
 def get_doppler_low_high(f_center, v_relative):
+    """
+    Get the lowest and highest expected frequencies due to Doppler shift.
+    """
     c = 299792458.0
     df_doppler = f_center * (((c+abs(v_relative))/c) - 1)
     f_center_min = f_center - df_doppler
@@ -602,7 +739,11 @@ def get_doppler_low_high(f_center, v_relative):
 
 
 def doppler_correction(f_rx_received, f_rx_original, f_tx_at_target):
-    #f_received = f_original * c/(c+v_src)
+    """
+    Perform doppler correction based on received and original frequencies.
+
+    Calculates the velocity of the source and uses it to determine the required transmit frequency.
+    """
     v_src = c * (f_rx_original/f_rx_received - 1)
     f_send = f_tx_at_target * (c+v_src)/c
     return f_send, v_src # v_src is the derivative of separating distance. (negative if satellite is approaching)
@@ -610,8 +751,10 @@ def doppler_correction(f_rx_received, f_rx_original, f_tx_at_target):
 def doppler_correction_tle(uncorrected_tx_frequency):
     """
     Perform doppler correction based on current position based on TLE.
+    This requires TLE to be new enough to be accurate. However it allows for frequency correction before reception.
 
-    Source: https://github.com/daniestevez/gr-satellites/blob/main/examples/doppler_correction/tle_to_doppler_file.py
+    This requires skyfield to be installed and configured with TLE data.
+    TODO: Automatic TLE updating, configuration files for GS, satellite etc.
     """
     current_time = skyfield_timescale.now()
     difference = satellite - groundstation
@@ -626,21 +769,26 @@ def calculate_assumed_carrier_frequency(absolute_rx_frequency, uncorrected_tx_fr
     """
     doppler = doppler_correction_tle(uncorrected_tx_frequency)
     assumed_carrier_frequency = absolute_rx_frequency + doppler
-    print("")
-    print("Doppler correction calculation:")
-    print(f"Using current values: absolute_rx_frequency={absolute_rx_frequency/1e6:.6f} MHz, uncorrected_tx_frequency={uncorrected_tx_frequency/1e6:.6f} MHz")
-    print(f"Calculated doppler: {doppler/1e3:.3f} kHz, resulting in assumed carrier frequency: {assumed_carrier_frequency/1e6:.6f} MHz")
-    print("")
     return assumed_carrier_frequency
 
 
 def determine_ftune_and_min_sr(f_center_min, f_center_max, max_signal_bandwidth):
+    """
+    Determine frequency to tune to and minimum sample rate required to cover the desired frequency range.
+
+    Tuned frequency is calculated to allow for doppler shift and signal bandwidth with some extra margin.
+    10% margin + 25 kHz added to sideband calculation.
+
+    Minimum sample rate is just based on Shannon-Nyquist theorem. (sampling_rate >= 2 * highest_frequency_component)
+    """
     assert f_center_max >= f_center_min
     assert f_center_min > 0.5
     f_center_mid = (f_center_min + f_center_max) / 2
     f_center_span = f_center_max - f_center_min
     side_band = (max_signal_bandwidth/2 + f_center_span/2) * 1.1 + 25e3
     f_tune = f_center_mid - side_band
+
+    # 2 * highest frequency component adjusted for tuning frequency.
     minimum_samplerate = (f_center_mid + side_band - f_tune) * 2  # == side_band * 4
     return f_tune, minimum_samplerate
 
@@ -666,14 +814,19 @@ def fractional_resampler_f_max_undisturbed(sr0, sr1, halflen, f_cutoff_coeff):
     f_slope_center = f_cutoff_coeff * (sr1/sr0) * sr0
     halfwidth      = 0.94 * sr0 / halflen
     return f_slope_center - halfwidth
+
+
 # FREQUENCY MANAGEMENT =======================================================================================================================================================================
 # FREQUENCY MANAGEMENT =======================================================================================================================================================================
 
 
 
 def snr_dB(pl_power, noise_power):
-    snr_lin = (pl_power-noise_power) / noise_power
-    snr_dB_ = 10*np.log10( max(1e-6, snr_lin) )
+    """
+    Calculate SNR (Signal-to-Noise Ratio) in dB from signal power and noise power.
+    """
+    snr_linear = (pl_power-noise_power) / noise_power
+    snr_dB_ = 10*np.log10( max(1e-6, snr_linear) )
     return snr_dB_
 
 

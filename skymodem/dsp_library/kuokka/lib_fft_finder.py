@@ -1,15 +1,15 @@
 import numpy as np
 from numba import njit
-from .lib_tools import make_samples2, njit_objmode_fft
+from .lib_tools import make_samples, njit_objmode_fft
 
 
 _fft_mask_dict = dict()
 
 
-def construct_fft_mask(sps, mod_index, BT_rx_match, fftlen, masklen, nn):
+def construct_fft_mask(sps, modulation_index, BT_rx_match, fftlen, masklen, nn):
     for key,val in _fft_mask_dict.items():
         k_sps, k_mod_idx, k_BT, k_fftlen, k_masklen, k_nn = key
-        if (sps == k_sps) and (mod_index == k_mod_idx) and (BT_rx_match == k_BT) and (fftlen == k_fftlen) and (masklen == k_masklen) and (nn <= k_nn):
+        if (sps == k_sps) and (modulation_index == k_mod_idx) and (BT_rx_match == k_BT) and (fftlen == k_fftlen) and (masklen == k_masklen) and (nn <= k_nn):
             return val
     assert (masklen % 2) == 1
     nbits = int((fftlen*6 + sps*3 +1) / sps) + 1
@@ -17,7 +17,7 @@ def construct_fft_mask(sps, mod_index, BT_rx_match, fftlen, masklen, nn):
     n_stacked = 0
     while n_stacked < nn:
         bits = np.random.randint(0,2, nbits)*2 - 1
-        samples, _ = make_samples2(sps_f=sps, bitstring=bits, f_offset=0.0, power=1.0, mod_index=mod_index, shaper_BT_prod=BT_rx_match)
+        samples, _ = make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=0.0, power=1.0, modulation_index=modulation_index, shaper_BT_prod=BT_rx_match)
         i0 = np.random.randint(1,int(sps*2))
         n_snippets = int((len(samples)-i0)/fftlen) -1
         assert n_snippets > 1
@@ -32,21 +32,21 @@ def construct_fft_mask(sps, mod_index, BT_rx_match, fftlen, masklen, nn):
     #mask = mask - np.min(mask)
     mask = mask / np.max(mask)
     #print("[Constructed fft mask in {} ms]".format(round(1e3*T_construct,1)))
-    _fft_mask_dict[ (sps, mod_index, BT_rx_match, fftlen, masklen, nn) ] = mask
+    _fft_mask_dict[ (sps, modulation_index, BT_rx_match, fftlen, masklen, nn) ] = mask
     return mask
 
 
-def get_empiric_masklen(fftlen, sps, mod_index): #TODO this should be a function of mod_idx and BT...
-    return int(0.5 * 1.5 * (max(mod_index, 0.5)/0.5) * fftlen / sps)*2 + 1
+def get_empiric_masklen(fftlen, sps, modulation_index): #TODO this should be a function of mod_idx and BT...
+    return int(0.5 * 1.5 * (max(modulation_index, 0.5)/0.5) * fftlen / sps)*2 + 1
 
 
 #@njit(cache=True)
-def create_fft_f_centerer_statemx(fftlen, sps, f_center_search_map, mod_index, BT_rx_match, centering_delay_mpr, centerf_halflife):
+def create_fft_f_centerer_statemx(fftlen, sps, f_center_search_map, modulation_index, BT_rx_match, centering_delay_mpr, centerf_halflife):
     assert fftlen >= 32
     assert len(f_center_search_map) == fftlen
     assert 1.0 <= centerf_halflife < 50.0
     c_center_decay = 0.5**(1/centerf_halflife)
-    masklen = get_empiric_masklen(fftlen=fftlen, sps=sps, mod_index=mod_index)
+    masklen = get_empiric_masklen(fftlen=fftlen, sps=sps, modulation_index=modulation_index)
     jumplen = int(fftlen/2)
     statemx = np.zeros( (8,fftlen) , dtype=np.float64 )
     statemx[0,0]  = fftlen
@@ -61,7 +61,7 @@ def create_fft_f_centerer_statemx(fftlen, sps, f_center_search_map, mod_index, B
     statemx[2,:]  = 0.0		# fft mask-correlation
     statemx[3,:]  = 0.0		# window (real) (the only reason this matrix would be complex...)
     statemx[4,:]  = 0.0		# window (imag) (the only reason this matrix would be complex...)
-    statemx[5, 0:masklen]  	+= construct_fft_mask(sps=sps, mod_index=mod_index, BT_rx_match=BT_rx_match, fftlen=fftlen, masklen=masklen, nn=1000) # empiric mask
+    statemx[5, 0:masklen]  	+= construct_fft_mask(sps=sps, modulation_index=modulation_index, BT_rx_match=BT_rx_match, fftlen=fftlen, masklen=masklen, nn=1000) # empiric mask
     statemx[6,:]  = f_center_search_map
     return statemx
 
@@ -126,13 +126,13 @@ def fft_f_centerer(sample_arr, isample0, nsamples, center_f_arr, center_f_head0,
 
 
 # === carrier sensed =========================================================================================================================================================================
-def create_fft_f_centerer_csense_statemx(fftlen, sps, baudrate, f_center_search_map, mod_index, BT_rx_match, centering_delay_mpr, centerf_halflife, c_stat_update, carrier_sense_threshold):
+def create_fft_f_centerer_csense_statemx(fftlen, sps, baudrate, f_center_search_map, modulation_index, BT_rx_match, centering_delay_mpr, centerf_halflife, c_stat_update, carrier_sense_threshold):
     assert fftlen >= 32
     assert len(f_center_search_map) == fftlen
     assert 1.0 <= centerf_halflife < 50.0
     c_center_decay = 0.5**(1/centerf_halflife)
-    masklen = get_empiric_masklen(fftlen=fftlen, sps=sps, mod_index=mod_index)
-    power_band_length = int(0.5 * 0.95 * (max(0.5,mod_index)/0.5) * fftlen / sps)*2 +1 # 0.75*baudrate is approximately the bandwidth of half max amplitude. 0.95 gives the most accurate SNR reading.		# for energy sense
+    masklen = get_empiric_masklen(fftlen=fftlen, sps=sps, modulation_index=modulation_index)
+    power_band_length = int(0.5 * 0.95 * (max(0.5,modulation_index)/0.5) * fftlen / sps)*2 +1 # 0.75*baudrate is approximately the bandwidth of half max amplitude. 0.95 gives the most accurate SNR reading.		# for energy sense
     assert power_band_length <= masklen
     jumplen = int(fftlen/2)
     f_center_search_map_arr = np.array(f_center_search_map).copy()
@@ -171,7 +171,7 @@ def create_fft_f_centerer_csense_statemx(fftlen, sps, baudrate, f_center_search_
     statemx[2,:]  = 0.0		# fft mask-correlation
     statemx[3,:]  = 0.0		# window (real) (the only reason this matrix would be complex...)
     statemx[4,:]  = 0.0		# window (imag) (the only reason this matrix would be complex...)
-    statemx[5, 0:masklen]  	+= construct_fft_mask(sps=sps, mod_index=mod_index, BT_rx_match=BT_rx_match, fftlen=fftlen, masklen=masklen, nn=1200) # empiric mask
+    statemx[5, 0:masklen]  	+= construct_fft_mask(sps=sps, modulation_index=modulation_index, BT_rx_match=BT_rx_match, fftlen=fftlen, masklen=masklen, nn=1200) # empiric mask
     statemx[6,:]  = f_center_search_map_arr
     statemx[7,0:len(search_center_indexes)] = search_center_indexes 														# for energy sense
     return statemx

@@ -14,7 +14,6 @@ __pycache__/
 */__pycache__/
 */.idea/
 .vscode/
-
 *secret.h
 
 skymodem/sky_cython/build/
@@ -31,6 +30,7 @@ skymodem/skylink_wrapper/cython_skylink/build
 skymodem/skylink_wrapper/cython_skylink/build/*
 
 skymodem/dsp_library/*.dat
+skymodem/tle_cache/*
 
 
 /.idea/

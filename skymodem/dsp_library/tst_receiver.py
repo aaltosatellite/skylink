@@ -5,7 +5,7 @@ from kuokka.lib_tools import FS1P_SYNCHWORD, FS1P_SYNCHWORD_LEN, ints_to_bits
 from kuokka.lib_receiver import Receiver, RXDSPConfig, precompile_receiver
 from mtools.tools_dsp import waterfall_mx
 from mtools.tools_system import mpr_set
-from kuokka.lib_tools import make_samples2, radionoise
+from kuokka.lib_tools import make_samples, radionoise
 import time, os
 from matplotlib import pyplot as plt
 from copy import deepcopy
@@ -19,10 +19,10 @@ savior_params["synch_delay_mpr"] 	= 22.0		# param ~
 savior_params["lp_cutoff_coeff"] 	= 0.625		# param !
 savior_params["lp_ntaps"] 			= 121		# param ~
 savior_params["BT"] 				= -1.0		# param !
-savior_params["mod_index"] 			= 0.7		# param !
+savior_params["modulation_index"] 			= 0.7		# param !
 """
 
-def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payloads, noisePpHz, T_init_silence, T_interval_array, T_end_silence):
+def generate_test_samples(f_tune, f_center, sr0, baudrate, modulation_index, BT, n_payloads, noisePpHz, T_init_silence, T_interval_array, T_end_silence):
     assert len(T_interval_array) == (n_payloads-1)
     f_ofst_nrm = (f_center - f_tune) / sr0
     preamble_bits = ints_to_bits( (0xaa,)*8, bits_per_int=8) * 2 -1
@@ -38,7 +38,7 @@ def generate_test_samples(f_tune, f_center, sr0, baudrate, mod_index, BT, n_payl
         bits = frame_packet(pl=pl_char_ints, synchword_int=FS1P_SYNCHWORD, synchword_len=FS1P_SYNCHWORD_LEN, use_scrambler=True, use_rs=True, rs_mx=rs_mx, rs_cfg=rs_cfg, nrz_shift=True)
         bits = np.concatenate( (preamble_bits, bits) )
         tx_sps = sr0 / baudrate
-        pl_samples, _ = make_samples2(sps_f=tx_sps, bitstring=bits, f_offset=f_ofst_nrm, power=1.0, mod_index=mod_index, shaper_BT_prod=BT, n_silence_start=0, n_silence_end=0)
+        pl_samples, _ = make_samples(samples_per_symbol=tx_sps, bitstring=bits, frequency_offset=f_ofst_nrm, power=1.0, modulation_index=modulation_index, shaper_BT_prod=BT, n_silence_start=0, n_silence_end=0)
         payload_istart_iend_list.append( (pl, len(samples), len(samples)+len(pl_samples)) )
         samples = np.concatenate((samples, pl_samples))
         if i_pl < (n_payloads -1):
@@ -80,11 +80,11 @@ def feed_samples_to_a_receiver(dsp_config:RXDSPConfig, samples, payload_istart_i
 
 
 
-def tgt_loop(ii, noisePpHz, dsp_config:RXDSPConfig, n_payloads, f_center_error, rel_baudrate_error, tx_mod_index_override=None):
-    if tx_mod_index_override is None:
-        tx_mod_index = dsp_config.mod_index
+def tgt_loop(ii, noisePpHz, dsp_config:RXDSPConfig, n_payloads, f_center_error, rel_baudrate_error, tx_modulation_index_override=None):
+    if tx_modulation_index_override is None:
+        tx_modulation_index = dsp_config.modulation_index
     else:
-        tx_mod_index = tx_mod_index_override
+        tx_modulation_index = tx_modulation_index_override
     assert abs(rel_baudrate_error) < 1e-4
     T_init_silence  = 2.00 * dsp_config.fftlen_mpr * dsp_config.sps / (dsp_config.sps * dsp_config.baudrate)
     T_end_silence 	= 2.00 * dsp_config.centering_delay_mpr * dsp_config.fftlen_mpr * dsp_config.sps / (dsp_config.sps * dsp_config.baudrate)
@@ -94,7 +94,7 @@ def tgt_loop(ii, noisePpHz, dsp_config:RXDSPConfig, n_payloads, f_center_error, 
     avg_delay_t = -1
     for n_pl_run in nn:
         samples, payload_istart_iend_list = generate_test_samples(f_tune=dsp_config.rx_tune_frequency, f_center=dsp_config.rx_center_frequency + f_center_error, sr0=dsp_config.rx_samplerate,
-                                                                                                                          baudrate=dsp_config.baudrate * (1 + rel_baudrate_error), mod_index=tx_mod_index,
+                                                                                                                          baudrate=dsp_config.baudrate * (1 + rel_baudrate_error), modulation_index=tx_modulation_index,
                                                                                                                           BT=dsp_config.BT_rx_match, n_payloads=n_pl_run, noisePpHz=noisePpHz, T_init_silence=T_init_silence,
                                                                                                                           T_interval_array=(T_interval,)*(n_pl_run-1), T_end_silence=T_end_silence)
         pl_f_p_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=dsp_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list,
@@ -108,12 +108,12 @@ def tgt_loop(ii, noisePpHz, dsp_config:RXDSPConfig, n_payloads, f_center_error, 
 
 
 
-def measure_curve_mpr(rx_config:RXDSPConfig, n_payloads, f_center_error, rel_baudrate_error, noiseP_array, tx_mod_index_override=None):
+def measure_curve_mpr(rx_config:RXDSPConfig, n_payloads, f_center_error, rel_baudrate_error, noiseP_array, tx_modulation_index_override=None):
     reception_rate_array = np.zeros(len(noiseP_array), dtype=np.float64) -1
     delay_array = np.zeros(len(noiseP_array), dtype=np.float64) -2
     argtuples = list()
     for i_noise, noisePpHz in enumerate(noiseP_array):
-        argtuples.append( (i_noise, noisePpHz, rx_config, n_payloads, f_center_error, rel_baudrate_error, tx_mod_index_override) )
+        argtuples.append( (i_noise, noisePpHz, rx_config, n_payloads, f_center_error, rel_baudrate_error, tx_modulation_index_override) )
     ret_list, _ = mpr_set(f=tgt_loop, argtuple_list=argtuples, ncores=7, Q_or_NS="NS", picklepack=True, verbose=False)
     for i_noise, r_rate, avg_delay_t in ret_list:
         reception_rate_array[i_noise] = r_rate
@@ -135,7 +135,7 @@ def measure_execution_speed(rx_config:RXDSPConfig):
     T_end_silence = 0.5
     T_interval = 5e-3
     samples, payload_istart_iend_list = generate_test_samples(f_tune=rx_config.rx_tune_frequency, f_center=rx_config.rx_center_frequency + 1e3, sr0=rx_config.rx_samplerate,
-                                                                                                                      baudrate=rx_config.baudrate*(1+1.5e-5), mod_index=rx_config.mod_index,
+                                                                                                                      baudrate=rx_config.baudrate*(1+1.5e-5), modulation_index=rx_config.modulation_index,
                                                                                                                       BT=rx_config.BT_rx_match, n_payloads=12, noisePpHz=0.02/rx_config.baudrate, T_init_silence=T_init_silence,
                                                                                                                       T_interval_array=(T_interval,)*(8-1), T_end_silence=T_end_silence)
     pl_f_p_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list,
@@ -320,11 +320,11 @@ def basic_test_A():
     baudrate	= 9600 * 4
     n_payloads	= 12
     rx_config = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=baudrate, bufferlen=400000, batch_maxlen=1024 * 8)
-    #rx_config.mod_index = 0.7
+    #rx_config.modulation_index = 0.7
     #rx_config.BT_rx_match = -1
     noisePpHz = 0.001/baudrate
     print("[Generating samples]")
-    samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=f_center+3.1e3, sr0=sr0, baudrate=baudrate*(1+1.5e-5), mod_index=rx_config.mod_index, BT=rx_config.BT_rx_match,
+    samples, payload_istart_iend_list = generate_test_samples(f_tune=f_tune, f_center=f_center+3.1e3, sr0=sr0, baudrate=baudrate*(1+1.5e-5), modulation_index=rx_config.modulation_index, BT=rx_config.BT_rx_match,
                                                                                                                       n_payloads=n_payloads, noisePpHz=noisePpHz, T_init_silence=2.0, T_interval_array=(5e-3,)*(n_payloads-1), T_end_silence=2.0)
     print("[Feeding samples]")
     pl_f_p_cursor_list, dt_array, t_signal, t_silence = feed_samples_to_a_receiver(dsp_config=rx_config, samples=samples, payload_istart_iend_list=payload_istart_iend_list, default_batchlen=1024*4, do_precompile=True, add_noise_amp=0.01)
@@ -352,10 +352,10 @@ def compare_default_optimod_4800():
     rx_config3 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600 * 2, bufferlen=800000, batch_maxlen=1024 * 8)
     rx_config4 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600 * 4, bufferlen=800000, batch_maxlen=1024 * 8)
     rx_config5 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
-    rx_config5.mod_index = 0.7
+    rx_config5.modulation_index = 0.7
     rx_config5.BT_rx_match = 0.5
     rx_config6 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
-    rx_config6.mod_index = 0.75
+    rx_config6.modulation_index = 0.75
     rx_config6.BT_rx_match = 0.5
     rx_config6.lp_cutoff_coeff = 0.575
 
@@ -411,28 +411,28 @@ def compare_default_optimod_4800():
 
 
 
-def mod_index_matrix_comparison():
+def modulation_index_matrix_comparison():
     f_tune 		= 437.1e6
     f_center 	= 437.125e6
     sr0 		= 1e6
     n_payloads	= 64*3
     rx_config1 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
     rx_config2 = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 8)
-    rx_config1.mod_index = 0.5
-    rx_config2.mod_index = 0.75
+    rx_config1.modulation_index = 0.5
+    rx_config2.modulation_index = 0.75
 
     rel_noiseP_array = np.array([1e-5, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34]) # , 0.28
     noiseP_array1 = rel_noiseP_array / rx_config1.baudrate
     noiseP_array2 = rel_noiseP_array / rx_config2.baudrate
 
     print("rx-0.5 / tx-0.5")
-    reception_rate_array1, _ = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array1, tx_mod_index_override=0.50)
+    reception_rate_array1, _ = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array1, tx_modulation_index_override=0.50)
     print("rx-0.5 / tx-0.75")
-    reception_rate_array2, _ = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array1, tx_mod_index_override=0.75)
+    reception_rate_array2, _ = measure_curve_mpr(rx_config=rx_config1, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array1, tx_modulation_index_override=0.75)
     print("rx-0.75 / tx-0.5")
-    reception_rate_array3, _ = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array2, tx_mod_index_override=0.50)
+    reception_rate_array3, _ = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array2, tx_modulation_index_override=0.50)
     print("rx-0.75 / tx-0.75")
-    reception_rate_array4, _ = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array2, tx_mod_index_override=0.75)
+    reception_rate_array4, _ = measure_curve_mpr(rx_config=rx_config2, n_payloads=n_payloads, f_center_error=3e3, rel_baudrate_error=1.5e-5, noiseP_array=noiseP_array2, tx_modulation_index_override=0.75)
 
     fig = plt.figure(figsize=(15,11))
     ax1 = fig.add_subplot(111)
@@ -536,7 +536,7 @@ def optimizer_A(t_run_min):
     f_center 			= 437.125e6
     sr0 				= 1e6
     n_payloads			= 32
-    #mod_index 			= 0.5
+    #modulation_index 			= 0.5
     #BT_rx_match 		= 0.425
     f_center_error 		= 3e3
     rel_baudrate_error 	= 1.5e-5
@@ -545,12 +545,12 @@ def optimizer_A(t_run_min):
     noiseP_array 		= rel_noiseP_array / 9600
 
     rx_config_basis = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=9600, bufferlen=800000, batch_maxlen=1024 * 16)
-    rx_config_basis.mod_index = 0.75
+    rx_config_basis.modulation_index = 0.75
     #rx_config_basis.BT_rx_match = BT_rx_match
     #rx_config_basis.BT_rx_match = -1
 
     attrname_array_d1 = {
-            "mod_index" :     		[0.5, 0.75],
+            "modulation_index" :     		[0.5, 0.75],
             "sps" : 				[8,10,12,14,16,22],
             "fftlen_mpr" : 			[int(x)   for x in np.linspace(0.50,3.0, 128)  * 52],
             "centering_delay_mpr" : [float(x) for x in np.linspace(0.15,2.0, 128) * 2.0],
@@ -558,15 +558,15 @@ def optimizer_A(t_run_min):
             "JPL_halflife" : 		[int(x)   for x in np.linspace(0.25,2.0, 128) * 55],
             "lp_ntaps" : 			[int(x*0.5)*2+1 for x in np.linspace(0.1,2.0, 128) * 161],
             #"lp_cutoff_coeff" : 	[float(x) for x in np.linspace(0.50,2.0, 128) * 0.570],
-            #"mod_index" : 			[float(x) for x in np.linspace(0.50, 1.5, 256)],
+            #"modulation_index" : 			[float(x) for x in np.linspace(0.50, 1.5, 256)],
             "synch_delay_mpr" : 	[float(x) for x in np.linspace(0.25,2.0, 128) * 30.0],
     }
     attrname_array_d2 = {
             "lp_cutoff_coeff" :     [float(x) for x in np.linspace(0.50,0.65, 128) * 1.0],
-            "mod_index" :     		[float(x) for x in np.linspace(0.65,0.85, 128) * 1.0],
+            "modulation_index" :     		[float(x) for x in np.linspace(0.65,0.85, 128) * 1.0],
     }
-    #rx_config_basis.tx_mod_index = 4
-    #rx_config_basis.mod_index = 0.7
+    #rx_config_basis.tx_modulation_index = 4
+    #rx_config_basis.modulation_index = 0.7
 
     basisA = 0.0
     for _ in range(3):
@@ -609,16 +609,16 @@ def analyze_results_plot():
 
 
     results = [r for r in results if r["rx_config"]["BT_rx_match"] > 0.0]
-    #results = [r for r in results if r["rx_config"]["mod_index"] == 0.5]
-    #results = [r for r in results if r["rx_config"]["mod_index"] < 1.0]
+    #results = [r for r in results if r["rx_config"]["modulation_index"] == 0.5]
+    #results = [r for r in results if r["rx_config"]["modulation_index"] < 1.0]
     #results = [r for r in results if r["rx_config"]["lp_cutoff_coeff"] >= 0.55]
     #results = [r for r in results if r["rx_config"]["lp_cutoff_coeff"] <= 0.60]
-    #results = [r for r in results if r["rx_config"]["mod_index"] < 0.6]
+    #results = [r for r in results if r["rx_config"]["modulation_index"] < 0.6]
 
     print("{} remain after filtering.".format(len(results)))
 
 
-    parameter_names = ["mod_index", "lp_cutoff_coeff", "sps", "fftlen_mpr",  "centering_delay_mpr", "centerf_halflife", "JPL_halflife", "lp_ntaps", "synch_delay_mpr"]
+    parameter_names = ["modulation_index", "lp_cutoff_coeff", "sps", "fftlen_mpr",  "centering_delay_mpr", "centerf_halflife", "JPL_halflife", "lp_ntaps", "synch_delay_mpr"]
     for res in results[0:4]:
         print("A:       {}".format(res["A"]))
         print("delay:   {}".format(1e3*res["avg_delay"]))
@@ -629,7 +629,7 @@ def analyze_results_plot():
 
     A_array0 = [d["A"] for d in results0]
     A_array = [d["A"] for d in results]
-    mod_idx_array = np.array([d["rx_config"]["mod_index"] for d in results])
+    mod_idx_array = np.array([d["rx_config"]["modulation_index"] for d in results])
     version_array = np.array([d["version"] for d in results])
     BT_array = [d["rx_config"]["BT_rx_match"] for d in results]
     delay_array0 = [d["avg_delay"] for d in results0]
@@ -770,7 +770,7 @@ def analyze_results_plot():
 #basic_test_A()
 
 #compare_default_optimod_4800()
-#mod_index_matrix_comparison()
+#modulation_index_matrix_comparison()
 
 #compare_fftlens()
 #compare_timings()

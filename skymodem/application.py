@@ -186,10 +186,9 @@ if __name__ == '__main__':
         rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain)
 
     #amqp_broker_addr_ = "amqp://guest:guest@localhost:5672"
-    amqp_broker_addr_ = "amqp://modem:fs1pmodem@192.168.10.2:5672"
-    #amqp_broker_addr_ = None
+    #amqp_broker_addr_ = "amqp://modem:fs1pmodem@192.168.10.2:5672"
+    amqp_broker_addr_ = None
     modem = SkyModem(rx_dsp_config=rx_dsp_config_, tx_dsp_config=tx_dsp_config_, radio_config=radio_config_, skylink_config=skylink_config_, hmac_key_list=hmac_keys, vc_port_base=vc_base, amqp_broker_addr=amqp_broker_addr_)
-    modem.start(multimode=_args.multimode)
 
     if _args.doppler:
         modem.dsp_loop.set_doppler_correction(True)
@@ -203,6 +202,9 @@ if __name__ == '__main__':
         modem.dsp_loop.set_doppler_correction(False)
         modem.dsp_loop.set_do_frequency_following(False)
         print("[INIT] All frequency corrections disabled!")
+
+    modem.start(multimode=_args.multimode)
+    
 
     try:
         while True:

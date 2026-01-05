@@ -5,7 +5,7 @@ import threading
 from queue import Queue, Empty
 import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_TX, SOAPY_SDR_CF32
-from .lib_tools import make_samples2, radionoise, DebugPrinter
+from .lib_tools import make_samples, radionoise, DebugPrinter
 
 
 class RadioConfig:
@@ -563,7 +563,7 @@ class RadioLoop:
                 bits, baudrate, f_abs, power, mod_idx = ts_pl_list[pl_head][1]
                 sps = self.radio_config.rx_base_samplerate / baudrate
                 f_offset_rel = (f_abs - self.radio_config.rx_tune_frequency) / self.radio_config.rx_base_samplerate
-                transmission = make_samples2(sps_f=sps, bitstring=bits, f_offset=f_offset_rel, power=power, mod_index=mod_idx, shaper_BT_prod=0.5, n_silence_start=0, n_silence_end=0)
+                transmission = make_samples(samples_per_symbol=sps, bitstring=bits, frequency_offset=f_offset_rel, power=power, modulation_index=mod_idx, shaper_BT_prod=0.5, n_silence_start=0, n_silence_end=0)
                 i_start = int((ts_pl_list[pl_head][0]-t0) * self.radio_config.rx_base_samplerate)
                 transmission_dict[pl_head] = transmission, i_start
                 pl_head += 1

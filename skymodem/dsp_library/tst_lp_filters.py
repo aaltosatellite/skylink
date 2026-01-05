@@ -22,8 +22,8 @@ def draw_masks():
     fftlen = 1024
     #masklen_g = get_masklen(fftlen=fftlen, sps=sps, mask_mode=1) + 2*200
 
-    mask_gaussian = construct_fft_mask(sps=sps, mod_index=0.5, BT=0.5, fftlen=fftlen, masklen=fftlen-1, nn=5000)
-    mask_unfiltered = construct_fft_mask(sps=sps, mod_index=0.7, BT=-1, fftlen=fftlen, masklen=fftlen-1, nn=5000)
+    mask_gaussian = construct_fft_mask(sps=sps, modulation_index=0.5, BT=0.5, fftlen=fftlen, masklen=fftlen-1, nn=5000)
+    mask_unfiltered = construct_fft_mask(sps=sps, modulation_index=0.7, BT=-1, fftlen=fftlen, masklen=fftlen-1, nn=5000)
 
     mpr_arr = np.linspace(0.1, 10.0, 200)
     E_fraction_arr_g = compute_len_multiplier_to_E_fraction(uncut_mask=mask_gaussian, fftlen=fftlen, sps=sps, mpr_arr=mpr_arr)

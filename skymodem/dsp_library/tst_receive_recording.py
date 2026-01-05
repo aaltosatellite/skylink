@@ -25,7 +25,7 @@ def receive_a_recording():
     #samples = np.concatenate( (samples[0:300000], samples) )
     baudrate			= 9600			# tx param
     #sps  				= 10			# todo measure final A against a spectrum of sps's....
-    mod_index			= 0.5			# tx param
+    modulation_index			= 0.5			# tx param
     BT_rx_match 		= 0.425
     batch_maxlen 		= 1024*8
     f_tune				= 437.060e6
@@ -36,7 +36,7 @@ def receive_a_recording():
 
     rx_config = RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=baudrate, bufferlen=2000000, batch_maxlen=batch_maxlen)
     #rx_config.sps 					= sps
-    rx_config.mod_index				= mod_index
+    rx_config.modulation_index				= modulation_index
     rx_config.BT_rx_match			= BT_rx_match
     sps = rx_config.sps
 
