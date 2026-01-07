@@ -64,6 +64,34 @@ $ cd skylink/skymodem/
 $ python application.py
 ```
 
+There are some preset configurations for running the modem.
+These presets can be found in skylink/skymodem/modem_configs/presets.json
+Currently available presets are: fm_default, fm_backup, dev_default, fms_default, fm_multimode, dev_multimode, fms_multimode, fm_calculated_doppler
+
+These can be ran by using:
+```
+$ python application.py --config ${preset_name_here}
+```
+
+Preset configurations can also be overriden by specifying other configs such as:
+```
+$ python application.py --config ${preset_name_here} --rx_gain 50
+```
+
+# Configuration:
+Doppler calculation configurations can be added interactively for a new satellite/ground station using:
+```
+$ python skylink/skymodem/TLE_doppler_configs/create_doppler_config.py
+```
+
+This new configuration can be then used by creating a new preset with:
+```
+$ python skylink/skymodem/modem_configs/add_preset.py
+```
+This will ask for configuration values in addition to a doppler config filename which will be used.
+
+The new preset can then be used as specified in the "Running the application" section of this README.
+
 
 # Including Skylink into an embedded application
 

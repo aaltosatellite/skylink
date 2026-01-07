@@ -2,7 +2,7 @@
     "fm_default": {
         "mode": "soapy",
         "vc_base": 7100,
-        "center_freq": 437.125e6,
+        "center_freq": 437125000.0,
         "rx_gain": 40,
         "tx_gain": 80,
         "auth": "fm",
@@ -15,7 +15,7 @@
     "fm_backup": {
         "mode": "soapy-buu",
         "vc_base": 7100,
-        "center_freq": 437.125e6,
+        "center_freq": 437125000.0,
         "rx_gain": 40,
         "tx_gain": 80,
         "auth": "fm",
@@ -28,7 +28,7 @@
     "dev_default": {
         "mode": "usrp",
         "vc_base": 7100,
-        "center_freq": 437.025e6,
+        "center_freq": 437025000.0,
         "rx_gain": 40,
         "tx_gain": 80,
         "auth": "dev",
@@ -41,7 +41,7 @@
     "fms_default": {
         "mode": "usrp",
         "vc_base": 7100,
-        "center_freq": 437.025e6,
+        "center_freq": 437025000.0,
         "rx_gain": 40,
         "tx_gain": 80,
         "auth": "spare",
@@ -54,7 +54,7 @@
     "fm_multimode": {
         "mode": "soapy",
         "vc_base": 7100,
-        "center_freq": 437.125e6,
+        "center_freq": 437125000.0,
         "rx_gain": 40,
         "tx_gain": 80,
         "auth": "fm",
@@ -67,7 +67,7 @@
     "dev_multimode": {
         "mode": "usrp",
         "vc_base": 7100,
-        "center_freq": 437.025e6,
+        "center_freq": 437025000.0,
         "rx_gain": 40,
         "tx_gain": 80,
         "auth": "dev",
@@ -80,7 +80,7 @@
     "fms_multimode": {
         "mode": "usrp",
         "vc_base": 7100,
-        "center_freq": 437.025e6,
+        "center_freq": 437025000.0,
         "rx_gain": 40,
         "tx_gain": 80,
         "auth": "spare",
@@ -93,7 +93,7 @@
     "fm_calculated_doppler": {
         "mode": "soapy",
         "vc_base": 7100,
-        "center_freq": 437.125e6,
+        "center_freq": 437125000.0,
         "rx_gain": 40,
         "tx_gain": 80,
         "auth": "fm",
