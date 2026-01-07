@@ -358,7 +358,7 @@ class RadioLoop:
         if self.radio_config.device_serial is not None:
             for device in devices:
                 self.DBGPRINT(device)
-                if dict(device).get("serial") == serial or dict(device).get("seeder:serial") == serial:
+                if dict(device).get("serial") == serial or dict(device).get("seeder:serial") == serial or serial in dict(device).get("label"):
                     sdr = SoapySDR.Device(device)
         else:
             if len(devices) > 0:
