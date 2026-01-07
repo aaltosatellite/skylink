@@ -24,7 +24,7 @@ class TXDSPConfig:
 
     RXDSPConfig used for reception can be found in lib_receiver.py
     """
-    def __init__(self, tx_samplerate, tx_tune_frequency, tx_center_frequency, baudrate):
+    def __init__(self, tx_samplerate, tx_tune_frequency, tx_center_frequency, baudrate, tle_doppler_config=None):
         # radio device -------------------------------------
         self.tx_samplerate				= tx_samplerate
         self.tx_tune_frequency			= tx_tune_frequency
@@ -40,6 +40,18 @@ class TXDSPConfig:
         self.tx_f_adjustment_halfband   = 12e3
         self.synchword			        = FS1P_SYNCHWORD
         self.synchword_len		        = FS1P_SYNCHWORD_LEN
+
+        if tle_doppler_config is None:
+            # Get skymodem directory (two levels up from this file)
+            skymodem_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            self.tle_doppler_config     = os.path.join(skymodem_dir, 'TLE_doppler_configs', 'default_TLE_doppler_config.json')
+            print("[DSPLoop] Using default TLE Doppler config:", self.tle_doppler_config)
+        else:
+            # Convert to absolute path if relative for consistency.
+            if not os.path.isabs(tle_doppler_config):
+                self.tle_doppler_config = os.path.abspath(tle_doppler_config)
+            else:
+                self.tle_doppler_config = tle_doppler_config
 
     def check_validity(self):
         """
@@ -108,9 +120,7 @@ class DSPLoop:
         self.dsp_perf_stats			= None
         self.dsp_perf_stats_mpr		= dict()
         self.dbgprint_mask			= self.DBGP_ERRORS | self.DBGP_INITSTOP | self.DBGP_RX | self.DBGP_TX
-        # TODO: Make file path configurable. This is only loaded here because TLE based doppler is not set to true before.
-        # Currently it is Foresail1p + OH2AGS
-        self.tle_doppler_config     = os.path.join(os.path.dirname(__file__), '..', '..', 'TLE_doppler_configs', 'default_TLE_doppler_config.json')
+        self.tle_doppler_config     = tx_dsp_config.tle_doppler_config
 
 
     def is_ok(self):
@@ -216,26 +226,46 @@ class DSPLoop:
     # == private functions ===================================================================================================================================================================
     # ========================================================================================================================================================================================
     def _tx_on(self, t_mono):
+        """
+        Check if transmission is scheduled at given time.
+        """
         i = 0
         n = len(self.tx_schedule)
+
+        # Go through whole schedule.
         while i < n:
             tx_tup = self.tx_schedule[i]
+            # In the past, remove from schedule.
             if tx_tup[1] < t_mono:
                 self.tx_schedule.pop(i)
                 n -= 1
                 continue
+
+            # Next transmission in the future so no current tx.
+            # This works because schedule is ordered by start time.
             elif tx_tup[0] > t_mono:
                 return False
+            
+            # Currently a transmission ongoing.
             elif tx_tup[0] <= t_mono <= tx_tup[1]:
                 return True
+            
+        # No future transmissions found.
         return False
 
 
     def _schedule_tx(self, start_time_monotonic, end_time_monotonic):
+        """
+        Schedule a transmission time period so that reception loop can avoid reporting carrier sense during own transmission.
+        """
+
+        # Loop through schedule and make sure that list stays ordered by start time.
         for i in range(len(self.tx_schedule)):
             if self.tx_schedule[i][0] > start_time_monotonic:
                 self.tx_schedule.insert(i, (start_time_monotonic, end_time_monotonic))
                 return
+            
+        # Nothing scheduled after this transmission, just append to the end.
         self.tx_schedule.append((start_time_monotonic, end_time_monotonic))
 
 
@@ -335,7 +365,7 @@ class DSPLoop:
                                   n_silence_start = samples_before_transmission,
                                   n_silence_end = 0)
 
-        
+        # USRP wants samples in shape (1, N)
         if usrp_reshape:
             samples = np.reshape(samples, (1, len(samples)))
         if as_c64:
@@ -347,17 +377,17 @@ class DSPLoop:
     # -- loops -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def _rx_loop(self):
         """
-        Main demodulation loop for single-mode reception.
+        Main demodulation loop for single-mode (Single baudrate) reception.
 
         Receives samples from RadioLoop, processes them, and outputs received payloads to SkyLinkLoop.
         """
         
         default_batchlen = self.rx_dsp_config.batch_maxlen // 2
         T_sample = 1.0 / self.rx_dsp_config.rx_samplerate
-        ts_last_cs = 0.0
+        last_carrier_sense_time = 0.0
         while self.on:
             try:
-                samples, ts_s0_mono, ts_s0_unix = self.que_rx_samples_in.get(timeout=0.20)
+                samples, time_sample0_monotonic, time_sample0_unix = self.que_rx_samples_in.get(timeout=0.20)
             except Empty:
                 continue
             except Exception as e:
@@ -369,13 +399,13 @@ class DSPLoop:
                 while c < len(samples):
                     batch = samples[c:c+default_batchlen]
                     rx_pls, carrier_sensed = self.rx.process_batch(batch=batch, give_bits=False)
-                    ts_mono = ts_s0_mono + c * T_sample
-                    ts_unix = ts_s0_unix + c * T_sample
+                    ts_mono = time_sample0_monotonic + c * T_sample
+                    ts_unix = time_sample0_unix + c * T_sample
                     self.t_now_mono = ts_mono
                     tx_interference = self._tx_on(t_mono=ts_mono)
-                    if carrier_sensed and (not tx_interference) and ((ts_mono - ts_last_cs) > 20e-3):
+                    if carrier_sensed and (not tx_interference) and ((ts_mono - last_carrier_sense_time) > 20e-3):
                         self.que_rx_payloads_out.put(("cs", None, ts_mono), timeout=1.0)
-                        ts_last_cs = ts_mono
+                        last_carrier_sense_time = ts_mono
                     for rx_pl, rx_f_absolute, power_tuple in rx_pls:
                         self._clean_own_sent(ts_now_mono=self.t_now_mono)
                         snr = snr_dB(pl_power=power_tuple[0], noise_power=power_tuple[1])

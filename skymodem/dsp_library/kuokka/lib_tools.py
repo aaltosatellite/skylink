@@ -722,6 +722,9 @@ def freq_shift_phased_precomp(batch, shifter_arr, phase_idx0, phase_mod):
 
 @njit(cache=True)
 def freq_shift_phased(batch, sr, fdelta, phase0):
+    """
+    
+    """
     shifted = batch * np.exp(2j*np.pi*(fdelta/sr)*np.arange(len(batch)) + phase0*1j)
     phase1 = (phase0 + 2*np.pi*(fdelta/sr)*len(batch)) % (2*np.pi)
     return shifted, phase1
@@ -794,6 +797,9 @@ def determine_ftune_and_min_sr(f_center_min, f_center_max, max_signal_bandwidth)
 
 
 def get_frequency_search_map(fftlen, f_min_nrm, f_max_nrm, assert_in_window=True):
+    """
+    
+    """
     assert f_min_nrm <= f_max_nrm
     assert abs(f_max_nrm) < 1.0e3 #asserts the frequencies given were indeed normalized, not absolute.
     if assert_in_window:
@@ -826,7 +832,7 @@ def snr_dB(pl_power, noise_power):
     Calculate SNR (Signal-to-Noise Ratio) in dB from signal power and noise power.
     """
     snr_linear = (pl_power-noise_power) / noise_power
-    snr_dB_ = 10*np.log10( max(1e-6, snr_linear) )
+    snr_dB_ = 10 * np.log10( max(1e-6, snr_linear) )
     return snr_dB_
 
 

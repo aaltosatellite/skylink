@@ -11,7 +11,7 @@ from dsp_library.kuokka.lib_receiver import RXDSPConfig
 
 
 
-def get_usrp_receiver_config(f_center, baudrate, max_signal_bw, rx_gain, tx_gain):
+def get_usrp_receiver_config(f_center, baudrate, max_signal_bw, rx_gain, tx_gain, tle_doppler_config=None):
     from dsp_library.kuokka.lib_tools import determine_ftune_and_min_sr
     f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
     f_tune, minimum_samplerate = determine_ftune_and_min_sr(f_center_min=f_center_min, f_center_max=f_center_max, max_signal_bandwidth=max_signal_bw)
@@ -23,12 +23,12 @@ def get_usrp_receiver_config(f_center, baudrate, max_signal_bw, rx_gain, tx_gain
     print("Using usrp radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr0*1e-6, 3) ))
     radio_config 	= RadioConfig(mode="usrp", rx_samplerate=sr0, rx_tune_frequency=f_tune, tx_samplerate=sr0, tx_tune_frequency=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
     rx_dsp_config 	= RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
-    tx_dsp_config 	= TXDSPConfig(tx_samplerate=sr0, tx_tune_frequency=f_tune, tx_center_frequency=f_center, baudrate=baudrate)
+    tx_dsp_config 	= TXDSPConfig(tx_samplerate=sr0, tx_tune_frequency=f_tune, tx_center_frequency=f_center, baudrate=baudrate, tle_doppler_config=tle_doppler_config)
     return rx_dsp_config, tx_dsp_config, radio_config
 
 
 
-def get_soapy_leecher_receiver_config(soapy_selection, f_center, baudrate, f_tune, sr_hardware, max_signal_bw, rx_gain, tx_gain):
+def get_soapy_leecher_receiver_config(soapy_selection, f_center, baudrate, f_tune, sr_hardware, max_signal_bw, rx_gain, tx_gain, tle_doppler_config=None):
     f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
     f_center_min = f_center_min - max_signal_bw * 0.6
     f_center_max = f_center_max + max_signal_bw * 0.6
@@ -47,7 +47,7 @@ def get_soapy_leecher_receiver_config(soapy_selection, f_center, baudrate, f_tun
     print("Using soapy-leecher radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr_leecher*1e-6, 3) ))
     radio_config 	= RadioConfig(mode=soapy_selection, rx_samplerate=sr_leecher, rx_tune_frequency=f_tune, tx_samplerate=sr_leecher, tx_tune_frequency=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
     rx_dsp_config 	= RXDSPConfig(rx_samplerate=sr_leecher, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
-    tx_dsp_config 	= TXDSPConfig(tx_samplerate=sr_leecher, tx_tune_frequency=f_tune, tx_center_frequency=f_center, baudrate=baudrate)
+    tx_dsp_config 	= TXDSPConfig(tx_samplerate=sr_leecher, tx_tune_frequency=f_tune, tx_center_frequency=f_center, baudrate=baudrate, tle_doppler_config=tle_doppler_config)
     return rx_dsp_config, tx_dsp_config, radio_config
 
 
@@ -88,7 +88,14 @@ if __name__ == '__main__':
     rx_dsp_config_, tx_dsp_config_, radio_config_ = None, None, None
     import sys
     import argparse
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="SkyModem - Satellite Ground Station Modem using SkyLink.\n"
+                    "Use --config to specify a config preset, other parameters override config preset values.",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    # Mainly --config is used, other parameters override preset values.
+    parser.add_argument("--config", "-c", type=str, default=None, help="Configuration preset to use from modem_configs/presets.json. Other parameters override config preset values.", required=False)
     parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy", "soapy-buu"), help="Operation mode: attach directly to the USRP (default) or via SoapyShared: 'soapy' for main UHF and 'soapy-buu' for backup.", required=False)
     parser.add_argument("--vc_base", "-vc", type=int, default=7100, help="Virtual Channel base. Default 7100.", required=False)
     parser.add_argument("--center_freq", "-cf", "-f", type=float, default=437.025e6, help="Center frequency used for communications [Hz]. Default 437.025 MHz (dev frequency).")
@@ -99,7 +106,38 @@ if __name__ == '__main__':
     parser.add_argument("--doppler", "-d", action="store_true", help="Run modem with Doppler compensation; the implementation varies.")
     parser.add_argument("--doppler-tle", "-dt", action="store_true", help="Run modem with Doppler compensation based on TLE data; requires internet connection to fetch latest TLEs.")
     parser.add_argument("--no-follow", "-nf", action="store_true", help="Disable all frequency corrections from the modem. Overwrites the previous two options.")
+    parser.add_argument("--tle-doppler-config", "-tdc", type=str, default=None, help="Path to TLE Doppler configuration JSON file. If not specified, the default config is used.", required=False)
     _args = parser.parse_args(sys.argv[1:])
+    
+    # Load config preset if specified
+    if _args.config is not None:
+        import json
+        import os
+        config_path = os.path.join(os.path.dirname(__file__), "modem_configs", "presets.json")
+        with open(config_path, 'r') as f:
+            presets = json.load(f)
+        
+        if _args.config not in presets:
+            print(f"Error: Config preset '{_args.config}' not found in {config_path}")
+            print(f"Available presets: {', '.join(presets.keys())}")
+            sys.exit(1)
+        
+        preset = presets[_args.config]
+        print(f"[CONFIG] Loading preset '{_args.config}'")
+        
+        # Apply preset values as defaults, but don't override explicitly provided arguments
+        # Check which arguments were explicitly provided by comparing against defaults
+        parser_defaults = {action.dest: action.default for action in parser._actions if action.dest != 'help'}
+        
+        for key, value in preset.items():
+            # Only apply preset value if the argument wasn't explicitly provided
+            if key in parser_defaults and getattr(_args, key) == parser_defaults.get(key):
+                # Convert relative paths in tle_doppler_config to absolute paths relative to skymodem directory
+                if key == 'tle_doppler_config' and value is not None and not os.path.isabs(value):
+                    value = os.path.join(os.path.dirname(__file__), value)
+                setattr(_args, key, value)
+                print(f"[CONFIG]   {key} = {value}")
+
     vc_base = _args.vc_base
     assert vc_base >= 1000
     assert vc_base < 60000
@@ -107,11 +145,13 @@ if __name__ == '__main__':
     assert _args.rx_gain <= 76, f"rx_gain must be between 0 and 76 [dB]. Was {_args.rx_gain}"
     assert _args.tx_gain >= 0.0, f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
     assert _args.tx_gain <= 89.75, f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
+
     if _args.auth == "fm":
         # Safeguards for GS hardware: especially switch.
         assert _args.center_freq >= 436e6, f"center_freq must be between 436 and 438 MHz. Was {_args.center_freq}"
         assert _args.center_freq <= 438e6, f"center_freq must be between 436 and 438 MHz. Was {_args.center_freq}"
 
+    # Secret file needs to exist on top of selecting the mode. Otherwise development keys are used.
     if os.path.isfile("secret.h") and _args.auth == "fm":
         print("[AUTH] Using FM authentication keys.")
         uplink_key, downlink_key, service_key = read_keys_from_header("secret.h")
@@ -139,12 +179,13 @@ if __name__ == '__main__':
                 0x6f, 0x66, 0xfb, 0x7a, 0x36, 0xbd, 0x1e, 0x6d,
                 0x51, 0xf2, 0xed, 0xe4, 0x45, 0x65, 0x56, 0x6b
         ])
+
     if uplink_key == b"":
         print("[EXIT] Check HMAC Key!")
         exit()
+
     # Different keys for uplink, downlink, and service channel
     hmac_keys = [uplink_key, downlink_key, service_key]
-    ###print(f"[AUTH] HMAC keys: \n{uplink_key.hex()},\n{downlink_key.hex()},\n{service_key.hex()}") #DEBUG!!
 
     skylink_config_ = SkyConfiguration(identity=b"PyGS")
 
@@ -179,11 +220,11 @@ if __name__ == '__main__':
     if "soapy" in _args.mode:
         ftune_correction = 40e3
         print(f"[INIT] Using SoapyShared mode, center_freq={_args.center_freq} Hz, and 'ftune_correction'={ftune_correction} Hz")
-        rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(soapy_selection=_args.mode, f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain)
+        rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(soapy_selection=_args.mode, f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain, tle_doppler_config=_args.tle_doppler_config)
     else:
         assert _args.mode == "usrp"
         print(f"[INIT] Using USRP mode, center_freq={_args.center_freq} Hz, and no 'ftune_correction'.")
-        rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain)
+        rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain, tle_doppler_config=_args.tle_doppler_config)
 
     #amqp_broker_addr_ = "amqp://guest:guest@localhost:5672"
     #amqp_broker_addr_ = "amqp://modem:fs1pmodem@192.168.10.2:5672"
@@ -203,13 +244,14 @@ if __name__ == '__main__':
         modem.dsp_loop.set_do_frequency_following(False)
         print("[INIT] All frequency corrections disabled!")
 
+    # Setup is done, start modem
     modem.start(multimode=_args.multimode)
     
 
     try:
         while True:
-            #print(threading.active_count(), "threads active")
             time.sleep(0.5)
+            # Check that all required threads are still running
             if not modem.is_ok():
                 print("[EXIT] Modem is_ok() failed. Exiting.")
                 break
