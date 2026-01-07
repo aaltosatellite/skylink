@@ -10,10 +10,11 @@
         "doppler": false,
         "doppler_tle": true,
         "no_follow": false,
-        "tle_doppler_config": "TLE_doppler_configs/default_TLE_doppler_config.json"
+        "tle_doppler_config": "TLE_doppler_configs/default_TLE_doppler_config.json",
+        "device_serial": "314FC56"
     },
     "fm_backup": {
-        "mode": "soapy-buu",
+        "mode": "soapy",
         "vc_base": 7100,
         "center_freq": 437125000.0,
         "rx_gain": 40,
@@ -23,7 +24,8 @@
         "doppler": false,
         "doppler_tle": true,
         "no_follow": false,
-        "tle_doppler_config": "TLE_doppler_configs/default_TLE_doppler_config.json"
+        "tle_doppler_config": "TLE_doppler_configs/default_TLE_doppler_config.json",
+        "device_serial": "32723DA"
     },
     "dev_default": {
         "mode": "usrp",
@@ -36,7 +38,8 @@
         "doppler": false,
         "doppler_tle": false,
         "no_follow": false,
-        "tle_doppler_config": null
+        "tle_doppler_config": null,
+        "device_serial": null
     },
     "fms_default": {
         "mode": "usrp",
@@ -49,7 +52,8 @@
         "doppler": false,
         "doppler_tle": false,
         "no_follow": false,
-        "tle_doppler_config": null
+        "tle_doppler_config": null,
+        "device_serial": null
     },
     "fm_multimode": {
         "mode": "soapy",
@@ -62,7 +66,8 @@
         "doppler": false,
         "doppler_tle": true,
         "no_follow": false,
-        "tle_doppler_config": "TLE_doppler_configs/default_TLE_doppler_config.json"
+        "tle_doppler_config": "TLE_doppler_configs/default_TLE_doppler_config.json",
+        "device_serial": "314FC56"
     },
     "dev_multimode": {
         "mode": "usrp",
@@ -75,7 +80,8 @@
         "doppler": false,
         "doppler_tle": false,
         "no_follow": false,
-        "tle_doppler_config": null
+        "tle_doppler_config": null,
+        "device_serial": null
     },
     "fms_multimode": {
         "mode": "usrp",
@@ -88,7 +94,8 @@
         "doppler": false,
         "doppler_tle": false,
         "no_follow": false,
-        "tle_doppler_config": null
+        "tle_doppler_config": null,
+        "device_serial": null
     },
     "fm_calculated_doppler": {
         "mode": "soapy",
@@ -101,6 +108,7 @@
         "doppler": true,
         "doppler_tle": false,
         "no_follow": false,
-        "tle_doppler_config": null
+        "tle_doppler_config": null,
+        "device_serial": "314FC56"
     }
 }

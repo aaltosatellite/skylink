@@ -13,12 +13,12 @@ class RadioConfig:
     Configuration class for RadioLoop.
     """
 
-    def __init__(self, mode, rx_samplerate, rx_tune_frequency, tx_samplerate, tx_tune_frequency, rx_gain, tx_gain):
+    def __init__(self, mode, rx_samplerate, rx_tune_frequency, tx_samplerate, tx_tune_frequency, rx_gain, tx_gain, device_serial=None):
         """
         Initializes RadioConfig instance with given parameters.
 
         Parameters:
-            mode (str): Radio mode, either "usrp", "soapy", or "soapy-buu".
+            mode (str): Radio mode, either "usrp", "soapy"
             rx_samplerate (float): Base sample rate for receiving.
             rx_tune_frequency (float): Tuning frequency for receiving.
             tx_samplerate (float): Base sample rate for transmitting.
@@ -26,7 +26,7 @@ class RadioConfig:
             rx_gain (float): Gain setting for receiving.
             tx_gain (float): Gain setting for transmitting.
         """
-        assert mode in ("usrp", "soapy", "soapy-buu")
+        assert mode in ("usrp", "soapy")
         self.mode 			            = mode
         self.rx_base_samplerate 		= rx_samplerate
         self.rx_tune_frequency 		    = rx_tune_frequency
@@ -34,6 +34,7 @@ class RadioConfig:
         self.tx_tune_frequency 		    = tx_tune_frequency
         self.rx_gain		            = rx_gain
         self.tx_gain		            = tx_gain
+        self.device_serial              = device_serial
 
 
 class RadioLoop:
@@ -91,11 +92,11 @@ class RadioLoop:
         """
         Starts RadioLoop in either USRP or Soapy mode based on RadioConfig.
         """
-        assert self.radio_config.mode in ("usrp", "soapy", "soapy-buu")
+        assert self.radio_config.mode in ("usrp", "soapy")
         if self.radio_config.mode == "usrp":
             self._usrp_start()
         else:
-            self._soapy_start(soapy_selection=self.radio_config.mode)
+            self._soapy_start()
 
     def sim_start(self, noiseSPD, ts_pl_list, rx_samplearr_que, tx_sample_que):
         """
@@ -340,28 +341,29 @@ class RadioLoop:
     however there is some hardcoding in place for SoapyShared leecher devices.
     """
 
-    
-    def _soapy_start(self, soapy_selection: str):
+    def _soapy_start(self):
         """
         Set necessary parameters for the SoapySDR device and start RX and TX threads.
 
         Currently meant for use with SoapyShared leecher devices.
         
-        Parameters:
-            soapy_selection (str): Selection string for Soapy device. Either "soapy" or "soapy-buu".
         """
         self.DBGPRINT("SoapySDR start: list devices")
         # enumerate devices
         devices = SoapySDR.Device.enumerate()
         sdr = None
-        # in lab 314FC5A (ganymede) or 31119ED.
-        # in GS 32723DA (Backup UHF), 314FC56 (UHF), or 34A03D7 (S-Band).
-        #serial = "314FC5A" if "buu" not in soapy_selection else "31119ED"  # for lab usrp use
-        serial = "32723DA" if "buu" in soapy_selection else "314FC56" # For GS: primary is 314FC56.
-        for device in devices:
-            self.DBGPRINT(device)
-            if serial in device["label"]:
-                sdr = SoapySDR.Device(device)
+
+        # select device based on serial number if given
+        serial = self.radio_config.device_serial
+        if self.radio_config.device_serial is not None:
+            for device in devices:
+                self.DBGPRINT(device)
+                if dict(device).get("serial") == serial or dict(device).get("seeder:serial") == serial:
+                    sdr = SoapySDR.Device(device)
+        else:
+            if len(devices) > 0:
+                sdr = SoapySDR.Device(devices[0])
+
         SoapySDR.setLogLevel(SoapySDR.SOAPY_SDR_FATAL)
 
         # TODO: Maybe there should be a better way to configure devices than just hardcoding serial numbers here.

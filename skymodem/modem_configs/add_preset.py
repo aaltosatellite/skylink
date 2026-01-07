@@ -28,11 +28,11 @@ if __name__ == "__main__":
         print("\nEnter preset parameters:")
         mode = ""
         while True:
-            mode = get_input_with_default("Mode available values: usrp/soapy/soapy-buu (Soapy Backup-UHF)", "usrp")
-            if mode in ["usrp", "soapy", "soapy_buu"]:
+            mode = get_input_with_default("Mode available values: usrp/soapy", "usrp")
+            if mode in ["usrp", "soapy"]:
                 break
             else:
-                print("Invalid mode. Please enter 'usrp', 'soapy', or 'soapy-buu'.")
+                print("Invalid mode. Please enter 'usrp' or 'soapy'.")
         
         vc_base = int(get_input_with_default("VC Base (integer)", 7100))
         center_freq = float(get_input_with_default("Center Frequency (Hz)", 437.125e6))
@@ -89,7 +89,11 @@ if __name__ == "__main__":
                     break
                 else:
                     print(f"File '{tle_doppler_config}' not found in TLE_doppler_configs. Please enter a valid filename or 'none'.")
-        
+
+        serial_number = get_input_with_default("Device serial number for Soapy mode (or 'none' for first found device). This can be found using SoapySDRUtil --find. Can be serial or seeder:serial in SoapyShared", "none")
+        if serial_number.lower() == "none":
+            serial_number = None
+
         # Create preset dictionary
         preset = {
             "mode": mode,
@@ -102,7 +106,8 @@ if __name__ == "__main__":
             "doppler": doppler,
             "doppler_tle": doppler_tle,
             "no_follow": no_follow,
-            "tle_doppler_config": tle_doppler_config
+            "tle_doppler_config": tle_doppler_config,
+            "device_serial": serial_number
         }
 
         # Save preset

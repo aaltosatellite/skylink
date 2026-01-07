@@ -28,7 +28,7 @@ def get_usrp_receiver_config(f_center, baudrate, max_signal_bw, rx_gain, tx_gain
 
 
 
-def get_soapy_leecher_receiver_config(soapy_selection, f_center, baudrate, f_tune, sr_hardware, max_signal_bw, rx_gain, tx_gain, tle_doppler_config=None):
+def get_soapy_leecher_receiver_config(f_center, baudrate, f_tune, sr_hardware, max_signal_bw, rx_gain, tx_gain, tle_doppler_config=None, device_serial=None):
     f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
     f_center_min = f_center_min - max_signal_bw * 0.6
     f_center_max = f_center_max + max_signal_bw * 0.6
@@ -45,7 +45,7 @@ def get_soapy_leecher_receiver_config(soapy_selection, f_center, baudrate, f_tun
     print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
     print("Calculated necessary samplerate at {} ks/s".format( round(1.0e-3 * sr_leecher, 1) ))
     print("Using soapy-leecher radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr_leecher*1e-6, 3) ))
-    radio_config 	= RadioConfig(mode=soapy_selection, rx_samplerate=sr_leecher, rx_tune_frequency=f_tune, tx_samplerate=sr_leecher, tx_tune_frequency=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
+    radio_config 	= RadioConfig(mode="soapy",rx_samplerate=sr_leecher, rx_tune_frequency=f_tune, tx_samplerate=sr_leecher, tx_tune_frequency=f_tune, rx_gain=rx_gain, tx_gain=tx_gain, device_serial=device_serial)
     rx_dsp_config 	= RXDSPConfig(rx_samplerate=sr_leecher, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
     tx_dsp_config 	= TXDSPConfig(tx_samplerate=sr_leecher, tx_tune_frequency=f_tune, tx_center_frequency=f_center, baudrate=baudrate, tle_doppler_config=tle_doppler_config)
     return rx_dsp_config, tx_dsp_config, radio_config
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     # Mainly --config is used, other parameters override preset values.
     parser.add_argument("--config", "-c", type=str, default=None, help="Configuration preset to use from modem_configs/presets.json. Other parameters override config preset values.", required=False)
-    parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy", "soapy-buu"), help="Operation mode: attach directly to the USRP (default) or via SoapyShared: 'soapy' for main UHF and 'soapy-buu' for backup.", required=False)
+    parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy"), help="Operation mode: attach directly to the USRP (default) or via SoapyShared: 'soapy'", required=False)
     parser.add_argument("--vc_base", "-vc", type=int, default=7100, help="Virtual Channel base. Default 7100.", required=False)
     parser.add_argument("--center_freq", "-cf", "-f", type=float, default=437.025e6, help="Center frequency used for communications [Hz]. Default 437.025 MHz (dev frequency).")
     parser.add_argument("--rx_gain", "-rg", type=float, default=40, help="Reception Gain setting for the USRP: 0 - 76 [dB]. Default is 40.", required=False)
@@ -107,6 +107,8 @@ if __name__ == '__main__':
     parser.add_argument("--doppler-tle", "-dt", action="store_true", help="Run modem with Doppler compensation based on TLE data; requires internet connection to fetch latest TLEs.")
     parser.add_argument("--no-follow", "-nf", action="store_true", help="Disable all frequency corrections from the modem. Overwrites the previous two options.")
     parser.add_argument("--tle-doppler-config", "-tdc", type=str, default=None, help="Path to TLE Doppler configuration JSON file. If not specified, the default config is used.", required=False)
+    parser.add_argument("--device-serial", "-ds", type=str, default=None, help="Device serial number for USRP or SoapySDR device selection. Can be used if multiple devices are connected.", required=False)
+
     _args = parser.parse_args(sys.argv[1:])
     
     # Load config preset if specified
@@ -220,7 +222,7 @@ if __name__ == '__main__':
     if "soapy" in _args.mode:
         ftune_correction = 40e3
         print(f"[INIT] Using SoapyShared mode, center_freq={_args.center_freq} Hz, and 'ftune_correction'={ftune_correction} Hz")
-        rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(soapy_selection=_args.mode, f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain, tle_doppler_config=_args.tle_doppler_config)
+        rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain, tle_doppler_config=_args.tle_doppler_config, device_serial=_args.device_serial)
     else:
         assert _args.mode == "usrp"
         print(f"[INIT] Using USRP mode, center_freq={_args.center_freq} Hz, and no 'ftune_correction'.")

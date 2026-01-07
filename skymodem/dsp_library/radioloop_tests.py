@@ -40,7 +40,7 @@ def t1_connect_and_observe():
 
 
 def t2_continuous_transmit(mode, tx_gain):
-    assert mode in ("usrp", "soapy", "soapy-buu")
+    assert mode in ("usrp", "soapy")
     sr00 = 2e6
     f00 = 437.000e6
     config = RadioConfig(mode=mode, rx_samplerate=sr00, rx_tune_frequency=f00, tx_samplerate=sr00, tx_tune_frequency=f00, rx_gain=40, tx_gain=tx_gain)
@@ -65,7 +65,7 @@ def t2_continuous_transmit(mode, tx_gain):
 
 def t3_single_burst(mode, tx_gain, burst_duration):
     assert burst_duration < 15.0, "Too long burst for a single samplearray"
-    assert mode in ("usrp", "soapy", "soapy-buu")
+    assert mode in ("usrp", "soapy")
     sr00 = 2e6
     f00 = 437.000e6
     config = RadioConfig(mode=mode, rx_samplerate=sr00, rx_tune_frequency=f00, tx_samplerate=sr00, tx_tune_frequency=f00, rx_gain=40, tx_gain=tx_gain)
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", "-t", type=int, default=2, choices=[1, 2, 3],
                                             help="Test mode: 1 connect & observe, 2 continuous TX (default), 3 single burst TX")
-    parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy", "soapy-buu"),
+    parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy"),
                                             help="Run test by directly attaching to the USRP (default) or via SoapyShared.")
     parser.add_argument("--tx_gain", "-g", type=float, default=70,
                                             help="TX Gain setting for the USRP: 0.0 - 89.75 [dB]. Default is 70.")
