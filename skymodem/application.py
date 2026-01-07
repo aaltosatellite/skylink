@@ -95,6 +95,7 @@ if __name__ == '__main__':
     )
 
     # Mainly --config is used, other parameters override preset values.
+    parser.add_argument("--config-info", "-ci", action="store_true", help="List available configuration presets and exit.")
     parser.add_argument("--config", "-c", type=str, default=None, help="Configuration preset to use from modem_configs/presets.json. Other parameters override config preset values.", required=False)
     parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy"), help="Operation mode: attach directly to the USRP (default) or via SoapyShared: 'soapy'", required=False)
     parser.add_argument("--vc_base", "-vc", type=int, default=7100, help="Virtual Channel base. Default 7100.", required=False)
@@ -110,6 +111,20 @@ if __name__ == '__main__':
     parser.add_argument("--device-serial", "-ds", type=str, default=None, help="Device serial number for USRP or SoapySDR device selection. Can be used if multiple devices are connected.", required=False)
 
     _args = parser.parse_args(sys.argv[1:])
+
+    # Print information about available presets and exit
+    if _args.config_info:
+        import json
+        import os
+        config_path = os.path.join(os.path.dirname(__file__), "modem_configs", "presets.json")
+        with open(config_path, 'r') as f:
+            presets = json.load(f)
+            print("Available configuration presets:")
+            for preset_name in presets.keys():
+                print(f" - {preset_name}")
+                for key, value in presets[preset_name].items():
+                    print(f"     {key}: {value}")
+        sys.exit(0)
     
     # Load config preset if specified
     if _args.config is not None:
