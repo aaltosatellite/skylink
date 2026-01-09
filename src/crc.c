@@ -144,7 +144,16 @@ int sky_check_crc32(const SkyRadioFrame *frame, SkyParsedFrame *parsed)
 	parsed->hdr.flag_crced = 0;
 
 	// Remove the checksum from the frame.
-	parsed->payload_len = data_length;
+	// This is an almost repeater breaking bug onboard FS1p!
+	// (Only used on HAM channel).
+	// We are setting the payload length to length of ENTIRE FRAME minus CRC.
+	// parsed->payload_len = data_length;
+
+	// Future missions will nuke the CRC since FEC is makes it redundant.
+	// Instead we should just remove length of CRC from payload length.
+	parsed->payload_len -= sizeof(uint32_t);
+
+
 	return SKY_RET_OK;
 }
 

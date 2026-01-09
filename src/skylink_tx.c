@@ -206,8 +206,16 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 		sky_hmac_extend_with_authentication(self, &tx_frame);
 
 	/* Append CRC-32 checksum to the end of frame */
-	if ((vc_conf->require_authentication & SKY_CONFIG_FLAG_USE_CRC32) != 0)
-		sky_extend_with_crc32(&tx_frame);
+
+	// DO NOT USE CRC-32 WITH FS1p REPEATER CHANNEL!
+	// There is a critical bug on board, which causes the frame payload length to be incorrect
+	// This will allow CRC check to succeed but after that the payload is incorrectly sized and the repeater frame will not be accepted by the satellite.
+	// Future missions will nuke the CRC since FEC is makes it redundant.
+
+	// If there is no CRC-32 in the frame the channel will not check it even though the channel is configured to use it.
+	// Thus we can just not send it to work around the bug.
+	// if ((vc_conf->require_authentication & SKY_CONFIG_FLAG_USE_CRC32) != 0)
+	// 	sky_extend_with_crc32(&tx_frame);
 
 	// Increment counters
 	self->mac->total_frames_sent_in_current_window++;
