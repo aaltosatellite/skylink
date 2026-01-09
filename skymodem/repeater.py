@@ -65,6 +65,48 @@ def encode_ax25_address(callsign, ssid=0, is_last=False):
     
     return shifted_callsign + bytes([ssid_byte])
 
+def parse_frame(frame):
+    """
+    Parse an AX.25 frame and return its components.
+    
+    Args:
+        frame: bytearray of the AX.25 frame
+    Returns:
+        dict with keys: dest_addr, src_addr, digipeaters (list), control_byte, pid, info, crc
+    """
+
+    addresses = []
+    index = 0
+    while True:
+        addr_bytes = frame[index:index+7]
+        callsign = bytearray()
+        for b in addr_bytes[:6]:
+            callsign.append(b >> 1)
+        callsign_str = callsign.decode('ascii').rstrip()
+        ssid = (addr_bytes[6] >> 1) & 0x0F
+        addresses.append((callsign_str, ssid))
+        index += 7
+        if addr_bytes[6] & 0x01:
+            break
+
+    dest_addr, src_addr = addresses[0], addresses[1]
+    digipeaters = addresses[2:] if len(addresses) > 2 else []
+
+    control_byte = hex(frame[index])
+    pid = hex(frame[index + 1])
+    info = frame[index + 2:-2]
+    crc = hex((frame[-2] << 8) | frame[-1])
+
+    return {
+        "dest_addr": dest_addr,
+        "src_addr": src_addr,
+        "digipeaters": digipeaters,
+        "control_byte": control_byte,
+        "pid": pid,
+        "info": info,
+        "crc": crc
+    }
+
 
 
 
@@ -142,8 +184,6 @@ if __name__ == "__main__":
 
     # Calculate CRC
     crc = ax25_crc16(frame)
-    print("Calculated CRC16: ", crc)
-    print("In little-endian: ", crc & 0xFF, (crc >> 8) & 0xFF)
     # Append CRC (little-endian)
     frame.append((crc >> 8) & 0xFF)
     frame.append(crc & 0xFF)
@@ -154,4 +194,11 @@ if __name__ == "__main__":
 
     # Print frame in hex
     print("Payload (hex): ", frame.hex())
-    
+    while True:
+        try:
+            msg = sub_sock.recv_json()
+            print("Received repeater frame from satellite: ", msg["data"])
+            parsed_frame = parse_frame(bytearray.fromhex(msg["data"]))
+            print("Parsed frame: ", parsed_frame)
+        except zmq.Again:
+            pass
