@@ -24,13 +24,13 @@ def DBGPRINT(*args, **kwargs):
         print(ts+str(first), *args, **kwargs)
 
 
-def sub_socket_loop(sub_sock:zmq.Socket, sub_que:Queue, ichannel, parent_obj):
+def sub_socket_loop(sub_sock:zmq.Socket, sub_que:Queue, vc_number, parent_obj):
     sub_sock.set(zmq.RCVTIMEO, 250)
     sub_sock.subscribe(b"")
     while parent_obj.on:
         try:
             rcv_msg = sub_sock.recv()
-            sub_que.put_nowait((ichannel, rcv_msg))
+            sub_que.put_nowait((vc_number, rcv_msg))
         except zmq.Again:
             pass
         except Exception as e:
@@ -48,12 +48,12 @@ def bind_vc_sockets(vc_port_base, num_channels):
         pub_sock.set(zmq.RCVTIMEO, 1000)
         pub_sockets.append(pub_sock)
         sub_sock = context.socket(zmq.SUB)
-        sub_sock.bind("tcp://*:{}".format( str(vc_port_base + i_vc*10 + 1) ))
+        sub_sock.bind(f"tcp://*:{str(vc_port_base + i_vc*10 + 1)}")
         sub_sock.subscribe(b"")
         sub_sock.set(zmq.RCVTIMEO, 1000)
         sub_sockets.append(sub_sock)
     signaldata_pub_sock = context.socket(zmq.PUB)
-    signaldata_pub_sock.bind("tcp://*:{}".format( str(vc_port_base + 2) ))
+    signaldata_pub_sock.bind(f"tcp://*:{str(vc_port_base + 2)}")
     signaldata_pub_sock.set(zmq.RCVTIMEO, 1000)
     #signaldata_pub_sock.append(pub_sock)
     return pub_sockets, sub_sockets, signaldata_pub_sock, context
@@ -146,8 +146,8 @@ class SkyModem:
 
     def start(self, multimode=False):
         for i,sub_sock in enumerate(self.sub_sockets):
-            ichannel = i
-            thrd = threading.Thread(target=sub_socket_loop, args=(sub_sock, self.sub_que, ichannel, self), daemon=True)
+            vc_number = i
+            thrd = threading.Thread(target=sub_socket_loop, args=(sub_sock, self.sub_que, vc_number, self), daemon=True)
             thrd.start()
             self.sub_threads.append(thrd)
         self.skylink_loop.start()
@@ -186,19 +186,19 @@ class SkyModem:
                 if self.signaldata_amqp_pub_sock:
                     self.signaldata_amqp_pub_sock.basic_publish(amqp.Message(json.dumps(signaldata_d)), routing_key="fs1p.store.signaldata", exchange="measurements")
             try:
-                ekey, ichannel, rdata = self.skylink_loop.que_received_messages.get(timeout=0.20)
+                ekey, vc_number, rdata = self.skylink_loop.que_received_messages.get(timeout=0.20)
             except Empty:
                 continue
             except Exception as e:
                 DBGPRINT("Exception (skylink_reception_loop): "+str(e))
                 self.close()
                 break
-            assert ichannel in range(num_virtual_channels)
+            assert vc_number in range(num_virtual_channels)
             with self.action_lock:
-                self._process_skylink_msg(ekey=ekey, ichannel=ichannel, data=rdata)
+                self._process_skylink_msg(ekey=ekey, vc_number=vc_number, data=rdata)
 
 
-    def _process_skylink_msg(self, ekey, ichannel, data):
+    def _process_skylink_msg(self, ekey, vc_number, data):
         if ekey in (EKEY_SKY_ARQ_CONNECTED, EKEY_SKY_ARQ_DISCONNECTED):
             session_id = data
             assert type(session_id) == int
@@ -207,51 +207,51 @@ class SkyModem:
                 metadata_dict["rsp"] = "arq_connected"
             else:
                 metadata_dict["rsp"] = "arq_timeout"
-            metadata_dict["vc"] = ichannel
+            metadata_dict["vc"] = vc_number
             metadata_dict["session_identifier"] = session_id
             response_dict = dict()
             response_dict["packet_type"] = "control"
-            response_dict["vc"] = ichannel
+            response_dict["vc"] = vc_number
             response_dict["timestamp"] = dtime.now().isoformat()
             response_dict["metadata"] = metadata_dict
-            self.pub_sockets[ichannel].send(json.dumps(response_dict).encode("utf8"))
-            self.session_id_list[ichannel] = session_id
+            self.pub_sockets[vc_number].send(json.dumps(response_dict).encode("utf8"))
+            self.session_id_list[vc_number] = session_id
         if ekey == EKEY_SKY_PAYLOAD:
             assert type(data) == bytes
-            DBGPRINT("[VC: {} -> pub-zmq. len: {}]: \n\033[96m{}\033[0m\n".format(ichannel, len(data), data))
+            DBGPRINT(f"[VC: {vc_number} -> pub-zmq. len: {len(data)}]: \n\033[96m{data}\033[0m\n")
             frame_d = dict()
             frame_d["packet_type"] 	= "tm"
             frame_d["timestamp"] 	= dtime.now().isoformat()
-            frame_d["vc"] 			= ichannel
+            frame_d["vc"] 			= vc_number
             frame_d["data"] 		= "".join( [("00"+hex(x)[2:])[-2:] for x in data] )
             meta_d = dict()
-            meta_d["vc"] 			= ichannel
+            meta_d["vc"] 			= vc_number
             frame_d["metadata"] 	= meta_d
-            self.pub_sockets[ichannel].send(json.dumps(frame_d).encode("utf8"))
+            self.pub_sockets[vc_number].send(json.dumps(frame_d).encode("utf8"))
 
 
     def _zmq_to_modem_loop(self): # uplink
         while self.on:
             try:
-                ichannel, uplink_json = self.sub_que.get(timeout=0.20)
+                vc_number, uplink_json = self.sub_que.get(timeout=0.20)
             except Empty:
                 continue
             except Exception as e:
                 DBGPRINT("Exception (sub_que_loop): "+str(e))
                 self.close()
                 break
-            DBGPRINT("sub-zmq -> skylink-vc-{}. len: {}".format(ichannel, len(uplink_json)))
+            DBGPRINT("sub-zmq -> skylink-vc-{}. len: {}".format(vc_number, len(uplink_json)))
             with self.action_lock:
-                self._process_uplink_json(ichannel, uplink_json)
+                self._process_uplink_json(vc_number, uplink_json)
 
 
-    def _process_uplink_json(self, ichannel, uplink_json):
-        if not ichannel in range(num_virtual_channels):
-            DBGPRINT("error: ID not in vc range: {}".format(ichannel))
+    def _process_uplink_json(self, vc_number, uplink_json):
+        if not vc_number in range(num_virtual_channels):
+            DBGPRINT(f"error: ID not in vc range: {vc_number}")
             return
         frame_dict = json.loads( uplink_json )
         if not type(frame_dict) == dict:
-            DBGPRINT("error: json was not a dict:{}".format(type(frame_dict)))
+            DBGPRINT(f"error: json was not a dict:{type(frame_dict)}")
             return
 
         if "data" in frame_dict:
@@ -259,7 +259,7 @@ class SkyModem:
             hex_pairs = [hex_string[i*2:i*2+2] for i in range(len(hex_string)//2)]
             ints = [int(x, 16) for x in hex_pairs]
             data = bytes(ints)
-            send_ret = self.skylink_loop.send(ichannel=ichannel, data=data)
+            send_ret = self.skylink_loop.send(vc_number=vc_number, data=data)
             if send_ret < 0:
                 DBGPRINT("error: sky_vc_push_packet_to_send error: {}".format(send_ret))
 
@@ -275,7 +275,7 @@ class SkyModem:
                 response_dict["rsp"] 	= "state"
                 response_dict["state"] 	= list_of_vc_state_dicts
             elif ctrl_command == "flush":
-                self.skylink_loop.flush(ichannel=ichannel)
+                self.skylink_loop.flush(vc_number=vc_number)
                 response_dict["rsp"] = "ack"
             elif ctrl_command == "get_stats":
                 sky_stats_d = self.skylink_loop.sky_get_stats()
@@ -285,11 +285,11 @@ class SkyModem:
             elif ctrl_command == "clear_stats":
                 self.skylink_loop.sky_diag_clear()
             elif ctrl_command == "arq_connect":
-                self.skylink_loop.arq_connect(ichannel=ichannel)
+                self.skylink_loop.arq_connect(vc_number=vc_number)
                 response_dict["rsp"] = "arq_connecting"
-                response_dict["session_identifier"] = self.skylink_loop.sky_get_state()[ichannel]["session_identifier"] #session_identifier
+                response_dict["session_identifier"] = self.skylink_loop.sky_get_state()[vc_number]["session_identifier"] #session_identifier
             elif ctrl_command == "arq_disconnect":
-                self.skylink_loop.arq_disconnect(ichannel=ichannel)
+                self.skylink_loop.arq_disconnect(vc_number=vc_number)
                 response_dict["rsp"] = "ack"
             elif ctrl_command == "set_baudrate":
                 assert control_dict["baudrate"] in (4800, 9600, 9600*2, 9600*4), "invalid baudrate field in control_dict"
@@ -314,7 +314,7 @@ class SkyModem:
             rsp_frame_dict["packet_type"] 	= "control"
             rsp_frame_dict["timestamp"] 	= dtime.now().isoformat()
             rsp_frame_dict["metadata"] 		= response_dict
-            self.pub_sockets[ichannel].send(json.dumps(rsp_frame_dict).encode("utf8"))
+            self.pub_sockets[vc_number].send(json.dumps(rsp_frame_dict).encode("utf8"))
 
 
     def _get_skylink_config(self):

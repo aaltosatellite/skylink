@@ -11,13 +11,13 @@ import zmq
 
 
 
-def sub_socket_loop(sub_sock:zmq.Socket, sub_que:Queue, ichannel, parent_obj):
+def sub_socket_loop(sub_sock:zmq.Socket, sub_que:Queue, vc_number, parent_obj):
     sub_sock.set(zmq.RCVTIMEO, 250)
     sub_sock.subscribe(b"")
     while parent_obj.on:
         try:
             rcv_msg = sub_sock.recv()
-            sub_que.put_nowait((ichannel, rcv_msg))
+            sub_que.put_nowait((vc_number, rcv_msg))
         except zmq.Again:
             pass
         except Exception as e:

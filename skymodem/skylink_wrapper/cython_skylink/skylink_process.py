@@ -40,25 +40,25 @@ class SkyLinkLoop(threading.Thread):
         self.on = False
         self.join(timeout=1.0)
 
-    def send(self, ichannel, data):
+    def send(self, vc_number, data):
         with self.lock:
-            return self.skylink.sky_vc_push_packet_to_send(ichannel, data)
+            return self.skylink.sky_vc_push_packet_to_send(vc_number, data)
 
-    def arq_connect(self, ichannel):
+    def arq_connect(self, vc_number):
         with self.lock:
-            return self.skylink.sky_vc_arq_connect(ichannel)
+            return self.skylink.sky_vc_arq_connect(vc_number)
 
-    def arq_disconnect(self, ichannel):
+    def arq_disconnect(self, vc_number):
         with self.lock:
-            return self.skylink.sky_vc_arq_disconnect(ichannel)
+            return self.skylink.sky_vc_arq_disconnect(vc_number)
 
-    def flush(self, ichannel):
+    def flush(self, vc_number):
         with self.lock:
-            return self.skylink.sky_vc_arq_disconnect(ichannel)
+            return self.skylink.sky_vc_arq_disconnect(vc_number)
 
-    def get_arq_state(self, ichannel):
+    def get_arq_state(self, vc_number):
         with self.lock:
-            return self.skylink.sky_vc_get_arq_state(ichannel)
+            return self.skylink.sky_vc_get_arq_state(vc_number)
 
     def carrier_sensed(self):
         with self.lock:
@@ -85,9 +85,11 @@ class SkyLinkLoop(threading.Thread):
                 self.skylink.sky_tick(t_tick_mono)
                 while not self.que_payloads_from_dsp.empty():
                     code, data, ts_mono = self.que_payloads_from_dsp.get_nowait()
+                    # Carrier sensed:
                     if code == "cs":
                         self.skylink.carrier_sensed()
-                    if code == "pl":
+                    # Try to process a downlink frame and insert it to skylink buffers:
+                    elif code == "pl":
                         pl = data
                         #assert ts_mono < t_tick_mono
                         sky_rx_ret = self.skylink.sky_rx(pl, ts_mono)
@@ -100,17 +102,18 @@ class SkyLinkLoop(threading.Thread):
                         sleeptime = 0.0
 
                 state_d_l = self.skylink.sky_get_state()
-                sessid_state_list = [ (state_d_l[ichannel]["session_identifier"], state_d_l[ichannel]["state"]) for ichannel in range(num_virtual_channels)]
-                for ichannel, (sessid, state) in enumerate(sessid_state_list):
-                    if (sessid,state) != self.session_id_list[ichannel]:
-                        self.session_id_list[ichannel] = (sessid,state)
-                        DBGPRINT("VC {} ARQ moved to state [{}].".format(ichannel, {arq_state_on:"ON", arq_state_in_init:"INIT", arq_state_off:"OFF"}[state]))
+                sessid_state_list = [ (state_d_l[vc_number]["session_identifier"], state_d_l[vc_number]["state"]) for vc_number in range(num_virtual_channels)]
+                for vc_number, (sessid, state) in enumerate(sessid_state_list):
+                    if (sessid,state) != self.session_id_list[vc_number]:
+                        self.session_id_list[vc_number] = (sessid,state)
+                        DBGPRINT(f"VC {vc_number} ARQ moved to state [{ {arq_state_on:'ON', arq_state_in_init:'INIT', arq_state_off:'OFF'}[state] }]." )
                         if state == arq_state_in_init:
                             continue
                         ekey = {arq_state_on:EKEY_SKY_ARQ_CONNECTED, arq_state_off:EKEY_SKY_ARQ_DISCONNECTED}[state]
-                        self.que_received_messages.put_nowait( (ekey, ichannel, sessid) )
+                        self.que_received_messages.put_nowait( (ekey, vc_number, sessid) )
                         sleeptime = 0.0
 
+                # Transmissions:
                 while True:
                     if not (self.que_payloads_to_dsp.empty() and self.radio_tx_sample_que.empty() and self.radio_ready.is_set()):  # We want to feed the radio only as fast as it transmits. Maybe [.full()] instead of [not .empty()] ?
                         break
@@ -121,13 +124,14 @@ class SkyLinkLoop(threading.Thread):
                     self.que_payloads_to_dsp.put_nowait((frame_bytes,time.monotonic()))
                     sleeptime = 0.0
 
-                for ichannel in range(num_virtual_channels):
+                # Read received frames from skylink buffers:
+                for vc_number in range(num_virtual_channels):
                     while True:
-                        ri, rb = self.skylink.sky_vc_read_next_received(ichannel)
-                        if ri < 0:
+                        return_value, returned_bytes = self.skylink.sky_vc_read_next_received(vc_number)
+                        if return_value < 0:
                             break
-                        DBGPRINT("VC {} reception gave {} bytes.".format(ichannel, len(rb)))
-                        self.que_received_messages.put_nowait( (EKEY_SKY_PAYLOAD, ichannel, rb) )
+                        DBGPRINT(f"VC {vc_number} reception gave {len(returned_bytes)} bytes.")
+                        self.que_received_messages.put_nowait( (EKEY_SKY_PAYLOAD, vc_number, returned_bytes) )
                         sleeptime = 0.0
 
             if sleeptime > 0:

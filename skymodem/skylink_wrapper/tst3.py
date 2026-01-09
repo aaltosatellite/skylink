@@ -36,13 +36,13 @@ rcv_pl_list = list()
 for i in range(len(pl_list2)):
     rx_ret = link1.sky_rx(raw_frame_bytes=pl_list2[i])
     print("rx ret:", rx_ret)
-    for ichannel in range(4):
-        while link1.sky_vc_count_readable_rcv_packets(ichannel):
-            packet = link1.sky_vc_read_next_received(ichannel)
-            rcv_pl_list.append((ichannel, packet))
+    for vc_number in range(4):
+        while link1.sky_vc_count_readable_rcv_packets(vc_number):
+            packet = link1.sky_vc_read_next_received(vc_number)
+            rcv_pl_list.append((vc_number, packet))
 
 print("received {} / {} packets".format(len(rcv_pl_list), len(pl_list2) ))
-for ichannel, packet in rcv_pl_list:
-    print("rcv@{} : ".format(ichannel), packet)
+for vc_number, packet in rcv_pl_list:
+    print("rcv@{} : ".format(vc_number), packet)
 
 [print(i) for i in link1.sky_get_state()]
