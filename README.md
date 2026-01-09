@@ -92,6 +92,16 @@ This will ask for configuration values in addition to a doppler config filename 
 
 The new preset can then be used as specified in the "Running the application" section of this README.
 
+# Using skymodem to send messages to HAM Repeater
+An interactive python script can be ran alongside skymodem to construct frames for the repeater and send them using skymodem.
+```
+$ python skylink/skymodem/repeater.py
+```
+
+If you want to use another program than skymodem to send the repeater frames. The raw bytes (In hex format) that need to be sent for a repeater frame can also be acquired using:
+```
+$ python skylink/skymodem/repeater_frame_bytes.py
+```
 
 # Including Skylink into an embedded application
 
