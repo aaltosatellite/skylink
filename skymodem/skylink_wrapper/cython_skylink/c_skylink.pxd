@@ -226,8 +226,11 @@ cdef extern from "skylink.h":
 
 	int sky_tx(SkyHandle self, sky_radio_frame* frame);
 
+	int sky_tx_with_golay(SkyHandle self, sky_radio_frame* frame);
+
 	int sky_rx(SkyHandle self, const sky_radio_frame* frame);
 
+	int sky_rx_with_golay(SkyHandle self, sky_radio_frame* frame);
 
 
 cdef extern  from "mac.h":

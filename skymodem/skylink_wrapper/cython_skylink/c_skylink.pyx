@@ -384,6 +384,25 @@ cdef class SkyLink:
 
 	def sky_tx(self):
 		return self._sky_tx()
+
+	def sky_tx_with_golay(self):
+		cdef c_skylink.SkyRadioFrame frame;
+		frame.length = 0
+		cdef int iret = 0;
+		#tgt = <uint8_t*> malloc( sizeof(c_skylink.SkyRadioFrame) )
+		iret = c_skylink.sky_tx_with_golay(self.handle, &frame)
+		frame_bytes = bytes( frame.raw[:frame.length] )
+		return iret, frame_bytes
+
+	def sky_rx_with_golay(self, uint8_t* data, int leng, int rx_time_tick):
+		cdef c_skylink.SkyRadioFrame frame;
+		cdef int iret = 0;
+		memcpy(frame.raw, data, leng)
+		frame.length = leng
+		frame.rx_time_ticks = rx_time_tick
+		iret = c_skylink.sky_rx_with_golay(self.handle, &frame)
+		return iret	
+
 	# === RX/TX ============================================================================================================================
 
 
