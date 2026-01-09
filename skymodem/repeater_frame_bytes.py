@@ -84,4 +84,4 @@ if __name__ == "__main__":
             preamble = b"\xAA" * 16
             frame_bytes = preamble + frame_bytes
 
-    print("Final frame bytes:", frame_bytes.hex())
+    print("Final frame bytes:\n", frame_bytes.hex())
