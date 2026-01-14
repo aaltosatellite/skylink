@@ -9,8 +9,7 @@ skylink_config_.vc[3].require_authentication = 0 # No authentication for repeate
 skylink = SkyLink(skylink_config_)
 
 
-if __name__ == "__main__":
-
+def construct_frame_bytes():
     message = input("Input message for repeater frame (max 111 bytes) Default: Hello World! : ")
     if message.strip() == "":
         message = "Hello World!"
@@ -85,3 +84,8 @@ if __name__ == "__main__":
             frame_bytes = preamble + frame_bytes
 
     print("Final frame bytes:\n", frame_bytes.hex())
+
+    return frame_bytes
+
+if __name__ == "__main__":
+    construct_frame_bytes()

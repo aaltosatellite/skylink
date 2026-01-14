@@ -103,6 +103,11 @@ If you want to use another program than skymodem to send the repeater frames. Th
 $ python skylink/skymodem/repeater_frame_bytes.py
 ```
 
+You can also generate a WAV file of the frame to transmit by using:
+```
+$ python skylink/skymodem/repeater_frame_wav.py
+```
+
 # Including Skylink into an embedded application
 
 Because no well standardized method for cross compiling libraries for embedded applications doesn't
