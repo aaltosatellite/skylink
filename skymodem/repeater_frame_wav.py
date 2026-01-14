@@ -40,15 +40,17 @@ if __name__ == "__main__":
 
     samples = construct_samples_for_wav(frame_bytes, srate=srate, baudrate=9600)
 
-    # Normalize to int16. Store I in left channel, Q in right channel.
-    max_magnitude = np.max(np.abs(samples))
-    samples_normalized = samples / max_magnitude
-    stereo_samples = np.column_stack((samples_normalized.real, samples_normalized.imag))
-    stereo_samples = (stereo_samples * 32767).astype(np.int16)
+    # Get phases
+    phases = np.angle(samples)
+    max_phase = np.max(np.abs(phases))
+    normalized = phases / max_phase
+
+    # Scale to int16 range
+    mono_samples = np.int16(normalized * 32767)
     
     # Store adjacent to current script
     wav_filepath = os.path.abspath(__file__)
     wav_dir = os.path.dirname(wav_filepath)
     wav_filename = os.path.join(wav_dir, wav_filename)
-    wavfile.write(wav_filename, srate, stereo_samples)
+    wavfile.write(wav_filename, srate, mono_samples)
     print(f"WAV file '{wav_filename}' written successfully.")
