@@ -38,19 +38,24 @@ if __name__ == "__main__":
     else:
         srate = int(srate)
 
+    # Generate IQ samples
     samples = construct_samples_for_wav(frame_bytes, srate=srate, baudrate=9600)
 
-    # Get phases
-    phases = np.angle(samples)
-    max_phase = np.max(np.abs(phases))
-    normalized = phases / max_phase
+    # Frequency shift by srate/4
+    freq_shift = srate / 4
+    time_vector = np.arange(len(samples))
+    shifted_signal = samples * np.exp(1j * 2 * np.pi * (freq_shift / srate) * time_vector)
 
-    # Scale to int16 range
-    mono_samples = np.int16(normalized * 32767)
+    # Take real part
+    mono_samples = shifted_signal.real
+
+    # Normalize to int16 range
+    mono_samples /= np.max(np.abs(mono_samples))
+    mono_samples = (mono_samples * 32767).astype(np.int16)
     
     # Store adjacent to current script
     wav_filepath = os.path.abspath(__file__)
     wav_dir = os.path.dirname(wav_filepath)
     wav_filename = os.path.join(wav_dir, wav_filename)
     wavfile.write(wav_filename, srate, mono_samples)
-    print(f"WAV file '{wav_filename}' written successfully.")
+    print(f"WAV file '{wav_filename}' written successfully")
