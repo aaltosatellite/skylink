@@ -107,6 +107,7 @@ You can also generate a WAV file of the frame to transmit by using:
 ```
 $ python skylink/skymodem/repeater_frame_wav.py
 ```
+This script can generate either a mono NRZ signal or interleaved IQ samples as stereo.
 
 # Including Skylink into an embedded application
 
