@@ -3,11 +3,23 @@ Make a WAV file of a SkyLink repeater frame.
 
 Configurable sample rate, Generates a 16-bit PCM WAV file.
 """
+import argparse
+import sys
+
 from repeater_frame_bytes import construct_frame_bytes
 from scipy.io import wavfile
 from dsp_library.kuokka.lib_tools import make_samples, make_samples_alternative
 import numpy as np
 import os
+
+
+def _prompt_if_none(value, prompt, default=None):
+    if value is not None:
+        return value
+    text = input(prompt)
+    if default is not None and text.strip() == "":
+        return default
+    return text
 
 def bytes_to_bits_msb_first(data):
     """Convert bytes to bits, MSB first."""
@@ -35,28 +47,71 @@ def construct_samples_for_wav(frame_bytes, srate, baudrate=9600):
 
     return iq_samples, nrz_modulator
 
+
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate WAV (mono NRZ or stereo IQ) for a SkyLink repeater frame")
+
+    # Frame args (passed through)
+    parser.add_argument("--message", type=str, default=None, help="Message (max 111 bytes). If omitted, prompt.")
+    parser.add_argument("--dest", dest="dest_addr", type=str, default=None, help="Destination callsign. If omitted, prompt.")
+    parser.add_argument("--src", dest="src_addr", type=str, default=None, help="Source callsign. If omitted, prompt.")
+    parser.add_argument("--digi", dest="digis", action="append", default=None, help="Digipeater callsign, to add multiple use --digi multiple times")
+    parser.add_argument("--no-digis", action="store_true", help="Do not include digipeaters and do not prompt for them.")
+
+    sync = parser.add_mutually_exclusive_group()
+    sync.add_argument("--syncword", dest="add_syncword", action="store_true")
+    sync.add_argument("--no-syncword", dest="add_syncword", action="store_false")
+    parser.set_defaults(add_syncword=None)
+
+    pre = parser.add_mutually_exclusive_group()
+    pre.add_argument("--preamble", dest="add_preamble", action="store_true")
+    pre.add_argument("--no-preamble", dest="add_preamble", action="store_false")
+    parser.set_defaults(add_preamble=None)
+
+    # WAV generation args
+    parser.add_argument("--wav", dest="wav_filename", type=str, default=None, help="Output WAV filename")
+    parser.add_argument("--srate", type=int, default=None, help="Sample rate Hz")
+
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--mono", dest="use_mono", action="store_true", help="Mono NRZ output")
+    mode.add_argument("--iq", dest="use_mono", action="store_false", help="Stereo IQ output")
+    parser.set_defaults(use_mono=None)
+
+    return parser.parse_args(argv)
+
+
+
+
 if __name__ == "__main__":
-    frame_bytes = construct_frame_bytes()
-    wav_filename = input("Input output WAV filename (default repeater_frame.wav): ")
-    if wav_filename.strip() == "":
-        wav_filename = "repeater_frame.wav"
+    args = _parse_args(sys.argv[1:])
 
-    srate = input("Input sample rate in Hz (default 48000): ")
-    if srate.strip() == "":
-        srate = 48000
-    else:
-        srate = int(srate)
+    frame_bytes = construct_frame_bytes(
+        message=args.message,
+        dest_addr=args.dest_addr,
+        src_addr=args.src_addr,
+        digis=args.digis,
+        no_digis=bool(args.no_digis),
+        add_syncword=args.add_syncword,
+        add_preamble=args.add_preamble,
+    )
 
-    # Generate IQ samples
+    wav_filename = args.wav_filename
+    if wav_filename is None:
+        wav_filename = _prompt_if_none(None, "Input output WAV filename (default repeater_frame.wav): ", default="repeater_frame.wav")
+
+    srate = args.srate
+    if srate is None:
+        srate_str = _prompt_if_none(None, "Input sample rate in Hz (default 48000): ", default="48000")
+        srate = int(srate_str)
+
     iq_samples, nrz_modulator = construct_samples_for_wav(frame_bytes, srate=srate, baudrate=9600)
 
-    use_mono = True
-    mono_file = input("Generate mono file? (y/n, default y): ")
-    if mono_file.strip().lower() == "n":
-        use_mono = False
+    use_mono = args.use_mono
+    if use_mono is None:
+        mono_file = _prompt_if_none(None, "Generate mono file? (y/n, default y): ", default="y")
+        use_mono = mono_file.strip().lower() != "n"
 
-    # Silence seems to help gr_satellites decoder catch the clock. This is good to verify the file is valid.
-    guard_time = 0.2 
+    guard_time = 0.2
 
     # Store adjacent to current script
     wav_filepath = os.path.abspath(__file__)
@@ -78,7 +133,6 @@ if __name__ == "__main__":
 
         wavfile.write(wav_filename, srate, mono_samples)
         print(f"WAV file '{wav_filename}' written successfully (Mono NRZ)")
-
     else:
         # Note: When testing the stereo file decoding with gr_satellites, I found that I had to use --disable_dc_block and/or --use_agc (And of course --iq).
 
