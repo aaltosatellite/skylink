@@ -109,6 +109,13 @@ $ python skylink/skymodem/repeater_frame_wav.py
 ```
 This script can generate either a mono NRZ signal or interleaved IQ samples as stereo.
 
+Important to note about the repeater frames sent to Foresail1p. These will be fixed for Aalto-3 and other future projects:
+The radio board code can not be updated and has a few errors in repeater frame parsing.
+1. There is no HLDC start or end flag (0x7E) that is standard to AX.25 frames. The frames sent to the satellite will also not include this.
+2. The CRC (FCS) is MSB instead of LSB.
+3. The CRC sent back will only have the correct second byte of the CRC and the first one will be from the original frame.
+4. Sending skylink frame CRC field which is default on the repeater channel will result in the repeater frame not being accepted. However the frame that is sent back will include this CRC which can still be used to check validity of frame. This CRC will be the 4 final bytes of the entire frame after Golay, RS, Scrambling and will cover the whole skylink frame. Details (used polynomial etc.) can be found in src/crc.c.
+
 # Including Skylink into an embedded application
 
 Because no well standardized method for cross compiling libraries for embedded applications doesn't
