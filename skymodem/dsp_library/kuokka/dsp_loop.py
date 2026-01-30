@@ -298,7 +298,7 @@ class DSPLoop:
             # Doppler correction based on last received frequency done by calculating speed of the target.
             # Uses configured tx center frequency so if that is inaccurate, correction will be off.
             if self.do_doppler_correction:
-                f_use_abs = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_center_frequency, f_tx_at_target=self.tx_dsp_config.tx_center_frequency)
+                f_use_abs, _ = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_center_frequency, f_tx_at_target=self.tx_dsp_config.tx_center_frequency)
 
             # Just follow frequency based on last received packet. Useful in ground testing.
             else:
