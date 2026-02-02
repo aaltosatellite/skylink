@@ -55,6 +55,7 @@ def load_satellite_and_gs_configs(config_path):
             import requests
             URL = f"https://www.space-track.org/basicspacedata/query/class/gp/NORAD_CAT_ID/{norad_id}/orderby/EPOCH/format/tle"
             # In order to use space track, need to create credentials.json file in the same directory as this script
+            # credentials.json should contain fields "identity" (username/email) and "password".
             # Also need to set use_space_track = True above. This feature is mostly for OH2AGS since Celestrak blocks access after too many requests.
             credentials = json.load(open(os.path.abspath(os.path.dirname(__file__)) + '/credentials.json'))
             with requests.Session() as session:
