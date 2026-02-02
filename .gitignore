@@ -5,7 +5,7 @@
 *.gch
 *.swp
 build/
-
+credentials.json
 
 cmake-build-debug/
 */cmake-build-debug/

@@ -44,13 +44,31 @@ def load_satellite_and_gs_configs(config_path):
     global groundstation
 
     with open(config_path, 'r') as f:
+        use_space_track = False
         config = json.load(f)
         norad_id = config['norad_id']
         satellite_name = config["satellite_name"]
-
+        
+        tle_lines = None
         # Load TLE:
-        request = urllib.request.urlopen(f"https://celestrak.com/NORAD/elements/gp.php?CATNR={norad_id}&FORMAT=tle")
-        tle_lines = request.read().decode('utf-8').strip().split('\n')
+        if use_space_track:
+            import requests
+            URL = f"https://www.space-track.org/basicspacedata/query/class/gp/NORAD_CAT_ID/{norad_id}/orderby/EPOCH/format/tle"
+            # In order to use space track, need to create credentials.json file in the same directory as this script
+            # Also need to set use_space_track = True above. This feature is mostly for OH2AGS since Celestrak blocks access after too many requests.
+            credentials = json.load(open(os.path.abspath(os.path.dirname(__file__)) + '/credentials.json'))
+            with requests.Session() as session:
+                # Login to Space Track
+                resp = session.post('https://www.space-track.org/ajaxauth/login', data=credentials)
+                if resp.status_code != 200:
+                    raise Exception(f"Space Track login failed. Status code: {resp.status_code}")
+                request = session.get(URL)
+            tle_lines = request.text.strip().split('\n')
+            # Add satellite name as first TLE line since Space Track does not provide it unless format 3le, which has slightly different line format.
+            tle_lines = [satellite_name] + tle_lines
+        else:
+            request = urllib.request.urlopen(f"https://celestrak.com/NORAD/elements/gp.php?CATNR={norad_id}&FORMAT=tle")
+            tle_lines = request.read().decode('utf-8').strip().split('\n')
         satellite = EarthSatellite(tle_lines[1], tle_lines[2], satellite_name, skyfield_timescale)
 
         # Write TLE to a file, Current path + satellite name_tle.txt:
