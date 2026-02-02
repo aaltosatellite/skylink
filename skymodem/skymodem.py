@@ -75,7 +75,7 @@ class SkyModem:
     def __init__(self, rx_dsp_config:RXDSPConfig, tx_dsp_config:TXDSPConfig, radio_config:RadioConfig, skylink_config:SkyConfiguration, hmac_key_list, vc_port_base, amqp_broker_addr=None):
         self.on = True
         self.hmac_key_list = hmac_key_list
-        self.que_samples_radio_to_dsp 	= Queue(500)
+        self.que_samples_radio_to_dsp 	= Queue(2000)
         self.que_payloads_dsp_to_sky 	= Queue(100)
         self.que_payloads_sky_to_dsp 	= Queue(1)
         self.que_samples_dsp_to_radio 	= Queue(1)

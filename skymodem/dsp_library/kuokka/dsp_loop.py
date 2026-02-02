@@ -681,13 +681,13 @@ def _mpr_memfree(idd, buffer_shm_list, flag_ring_shm):
     n_ok = 0
     for shm in buffer_shm_list:
         try:
-            shm.unlink()
+            shm.close()
             n_ok += 1
         except:
             pass
     try:
-        flag_ring_shm.unlink()
+        flag_ring_shm.close()
         n_ok += 1
     except:
         pass
-    DBGPRINT(1, f"{n_ok}/{n0} of shared memories unlinked by mpr-thread-{idd}.")
+    DBGPRINT(1, f"{n_ok}/{n0} of shared memories closed by mpr-thread-{idd}.")
