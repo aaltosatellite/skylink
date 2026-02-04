@@ -103,7 +103,11 @@ def construct_frame_bytes(
 
     skylink.sky_vc_push_packet_to_send(3, bytes(frame))
     tx_i, frame_bytes = skylink.sky_tx_with_golay()
+
+    skylink.sky_vc_push_packet_to_send(3, bytes(frame))
+    tx_i2, frame_bytes2 = skylink.sky_tx()
     print("Frame bytes with Golay, Reed-solomon, whitening and skylink framing:\n", frame_bytes.hex())
+    print("Frame bytes without Golay, Reed-solomon, whitening:\n", frame_bytes2.hex())
     # Ask if syncword should be added
     if add_syncword is None:
         add_syncword_in = input("Add syncword to frame bytes? (y/n, default y): ")
