@@ -255,7 +255,7 @@ int sky_tx_with_golay(SkyHandle self, SkyRadioFrame* frame) {
 		SKY_ASSERT(frame->length + 3 <= sizeof(frame->raw));
 
 		/* Move the data by 3 bytes to make room for the PHY header */
-		for (unsigned int i = frame->length; i != 0; i--)
+		for (int i = frame->length; i >= 0; i--)
 			frame->raw[i + 3] = frame->raw[i];
 
 		/* Add PHY header */
