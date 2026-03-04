@@ -124,7 +124,7 @@ class SkyLinkLoop(threading.Thread):
                     tx_i, frame_bytes = self.skylink.sky_tx()
                     if tx_i == 0:
                         break
-                    DBGPRINT("Transmitting a frame of {} bytes uplink.".format(len(frame_bytes)))
+                    DBGPRINT(f"Transmitting a frame of {len(frame_bytes)} bytes uplink.")
                     self.que_payloads_to_dsp.put_nowait((frame_bytes,time.monotonic()))
                     sleeptime = 0.0
 
