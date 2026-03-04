@@ -263,7 +263,7 @@ class SkyModem:
             if send_ret < 0:
                 DBGPRINT("error: sky_vc_push_packet_to_send error: {}".format(send_ret))
 
-        if frame_dict["packet_type"] == "control":
+        if ["packet_type"] in frame_dict and frame_dict["packet_type"] == "control":
             response_dict = dict()
             control_dict = frame_dict["metadata"]
             if not "cmd" in control_dict:
