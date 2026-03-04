@@ -561,6 +561,11 @@ cdef class SkyLink:
 		now = self.get_tick_time()
 		c_skylink.sky_mac_carrier_sensed(self.handle.mac, now)
 
+	def mac_reset(self):
+		cdef sky_tick_t now;
+		now = self.get_tick_time()
+		c_skylink.mac_reset(self.handle.mac, now)
+
 
 	def get_tick_time(self):
 		return int(c_skylink.sky_get_tick_time())

@@ -238,6 +238,8 @@ cdef extern  from "mac.h":
 
 	void sky_mac_carrier_sensed(SkyMAC* mac, sky_tick_t now);
 
+	void mac_reset(SkyMAC* mac, sky_tick_t now);
+
 
 
 cdef extern from "hmac.h":

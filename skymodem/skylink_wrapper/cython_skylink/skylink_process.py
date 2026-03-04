@@ -75,6 +75,10 @@ class SkyLinkLoop(threading.Thread):
     def sky_diag_clear(self):
         with self.lock:
             return self.skylink.sky_diag_clear()
+        
+    def mac_reset(self):
+        with self.lock:
+            return self.skylink.mac_reset()
 
     def run(self):
         sleeptime = 0.0

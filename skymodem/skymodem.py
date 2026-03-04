@@ -306,6 +306,9 @@ class SkyModem:
             elif ctrl_command == "get_skylink_config":
                 response_dict["skylink_config"] = self._get_skylink_config()
                 response_dict["rsp"] = "skylink_config"
+            elif ctrl_command == "reset_mac":
+                self.skylink_loop.mac_reset()
+                response_dict["rsp"] = "ack"
             else:
                 DBGPRINT("Unknown control command: {}".format(ctrl_command))
                 return
