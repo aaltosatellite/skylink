@@ -297,7 +297,7 @@ class RadioLoop:
                 self.DBGPRINT("TX SAMPLES IN WRONG SHAPE: {}. SHOULD BE (1,n). No transmission.".format( str(samplearr.shape) ) )
                 continue
 
-            # Allow SkyLinkLoop to send more packets to DSPLoop
+            # Prevent SkyLinkLoop from sending more packets to DSPLoop
             self.tx_ready.clear()
 
             # Calculate end time for transmission so samples are not fed into streamer too fast.
@@ -498,7 +498,7 @@ class RadioLoop:
                 self.on = False
                 break
 
-            # Allow SkyLinkLoop to send more packets to DSPLoop
+            # Prevent SkyLinkLoop from sending more packets to DSPLoop
             self.tx_ready.clear()
 
             # Calculate end time for transmission so samples are not fed into streamer too fast.
