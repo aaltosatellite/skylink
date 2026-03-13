@@ -236,6 +236,7 @@ void mac_reset(SkyMAC* mac, sky_tick_t now)
 	// Reset window length to minimum and zero it's adjustment counter.
 	mac->window_adjust_counter = 0;
 	mac->my_window_length = mac->config->minimum_window_length_ticks;
+	mac->peer_window_length = mac->config->minimum_window_length_ticks;
 
 	// Set value of start of cycle/own window. Now - cycle length sets it so that now is the beginning of the next cycle. (T0 is always behind now)
 	mac->T0 = wrap_time_ticks(now - get_mac_cycle(mac));

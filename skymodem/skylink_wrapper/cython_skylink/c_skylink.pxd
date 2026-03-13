@@ -226,14 +226,19 @@ cdef extern from "skylink.h":
 
 	int sky_tx(SkyHandle self, sky_radio_frame* frame);
 
+	int sky_tx_with_golay(SkyHandle self, sky_radio_frame* frame);
+
 	int sky_rx(SkyHandle self, const sky_radio_frame* frame);
 
+	int sky_rx_with_golay(SkyHandle self, sky_radio_frame* frame);
 
 
 cdef extern  from "mac.h":
 	bint mac_can_send(SkyMAC* mac, sky_tick_t now);
 
 	void sky_mac_carrier_sensed(SkyMAC* mac, sky_tick_t now);
+
+	void mac_reset(SkyMAC* mac, sky_tick_t now);
 
 
 

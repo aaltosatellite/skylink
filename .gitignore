@@ -5,7 +5,7 @@
 *.gch
 *.swp
 build/
-
+credentials.json
 
 cmake-build-debug/
 */cmake-build-debug/
@@ -14,7 +14,6 @@ __pycache__/
 */__pycache__/
 */.idea/
 .vscode/
-
 *secret.h
 
 skymodem/sky_cython/build/

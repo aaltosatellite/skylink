@@ -1,23 +1,16 @@
-#include "skylink/crc.h"
-#include "skylink/frame.h"
-#include "skylink/utilities.h"
-#include "skylink/diag.h"
+"""
+Helper script to validate a SkyModem repeater frame using the frame CRC.
 
-#include <string.h> // memcpy
+This is neccessary due to an onboard unpatchable bug that causes Foresail1p to send incorrect FCS.
 
-#define CRC32_INIT 0xFFFFFFFFU
-#define CRC32_INVERSE 0xFFFFFFFFU
+Usage:
+    python skymodem/validate_repeater_frame_crc.py <frame_hex_string>
+"""
 
-/*
- * Polynomial: 0x04C11DB7
- * Init: 0xFFFFFFFFU
- * RefIn: True
- * RefOut: True
- * XorOut: 0xFFFFFFFFU
- * Test: 0xCBF43926
- */
-static const uint32_t crc32_table[256] =
-{
+import argparse
+import sys
+
+crc32_table = [
 	0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA,
 	0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
 	0x0EDB8832, 0x79DCB8A4, 0xE0D5E91E, 0x97D2D988,
@@ -82,78 +75,58 @@ static const uint32_t crc32_table[256] =
 	0xBAD03605, 0xCDD70693, 0x54DE5729, 0x23D967BF,
 	0xB3667A2E, 0xC4614AB8, 0x5D681B02, 0x2A6F2B94,
 	0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D
-};
+]
 
-// Calculate CRC-32 checksum of data buf with length len.
-uint32_t sky_crc32(const uint8_t *buf, unsigned int len)
-{
-	// Initialization for CRC-32 calculation.
-	uint32_t crc = CRC32_INIT;
-	// Calculate CRC-32 checksum until there is nothing left to calculate.
-	while (len--)
-		crc = (crc >> 8) ^ crc32_table[ (crc ^ (uint32_t)*buf++) & 0xFF ];
-	// Return the CRC-32 checksum.
-	return (crc ^ CRC32_INVERSE);
-}
-
-// Extend a frame with CRC-32 checksum. Returns 0 on success or a negative error code.
-int sky_extend_with_crc32(SkyTransmitFrame* tx_frame)
-{
-	SKY_ASSERT(tx_frame != NULL);
-	SkyRadioFrame* frame = tx_frame->frame;
-
-	// Check if the CRC-32 extension would fit into the frame.
-	if (frame->length > SKY_FRAME_MAX_LEN - sizeof(uint32_t))
-		return SKY_RET_CRC_INVALID_LENGTH;
-
-	tx_frame->hdr->flag_crced = 1;
-
-	// Calculate checksum and append it to the end of the frame.
-	uint32_t crc = sky_hton32(sky_crc32(frame->raw, frame->length));
-	memcpy(&frame->raw[frame->length], &crc, sizeof(uint32_t)); // unaligned copy
-	frame->length += sizeof(uint32_t);
-
-	return SKY_RET_OK;
-}
-
-// Check that the CRC-32 checksum of the frame is correct. Returns 0 on success or a negative error code.
-int sky_check_crc32(const SkyRadioFrame *frame, SkyParsedFrame *parsed)
-{
-	SKY_ASSERT(frame != NULL);
-	// Check if the frame is long enough to contain the checksum.
-	if (frame->length < sizeof(uint32_t))
-		return SKY_RET_CRC_INVALID_LENGTH;
-
-	// Get the length of the data in the frame without the checksum.
-	unsigned int data_length = frame->length - sizeof(uint32_t);
-
-	// Parse received checksum from the frame.
-	uint32_t received;
-	memcpy(&received, &frame->raw[data_length], sizeof(uint32_t)); // unaligned copy
-	received = sky_ntoh32(received);
-
-	// Calculate checksum based on the received data.
-	uint32_t calculated = sky_crc32(frame->raw, data_length);
-
-	// Match?
-	if (received != calculated) {
-		SKY_PRINTF(SKY_DIAG_INFO, COLOR_RED "CRC-32 failed!\n" COLOR_RESET "\n")
-		return SKY_RET_CRC_INVALID_CHECKSUM;
-	}
-
-	parsed->hdr.flag_crced = 0;
-
-	// Remove the checksum from the frame.
-	// This is an almost repeater breaking bug onboard FS1p!
-	// (Only used on HAM channel).
-	// We are setting the payload length to length of ENTIRE FRAME minus CRC.
-	// parsed->payload_len = data_length;
-
-	// Future missions will nuke the CRC since FEC is makes it redundant.
-	// Instead we should just remove length of CRC from payload length.
-	parsed->payload_len -= sizeof(uint32_t);
+"""
+ * Polynomial: 0x04C11DB7
+ * Init: 0xFFFFFFFFU
+ * RefIn: True
+ * RefOut: True
+ * XorOut: 0xFFFFFFFFU
+ * Test: 0xCBF43926
+"""
+def skylink_crc32(data):
+    """
+    Calculate SkyLink CRC32 for given data.
+    
+    Args:
+        data: bytes or bytearray
+    Returns:
+        32-bit CRC value
+    """
+    # Take data without the last 4 bytes (CRC)
+    data = data[:-4]
+    crc = 0xFFFFFFFF
+    for byte in data:
+        crc = (crc >> 8) ^ crc32_table[(crc ^ byte) & 0xFF]
+    return (crc ^ 0xFFFFFFFF) & 0xFFFFFFFF
 
 
-	return SKY_RET_OK;
-}
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Validate SkyLink Frame CRC32.")
+    parser.add_argument("frame_hex", type=str, help="Frame data as hex string")
+    args = parser.parse_args()
+
+    # Remove possible spaces in the hex string
+    args.frame_hex = args.frame_hex.replace(" ", "")
+    frame_bytes = bytes.fromhex(args.frame_hex)
+    # Check if Frame is CRCed flag is set.
+    header_start = 1
+    identity_length = frame_bytes[0] & 0b0111
+    header_start += identity_length
+    flags = frame_bytes[header_start]
+    if (flags & (1 << 4)) == 0:
+        print("Frame is not CRCed. Exiting.")
+        sys.exit(1)
+
+    computed_crc = skylink_crc32(frame_bytes)
+    received_crc = int.from_bytes(frame_bytes[-4:], byteorder='big')
+
+
+    print(f"Computed CRC32: 0x{computed_crc:08X}")
+    print(f"Received CRC32: 0x{received_crc:08X}")
+    if computed_crc == received_crc:
+        print("CRC is valid.")
+    else:
+        print("CRC is INVALID.")

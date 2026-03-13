@@ -1,0 +1,2 @@
+# Seperate gitignore here just so TLE cache directory can be in git.
+*.txt

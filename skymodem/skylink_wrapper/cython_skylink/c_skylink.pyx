@@ -346,15 +346,15 @@ cdef class SkyLink:
 			keydata += key
 		self._set_hmac_keys(<uint8_t*> keydata, <int> len(key_list))
 
-	cdef _get_hmac_key(self, int ichannel):
+	cdef _get_hmac_key(self, int vc_number):
 		cdef uint8_t* key;
-		key = self.handle.hmac.keys[ichannel].key
+		key = self.handle.hmac.keys[vc_number].key
 		k = bytes(key[0:c_skylink.BLAKE3_KEY_LEN])
 		return k
 
-	def get_hmac_key(self, ichannel):
-		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
-		return bytes(self._get_hmac_key( <int> ichannel))
+	def get_hmac_key(self, vc_number):
+		assert 0 <= vc_number < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
+		return bytes(self._get_hmac_key( <int> vc_number))
 	# === HMAC-KEYS ========================================================================================================================
 
 
@@ -384,56 +384,75 @@ cdef class SkyLink:
 
 	def sky_tx(self):
 		return self._sky_tx()
+
+	def sky_tx_with_golay(self):
+		cdef c_skylink.SkyRadioFrame frame;
+		frame.length = 0
+		cdef int iret = 0;
+		#tgt = <uint8_t*> malloc( sizeof(c_skylink.SkyRadioFrame) )
+		iret = c_skylink.sky_tx_with_golay(self.handle, &frame)
+		frame_bytes = bytes( frame.raw[:frame.length] )
+		return iret, frame_bytes
+
+	def sky_rx_with_golay(self, uint8_t* data, int leng, int rx_time_tick):
+		cdef c_skylink.SkyRadioFrame frame;
+		cdef int iret = 0;
+		memcpy(frame.raw, data, leng)
+		frame.length = leng
+		frame.rx_time_ticks = rx_time_tick
+		iret = c_skylink.sky_rx_with_golay(self.handle, &frame)
+		return iret	
+
 	# === RX/TX ============================================================================================================================
 
 
 
 	# === SEND =============================================================================================================================
-	cdef _sky_vc_push_packet_to_send(self, int ichannel, uint8_t* data, int datalen):
+	cdef _sky_vc_push_packet_to_send(self, int vc_number, uint8_t* data, int datalen):
 		cdef int ret = 0;
-		ret = c_skylink.sky_vc_push_packet_to_send(self.handle.virtual_channels[ichannel], data, datalen)
+		ret = c_skylink.sky_vc_push_packet_to_send(self.handle.virtual_channels[vc_number], data, datalen)
 		return ret
 
-	def sky_vc_push_packet_to_send(self, ichannel, data):
-		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
-		return self._sky_vc_push_packet_to_send(<int> ichannel, <uint8_t*> data, <int> len(data))
+	def sky_vc_push_packet_to_send(self, vc_number, data):
+		assert 0 <= vc_number < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
+		return self._sky_vc_push_packet_to_send(<int> vc_number, <uint8_t*> data, <int> len(data))
 
 
-	cdef _sky_vc_count_packets_to_tx(self, int ichannel, int include_resend):
+	cdef _sky_vc_count_packets_to_tx(self, int vc_number, int include_resend):
 		cdef int ret = 0;
-		ret = c_skylink.sky_vc_count_packets_to_tx(self.handle.virtual_channels[ichannel], include_resend)
+		ret = c_skylink.sky_vc_count_packets_to_tx(self.handle.virtual_channels[vc_number], include_resend)
 		return ret
 
-	def sky_vc_count_packets_to_tx(self, ichannel, include_resend):
-		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
-		return self._sky_vc_count_packets_to_tx(<int> ichannel, <int> int(include_resend))
+	def sky_vc_count_packets_to_tx(self, vc_number, include_resend):
+		assert 0 <= vc_number < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
+		return self._sky_vc_count_packets_to_tx(<int> vc_number, <int> int(include_resend))
 
 
-	def sky_vc_send_buffer_is_full(self, ichannel):
-		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
+	def sky_vc_send_buffer_is_full(self, vc_number):
+		assert 0 <= vc_number < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
 		cdef int ret = 0;
-		ret = c_skylink.sky_vc_send_buffer_is_full(self.handle.virtual_channels[ichannel])
+		ret = c_skylink.sky_vc_send_buffer_is_full(self.handle.virtual_channels[vc_number])
 		return ret
 	# === SEND =============================================================================================================================
 
 
 
 	# === RECEIVE ==========================================================================================================================
-	cdef _sky_vc_count_readable_rcv_packets(self, int ichannel):
+	cdef _sky_vc_count_readable_rcv_packets(self, int vc_number):
 		cdef int ret = 0;
-		ret = c_skylink.sky_vc_count_readable_rcv_packets(self.handle.virtual_channels[ichannel])
+		ret = c_skylink.sky_vc_count_readable_rcv_packets(self.handle.virtual_channels[vc_number])
 		return ret
 
-	def sky_vc_count_readable_rcv_packets(self, ichannel):
-		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
-		return self._sky_vc_count_readable_rcv_packets(<int> ichannel)
+	def sky_vc_count_readable_rcv_packets(self, vc_number):
+		assert 0 <= vc_number < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
+		return self._sky_vc_count_readable_rcv_packets(<int> vc_number)
 
 
-	cdef _sky_vc_read_next_received(self, int ichannel):
+	cdef _sky_vc_read_next_received(self, int vc_number):
 		cdef int ret = 0;
 		cdef uint8_t* tgt;
 		tgt = <uint8_t*> malloc(1024)
-		ret = c_skylink.sky_vc_read_next_received(self.handle.virtual_channels[ichannel], tgt, 1024)
+		ret = c_skylink.sky_vc_read_next_received(self.handle.virtual_channels[vc_number], tgt, 1024)
 		if ret < 0:
 			free(tgt)
 			return ret, b""
@@ -441,9 +460,9 @@ cdef class SkyLink:
 		free(tgt)
 		return ret, ret_b
 
-	def sky_vc_read_next_received(self, ichannel):
-		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
-		return self._sky_vc_read_next_received(<int> ichannel)
+	def sky_vc_read_next_received(self, vc_number):
+		assert 0 <= vc_number < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
+		return self._sky_vc_read_next_received(<int> vc_number)
 	# === RECEIVE ==========================================================================================================================
 
 
@@ -496,34 +515,34 @@ cdef class SkyLink:
 		c_skylink.sky_diag_clear(self.handle.diag)
 
 
-	cdef _sky_vc_arq_connect(self, int ichannel):
+	cdef _sky_vc_arq_connect(self, int vc_number):
 		cdef int ret = 0;
-		ret = sky_vc_arq_connect(self.handle.virtual_channels[ichannel])
+		ret = sky_vc_arq_connect(self.handle.virtual_channels[vc_number])
 		return ret
 
-	def sky_vc_arq_connect(self, ichannel):
-		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
-		return self._sky_vc_arq_connect(<int> ichannel)
+	def sky_vc_arq_connect(self, vc_number):
+		assert 0 <= vc_number < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
+		return self._sky_vc_arq_connect(<int> vc_number)
 
 
-	cdef _sky_vc_arq_disconnect(self, int ichannel):
+	cdef _sky_vc_arq_disconnect(self, int vc_number):
 		cdef int ret = 0;
-		ret = sky_vc_arq_disconnect(self.handle.virtual_channels[ichannel])
+		ret = sky_vc_arq_disconnect(self.handle.virtual_channels[vc_number])
 		return ret
 
-	def sky_vc_arq_disconnect(self, ichannel):
-		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
-		return self._sky_vc_arq_disconnect(<int> ichannel)
+	def sky_vc_arq_disconnect(self, vc_number):
+		assert 0 <= vc_number < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
+		return self._sky_vc_arq_disconnect(<int> vc_number)
 
 
-	cdef _sky_vc_get_arq_state(self, int ichannel):
+	cdef _sky_vc_get_arq_state(self, int vc_number):
 		cdef uint8_t x;
-		x = self.handle.virtual_channels[ichannel].arq_state
+		x = self.handle.virtual_channels[vc_number].arq_state
 		return int(x)
 
-	def sky_vc_get_arq_state(self, ichannel):
-		assert 0 <= ichannel < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
-		return self._sky_vc_get_arq_state(ichannel)
+	def sky_vc_get_arq_state(self, vc_number):
+		assert 0 <= vc_number < c_skylink.SKY_NUM_VIRTUAL_CHANNELS
+		return self._sky_vc_get_arq_state(vc_number)
 
 
 	cdef _can_send(self):
@@ -541,6 +560,11 @@ cdef class SkyLink:
 		cdef sky_tick_t now;
 		now = self.get_tick_time()
 		c_skylink.sky_mac_carrier_sensed(self.handle.mac, now)
+
+	def mac_reset(self):
+		cdef sky_tick_t now;
+		now = self.get_tick_time()
+		c_skylink.mac_reset(self.handle.mac, now)
 
 
 	def get_tick_time(self):
