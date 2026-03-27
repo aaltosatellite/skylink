@@ -8,6 +8,7 @@ from skylink_wrapper.cython_skylink import num_virtual_channels, arq_state_off
 import zmq, amqp
 #import time
 import json
+import os
 from datetime import datetime as dtime
 from queue import Queue, Empty
 from urllib.parse import urlparse
@@ -309,6 +310,16 @@ class SkyModem:
             elif ctrl_command == "reset_mac":
                 self.skylink_loop.mac_reset()
                 response_dict["rsp"] = "ack"
+            elif ctrl_command == "get_tle":
+                # TODO: Make the pathing more flexible for other satellite names.
+                cache_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "tle_cache", "Foresail-1p_tle.txt")
+                if os.path.exists(cache_path):
+                    with open(cache_path, 'r') as f:
+                        tle_data = f.read().strip().split('\n')
+                    response_dict["tle"] = tle_data
+                else:
+                    response_dict["tle"] = None
+                response_dict["rsp"] = "tle"
             else:
                 DBGPRINT("Unknown control command: {}".format(ctrl_command))
                 return

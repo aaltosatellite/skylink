@@ -50,6 +50,7 @@ def load_satellite_and_gs_configs(config_path):
         norad_id = config['norad_id']
         satellite_name = config["satellite_name"]
         cache_file = os.path.join(os.path.dirname(__file__), '..', '..', 'tle_cache', f"{satellite_name.replace(' ', '_')}_tle.txt")
+        using_cached = False
 
         # Check for TLE cache
         if os.path.exists(cache_file):
@@ -64,7 +65,8 @@ def load_satellite_and_gs_configs(config_path):
                     if (datetime.now(tz=timezone.utc) - tle_timestamp) < timedelta(hours=12):
                         print(f"Using cached TLE data for {satellite_name} from {tle_timestamp.isoformat()}")
                         print(f"Cached TLE data for {satellite_name}:\n{tle_lines[0]}\n{tle_lines[1]}")
-                        return EarthSatellite(tle_lines[0], tle_lines[1], satellite_name, skyfield_timescale)
+                        satellite = EarthSatellite(tle_lines[0], tle_lines[1], satellite_name, skyfield_timescale)
+                        using_cached = True
                     else:
                         print(f"Cached TLE data for {satellite_name} is older than 12 hours. Fetching new TLE data.")
                 else:
@@ -91,6 +93,7 @@ def load_satellite_and_gs_configs(config_path):
                 print(f"Failed to fetch TLE data from Space Track for {satellite_name}. Status code: {request.status_code}. Using cached TLE data if available.")
                 if len(tle_lines) == 2:
                     satellite = EarthSatellite(tle_lines[0], tle_lines[1], satellite_name, skyfield_timescale)
+                    using_cached = True
                 else:
                     raise Exception(f"No valid TLE data available for {satellite_name}.")
             # Add satellite name as first TLE line since Space Track does not provide it unless format 3le, which has slightly different line format.
@@ -105,13 +108,15 @@ def load_satellite_and_gs_configs(config_path):
                 print(f"Error fetching TLE data from Celestrak for {satellite_name}: {e}")
                 if len(tle_lines) == 2:
                     satellite = EarthSatellite(tle_lines[0], tle_lines[1], satellite_name, skyfield_timescale)
+                    using_cached = True
                 else:
                     raise Exception(f"No valid TLE data available for {satellite_name}.")
 
         # Write TLE to a file, Current path + satellite name_tle.txt:
-        with open(cache_file, 'w') as f:
-            f.write(datetime.now(tz=timezone.utc).isoformat() + '\n')
-            f.write('\n'.join(tle_lines[1:3]) + '\n')
+        if not using_cached:
+            with open(cache_file, 'w') as f:
+                f.write(datetime.now(tz=timezone.utc).isoformat() + '\n')
+                f.write('\n'.join(tle_lines[1:3]) + '\n')
 
         # Load Ground Station info
         gs_latitude = config["gs_latitude"]
