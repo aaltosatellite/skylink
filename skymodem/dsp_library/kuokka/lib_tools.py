@@ -52,6 +52,8 @@ def load_satellite_and_gs_configs(config_path):
         cache_file = os.path.join(os.path.dirname(__file__), '..', '..', 'tle_cache', f"{satellite_name.replace(' ', '_')}_tle.txt")
         using_cached = False
 
+        tle_lines = []
+
         # Check for TLE cache
         if os.path.exists(cache_file):
             # Don't spam space-track. Their rules say one TLE per hour and from experience they will ban the account if this rule is broken too much.
@@ -71,7 +73,6 @@ def load_satellite_and_gs_configs(config_path):
                         print(f"Cached TLE data for {satellite_name} is older than 12 hours. Fetching new TLE data.")
                 else:
                     print(f"TLE cache file for {satellite_name} is malformed. Fetching new TLE data.")
-        tle_lines = None
 
         # Load TLE:
         if use_space_track and not using_cached:
