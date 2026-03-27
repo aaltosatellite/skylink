@@ -7,6 +7,7 @@ import skyfield.api
 import urllib.request
 import os
 import json
+from datetime import datetime, timezone, timedelta
 
 
 skyfield_timescale = skyfield.api.load.timescale()
@@ -48,8 +49,28 @@ def load_satellite_and_gs_configs(config_path):
         config = json.load(f)
         norad_id = config['norad_id']
         satellite_name = config["satellite_name"]
-        
+        cache_file = os.path.join(os.path.dirname(__file__), '..', '..', 'tle_cache', f"{satellite_name.replace(' ', '_')}_tle.txt")
+
+        # Check for TLE cache
+        if os.path.exists(cache_file):
+            # Don't spam space-track. Their rules say one TLE per hour and from experience they will ban the account if this rule is broken too much.
+            # First line is the timestamp (ISO format) then two lines of TLE data.
+            with open(cache_file, 'r') as f:
+                lines = f.read().strip().split('\n')
+                if len(lines) == 3:
+                    tle_timestamp = datetime.fromisoformat(lines[0])
+                    # Always load the TLE data. If something goes wrong with space-track, we can still use old TLE data. This is better than nothing.
+                    tle_lines = lines[1:]
+                    if (datetime.now(tz=timezone.utc) - tle_timestamp) < timedelta(hours=12):
+                        print(f"Using cached TLE data for {satellite_name} from {tle_timestamp.isoformat()}")
+                        print(f"Cached TLE data for {satellite_name}:\n{tle_lines[0]}\n{tle_lines[1]}")
+                        return EarthSatellite(tle_lines[0], tle_lines[1], satellite_name, skyfield_timescale)
+                    else:
+                        print(f"Cached TLE data for {satellite_name} is older than 12 hours. Fetching new TLE data.")
+                else:
+                    print(f"TLE cache file for {satellite_name} is malformed. Fetching new TLE data.")
         tle_lines = None
+
         # Load TLE:
         if use_space_track:
             import requests
@@ -64,18 +85,33 @@ def load_satellite_and_gs_configs(config_path):
                 if resp.status_code != 200:
                     raise Exception(f"Space Track login failed. Status code: {resp.status_code}")
                 request = session.get(URL)
-            tle_lines = request.text.strip().split('\n')
+            response_lines = request.text.strip().split('\n')
+            if len(response_lines) < 2:
+                # Use cached TLE:
+                print(f"Failed to fetch TLE data from Space Track for {satellite_name}. Status code: {request.status_code}. Using cached TLE data if available.")
+                if len(tle_lines) == 2:
+                    satellite = EarthSatellite(tle_lines[0], tle_lines[1], satellite_name, skyfield_timescale)
+                else:
+                    raise Exception(f"No valid TLE data available for {satellite_name}.")
             # Add satellite name as first TLE line since Space Track does not provide it unless format 3le, which has slightly different line format.
-            tle_lines = [satellite_name] + tle_lines
+            tle_lines = [satellite_name] + response_lines
+            satellite = EarthSatellite(tle_lines[1], tle_lines[2], satellite_name, skyfield_timescale)
         else:
-            request = urllib.request.urlopen(f"https://celestrak.com/NORAD/elements/gp.php?CATNR={norad_id}&FORMAT=tle")
-            tle_lines = request.read().decode('utf-8').strip().split('\n')
-        satellite = EarthSatellite(tle_lines[1], tle_lines[2], satellite_name, skyfield_timescale)
+            try:
+                request = urllib.request.urlopen(f"https://celestrak.com/NORAD/elements/gp.php?CATNR={norad_id}&FORMAT=tle")
+                tle_lines = request.read().decode('utf-8').strip().split('\n')
+                satellite = EarthSatellite(tle_lines[1], tle_lines[2], satellite_name, skyfield_timescale)
+            except Exception as e:
+                print(f"Error fetching TLE data from Celestrak for {satellite_name}: {e}")
+                if len(tle_lines) == 2:
+                    satellite = EarthSatellite(tle_lines[0], tle_lines[1], satellite_name, skyfield_timescale)
+                else:
+                    raise Exception(f"No valid TLE data available for {satellite_name}.")
 
         # Write TLE to a file, Current path + satellite name_tle.txt:
-        cache_file = os.path.join(os.path.dirname(__file__), '..', '..', 'tle_cache', f"{satellite_name.replace(' ', '_')}_tle.txt")
         with open(cache_file, 'w') as f:
-            f.write('\n'.join(tle_lines))
+            f.write(datetime.now(tz=timezone.utc).isoformat() + '\n')
+            f.write('\n'.join(tle_lines[1:3]) + '\n')
 
         # Load Ground Station info
         gs_latitude = config["gs_latitude"]
@@ -85,7 +121,10 @@ def load_satellite_and_gs_configs(config_path):
 
         print(f"Loaded TLE for {satellite_name} (NORAD ID: {norad_id})")
         print(f"Ground Station location: lat {gs_latitude} deg, lon {gs_longitude} deg, elev {gs_elevation} m")
-        print(f"Got TLE lines: \n{tle_lines[0]}\n{tle_lines[1]}\n{tle_lines[2]}")
+        if len(tle_lines) == 3:
+            print(f"Got TLE lines: \n{tle_lines[0]}\n{tle_lines[1]}\n{tle_lines[2]}")
+        elif len(tle_lines) == 2:
+            print(f"Got TLE lines: \n{tle_lines[0]}\n{tle_lines[1]}")
 
 
 # = USRP B200/B210 VALID SAMPLERATES =========================================================================================================================================================
