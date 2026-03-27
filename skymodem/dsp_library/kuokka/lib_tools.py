@@ -74,7 +74,7 @@ def load_satellite_and_gs_configs(config_path):
         tle_lines = None
 
         # Load TLE:
-        if use_space_track:
+        if use_space_track and not using_cached:
             import requests
             URL = f"https://www.space-track.org/basicspacedata/query/class/gp/NORAD_CAT_ID/{norad_id}/orderby/EPOCH/format/tle"
             # In order to use space track, need to create credentials.json file in the same directory as this script
@@ -99,7 +99,7 @@ def load_satellite_and_gs_configs(config_path):
             # Add satellite name as first TLE line since Space Track does not provide it unless format 3le, which has slightly different line format.
             tle_lines = [satellite_name] + response_lines
             satellite = EarthSatellite(tle_lines[1], tle_lines[2], satellite_name, skyfield_timescale)
-        else:
+        elif not using_cached:
             try:
                 request = urllib.request.urlopen(f"https://celestrak.com/NORAD/elements/gp.php?CATNR={norad_id}&FORMAT=tle")
                 tle_lines = request.read().decode('utf-8').strip().split('\n')
