@@ -69,6 +69,7 @@ def load_satellite_and_gs_configs(config_path):
                         print(f"Cached TLE data for {satellite_name}:\n{tle_lines[0]}\n{tle_lines[1]}")
                         satellite = EarthSatellite(tle_lines[0], tle_lines[1], satellite_name, skyfield_timescale)
                         using_cached = True
+                        tle_lines = [satellite_name] + tle_lines
                     else:
                         print(f"Cached TLE data for {satellite_name} is older than 12 hours. Fetching new TLE data.")
                 else:
@@ -89,6 +90,7 @@ def load_satellite_and_gs_configs(config_path):
                     raise Exception(f"Space Track login failed. Status code: {resp.status_code}")
                 request = session.get(URL)
             response_lines = request.text.strip().split('\n')
+            # Uh oh banned again:
             if len(response_lines) < 2:
                 # Use cached TLE:
                 print(f"Failed to fetch TLE data from Space Track for {satellite_name}. Status code: {request.status_code}. Using cached TLE data if available.")
@@ -107,7 +109,7 @@ def load_satellite_and_gs_configs(config_path):
                 satellite = EarthSatellite(tle_lines[1], tle_lines[2], satellite_name, skyfield_timescale)
             except Exception as e:
                 print(f"Error fetching TLE data from Celestrak for {satellite_name}: {e}")
-                if len(tle_lines) == 2:
+                if len(tle_lines) == 3:
                     satellite = EarthSatellite(tle_lines[0], tle_lines[1], satellite_name, skyfield_timescale)
                     using_cached = True
                 else:
@@ -127,10 +129,7 @@ def load_satellite_and_gs_configs(config_path):
 
         print(f"Loaded TLE for {satellite_name} (NORAD ID: {norad_id})")
         print(f"Ground Station location: lat {gs_latitude} deg, lon {gs_longitude} deg, elev {gs_elevation} m")
-        if len(tle_lines) == 3:
-            print(f"Got TLE lines: \n{tle_lines[0]}\n{tle_lines[1]}\n{tle_lines[2]}")
-        elif len(tle_lines) == 2:
-            print(f"Got TLE lines: \n{tle_lines[0]}\n{tle_lines[1]}")
+        print(f"Got TLE lines: \n{tle_lines[1]}\n{tle_lines[2]}")
 
 
 # = USRP B200/B210 VALID SAMPLERATES =========================================================================================================================================================
