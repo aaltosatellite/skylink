@@ -11,6 +11,7 @@ import time
 import multiprocessing as mpr
 from multiprocessing import shared_memory
 from copy import copy
+from datetime import datetime, timezone, timedelta
 
 SHM_MEM_BASENAME = "skymodem-dsp-multimode-shm-"
 
@@ -442,7 +443,14 @@ class DSPLoop:
 
         Receives payloads from SkyLinkLoop, processes them into samples, and outputs samples to RadioLoop.
         """
+        last_tle_update = datetime.now(tz=timezone.utc)
         while self.on:
+            # Every 12 hours update tle for doppler correction if enabled to account for TLE decay.
+            if self.do_tle_doppler_correction and ((datetime.now(tz=timezone.utc) - last_tle_update) > timedelta(hours=12)):
+                load_satellite_and_gs_configs(self.tle_doppler_config)
+                last_tle_update = datetime.now(tz=timezone.utc)
+                DBGPRINT(self.dbgprint_mask&self.DBGP_TX, "TLE data reloaded for Doppler correction.")
+
             if not self.que_tx_samples_out.empty():
                 time.sleep(0.002)
                 continue
