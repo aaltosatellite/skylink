@@ -167,7 +167,7 @@ class RadioLoop:
 
         # Start RX and TX threads
         self.rx_thread 			= threading.Thread(target=self._usrp_rx_loop,    args=(usrp, 1024*2), daemon=True) #TODO bufferlen as setting?
-        self.tx_thread 			= threading.Thread(target=self._usrp_tx_loop,    args=(usrp, 1024*2), daemon=True) #TODO bufferlen as setting?
+        self.tx_thread 			= threading.Thread(target=self._usrp_tx_loop,    args=(usrp, 1024*8), daemon=True) #TODO bufferlen as setting?
         self.on = True
         self.rx_thread.start()
         self.tx_thread.start()
@@ -394,7 +394,7 @@ class RadioLoop:
 
         # Start RX and TX threads
         self.rx_thread			= threading.Thread(target=self._soapy_rx_loop,   args=(sdr, 1024*4), daemon=True)
-        self.tx_thread 			= threading.Thread(target=self._soapy_tx_loop,   args=(sdr, 1024*4), daemon=True) #TODO bufferlen as setting?
+        self.tx_thread 			= threading.Thread(target=self._soapy_tx_loop,   args=(sdr, 1024*8), daemon=True) #TODO bufferlen as setting?
         self.on = True
         self.rx_thread.start()
         self.tx_thread.start()
