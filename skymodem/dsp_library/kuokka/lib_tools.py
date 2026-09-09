@@ -51,6 +51,8 @@ def load_satellite_and_gs_configs(config_path):
         satellite_name = config["satellite_name"]
         cache_file = os.path.join(os.path.dirname(__file__), '..', '..', 'tle_cache', f"{satellite_name.replace(' ', '_')}_tle.txt")
         using_cached = False
+        porthouse_config = os.path.join(os.path.dirname(__file__), '..', '..', 'tle_cache', "porthouse_address.txt")
+        use_porthouse = True
 
         tle_lines = []
 
@@ -76,7 +78,15 @@ def load_satellite_and_gs_configs(config_path):
                     print(f"TLE cache file for {satellite_name} is malformed. Fetching new TLE data.")
 
         # Load TLE:
-        if use_space_track and not using_cached:
+        if use_porthouse and not using_cached: #While the local cache is redundant as porthouse (Suomi100 aert nspawn in actuality) already has it's own cache, I don't want to FAFO in case something else that I don't notice is using this tle_cache file to grab the satellite TLEs and will then break
+            with open(porthouse_config, "r") as file:
+                addr = file.read()
+                URL = f"{addr}/tle/{norad_id}"
+                request = urllib.request.urlopen(URL)
+                #this is necessary as the spacetrack format is 3 lines (first line being satellite name and update time)
+                tle_lines = satellite_name + request.read().decode("utf-8").strip().split("\n")
+                satellite = EarthSatellite(tle_lines[1], tle_lines[2], satellite_name, skyfield_timescale)
+        elif use_space_track and not using_cached:
             import requests
             URL = f"https://www.space-track.org/basicspacedata/query/class/gp/NORAD_CAT_ID/{norad_id}/orderby/EPOCH/format/tle"
             # In order to use space track, need to create credentials.json file in the same directory as this script
