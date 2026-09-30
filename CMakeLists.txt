@@ -10,16 +10,15 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 set(CMAKE_BUILD_TYPE Debug) # Force debug mode
 
-
-
+set(SKYLINK_PLATFORM
+    "linux"
+    CACHE STRING "Platform folder for skylink (linux, freertos)")
 
 find_package(ZMQ REQUIRED)
-
 
 add_compile_options(-O2)
 add_compile_options(-g -Wall -Wextra)
 
-
 add_subdirectory(src)
-add_subdirectory(tests) #TODO: Update tests to modernity
-#add_subdirectory(skymodem)
+# add_subdirectory(tests) # TODO: Update tests to modernity
+# add_subdirectory(skymodem)
