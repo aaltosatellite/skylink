@@ -13,6 +13,9 @@ set(CMAKE_BUILD_TYPE Debug) # Force debug mode
 set(SKYLINK_PLATFORM
     "linux"
     CACHE STRING "Platform folder for skylink (linux, freertos)")
+set(SKYLINK_BUILD_SHARED
+    TRUE
+    CACHE BOOL "Build shared lib for skylink")
 
 find_package(ZMQ REQUIRED)
 
