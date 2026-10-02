@@ -47,7 +47,7 @@ target_sources(
           "ext/libfec/decode_rs_8.c"
           "ext/libfec/encode_rs_8.c")
 
-add_library(skylink_shared SHARED $<TARGET_OBJECTS:skylink>)
+add_library(skylink_static STATIC $<TARGET_OBJECTS:skylink>)
 if(SKYLINK_BUILD_SHARED)
-  add_library(skylink_static STATIC $<TARGET_OBJECTS:skylink>)
+  add_library(skylink_shared SHARED $<TARGET_OBJECTS:skylink>)
 endif()
