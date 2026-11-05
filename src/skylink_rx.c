@@ -12,8 +12,11 @@
 
 #include <string.h> // memcmp, memset
 
+#ifdef SKY_USE_TDD_MAC
 
 static void sky_rx_process_ext_mac_control(SkyHandle self, int rx_time_ticks, SkyParsedFrame *parsed);
+
+#endif
 
 // Pass recieved frame with FEC and Golay header for the protocol logic.
 int sky_rx_with_golay(SkyHandle self, SkyRadioFrame* frame)
@@ -170,6 +173,7 @@ int sky_rx(SkyHandle self, const SkyRadioFrame* frame)
 }
 
 
+#ifdef SKY_USE_TDD_MAC
 
 static void sky_rx_process_ext_mac_control(SkyHandle self, int rx_time_ticks, SkyParsedFrame* parsed)
 {
@@ -193,3 +197,5 @@ static void sky_rx_process_ext_mac_control(SkyHandle self, int rx_time_ticks, Sk
 	// Update MAC system's belief of current status of windowing.
 	mac_update_belief(self->mac, sky_get_tick_time(), rx_time_ticks, w, r);
 }
+
+#endif

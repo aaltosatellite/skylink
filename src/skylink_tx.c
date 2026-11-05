@@ -16,6 +16,7 @@
 
 
 
+#ifdef SKY_USE_TDD_MAC
 
 /* This zeroes the tracking of how many frames have been sent in current window. */
 static void sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_send, sky_tick_t now)
@@ -70,6 +71,8 @@ static void sky_tx_track_tdd_state(SkyHandle self, int can_send, int content_to_
 	}
 }
 
+#endif
+
 
 static int sky_tx_extension_eval_hmac_reset(SkyHandle self, SkyTransmitFrame *tx_frame, uint8_t vc)
 {
@@ -116,9 +119,13 @@ static int sky_tx_pick_vc(SkyHandle self, sky_tick_t now)
 			return vc;
 	}
 
+  #ifdef SKY_USE_TDD_MAC
+
 	// This is here to ensure that the peer advances its window through TDD gap even if there are no messages to send
 	if (mac_idle_frame_needed(self->mac, now))
 		return 0;
+
+  #endif
 
 	// No need to transmit.
 	return -1;
@@ -132,8 +139,11 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	SKY_ASSERT(frame != NULL);
 
 	// Check If it is okay to transmit.
+
 	sky_tick_t now = sky_get_tick_time();
-	int can_send = mac_can_send(self->mac, now);
+#ifdef SKY_USE_TDD_MAC
+  int can_send = mac_can_send(self->mac, now);
+#endif
 
 
 	// Check the virtual channels' timeout conditions.
@@ -144,10 +154,19 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	// Pick a virtual channel to transmit on.
 	int vc = sky_tx_pick_vc(self, now);
 	int content_to_send = (vc >= 0);
+
+#ifdef SKY_USE_TDD_MAC
 	sky_tx_track_tdd_state(self, can_send, content_to_send, now);
+#endif
 
 	// No need to transmit.
-	if ((!can_send) || (vc < 0))
+	if (
+#ifdef SKY_USE_TDD_MAC
+      (!can_send) 
+#else
+      false
+#endif
+      || (vc < 0))
 		return 0;
 
 	// Advance round robin index for virtual channels.
@@ -189,7 +208,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	/* Add HMAC reset extension if required. */
 	sky_tx_extension_eval_hmac_reset(self, &tx_frame, vc);
 
-	/* Fill rest of the frame with payload data and necessary ARQ extensions. */
+	/* Fill rest of the frame with payload data and necessary ARQ extensions. */      // NOTE:     ↓ this function needs to be looked at for windowing bs
 	int ret = sky_vc_fill_frame(self->virtual_channels[vc], self->conf, &tx_frame, now, self->mac->frames_sent_in_current_window_per_vc[vc], self->diag);
 
 	// If there was an error, return it.
@@ -219,6 +238,7 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 
 	// Increment counters
 	self->mac->total_frames_sent_in_current_window++;
+  // NOTE:   ↓ this probably is unnescessary because windowing is not needed on full duplex machines
 	self->mac->frames_sent_in_current_window_per_vc[vc]++;
 
 	// Update statistics
