@@ -13,6 +13,7 @@
  */
 struct sky_mac_s {
 
+#ifdef SKY_USE_TDD_MAC                
 	// Pointer to original configuration struct
 	const SkyMACConfig* config;
 
@@ -31,14 +32,17 @@ struct sky_mac_s {
 	// Counter to monitor is the current window length too large or small
 	int32_t window_adjust_counter;
 
+#endif
 	// The virtual channel that takes presence on next window.
 	uint8_t vc_round_robin_start;
 
+#ifdef SKY_USE_TDD_MAC                
 	// Is our window open?
 	bool window_on;
 
 	// Was it possible to send, without content to send?
 	bool unused_window_time;
+#endif
 
 	// Number of frames transmitted in this window per VC
 	uint16_t frames_sent_in_current_window_per_vc[SKY_NUM_VIRTUAL_CHANNELS];
@@ -56,7 +60,11 @@ struct sky_mac_s {
  *	params:
  *  	config: Pointer to configuration struct. The allocation must always be available.
  */
-SkyMAC* sky_mac_create(SkyMACConfig* config);
+SkyMAC* sky_mac_create(
+#ifdef SKY_USE_TDD_MAC                
+    SkyMACConfig* config
+#endif    
+    );
 
 
 /*
