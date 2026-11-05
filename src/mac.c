@@ -8,6 +8,7 @@
 #include "skylink/utilities.h"
 #include "sky_platform.h"
 
+#ifdef SKY_USE_TDD_MAC                
 
 /*
  * Calculate the total length of TDD cycle in ticks
@@ -30,7 +31,7 @@ static sky_tick_t wrap_tdd_cycle(SkyMAC* mac, sky_tick_t ticks)
 #endif
 }
 
-
+#endif
 
 
 
@@ -39,8 +40,13 @@ static sky_tick_t wrap_tdd_cycle(SkyMAC* mac, sky_tick_t ticks)
 // === PUBLIC FUNCTIONS ================================================================================================
 
 // Create a new MAC instance and initialize it with the given configuration.
-SkyMAC* sky_mac_create(SkyMACConfig* config)
+SkyMAC* sky_mac_create(
+#ifdef SKY_USE_TDD_MAC                
+    SkyMACConfig* config
+#endif
+    )
 {
+#ifdef SKY_USE_TDD_MAC                
 	//Check that values are within allowed parameters, if not set them to default.
 
 	// Make sure the min/max windows size make sense.
@@ -64,9 +70,12 @@ SkyMAC* sky_mac_create(SkyMACConfig* config)
 		config->window_adjustment_threshold = 1;
 	if (config->window_adjustment_threshold > 4)
 		config->window_adjustment_threshold = 4;
+#endif
 
 	//Allocate memory for the MAC struct.
 	SkyMAC* mac = SKY_MALLOC(sizeof(SkyMAC));
+
+#ifdef SKY_USE_TDD_MAC                
 
 	//Initialize the MAC struct.
 	mac->config = config;
@@ -78,10 +87,15 @@ SkyMAC* sky_mac_create(SkyMACConfig* config)
 	mac->peer_window_length = config->minimum_window_length_ticks;
 	mac->last_belief_update = MOD_TIME_TICKS - 300000;
 	mac->total_frames_sent_in_current_window = 0;
+
+#endif
 	mac->vc_round_robin_start = 0;
+
+#ifdef SKY_USE_TDD_MAC                
 	for (int i = 0; i < SKY_NUM_VIRTUAL_CHANNELS; ++i) {
 		mac->frames_sent_in_current_window_per_vc[i] = 0;
 	}
+#endif
 	return mac;
 }
 
@@ -96,6 +110,8 @@ void sky_mac_destroy(SkyMAC* mac) {
  *	This is mainly useful if there is reason to suspect that gs and satellite are in lockstep and talk over
  *	each other. Preferably use the current own window length with random sign to shift by.
  */
+#ifdef SKY_USE_TDD_MAC                
+
 void mac_shift_windowing(SkyMAC* mac, sky_tick_t t_shift) {
 	// T0 should always stay behind current time. Otherwise time-deltas wrap around the wrong way.
 	t_shift = (t_shift > 0) ? t_shift : -t_shift;
@@ -289,3 +305,5 @@ int mac_set_frame_fields(SkyMAC* mac, SkyTransmitFrame* tx_frame, sky_tick_t now
 	// Add MAC/TDD control extension with window length and remaining ticks to tx_frame.
 	return sky_frame_add_extension_mac_tdd_control(tx_frame, (uint16_t)mac->my_window_length, (uint16_t)remaining);
 }
+
+#endif
