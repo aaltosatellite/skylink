@@ -5,7 +5,7 @@
 #include "skylink/frame.h"
 
 
-#define SKY_USE_TDD_MAC
+//#define SKY_USE_TDD_MAC // it cant be this easy can it?
 
 
 
