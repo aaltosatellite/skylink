@@ -42,13 +42,13 @@ struct sky_mac_s {
 
 	// Was it possible to send, without content to send?
 	bool unused_window_time;
-#endif
 
 	// Number of frames transmitted in this window per VC
 	uint16_t frames_sent_in_current_window_per_vc[SKY_NUM_VIRTUAL_CHANNELS];
 
 	// Total number of frames sent in this windows
 	uint16_t total_frames_sent_in_current_window;
+#endif
 };
 
 

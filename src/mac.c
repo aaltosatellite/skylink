@@ -7,6 +7,7 @@
 #include "skylink/frame.h"
 #include "skylink/utilities.h"
 #include "sky_platform.h"
+#include <string.h>
 
 #ifdef SKY_USE_TDD_MAC                
 
@@ -74,6 +75,7 @@ SkyMAC* sky_mac_create(
 
 	//Allocate memory for the MAC struct.
 	SkyMAC* mac = SKY_MALLOC(sizeof(SkyMAC));
+  memset(mac, 0, sizeof(SkyMAC));
 
 #ifdef SKY_USE_TDD_MAC                
 

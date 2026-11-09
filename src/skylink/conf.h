@@ -8,7 +8,7 @@
 
 /* TDD MAC configuration struct */
 typedef struct {
-#ifdef SKY_USE_TDD_MAC                
+#ifdef SKY_USE_TDD_MAC
 
   /* Transmission window size limits for both me and peer. */
   int32_t maximum_window_length_ticks;
@@ -49,6 +49,8 @@ typedef struct {
    * the window. */
   uint8_t idle_frames_per_window;
 
+#else
+  uint8_t dummy;
 #endif
 } SkyMACConfig;
 
@@ -107,10 +109,13 @@ typedef struct {
    * payloads. This is to keep status fresh. */
   int32_t idle_frame_threshold;
 
+#ifdef SKY_USE_TDD_MAC
   /* How many idle frames are created per window per virtual channel where ARQ
    * is active. */
   int8_t idle_frames_per_window;
-
+#else
+  int32_t idle_frame_interval_ticks;
+#endif
 } SkyARQConfig;
 
 /*
@@ -121,7 +126,7 @@ typedef struct {
  * directly from here, allowing configuration changes.
  */
 struct sky_conf {
-  SkyMACConfig mac; // MAC/TDD Configuration
+  SkyMACConfig mac;                         // MAC/TDD Configuration
   SkyHMACConfig hmac;                       // HMAC Configuration
   SkyVCConfig vc[SKY_NUM_VIRTUAL_CHANNELS]; // Virtual channel configurations
   SkyARQConfig arq; // Automatic repeat request configurations

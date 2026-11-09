@@ -26,8 +26,13 @@ SkyHandle sky_create(SkyConfig *config)
 		arq_conf->timeout_ticks = 10000;
 	if (arq_conf->idle_frame_threshold < 100 || arq_conf->idle_frame_threshold > 10000)
 		arq_conf->idle_frame_threshold = 1000;
+#ifdef SKY_USE_TDD_MAC
 	if (arq_conf->idle_frames_per_window < 1 || arq_conf->idle_frames_per_window > 4)
 		arq_conf->idle_frames_per_window = 1;
+#else
+  if (arq_conf->idle_frame_interval_ticks < 1 || arq_conf->idle_frame_interval_ticks > 4)
+    arq_conf->idle_frame_interval_ticks = 1;
+#endif
 
 
 	//Allocate memory for Skylink instance and set it to zero.
