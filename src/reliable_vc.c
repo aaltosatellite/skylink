@@ -319,13 +319,25 @@ int sky_vc_push_rx_packet(SkyVirtualChannel* vchannel, const uint8_t* src, unsig
 //======================================================================================================================
 
 
+#ifndef SKY_USE_TDD_MAC
+static int idle_frame_allowed(const SkyVirtualChannel *vc, const SkyConfig *conf, sky_tick_t now)
+{
+  return wrap_time_ticks(now - vc->last_idle_tick) >= conf->arq.idle_frame_interval_ticks;
+}
+#endif
+
 // sky_vc_has_content_to_send()
 /*
 Returns boolean 0/1 as to if there is content to be sent on this virtual channel.
 Execution of function depends on the ARQ state of the virtual channel.
 */
-int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_tick_t now, uint16_t frames_sent_in_this_vc_window)
+int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_tick_t now
+#ifdef SKY_USE_TDD_MAC
+    , uint16_t frames_sent_in_this_vc_window
+#endif
+    )
 {
+
 	switch (vchannel->arq_state) {
 	case ARQ_STATE_OFF:
 		/*
@@ -343,8 +355,15 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_t
 		 * ARQ is handshaking but we haven't received response yet.
 		 */
 
+
 		// Transmit if not too many idle frames have not been generated.
-		if (frames_sent_in_this_vc_window < config->arq.idle_frames_per_window)
+		if (
+#ifdef SKY_USE_TDD_MAC
+        frames_sent_in_this_vc_window < config->arq.idle_frames_per_window
+#else
+        idle_frame_allowed(vchannel, config, now)
+#endif
+        )
 			return 1;
 		return 0;
 
@@ -358,7 +377,14 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_t
 			return 1;
 
 		// Yes, if and we have need to retransmit something and not all idle frame are used.
-		if ((frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) && (rcvRing_get_horizon_bitmap(vchannel->rcvRing) || vchannel->need_recall))
+		if (
+        (
+#ifdef SKY_USE_TDD_MAC
+          frames_sent_in_this_vc_window < config->arq.idle_frames_per_window
+#else
+          idle_frame_allowed(vchannel, config, now)
+#endif
+          ) && (rcvRing_get_horizon_bitmap(vchannel->rcvRing) || vchannel->need_recall))
 			return 1;
 
 		// Yes, if we need to response a ARQ handshake
@@ -366,8 +392,13 @@ int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_t
 			return 1;
 
 		// Can still generate more idle frames?
-		if (frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) {
-
+		if (
+#ifdef SKY_USE_TDD_MAC
+        frames_sent_in_this_vc_window < config->arq.idle_frames_per_window
+#else
+        idle_frame_allowed(vchannel, config, now)
+#endif
+       ) {
 			int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > config->arq.idle_frame_threshold;
 			int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > config->arq.idle_frame_threshold;
 			int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > config->arq.idle_frame_threshold;
@@ -385,7 +416,11 @@ Fills the frame with a packet if there is something to send.
 
 Returns boolean 0/1 as to if it actually wrote a frame.
 */
-int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmitFrame *tx_frame, sky_tick_t now, uint16_t frames_sent_in_this_vc_window, SkyDiagnostics *diag)
+int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmitFrame *tx_frame, sky_tick_t now,
+#ifdef SKY_USE_TDD_MAC
+    uint16_t frames_sent_in_this_vc_window,
+#endif
+    SkyDiagnostics *diag)
 {
 
 	switch (vchannel->arq_state) {
@@ -420,8 +455,16 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 		 */
 
 		// Transmit handshake as an idle frame if we haven't spammed enough in this window
-		if (frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) {
-
+		if (
+#ifdef SKY_USE_TDD_MAC
+        frames_sent_in_this_vc_window < config->arq.idle_frames_per_window
+#else
+        idle_frame_allowed(vchannel, config, now)
+#endif
+        ) {
+#ifndef SKY_USE_TDD_MAC
+      vchannel->last_idle_tick = now;
+#endif
 			// Add only a ARQ handshake extension to the packet
 			sky_frame_add_extension_arq_handshake(tx_frame, ARQ_STATE_IN_INIT, vchannel->arq_session_identifier);
 			return 1;
@@ -447,7 +490,16 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 
 		// Add ARQ retransmit request extension if we see that there are missing frames.
 		sky_arq_mask_t mask = rcvRing_get_horizon_bitmap(vchannel->rcvRing);
-		if ((frames_sent_in_this_vc_window < config->arq.idle_frames_per_window) && (mask != 0 || vchannel->need_recall)){
+		if ((
+#ifdef SKY_USE_TDD_MAC
+          frames_sent_in_this_vc_window < config->arq.idle_frames_per_window
+#else
+          idle_frame_allowed(vchannel, config, now)
+#endif
+        ) && (mask != 0 || vchannel->need_recall)){
+#ifndef SKY_USE_TDD_MAC
+      vchannel->last_idle_tick = now;
+#endif
 			sky_frame_add_extension_arq_request(tx_frame, vchannel->rcvRing->head_sequence, mask);
 			vchannel->need_recall = 0;
 			ret = 1;
@@ -455,12 +507,23 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 
 		// Add ARQ Control/Sync extension if we have something to send or if we have been idle for too long.
 		int payload_to_send = sendRing_count_packets_to_send(vchannel->sendRing, 1) > 0;
-		int b0 = frames_sent_in_this_vc_window < config->arq.idle_frames_per_window;
+		int b0 = (
+#ifdef SKY_USE_TDD_MAC
+        frames_sent_in_this_vc_window < config->arq.idle_frames_per_window
+#else
+        idle_frame_allowed(vchannel, config, now)
+#endif 
+        );
 		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > config->arq.idle_frame_threshold;
 		int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > config->arq.idle_frame_threshold;
 		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > config->arq.idle_frame_threshold;
 		int b4 = vchannel->unconfirmed_payloads > 0;
 		if ((b0 && (b1 || b2 || b3 || b4)) || payload_to_send){
+#ifndef SKY_USE_TDD_MAC
+      if (b0) {
+        vchannel->last_idle_tick = now;
+      }
+#endif
 			sky_frame_add_extension_arq_ctrl(tx_frame, vchannel->sendRing->tx_sequence, vchannel->rcvRing->head_sequence);
 			vchannel->last_ctrl_send_tick = now;
 			vchannel->unconfirmed_payloads = 0;

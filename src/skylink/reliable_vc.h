@@ -35,6 +35,9 @@ struct sky_virtual_channel_s {
 	sky_tick_t last_tx_tick;            // Tick of last time peer confirmed new payloads received, or being in sync with us.
 	sky_tick_t last_rx_tick;            // Tick of last time a new continuous payloads was received, or we confirmed sync with peer.
 	sky_tick_t last_ctrl_send_tick;     // Tick of last time a control extension was transmitted.
+#ifndef SKY_USE_TDD_MAC
+  sky_tick_t last_idle_tick;
+#endif
 
 	// Helper counter for the number of received packets which we have not yet acknownledged.
 	int16_t unconfirmed_payloads;
@@ -87,13 +90,21 @@ int sky_vc_count_packets_to_tx(SkyVirtualChannel* vchannel, int include_resend);
 void sky_vc_update_tx_sync(SkyVirtualChannel *vchannel, sky_arq_sequence_t peer_rx_head_sequence_by_ctrl, sky_tick_t now);
 
 // Returns boolean 0/1 as to if there is content to be sent on this virtual channel.
-int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_tick_t now, uint16_t frames_sent_in_this_vc_window);
+int sky_vc_content_to_send(SkyVirtualChannel* vchannel, SkyConfig* config, sky_tick_t now
+#ifdef SKY_USE_TDD_MAC
+    , uint16_t frames_sent_in_this_vc_window
+#endif
+    );
 
 /*
  * Fills the frame with a packet if there is something to send.
  * Returns boolean 0/1 as to if it actually wrote a frame.
  */
-int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmitFrame *tx_frame, sky_tick_t now, uint16_t frames_sent_in_this_vc_window, SkyDiagnostics *diag);
+int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmitFrame *tx_frame, sky_tick_t now, 
+#ifdef SKY_USE_TDD_MAC
+    uint16_t frames_sent_in_this_vc_window, 
+#endif
+    SkyDiagnostics *diag);
 //======================================================================================================================
 //======================================================================================================================
 

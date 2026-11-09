@@ -115,7 +115,11 @@ static int sky_tx_pick_vc(SkyHandle self, sky_tick_t now)
 			return vc;
 
 		// Something in the buffer?
-		if (sky_vc_content_to_send(self->virtual_channels[vc], self->conf, now, self->mac->frames_sent_in_current_window_per_vc[vc]) > 0)
+		if (sky_vc_content_to_send(self->virtual_channels[vc], self->conf, now
+#ifdef SKY_USE_TDD_MAC
+          , self->mac->frames_sent_in_current_window_per_vc[vc]
+#endif
+          ) > 0)
 			return vc;
 	}
 
@@ -208,8 +212,12 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	/* Add HMAC reset extension if required. */
 	sky_tx_extension_eval_hmac_reset(self, &tx_frame, vc);
 
-	/* Fill rest of the frame with payload data and necessary ARQ extensions. */      // NOTE:     ↓ this function needs to be looked at for windowing bs
-	int ret = sky_vc_fill_frame(self->virtual_channels[vc], self->conf, &tx_frame, now, self->mac->frames_sent_in_current_window_per_vc[vc], self->diag);
+	/* Fill rest of the frame with payload data and necessary ARQ extensions. */
+  int ret = sky_vc_fill_frame(self->virtual_channels[vc], self->conf, &tx_frame, now
+#ifdef SKY_USE_TDD_MAC
+      , self->mac->frames_sent_in_current_window_per_vc[vc]
+#endif
+      , self->diag);
 
 	// If there was an error, return it.
 	if (ret < 0)
@@ -236,11 +244,11 @@ int sky_tx(SkyHandle self, SkyRadioFrame* frame)
 	// if ((vc_conf->require_authentication & SKY_CONFIG_FLAG_USE_CRC32) != 0)
 	// 	sky_extend_with_crc32(&tx_frame);
 
+#ifdef SKY_USE_TDD_MAC
 	// Increment counters
 	self->mac->total_frames_sent_in_current_window++;
-  // NOTE:   ↓ this probably is unnescessary because windowing is not needed on full duplex machines
 	self->mac->frames_sent_in_current_window_per_vc[vc]++;
-
+#endif
 	// Update statistics
 	self->diag->tx_bytes += frame->length;
 	self->diag->vc_stats[vc].tx_frames++;
