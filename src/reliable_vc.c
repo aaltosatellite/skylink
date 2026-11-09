@@ -105,6 +105,9 @@ void sky_vc_wipe_to_arq_off_state(SkyVirtualChannel* vchannel)
 	vchannel->last_tx_tick = 0;
 	vchannel->last_rx_tick = 0;
 	vchannel->last_ctrl_send_tick = 0;
+#ifndef SKY_USE_TDD_MAC
+	vchannel->last_idle_tick = MOD_TIME_TICKS / 2;
+#endif
 	vchannel->unconfirmed_payloads = 0;
 	vchannel->handshake_send = 0;
 }
@@ -123,6 +126,9 @@ void sky_vc_wipe_to_arq_init_state(SkyVirtualChannel *vchannel)
 	vchannel->last_tx_tick = sky_get_tick_time();
 	vchannel->last_rx_tick = sky_get_tick_time();
 	vchannel->last_ctrl_send_tick = 0;
+#ifndef SKY_USE_TDD_MAC
+	vchannel->last_idle_tick = MOD_TIME_TICKS / 2;
+#endif
 	vchannel->unconfirmed_payloads = 0;
 	vchannel->handshake_send = 0;
 }
@@ -141,6 +147,9 @@ void sky_vc_wipe_to_arq_on_state(SkyVirtualChannel *vchannel, uint32_t identifie
 	vchannel->last_tx_tick = sky_get_tick_time();
 	vchannel->last_rx_tick = sky_get_tick_time();
 	vchannel->last_ctrl_send_tick = 0;
+#ifndef SKY_USE_TDD_MAC
+	vchannel->last_idle_tick = MOD_TIME_TICKS / 2;
+#endif
 	vchannel->unconfirmed_payloads = 0;
 	vchannel->handshake_send = 1; // TODO: redundant
 }
@@ -422,6 +431,11 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 #endif
     SkyDiagnostics *diag)
 {
+#ifdef SKY_USE_TDD_MAC
+	const int idle_allowed = frames_sent_in_this_vc_window < config->arq.idle_frames_per_window;
+#else
+	const int idle_allowed = idle_frame_allowed(vchannel, config, now);
+#endif
 
 	switch (vchannel->arq_state) {
 	case ARQ_STATE_OFF: {
@@ -455,13 +469,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 		 */
 
 		// Transmit handshake as an idle frame if we haven't spammed enough in this window
-		if (
-#ifdef SKY_USE_TDD_MAC
-        frames_sent_in_this_vc_window < config->arq.idle_frames_per_window
-#else
-        idle_frame_allowed(vchannel, config, now)
-#endif
-        ) {
+		if (idle_allowed) {
 #ifndef SKY_USE_TDD_MAC
       vchannel->last_idle_tick = now;
 #endif
@@ -490,13 +498,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 
 		// Add ARQ retransmit request extension if we see that there are missing frames.
 		sky_arq_mask_t mask = rcvRing_get_horizon_bitmap(vchannel->rcvRing);
-		if ((
-#ifdef SKY_USE_TDD_MAC
-          frames_sent_in_this_vc_window < config->arq.idle_frames_per_window
-#else
-          idle_frame_allowed(vchannel, config, now)
-#endif
-        ) && (mask != 0 || vchannel->need_recall)){
+		if (idle_allowed && (mask != 0 || vchannel->need_recall)){
 #ifndef SKY_USE_TDD_MAC
       vchannel->last_idle_tick = now;
 #endif
@@ -507,13 +509,7 @@ int sky_vc_fill_frame(SkyVirtualChannel *vchannel, SkyConfig *config, SkyTransmi
 
 		// Add ARQ Control/Sync extension if we have something to send or if we have been idle for too long.
 		int payload_to_send = sendRing_count_packets_to_send(vchannel->sendRing, 1) > 0;
-		int b0 = (
-#ifdef SKY_USE_TDD_MAC
-        frames_sent_in_this_vc_window < config->arq.idle_frames_per_window
-#else
-        idle_frame_allowed(vchannel, config, now)
-#endif 
-        );
+		int b0 = idle_allowed;
 		int b1 = wrap_time_ticks(now - vchannel->last_ctrl_send_tick) > config->arq.idle_frame_threshold;
 		int b2 = wrap_time_ticks(now - vchannel->last_tx_tick) > config->arq.idle_frame_threshold;
 		int b3 = wrap_time_ticks(now - vchannel->last_rx_tick) > config->arq.idle_frame_threshold;
