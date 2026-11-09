@@ -30,8 +30,8 @@ SkyHandle sky_create(SkyConfig *config)
 	if (arq_conf->idle_frames_per_window < 1 || arq_conf->idle_frames_per_window > 4)
 		arq_conf->idle_frames_per_window = 1;
 #else
-  if (arq_conf->idle_frame_interval_ticks < 1 || arq_conf->idle_frame_interval_ticks > 4)
-    arq_conf->idle_frame_interval_ticks = 1;
+  if (arq_conf->idle_frame_interval_ticks < 1 || arq_conf->idle_frame_interval_ticks > 10000)
+    arq_conf->idle_frame_interval_ticks = 100;
 #endif
 
 
