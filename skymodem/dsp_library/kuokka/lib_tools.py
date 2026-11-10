@@ -839,13 +839,29 @@ def doppler_correction_tle(uncorrected_tx_frequency):
     doppler = range_rate / c * uncorrected_tx_frequency
     return doppler
 
-def calculate_assumed_carrier_frequency(absolute_rx_frequency, uncorrected_tx_frequency):
+def calculate_assumed_carrier_frequency(absolute_rx_frequency, uncorrected_tx_frequency, rx_nominal_frequency=None, tx_nominal_frequency=None):
     """
     WIP: Calculate the assumed carrier frequency based on absolute frequency of received signal and TLE based doppler correction.
+
+    With one frequency for both directions, the received carrier is also the uplink carrier.
+    With two frequencies, give both nominal frequencies. The uplink carrier then has the same relative
+    error as the downlink carrier, because both come from one oscillator in the satellite.
     """
-    doppler = doppler_correction_tle(uncorrected_tx_frequency)
-    assumed_carrier_frequency = absolute_rx_frequency + doppler
-    return assumed_carrier_frequency
+    if (rx_nominal_frequency is None) or (tx_nominal_frequency is None) or (rx_nominal_frequency == tx_nominal_frequency):
+        doppler = doppler_correction_tle(uncorrected_tx_frequency)
+        assumed_carrier_frequency = absolute_rx_frequency + doppler
+        return assumed_carrier_frequency
+    rx_carrier_frequency = absolute_rx_frequency + doppler_correction_tle(absolute_rx_frequency)
+    return tx_nominal_frequency * (rx_carrier_frequency / rx_nominal_frequency)
+
+
+def frequency_following_tx(f_rx_received, f_rx_nominal, f_tx_nominal):
+    """
+    Transmit frequency that has the same relative error as the received signal.
+
+    With one frequency for both directions, this is the received frequency.
+    """
+    return f_tx_nominal * (f_rx_received / f_rx_nominal)
 
 
 def determine_ftune_and_min_sr(f_center_min, f_center_max, max_signal_bandwidth):

@@ -13,7 +13,7 @@ class RadioConfig:
     Configuration class for RadioLoop.
     """
 
-    def __init__(self, mode, rx_samplerate, rx_tune_frequency, tx_samplerate, tx_tune_frequency, rx_gain, tx_gain, device_serial=None):
+    def __init__(self, mode, rx_samplerate, rx_tune_frequency, tx_samplerate, tx_tune_frequency, rx_gain, tx_gain, device_serial=None, rx_antenna=None, tx_antenna=None):
         """
         Initializes RadioConfig instance with given parameters.
 
@@ -25,6 +25,8 @@ class RadioConfig:
             tx_tune_frequency (float): Tuning frequency for transmitting.
             rx_gain (float): Gain setting for receiving.
             tx_gain (float): Gain setting for transmitting.
+            rx_antenna (str): Antenna port for receiving, USRP only. None keeps the device default.
+            tx_antenna (str): Antenna port for transmitting, USRP only. None keeps the device default.
         """
         assert mode in ("usrp", "soapy")
         self.mode 			            = mode
@@ -35,6 +37,8 @@ class RadioConfig:
         self.rx_gain		            = rx_gain
         self.tx_gain		            = tx_gain
         self.device_serial              = device_serial
+        self.rx_antenna                 = rx_antenna
+        self.tx_antenna                 = tx_antenna
 
 
 class RadioLoop:
@@ -141,6 +145,13 @@ class RadioLoop:
         usrp.set_rx_gain(self.radio_config.rx_gain, 0)
         usrp.set_tx_gain(self.radio_config.tx_gain, 0)
 
+        # Antenna ports. Receiving on the TX/RX port stops reception during transmission on many devices.
+        # For full duplex with two frequencies, receive on RX2 and transmit on TX/RX.
+        if self.radio_config.rx_antenna is not None:
+            usrp.set_rx_antenna(self.radio_config.rx_antenna, 0)
+        if self.radio_config.tx_antenna is not None:
+            usrp.set_tx_antenna(self.radio_config.tx_antenna, 0)
+
         # GPIO Settings, Bank FP0 (Front Panel 0), ATR_TX is status of pins when transmitting, ATR_XX when in full-duplex mode.
         # Takes in mask and value. TODO: Document what is configured here.
         usrp.set_gpio_attr("FP0", "ATR_TX", (1 << 8), (1 << 8))
@@ -148,8 +159,8 @@ class RadioLoop:
         time.sleep(0.1)
 
         # Read actual sample rates
-        self.rx_samplerate_actual = float(usrp.get_rx_freq(0))
-        self.tx_samplerate_actual = float(usrp.get_tx_freq(0))
+        self.rx_samplerate_actual = float(usrp.get_rx_rate(0))
+        self.tx_samplerate_actual = float(usrp.get_tx_rate(0))
 
         # USRP Info/Settings printout
         self.DBGPRINT(f"RX antennas(0):         {usrp.get_rx_antennas(0)}")

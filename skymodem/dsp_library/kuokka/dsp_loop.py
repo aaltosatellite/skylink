@@ -3,7 +3,7 @@ import queue
 import numpy as np
 from .lib_receiver import Receiver, RXDSPConfig, precompile_receiver
 from .lib_framing import frame_packet
-from .lib_tools import doppler_correction, doppler_correction_tle, calculate_assumed_carrier_frequency, ints_to_bits, FS1P_SYNCHWORD_LEN, FS1P_SYNCHWORD, make_samples, snr_dB, DebugPrinter, load_satellite_and_gs_configs
+from .lib_tools import doppler_correction, doppler_correction_tle, calculate_assumed_carrier_frequency, frequency_following_tx, ints_to_bits, FS1P_SYNCHWORD_LEN, FS1P_SYNCHWORD, make_samples, snr_dB, DebugPrinter, load_satellite_and_gs_configs
 from .lib_reedsolomon import get_default_rs
 import threading
 from queue import Queue, Empty
@@ -122,6 +122,9 @@ class DSPLoop:
         self.dsp_perf_stats_mpr		= dict()
         self.dbgprint_mask			= self.DBGP_ERRORS | self.DBGP_INITSTOP | self.DBGP_RX | self.DBGP_TX
         self.tle_doppler_config     = tx_dsp_config.tle_doppler_config
+        # Nominal centers do not change. tx_center_frequency can change with doppler correction.
+        self.rx_nominal_center_frequency = rx_dsp_config.rx_center_frequency
+        self.tx_nominal_center_frequency = tx_dsp_config.tx_center_frequency
 
 
     def is_ok(self):
@@ -302,8 +305,9 @@ class DSPLoop:
                 f_use_abs, _ = doppler_correction(f_rx_received=f_recv_abs, f_rx_original=self.rx_dsp_config.rx_center_frequency, f_tx_at_target=self.tx_dsp_config.tx_center_frequency)
 
             # Just follow frequency based on last received packet. Useful in ground testing.
+            # With separate uplink and downlink frequencies, keep the same relative error.
             else:
-                f_use_abs = f_recv_abs
+                f_use_abs = frequency_following_tx(f_rx_received=f_recv_abs, f_rx_nominal=self.rx_nominal_center_frequency, f_tx_nominal=self.tx_nominal_center_frequency)
 
         # No frequency following, just use configured frequency.
         else:
@@ -426,7 +430,7 @@ class DSPLoop:
                         
                         # Calculate assumed carrier frequency based on doppler correction
                         if self.do_tle_doppler_correction:
-                            self.tx_dsp_config.tx_center_frequency = calculate_assumed_carrier_frequency(absolute_rx_frequency=rx_f_absolute, uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency)
+                            self.tx_dsp_config.tx_center_frequency = calculate_assumed_carrier_frequency(absolute_rx_frequency=rx_f_absolute, uncorrected_tx_frequency=self.tx_dsp_config.tx_center_frequency, rx_nominal_frequency=self.rx_nominal_center_frequency, tx_nominal_frequency=self.tx_nominal_center_frequency)
 
 
                         self.last_verified_freq = (rx_f_absolute, ts_mono)
