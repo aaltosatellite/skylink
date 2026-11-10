@@ -145,7 +145,7 @@ class SkyModem:
                 pass
 
 
-    def start(self, multimode=False):
+    def start(self, multimode=False, start_radio=True):
         for i,sub_sock in enumerate(self.sub_sockets):
             vc_number = i
             thrd = threading.Thread(target=sub_socket_loop, args=(sub_sock, self.sub_que, vc_number, self), daemon=True)
@@ -156,7 +156,8 @@ class SkyModem:
             self.dsp_loop.start_multimode([9600,19200,38400], 0)
         else:
             self.dsp_loop.start()
-        self.radio_loop.start()
+        if start_radio:
+            self.radio_loop.start()
         self.sub_que_process_thread 	= threading.Thread(target=self._zmq_to_modem_loop, args=tuple(), daemon=True)
         self.sub_que_process_thread.start()
         self.skylink_reception_thread 	= threading.Thread(target=self._modem_to_zmq_loop, args=tuple(), daemon=True)

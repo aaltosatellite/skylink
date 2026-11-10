@@ -11,19 +11,27 @@ from dsp_library.kuokka.lib_receiver import RXDSPConfig
 
 
 
-def get_usrp_receiver_config(f_center, baudrate, max_signal_bw, rx_gain, tx_gain, tle_doppler_config=None):
+def get_usrp_receiver_config(f_center, baudrate, max_signal_bw, rx_gain, tx_gain, tle_doppler_config=None, f_tx_center=None, rx_antenna=None, tx_antenna=None):
+    """
+    f_center is the receive frequency. f_tx_center is the transmit frequency. It is the same as f_center if not given.
+    """
     from dsp_library.kuokka.lib_tools import determine_ftune_and_min_sr
-    f_center_min, f_center_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
-    f_tune, minimum_samplerate = determine_ftune_and_min_sr(f_center_min=f_center_min, f_center_max=f_center_max, max_signal_bandwidth=max_signal_bw)
+    if f_tx_center is None:
+        f_tx_center = f_center
+    f_rx_min, f_rx_max = get_doppler_low_high(f_center=f_center, v_relative=7500.0*2)
+    f_tx_min, f_tx_max = get_doppler_low_high(f_center=f_tx_center, v_relative=7500.0*2)
+    f_rx_tune, rx_minimum_samplerate = determine_ftune_and_min_sr(f_center_min=f_rx_min, f_center_max=f_rx_max, max_signal_bandwidth=max_signal_bw)
+    f_tx_tune, tx_minimum_samplerate = determine_ftune_and_min_sr(f_center_min=f_tx_min, f_center_max=f_tx_max, max_signal_bandwidth=max_signal_bw)
+    minimum_samplerate = max(rx_minimum_samplerate, tx_minimum_samplerate)
     assert minimum_samplerate < 3e6
     sr0 = 1e6
     if sr0 < minimum_samplerate:
         sr0 = [float(x) for x in sorted(usrp_B200_valid_samplerates) if x >= minimum_samplerate][0]
     print("Calculated minimum samplerate at {} ks/s".format( round(1.0e-3 * minimum_samplerate, 1) ))
-    print("Using usrp radio config of: f_tune={} MHz,   sr0={} Ms/s".format( round(f_tune*1e-6, 3), round(sr0*1e-6, 3) ))
-    radio_config 	= RadioConfig(mode="usrp", rx_samplerate=sr0, rx_tune_frequency=f_tune, tx_samplerate=sr0, tx_tune_frequency=f_tune, rx_gain=rx_gain, tx_gain=tx_gain)
-    rx_dsp_config 	= RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_tune, rx_center_frequency=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
-    tx_dsp_config 	= TXDSPConfig(tx_samplerate=sr0, tx_tune_frequency=f_tune, tx_center_frequency=f_center, baudrate=baudrate, tle_doppler_config=tle_doppler_config)
+    print("Using usrp radio config of: rx f_tune={} MHz, tx f_tune={} MHz,   sr0={} Ms/s".format( round(f_rx_tune*1e-6, 3), round(f_tx_tune*1e-6, 3), round(sr0*1e-6, 3) ))
+    radio_config 	= RadioConfig(mode="usrp", rx_samplerate=sr0, rx_tune_frequency=f_rx_tune, tx_samplerate=sr0, tx_tune_frequency=f_tx_tune, rx_gain=rx_gain, tx_gain=tx_gain, rx_antenna=rx_antenna, tx_antenna=tx_antenna)
+    rx_dsp_config 	= RXDSPConfig(rx_samplerate=sr0, rx_tune_frequency=f_rx_tune, rx_center_frequency=f_center, baudrate=baudrate, bufferlen=800000, batch_maxlen=1024 * 16)
+    tx_dsp_config 	= TXDSPConfig(tx_samplerate=sr0, tx_tune_frequency=f_tx_tune, tx_center_frequency=f_tx_center, baudrate=baudrate, tle_doppler_config=tle_doppler_config)
     return rx_dsp_config, tx_dsp_config, radio_config
 
 
@@ -100,6 +108,11 @@ if __name__ == '__main__':
     parser.add_argument("--mode", "-m", type=str, default="usrp", choices=("usrp", "soapy"), help="Operation mode: attach directly to the USRP (default) or via SoapyShared: 'soapy'", required=False)
     parser.add_argument("--vc_base", "-vc", type=int, default=7100, help="Virtual Channel base. Default 7100.", required=False)
     parser.add_argument("--center_freq", "-cf", "-f", type=float, default=437.025e6, help="Center frequency used for communications [Hz]. Default 437.025 MHz (dev frequency).")
+    parser.add_argument("--rx_freq", "-rf", type=float, default=None, help="Receive (downlink) frequency [Hz]. Default is --center_freq.")
+    parser.add_argument("--tx_freq", "-tf", type=float, default=None, help="Transmit (uplink) frequency [Hz]. Default is --center_freq. USRP mode only if it is not the same as the receive frequency.")
+    parser.add_argument("--rx_antenna", "-ra", type=str, default=None, help="USRP receive antenna port. Default is RX2 if the two frequencies are not the same, else the device default.")
+    parser.add_argument("--tx_antenna", "-ta", type=str, default=None, help="USRP transmit antenna port. Default is TX/RX if the two frequencies are not the same, else the device default.")
+    parser.add_argument("--peer", action="store_true", help="Bench test only: act as the satellite side of the link (other identity, reversed keys) so that two modems can talk to each other. Needs --auth dev.")
     parser.add_argument("--rx_gain", "-rg", type=float, default=40, help="Reception Gain setting for the USRP: 0 - 76 [dB]. Default is 40.", required=False)
     parser.add_argument("--tx_gain", "-tg", type=float, default=80, help="TX Gain setting for the USRP: 0.0 - 89.75 [dB]. Default is 80.", required=False)
     parser.add_argument("--auth", "-a", type=str, default="dev", choices=("dev", "spare", "fm"), help="Authentication key choices: 'dev' development (default), 'spare' Flight Model Spare, and 'fm' Flight Model.", required=False)
@@ -163,10 +176,18 @@ if __name__ == '__main__':
     assert _args.tx_gain >= 0.0, f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
     assert _args.tx_gain <= 89.75, f"tx_gain must be between 0.0 and 89.75 [dB]. Was {_args.tx_gain}"
 
+    rx_freq = _args.center_freq if _args.rx_freq is None else _args.rx_freq
+    tx_freq = _args.center_freq if _args.tx_freq is None else _args.tx_freq
+    two_frequencies = (rx_freq != tx_freq)
+    if two_frequencies and _args.mode != "usrp":
+        print("[EXIT] Different transmit and receive frequencies need --mode usrp.")
+        sys.exit(1)
+
     if _args.auth == "fm":
         # Safeguards for GS hardware: especially switch.
-        assert _args.center_freq >= 436e6, f"center_freq must be between 436 and 438 MHz. Was {_args.center_freq}"
-        assert _args.center_freq <= 438e6, f"center_freq must be between 436 and 438 MHz. Was {_args.center_freq}"
+        for freq_name, freq in (("center_freq", _args.center_freq), ("rx_freq", rx_freq), ("tx_freq", tx_freq)):
+            assert freq >= 436e6, f"{freq_name} must be between 436 and 438 MHz. Was {freq}"
+            assert freq <= 438e6, f"{freq_name} must be between 436 and 438 MHz. Was {freq}"
 
     # Secret file needs to exist on top of selecting the mode. Otherwise development keys are used.
     if os.path.isfile("secret.h") and _args.auth == "fm":
@@ -204,7 +225,8 @@ if __name__ == '__main__':
     # Different keys for uplink, downlink, and service channel
     hmac_keys = [uplink_key, downlink_key, service_key]
 
-    skylink_config_ = SkyConfiguration(identity=b"PyGS")
+    assert not (_args.peer and _args.auth != "dev"), "--peer works only with the development keys (--auth dev)."
+    skylink_config_ = SkyConfiguration(identity=(b"PyPeer" if _args.peer else b"PyGS"))
 
     #* DO NOT MODIFY FOLLOWING CONFIGURATIONS IN ANY SITUATION!!! *#
     skylink_config_.vc[0].require_authentication = auth_flag_require_auth | auth_flag_require_seq | auth_flag_auth_tx
@@ -233,15 +255,22 @@ if __name__ == '__main__':
     skylink_config_.vc[3].tx_key = 0
     #* DO NOT MODIFY ABOVE CONFIGURATIONS IN ANY SITUATION!!! *#
 
+    if _args.peer:
+        for vc_number_ in (0, 1):
+            skylink_config_.vc[vc_number_].rx_key = 0
+            skylink_config_.vc[vc_number_].tx_key = 1
+
 
     if "soapy" in _args.mode:
         ftune_correction = 40e3
         print(f"[INIT] Using SoapyShared mode, center_freq={_args.center_freq} Hz, and 'ftune_correction'={ftune_correction} Hz")
-        rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain, tle_doppler_config=_args.tle_doppler_config, device_serial=_args.device_serial)
+        rx_dsp_config_, tx_dsp_config_, radio_config_ = get_soapy_leecher_receiver_config(f_center=rx_freq + 0e3, baudrate=9600, f_tune=436e6+ftune_correction, sr_hardware=8e6, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain, tle_doppler_config=_args.tle_doppler_config, device_serial=_args.device_serial)
     else:
         assert _args.mode == "usrp"
-        print(f"[INIT] Using USRP mode, center_freq={_args.center_freq} Hz, and no 'ftune_correction'.")
-        rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=_args.center_freq + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain, tle_doppler_config=_args.tle_doppler_config)
+        rx_antenna = _args.rx_antenna if (_args.rx_antenna is not None) else ("RX2" if two_frequencies else None)
+        tx_antenna = _args.tx_antenna if (_args.tx_antenna is not None) else ("TX/RX" if two_frequencies else None)
+        print(f"[INIT] Using USRP mode, rx_freq={rx_freq} Hz, tx_freq={tx_freq} Hz, rx_antenna={rx_antenna}, tx_antenna={tx_antenna}, and no 'ftune_correction'.")
+        rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=rx_freq + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain, tle_doppler_config=_args.tle_doppler_config, f_tx_center=tx_freq, rx_antenna=rx_antenna, tx_antenna=tx_antenna)
 
     #amqp_broker_addr_ = "amqp://guest:guest@localhost:5672"
     #amqp_broker_addr_ = "amqp://modem:fs1pmodem@192.168.10.2:5672"
