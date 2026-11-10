@@ -84,6 +84,9 @@ class SkyConfigEnum(Enum):
 	# Identity and its length
 	IDENTITY = 42
 	IDENTITY_LENGTH = 43
+
+	# ARQ, full duplex
+	ARQ_IDLE_FRAME_INTERVAL_TICKS = 44
 ## ====================0
 
 
@@ -91,11 +94,13 @@ class ArqConfig:
 	timeout_ticks		 	= 26000
 	idle_frame_threshold 	= 3000
 	idle_frames_per_window 	= 1
+	idle_frame_interval_ticks = 100
 
 class HMACConfig:
 	maximum_jump 			= 24
 
 class MACConfig:
+	# Legacy TDD, kept so that old scripts can still set these.
 	gap_constant_ticks              = 260
 	tail_constant_ticks             = 260
 	minimum_window_length_ticks     = 250
@@ -124,7 +129,7 @@ class SkyConfiguration:
 		self.mac = MACConfig()
 		self.hmac = HMACConfig()
 		self.arq = ArqConfig()
-		self.identity = b"PySky"
+		self.identity = identity
 
 
 cdef class SkyLink:
@@ -139,20 +144,9 @@ cdef class SkyLink:
 	cdef _init0(self, configuration):
 		self.conf.arq.timeout_ticks = configuration.arq.timeout_ticks
 		self.conf.arq.idle_frame_threshold = configuration.arq.idle_frame_threshold
-		self.conf.arq.idle_frames_per_window = configuration.arq.idle_frames_per_window
+		self.conf.arq.idle_frame_interval_ticks = configuration.arq.idle_frame_interval_ticks
 
 		self.conf.hmac.maximum_jump = configuration.hmac.maximum_jump
-
-		self.conf.mac.carrier_sense_ticks = configuration.mac.carrier_sense_ticks
-		self.conf.mac.gap_constant_ticks = configuration.mac.gap_constant_ticks
-		self.conf.mac.idle_frames_per_window = configuration.mac.idle_frames_per_window
-		self.conf.mac.idle_timeout_ticks = configuration.mac.idle_timeout_ticks
-		self.conf.mac.maximum_window_length_ticks = configuration.mac.maximum_window_length_ticks
-		self.conf.mac.minimum_window_length_ticks = configuration.mac.minimum_window_length_ticks
-		self.conf.mac.tail_constant_ticks = configuration.mac.tail_constant_ticks
-		self.conf.mac.unauthenticated_mac_updates = configuration.mac.unauthenticated_mac_updates
-		self.conf.mac.window_adjust_increment_ticks = configuration.mac.window_adjust_increment_ticks
-		self.conf.mac.window_adjustment_threshold = configuration.mac.window_adjustment_threshold
 
 		for i in range(c_skylink.SKY_NUM_VIRTUAL_CHANNELS):
 			self.conf.vc[i].horizon_width = configuration.vc[i].horizon_width
@@ -186,26 +180,6 @@ cdef class SkyLink:
 
 	def set_config_value(self, idx, value):
 		attrname = SkyConfigEnum(idx).name
-		if attrname == "MAC_MAXIMUM_WINDOW_LENGTH_TICKS":
-			self.conf.mac.maximum_window_length_ticks = value
-		if attrname == "MAC_MINIMUM_WINDOW_LENGTH_TICKS":
-			self.conf.mac.minimum_window_length_ticks = value
-		if attrname == "MAC_GAP_CONSTANT_TICKS":
-			self.conf.mac.gap_constant_ticks = value
-		if attrname == "MAC_TAIL_CONSTANT_TICKS":
-			self.conf.mac.tail_constant_ticks = value
-		if attrname == "MAC_IDLE_TIMEOUT_TICKS":
-			self.conf.mac.idle_timeout_ticks = value
-		if attrname == "MAC_WINDOW_ADJUST_INCREMENT_TICKS":
-			self.conf.mac.window_adjust_increment_ticks = value
-		if attrname == "MAC_CARRIER_SENSE_TICKS":
-			self.conf.mac.carrier_sense_ticks = value
-		if attrname == "MAC_UNAUTHENTICATED_MAC_UPDATES":
-			self.conf.mac.unauthenticated_mac_updates = value
-		if attrname == "MAC_WINDOW_ADJUSTMENT_THRESHOLD":
-			self.conf.mac.window_adjustment_threshold = value
-		if attrname == "MAC_IDLE_FRAMES_PER_WINDOW":
-			self.conf.mac.idle_frames_per_window = value
 		if attrname == "HMAC_MAXIMUM_JUMP":
 			self.conf.hmac.maximum_jump = value
 		if attrname == "VC0_USABLE_ELEMENT_SIZE":
@@ -268,8 +242,8 @@ cdef class SkyLink:
 			self.conf.arq.timeout_ticks = value
 		if attrname == "ARQ_IDLE_FRAME_THRESHOLD":
 			self.conf.arq.idle_frame_threshold = value
-		if attrname == "ARQ_IDLE_FRAMES_PER_WINDOW":
-			self.conf.arq.idle_frames_per_window = value
+		if attrname == "ARQ_IDLE_FRAME_INTERVAL_TICKS":
+			self.conf.arq.idle_frame_interval_ticks = value
 		if attrname == "IDENTITY":
 			id_len = min(len(value), c_skylink.SKY_MAX_IDENTITY_LEN)
 			value = value.encode('utf-8')
@@ -278,16 +252,16 @@ cdef class SkyLink:
 
 	def get_config_values(self):
 		ret = dict()
-		ret["MAC_MAXIMUM_WINDOW_LENGTH_TICKS"] = self.conf.mac.maximum_window_length_ticks
-		ret["MAC_MINIMUM_WINDOW_LENGTH_TICKS"] = self.conf.mac.minimum_window_length_ticks
-		ret["MAC_GAP_CONSTANT_TICKS"] = self.conf.mac.gap_constant_ticks
-		ret["MAC_TAIL_CONSTANT_TICKS"] = self.conf.mac.tail_constant_ticks
-		ret["MAC_IDLE_TIMEOUT_TICKS"] = self.conf.mac.idle_timeout_ticks
-		ret["MAC_WINDOW_ADJUST_INCREMENT_TICKS"] = self.conf.mac.window_adjust_increment_ticks
-		ret["MAC_CARRIER_SENSE_TICKS"] = self.conf.mac.carrier_sense_ticks
-		ret["MAC_UNAUTHENTICATED_MAC_UPDATES"] = self.conf.mac.unauthenticated_mac_updates
-		ret["MAC_WINDOW_ADJUSTMENT_THRESHOLD"] = self.conf.mac.window_adjustment_threshold
-		ret["MAC_IDLE_FRAMES_PER_WINDOW"] = self.conf.mac.idle_frames_per_window
+		ret["MAC_MAXIMUM_WINDOW_LENGTH_TICKS"] = 0
+		ret["MAC_MINIMUM_WINDOW_LENGTH_TICKS"] = 0
+		ret["MAC_GAP_CONSTANT_TICKS"] = 0
+		ret["MAC_TAIL_CONSTANT_TICKS"] = 0
+		ret["MAC_IDLE_TIMEOUT_TICKS"] = 0
+		ret["MAC_WINDOW_ADJUST_INCREMENT_TICKS"] = 0
+		ret["MAC_CARRIER_SENSE_TICKS"] = 0
+		ret["MAC_UNAUTHENTICATED_MAC_UPDATES"] = 0
+		ret["MAC_WINDOW_ADJUSTMENT_THRESHOLD"] = 0
+		ret["MAC_IDLE_FRAMES_PER_WINDOW"] = 0
 		ret["HMAC_MAXIMUM_JUMP"] = self.conf.hmac.maximum_jump
 		ret["VC0_USABLE_ELEMENT_SIZE"] = self.conf.vc[0].usable_element_size
 		ret["VC0_RCV_RING_LEN"] = self.conf.vc[0].rcv_ring_len
@@ -319,7 +293,8 @@ cdef class SkyLink:
 		ret["VC3_RX_KEY"] = self.conf.vc[3].rx_key
 		ret["ARQ_TIMEOUT_TICKS"] = self.conf.arq.timeout_ticks
 		ret["ARQ_IDLE_FRAME_THRESHOLD"] = self.conf.arq.idle_frame_threshold
-		ret["ARQ_IDLE_FRAMES_PER_WINDOW"] = self.conf.arq.idle_frames_per_window
+		ret["ARQ_IDLE_FRAMES_PER_WINDOW"] = 0
+		ret["ARQ_IDLE_FRAME_INTERVAL_TICKS"] = self.conf.arq.idle_frame_interval_ticks
 		ret["IDENTITY"] = self.conf.identity[:self.conf.identity_len].decode("utf-8")
 		ret["IDENTITY_LENGTH"] = self.conf.identity_len
 		return ret
@@ -545,26 +520,18 @@ cdef class SkyLink:
 		return self._sky_vc_get_arq_state(vc_number)
 
 
-	cdef _can_send(self):
-		cdef sky_tick_t now;
-		cdef bint b;
-		now = c_skylink.sky_get_tick_time()
-		b = c_skylink.mac_can_send(self.handle.mac, now)
-		return b
-
 	def can_send(self):
-		return bool(self._can_send())
+		# Full duplex: there is no transmit window.
+		return True
 
 
 	def carrier_sensed(self):
-		cdef sky_tick_t now;
-		now = self.get_tick_time()
-		c_skylink.sky_mac_carrier_sensed(self.handle.mac, now)
+		# Full duplex: no carrier sense. Kept for old callers.
+		pass
 
 	def mac_reset(self):
-		cdef sky_tick_t now;
-		now = self.get_tick_time()
-		c_skylink.mac_reset(self.handle.mac, now)
+		# Full duplex: no MAC state. Kept for old callers.
+		pass
 
 
 	def get_tick_time(self):

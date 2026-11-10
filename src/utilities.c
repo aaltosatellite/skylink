@@ -48,7 +48,11 @@ SkyHandle sky_create(SkyConfig *config)
 	SKY_ASSERT(handle != NULL);
 
 	// Create TDD/MAC instance.
-	handle->mac = sky_mac_create(&config->mac);
+	handle->mac = sky_mac_create(
+#ifdef SKY_USE_TDD_MAC
+      &config->mac    
+#endif
+  );
 	SKY_ASSERT(handle->mac != NULL);
 
 	// Create HMAC instance.

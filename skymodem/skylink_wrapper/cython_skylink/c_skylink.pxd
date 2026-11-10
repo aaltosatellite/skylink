@@ -67,17 +67,9 @@ cdef extern from "conf.h":
 	cdef const int SKY_CONFIG_FLAG_REQUIRE_SEQUENCE			# 0b0100
 	cdef const int SKY_CONFIG_FLAG_USE_CRC32				# 0b1000
 
+	#// full-duplex has MAC, but we need this to keep SkyConfig complete.
 	ctypedef struct SkyMACConfig:
-		int32_t maximum_window_length_ticks;
-		int32_t minimum_window_length_ticks;
-		int32_t gap_constant_ticks;
-		int32_t tail_constant_ticks; #// TODO: Rename switch_delay_ticks.
-		int32_t idle_timeout_ticks;
-		int16_t window_adjust_increment_ticks;
-		int16_t carrier_sense_ticks;
-		uint8_t unauthenticated_mac_updates;
-		int8_t window_adjustment_threshold;
-		uint8_t idle_frames_per_window;
+		pass
 
 	ctypedef struct SkyHMACConfig:
 		int32_t maximum_jump;
@@ -85,7 +77,7 @@ cdef extern from "conf.h":
 	ctypedef struct SkyARQConfig:
 		int32_t timeout_ticks;
 		int32_t idle_frame_threshold;
-		int8_t idle_frames_per_window;
+		int32_t idle_frame_interval_ticks;
 
 	ctypedef struct SkyVCConfig:
 		int usable_element_size;
@@ -231,15 +223,6 @@ cdef extern from "skylink.h":
 	int sky_rx(SkyHandle self, const sky_radio_frame* frame);
 
 	int sky_rx_with_golay(SkyHandle self, sky_radio_frame* frame);
-
-
-cdef extern  from "mac.h":
-	bint mac_can_send(SkyMAC* mac, sky_tick_t now);
-
-	void sky_mac_carrier_sensed(SkyMAC* mac, sky_tick_t now);
-
-	void mac_reset(SkyMAC* mac, sky_tick_t now);
-
 
 
 cdef extern from "hmac.h":
