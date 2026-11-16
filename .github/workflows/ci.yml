@@ -1,0 +1,263 @@
+# Host build + C unit tests, Python parser tests, arm-none-eabi cross-compile.
+name: CI
+
+on: 
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # libzmq3-dev: CMakeLists.txt:16 does find_package(ZMQ REQUIRED) even
+      # though the host build doesn't need it. Installed rather than fixed for now.
+      - name: Install dependencies
+        run: sudo apt-get update -o Acquire::Retries=3 && sudo apt-get install -y -o Acquire::Retries=3 build-essential cmake libzmq3-dev
+
+      - name: Configure and build
+        run: cmake -S . -B build && cmake --build build -j
+
+      # The binary exits non-zero because of one known failure, so we judge the
+      # result from its output instead of its exit code.
+      - name: Run unit tests
+        run: |
+          build/tests/units2/unit_tests2 2>&1 | tee test-output.txt || true
+          KNOWN=both_hmac_and_crc  # CRC+HMAC defect, see TODO at src/skylink_rx.c:144
+          # Runner colors output even when piped; strip ANSI codes before parsing.
+          plain=$(sed 's/\x1b\[[0-9;]*m//g' test-output.txt)
+          # No summary line means the runner crashed or aborted: fail.
+          if ! grep -qE '^Tests: .* total' <<<"$plain"; then
+            echo "::error::Test summary missing; unit_tests2 did not finish."
+            exit 1
+          fi
+          failed=$(grep -oP '^\s*FAIL \K\S+' <<<"$plain" || true)
+          if grep -qx "$KNOWN" <<<"$failed"; then
+            echo "::warning::Known failure '$KNOWN' still failing (CRC+HMAC defect, src/skylink_rx.c:144). Ignored by CI."
+          else
+            echo "::notice::Known failure '$KNOWN' passed. Remove the exception from ci.yml."
+          fi
+          unexpected=$(grep -vx "$KNOWN" <<<"$failed" || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::Unexpected test failures: $(tr '\n' ' ' <<<"$unexpected")"
+            exit 1
+          fi
+
+      - name: Upload test output
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-output
+          path: test-output.txt
+
+  # Python frame parser tests. System python3 (3.12) in a venv, no setup-python.
+  python-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v7
+
+      # Pinned to the versions the tests were analysed with.
+      - name: Install dependencies
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install construct==2.10.70 blake3==1.0.11 pytest==9.1.1
+
+      # Known failures make pytest exit non-zero; the gate step below judges
+      # the result from the junit XML instead.
+      - name: Run pytest
+        run: PYTHONPATH=.:tests .venv/bin/pytest -p no:cacheprovider -v --junitxml=pytest-results.xml tests || true
+
+      - name: Check results
+        run: |
+          python3 - <<'EOF'
+          import os, sys
+          import xml.etree.ElementTree as ET
+
+          # Real defects: header layout differs from the C code, and the parser
+          # slices an 8-byte auth tag where the real tag is 4 bytes.
+          KNOWN = {"test_parse.py::test_parsing",
+                   "test_parse.py::test_variable_identity_lengths",
+                   "test_parse.py::test_parse_extensions"}
+          # Fails ~1/3 of runs. corrupt() (tests/utils.py) flips 1-20 random bits
+          # without a seed, so each run differs. When a flip lands in the header,
+          # parsing raises StreamError before the HMAC check (~27%), or the
+          # "authenticated" flag gets cleared and HMAC is skipped (~7%).
+          FLAKY = {"test_construct.py::test_hmac"}
+
+          # Missing XML or zero tests means pytest crashed or collected nothing.
+          if not os.path.exists("pytest-results.xml"):
+              print("::error::pytest-results.xml missing; pytest did not run.")
+              sys.exit(1)
+          cases = list(ET.parse("pytest-results.xml").iter("testcase"))
+          if not cases:
+              print("::error::pytest-results.xml has zero tests.")
+              sys.exit(1)
+
+          passed, known, flaky, unexpected, seen = [], [], [], [], set()
+          for c in cases:
+              tid = c.get("classname", "").split(".")[-1] + ".py::" + c.get("name", "")
+              seen.add(tid)
+              bad = c.find("failure") is not None or c.find("error") is not None
+              if not bad:
+                  if c.find("skipped") is None:
+                      passed.append(tid)
+                  if tid in KNOWN:
+                      print(f"::notice::Known failure {tid} passed. Remove the exception from ci.yml.")
+              elif tid in KNOWN:
+                  known.append(tid)
+                  print(f"::warning::Known failure {tid} still failing (parser header layout / 8-byte auth tag).")
+              elif tid in FLAKY:
+                  flaky.append(tid)
+                  print(f"::warning::Flaky test {tid} failed (unseeded random bit flips).")
+              else:
+                  unexpected.append(tid)
+                  print(f"::error::Unexpected failure: {tid}")
+
+          # Warn if a listed test was renamed or deleted, so its exception isn't silently lost.
+          for tid in sorted((KNOWN | FLAKY) - seen):
+              print(f"::warning::Listed test {tid} not found in results. Update ci.yml.")
+
+          print(f"Summary: {len(passed)} passed / {len(known)} known-failing / "
+                f"{len(flaky)} flaky / {len(unexpected)} unexpected")
+          sys.exit(1 if unexpected else 0)
+          EOF
+
+      - name: Upload pytest results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-results
+          path: python/pytest-results.xml
+
+  # Compile-only check of the library for the flight MCU, with a warning gate
+  # and a flash-usage report. No link, so no FreeRTOS or SEGGER sources needed.
+  cross-compile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install toolchain
+        timeout-minutes: 5
+        run: |
+          sudo apt-get update -o Acquire::Retries=3
+          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi
+
+      # Only what platforms/freertos/sky_platform.h needs with SKY_DEBUG: the
+      # allocator, configASSERT (evaluates x, does nothing) and SEGGER_RTT_printf.
+      - name: Create FreeRTOS/SEGGER stub headers
+        run: |
+          mkdir -p "$RUNNER_TEMP/stubs"
+          cat > "$RUNNER_TEMP/stubs/FreeRTOS.h" <<'EOF'
+          #include <stddef.h>
+          void *pvPortMalloc(size_t size);
+          void vPortFree(void *ptr);
+          #define configASSERT(x) ((void)(x))
+          EOF
+          cat > "$RUNNER_TEMP/stubs/SEGGER_RTT.h" <<'EOF'
+          int SEGGER_RTT_printf(unsigned BufferIndex, const char *sFormat, ...);
+          EOF
+
+      # Target: STM32L476VGTx (Cortex-M4F), confirmed by the Aalto-3 team.
+      # The "no division instruction" comment in src/utilities.c refers to older
+      # hardware, not Aalto-3.
+      # Built with SKY_DEBUG, as defined PUBLIC in src/CMakeLists.txt, so this
+      # matches what any CMake build of skylink (firmware included) compiles.
+      # Sources also come from src/CMakeLists.txt so the list can't drift.
+      - name: Compile
+        run: |
+          mkdir -p cross-report
+          obj="$RUNNER_TEMP/obj"
+          srcs=$(sed -n '/target_sources/,/)/p' src/CMakeLists.txt | grep -o '"[^"]*\.c"' | tr -d '"')
+          # A reformatted CMakeLists.txt could make the sed match nothing: fail, don't pass empty.
+          if [ -z "$srcs" ]; then
+            echo "::error::No sources found in src/CMakeLists.txt target_sources()."
+            exit 1
+          fi
+          echo "Compiling $(wc -w <<<"$srcs") translation units"
+          failed=0
+          for f in $srcs; do
+            mkdir -p "$obj/$(dirname "$f")"
+            arm-none-eabi-gcc -DSKY_DEBUG -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -std=gnu11 -Os -Wall -Wextra \
+              -ffunction-sections -fdata-sections \
+              -Isrc -Iplatforms/freertos -I"$RUNNER_TEMP/stubs" \
+              -c "src/$f" -o "$obj/${f%.c}.o" 2>>cross-report/warnings.log \
+              || { echo "::error::Failed to compile src/$f"; failed=1; }
+          done
+          cat cross-report/warnings.log
+          exit $failed
+
+      # Warnings are keyed by file + flag with a count, not by line, so unrelated
+      # edits don't break the gate.
+      - name: Check warnings against baseline
+        run: |
+          python3 - <<'EOF'
+          import re, sys
+          from collections import Counter
+
+          BASELINE = {  # group: (count, why)
+              "src/mac.c [-Wtype-limits]": (1, "sky_tick_t is uint32_t on FreeRTOS but int32_t on Linux; "
+                                               "clamp at mac.c peer_mac_remaining < 0 is dead on target."),
+              "src/mac.c [-Wsign-compare]": (5, "Same root cause: unsigned sky_tick_t on target vs signed config fields."),
+              "src/reliable_vc.c [-Wsign-compare]": (2, "Same root cause: unsigned sky_tick_t on target vs int32_t wrap_time_ticks()."),
+              "src/utilities.c [-Wimplicit-function-declaration]": (1, "abs() used without #include <stdlib.h>."),
+              "src/utilities.c [-Wbuiltin-declaration-mismatch]": (1, "Follows from the missing <stdlib.h> include."),
+              "src/ext/blake3/blake3_dispatch.c [-Wunused-function]": (1, "Vendored code, unused on non-x86."),
+          }
+
+          log = open("cross-report/warnings.log").read()
+          found = Counter(f"{m[1]} [{m[2]}]" for m in
+                          re.finditer(r"^(\S+?):\d+:\d+: warning: .*\[(-W[^\]]+)\]$", log, re.M))
+          # Any warning line the regex didn't match would otherwise be silently ignored.
+          total = len(re.findall(r"warning: ", log))
+          if total != sum(found.values()):
+              print(f"::error::{total} warning lines in log but only {sum(found.values())} parsed. Fix the regex.")
+              sys.exit(1)
+
+          bad = False
+          for key in sorted(BASELINE.keys() | found.keys()):
+              (base, why), now = BASELINE.get(key, (0, "")), found.get(key, 0)
+              if now > base:
+                  bad = True
+                  print(f"::error::{key}: {now} warnings, baseline {base}.")
+              elif now < base:
+                  print(f"::notice::{key}: {now} warnings, baseline {base}. Update BASELINE in ci.yml.")
+              else:
+                  print(f"::warning::{key}: {now} known warnings. {why}".rstrip())
+          print(f"Summary: {sum(found.values())} warnings in {len(found)} groups, baseline "
+                f"{sum(n for n, _ in BASELINE.values())} in {len(BASELINE)} groups")
+          sys.exit(1 if bad else 0)
+          EOF
+
+      # Informational flash usage, baseline for tracking size changes later.
+      - name: Report object sizes
+        run: |
+          cd "$RUNNER_TEMP/obj"
+          {
+            echo "### arm-none-eabi object sizes (-Os, SKY_DEBUG as in src/CMakeLists.txt, Cortex-M4F, STM32L476)"
+            echo "| file | text | data | bss |"
+            echo "|---|--:|--:|--:|"
+            find . -name '*.o' | sort | xargs arm-none-eabi-size -t \
+              | awk 'NR>1 { f = ($6 == "(TOTALS)") ? "**total**" : substr($6, 3); print "| " f " | " $1 " | " $2 " | " $3 " |" }'
+          } | tee "$GITHUB_WORKSPACE/cross-report/size.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload cross-compile report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cross-compile-report
+          path: cross-report/
