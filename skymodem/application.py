@@ -117,6 +117,8 @@ if __name__ == '__main__':
     parser.add_argument("--tx_gain", "-tg", type=float, default=80, help="TX Gain setting for the USRP: 0.0 - 89.75 [dB]. Default is 80.", required=False)
     parser.add_argument("--auth", "-a", type=str, default="dev", choices=("dev", "spare", "fm"), help="Authentication key choices: 'dev' development (default), 'spare' Flight Model Spare, and 'fm' Flight Model.", required=False)
     parser.add_argument("--multimode", "-mm", action="store_true", help="Run modem in 'multimode', which means that all baudrates (9600, 19200, 38400) are being received.")
+    parser.add_argument("--baudrate", "-br", type=float, default=9600, help="USRP mode only. Air baud rate. The other end must use the same. The radio sample rate and the receiver's samples per symbol are chosen automatically. 9600 to 38400 need no change. Higher rates raise the sample rate and the CPU load.")
+    parser.add_argument("--sps", type=int, default=None, help="USRP mode only. Samples per symbol of the receiver (3 to 100). Default: the largest value that fits the sample rate, at most 12. A smaller value costs less CPU time. The limit is sps * baudrate <= sample rate / 2.")
     parser.add_argument("--doppler", "-d", action="store_true", help="Run modem with Doppler compensation; the implementation varies.")
     parser.add_argument("--doppler-tle", "-dt", action="store_true", help="Run modem with Doppler compensation based on TLE data; requires internet connection to fetch latest TLEs.")
     parser.add_argument("--no-follow", "-nf", action="store_true", help="Disable all frequency corrections from the modem. Overwrites the previous two options.")
@@ -272,6 +274,35 @@ if __name__ == '__main__':
         print(f"[INIT] Using USRP mode, rx_freq={rx_freq} Hz, tx_freq={tx_freq} Hz, rx_antenna={rx_antenna}, tx_antenna={tx_antenna}, and no 'ftune_correction'.")
         rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=rx_freq + 0e3, baudrate=9600, max_signal_bw=9600*4*1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain, tle_doppler_config=_args.tle_doppler_config, f_tx_center=tx_freq, rx_antenna=rx_antenna, tx_antenna=tx_antenna)
 
+    if _args.baudrate != 9600 or _args.sps is not None:
+        if _args.mode != "usrp":
+            print("[EXIT] --baudrate and --sps work in USRP mode only.")
+            sys.exit(1)
+        import inspect
+        from dsp_library.kuokka.lib_tools import choose_sample_rate_and_sps
+        extra_arguments = {"device_serial": _args.device_serial} if "device_serial" in inspect.signature(get_usrp_receiver_config).parameters else {}
+        try:
+            rx_dsp_config_, tx_dsp_config_, radio_config_ = get_usrp_receiver_config(f_center=rx_freq + 0e3, baudrate=_args.baudrate, max_signal_bw=_args.baudrate * 4 * 1.2, rx_gain=_args.rx_gain, tx_gain=_args.tx_gain, tle_doppler_config=_args.tle_doppler_config, f_tx_center=tx_freq, rx_antenna=rx_antenna, tx_antenna=tx_antenna, **extra_arguments)
+            sample_rate, sps = choose_sample_rate_and_sps(_args.baudrate, minimum_sample_rate=radio_config_.rx_base_samplerate)
+        except (AssertionError, ValueError) as error:
+            print(f"[EXIT] --baudrate {_args.baudrate:.0f} is too high: the signal (about 4.8 times the baud rate, plus Doppler) would need a radio sample rate of 3 MS/s or more. {error}")
+            sys.exit(1)
+        if _args.sps is not None:
+            sps = _args.sps
+            if sps < 3 or _args.sps * _args.baudrate > 0.5 * sample_rate:
+                print(f"[EXIT] --sps {_args.sps} does not fit: it needs 3 or more, and sps * baudrate ({_args.sps * _args.baudrate:.0f}) must be at most half of the sample rate ({0.5 * sample_rate:.0f}).")
+                sys.exit(1)
+        radio_config_.rx_base_samplerate = radio_config_.tx_base_samplerate = sample_rate
+        rx_dsp_config_.rx_samplerate = sample_rate
+        tx_dsp_config_.tx_samplerate = sample_rate
+        rx_dsp_config_.sps = sps
+        try:
+            rx_dsp_config_.check_validity()
+            tx_dsp_config_.check_validity()
+        except AssertionError as error:
+            print(f"[EXIT] --baudrate {_args.baudrate:.0f} is not valid with a sample rate of {sample_rate / 1e6:g} MS/s and {sps} samples per symbol: {error}")
+            sys.exit(1)
+        print(f"[INIT] Baud rate {_args.baudrate:.0f}: radio sample rate {sample_rate / 1e6:g} MS/s, {sps} samples per symbol in the receiver.")
     #amqp_broker_addr_ = "amqp://guest:guest@localhost:5672"
     #amqp_broker_addr_ = "amqp://modem:fs1pmodem@192.168.10.2:5672"
     amqp_broker_addr_ = None

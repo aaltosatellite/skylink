@@ -1022,3 +1022,27 @@ def dt_array_report(dt_array, nsamples, sr0, dt_array_names):
     S += "\n" + "parts of total:    {} %".format( round( 100*np.sum(dt_array)/dt_total , 2) )
     S += "\n" + "="*50
     return S
+
+
+def choose_sample_rate_and_sps(baudrate, minimum_sample_rate=1e6, sps_max=12, sps_min=4, max_sample_rate=4e6):
+    """
+    Choose the radio sample rate and the samples per symbol (sps) of the receiver for a baud rate.
+
+    The receiver resamples the signal to sps * baudrate. The resampler needs this rate to be at most
+    half of the radio sample rate. A larger sps is better for the demodulator, but costs CPU time.
+
+    Gives the smallest valid B200 sample rate (not below minimum_sample_rate) that allows at least sps_min,
+    and the largest sps that fits, at most sps_max.
+    Raises ValueError if no sample rate up to max_sample_rate is enough.
+    """
+    for sample_rate in sorted(usrp_B200_valid_samplerates):
+        if sample_rate < minimum_sample_rate:
+            continue
+        if sample_rate > max_sample_rate:
+            break
+        sps = int(0.49 * sample_rate / baudrate)
+        if sps >= sps_min:
+            return float(sample_rate), min(sps, sps_max)
+    largest = 0.49 * max_sample_rate / sps_min
+    raise ValueError(f"{baudrate:.0f} baud needs a radio sample rate above {max_sample_rate / 1e6:g} MS/s. "
+                     f"The largest baud rate with {sps_min} samples per symbol at {max_sample_rate / 1e6:g} MS/s is about {largest:.0f}.")
