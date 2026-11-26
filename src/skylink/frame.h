@@ -70,6 +70,25 @@ struct sky_radio_frame
 #define EXTENSION_MAC_TDD_CONTROL       4
 #define EXTENSION_HMAC_SEQUENCE_RESET   5
 
+/*
+ * Order in which the extensions appear in a frame.
+ *
+ * The extensions carry no type or length fields, so the receiver must walk them
+ * in exactly the order the transmitter appends them. sky_tx() adds the TDD MAC
+ * control and HMAC sequence reset extensions first, then sky_vc_fill_frame()
+ * adds the ARQ handshake, retransmit request, control and sequence extensions,
+ * and finally the payload. This is NOT the order of the type IDs above.
+ * If the append order in sky_tx() or sky_vc_fill_frame() changes, change this too.
+ */
+#define SKY_EXTENSION_WIRE_ORDER { \
+	EXTENSION_MAC_TDD_CONTROL,     \
+	EXTENSION_HMAC_SEQUENCE_RESET, \
+	EXTENSION_ARQ_HANDSHAKE,       \
+	EXTENSION_ARQ_REQUEST,         \
+	EXTENSION_ARQ_CTRL,            \
+	EXTENSION_ARQ_SEQUENCE         \
+}
+
 
 /* ARQ Sequence */
 typedef struct __attribute__((__packed__)) {
