@@ -409,6 +409,19 @@ int sendRing_count_packets_to_send(SkySendRing* sendRing, int include_resend)
 	return n;
 }
 
+//Remove the sequences from the resend list that can no longer be retransmitted. (They have been acknowledged.)
+static void sendRing_drop_unrecallable_resends(SkySendRing *sendRing)
+{
+	unsigned int kept = 0;
+	for (unsigned int i = 0; i < sendRing->resend_count; i++) {
+		if (sendRing_can_recall(sendRing, sendRing->resend_list[i]))
+			sendRing->resend_list[kept++] = sendRing->resend_list[i];
+	}
+	for (unsigned int i = kept; i < sendRing->resend_count; i++)
+		sendRing->resend_list[i] = 0;
+	sendRing->resend_count = kept;
+}
+
 //Pop the first sequence in the resend list. Returns the popped sequence or a negative error code.
 static int sendRing_pop_resend_sequence(SkySendRing *sendRing)
 {
@@ -419,12 +432,11 @@ static int sendRing_pop_resend_sequence(SkySendRing *sendRing)
 	//Get the first sequence in the resend list.
 	sky_arq_sequence_t r = sendRing->resend_list[0];
 
-	//Decrement the resend count.
-	sendRing->resend_count--;
-
-	//If there are still sequences in the resend list, shift them one step.
+	//Shift the remaining sequences one step and decrement the resend count.
 	for (unsigned int i = 1; i < sendRing->resend_count; i++)
 		sendRing->resend_list[i - 1] = sendRing->resend_list[i];
+	sendRing->resend_count--;
+	sendRing->resend_list[sendRing->resend_count] = 0;
 
 	//Return the popped sequence.
 	return r;
@@ -565,6 +577,10 @@ int sendRing_clean_tail_up_to(SkySendRing *sendRing, SkyElementBuffer *elementBu
 
 		n_cleared++;
 	}
+
+	//Drop the scheduled resends of the payloads that were just acknowledged.
+	sendRing_drop_unrecallable_resends(sendRing);
+
 	return n_cleared; //the number of payloads cleared.
 }
 //===== SEND RING ======================================================================================================
