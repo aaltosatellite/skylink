@@ -193,18 +193,20 @@ int sky_frame_parse_extension_headers(const SkyRadioFrame* frame, SkyParsedFrame
 		return SKY_RET_INVALID_EXT_LENGTH;
 
 	uint8_t extensions = parsed->hdr.included_extensions;
-	uint8_t current_extension = 0;
 
-	// Iterate all extension headers
-	while (extensions)
+	// Bits 6 and 7 are not assigned to any extension.
+	if (extensions & 0xC0)
+		return SKY_RET_INVALID_EXT_TYPE;
+
+	// Walk the extensions in the order the transmitter appends them, not in bit order.
+	static const uint8_t wire_order[] = SKY_EXTENSION_WIRE_ORDER;
+	for (unsigned int i = 0; i < sizeof(wire_order); i++)
 	{
-		uint8_t ext_found = (extensions & (0x01 << current_extension));
-		extensions = extensions & ~(0x01 << current_extension);
-		 // Extension not present, skip to next extension type.
-		if (ext_found == 0) {
-			current_extension++;
+		const uint8_t current_extension = wire_order[i];
+		// Extension not present, skip to next extension type.
+		if ((extensions & (0x01 << current_extension)) == 0)
 			continue;
-		}
+
 		switch (current_extension)
 		{
 		case EXTENSION_ARQ_SEQUENCE:
@@ -240,7 +242,6 @@ int sky_frame_parse_extension_headers(const SkyRadioFrame* frame, SkyParsedFrame
 		default: // Invalid extension type
 			return SKY_RET_INVALID_EXT_TYPE;
 		}
-		current_extension++;
 	}
 	// Parsing was successful.
 	return SKY_RET_OK;
